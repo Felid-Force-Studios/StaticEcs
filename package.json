@@ -1,0 +1,22 @@
+{
+    "name": "com.felid-force-studios.static-ecs",
+    "author":
+    {
+        "name": "Felid-Force-Studios",
+        "url": "https://github.com/Felid-Force-Studios/StaticEcs"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Felid-Force-Studios/StaticEcs.git"
+    },
+    "displayName": "Static ECS",
+    "version": "0.9.0",
+    "unity": "2020.3",
+    "description": "C# Entity Component System Framework",
+    "keywords":
+    [
+        "ecs",
+        "performance",
+        "staticecs"
+    ]
+}

@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props"
+            Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')"/>
+    
+    <PropertyGroup>
+        <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+        <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+        <ProjectGuid>{4BEE09B2-51DF-46EC-B20C-64A6EA2E0CD6}</ProjectGuid>
+        <OutputType>Library</OutputType>
+        <AppDesignerFolder>Properties</AppDesignerFolder>
+        <AssemblyName>FFS.StaticEcs</AssemblyName>
+        <Nullable>disable</Nullable>
+        <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+        <LangVersion>9</LangVersion>
+        <FileAlignment>512</FileAlignment>
+        <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+        <RootNamespace>FFS.Libraries.StaticEcs</RootNamespace>
+        
+        <Title>StaticECS</Title>
+        <Version>0.9.0</Version>
+        <Authors>Felid-Force-Studios</Authors>
+        <Description>C# Entity Component System Framework</Description>
+        <Copyright>Felid-Force-Studios</Copyright>
+        <RepositoryUrl>https://github.com/Felid-Force-Studios/StaticEcs</RepositoryUrl>
+        <PackageLicenseUrl>https://github.com/Felid-Force-Studios/StaticEcs/blob/master/LICENSE</PackageLicenseUrl>
+        <PackageTags>ecs; gamedev; unity; staticecs</PackageTags>
+    </PropertyGroup>
+    
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+        <PlatformTarget>AnyCPU</PlatformTarget>
+        <DebugSymbols>true</DebugSymbols>
+        <DebugType>full</DebugType>
+        <Optimize>false</Optimize>
+        <OutputPath>bin\Debug\</OutputPath>
+        <DefineConstants>FFS_ECS_ENABLE_DEBUG</DefineConstants>
+        <ErrorReport>prompt</ErrorReport>
+        <WarningLevel>4</WarningLevel>
+    </PropertyGroup>
+    
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+        <PlatformTarget>AnyCPU</PlatformTarget>
+        <DebugType>pdbonly</DebugType>
+        <Optimize>true</Optimize>
+        <OutputPath>bin\Release\</OutputPath>
+        <ErrorReport>prompt</ErrorReport>
+        <WarningLevel>4</WarningLevel>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Reference Include="System"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Include="Src\Component\Component.cs" />
+        <Compile Include="Src\Component\ComponentTypes.cs" />
+        <Compile Include="Src\Component\ComponentTypesRaw.cs" />
+        <Compile Include="Src\Component\Ecs.Components.cs" />
+        <Compile Include="Src\Component\Ecs.Components.Pool.cs" />
+        <Compile Include="Src\Component\Ecs.Components.PoolWrapper.cs" />
+        <Compile Include="Src\Component\Ecs.Entity.Component.cs" />
+        <Compile Include="Src\Component\Ecs.World.QueryComponents.cs" />
+        <Compile Include="Src\Component\QueryIterator.cs" />
+        <Compile Include="Src\Component\QueryMethodComponents.cs" />
+        <Compile Include="Src\Component\QueryRunner.cs" />
+        <Compile Include="Src\Ecs.Context.cs" />
+        <Compile Include="Src\Ecs.cs" />
+        <Compile Include="Src\Ecs.Entity.cs" />
+        <Compile Include="Src\Ecs.World.cs" />
+        <Compile Include="Src\Events\Ecs.Event.cs" />
+        <Compile Include="Src\Events\Ecs.EventReceiver.cs" />
+        <Compile Include="Src\Events\Ecs.Events.cs" />
+        <Compile Include="Src\Events\Ecs.Events.Pool.cs" />
+        <Compile Include="Src\Mask\Ecs.Entity.Mask.cs" />
+        <Compile Include="Src\Mask\Ecs.Masks.cs" />
+        <Compile Include="Src\Mask\Ecs.Masks.Pool.cs" />
+        <Compile Include="Src\Mask\Ecs.Masks.PoolWrapper.cs" />
+        <Compile Include="Src\Mask\Mask.cs" />
+        <Compile Include="Src\Mask\MaskTypes.cs" />
+        <Compile Include="Src\Mask\MaskTypesRaw.cs" />
+        <Compile Include="Src\Mask\QueryMethodMasks.cs" />
+        <Compile Include="Src\Query\OnCreateEntityFunctions.cs" />
+        <Compile Include="Src\Query\QueryIterator.cs" />
+        <Compile Include="Src\Query\QueryMethod.cs" />
+        <Compile Include="Src\Query\QueryWith.cs" />
+        <Compile Include="Src\Query\QueryWithAdds.cs" />
+        <Compile Include="Src\Query\World.Query.cs" />
+        <Compile Include="Src\System\BatchSystems.cs" />
+        <Compile Include="Src\System\System.cs" />
+        <Compile Include="Src\System\Systems.cs" />
+        <Compile Include="Src\Tag\Ecs.Tags.cs" />
+        <Compile Include="Src\Tag\Ecs.Tags.Pool.cs" />
+        <Compile Include="Src\Tag\Ecs.Tags.PoolWrapper.cs" />
+        <Compile Include="Src\Tag\Entity.Tag.cs" />
+        <Compile Include="Src\Tag\QueryMethodTags.cs" />
+        <Compile Include="Src\Tag\Tag.cs" />
+        <Compile Include="Src\Tag\TagTypes.cs" />
+        <Compile Include="Src\Tag\TagTypesRaw.cs" />
+        <Compile Include="Src\Utils\BitMask.cs" />
+        <Compile Include="Src\Utils\Utils.cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <Content Include="Benchmark.md" />
+      <Content Include="README.md" />
+      <Content Include="README_RU.md" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Remove="**/*.meta" />
+        <None Remove="FFS.StaticEcs.asmdef" />
+        <None Remove="package.json" />
+        <None Remove="LICENSE.meta" />
+    </ItemGroup>
+    <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
+</Project>

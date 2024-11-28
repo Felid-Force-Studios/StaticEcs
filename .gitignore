@@ -1,0 +1,8 @@
+*.sln
+bin
+obj
+Library
+Temp
+.vscode
+.idea
+.DS_Store
