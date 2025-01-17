@@ -9,16 +9,16 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public ref struct QueryComponentsIterator<WorldID, C> where C : struct, IComponent where WorldID : struct, IWorldId {
+    public ref struct QueryComponentsIterator<WorldType, C> where C : struct, IComponent where WorldType : struct, IWorldType {
         private readonly C[] _data; //8
         private int _count;         //4
 
         [MethodImpl(AggressiveInlining)]
         public QueryComponentsIterator(byte cs9fake) {
-            _data = Ecs<WorldID>.Components<C>.Value.Data();
-            _count = Ecs<WorldID>.Components<C>.Value.Count();
+            _data = Ecs<WorldType>.Components<C>.Value.Data();
+            _count = Ecs<WorldType>.Components<C>.Value.Count();
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            Ecs<WorldID>.Components<C>.Value.AddBlocker(1);
+            Ecs<WorldType>.Components<C>.Value.AddBlocker(1);
             #endif
         }
 
@@ -27,9 +27,9 @@ namespace FFS.Libraries.StaticEcs {
             get {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 ref var val = ref _data[_count];
-                if (Ecs<WorldID>.ModuleComponents.Value._debugEventListeners != null) {
-                    foreach (var listener in Ecs<WorldID>.ModuleComponents.Value._debugEventListeners) {
-                        listener.OnComponentRefMut(new Ecs<WorldID>.Entity(Ecs<WorldID>.Components<C>.Value.EntitiesData()[_count]), ref val);
+                if (Ecs<WorldType>.ModuleComponents.Value._debugEventListeners != null) {
+                    foreach (var listener in Ecs<WorldType>.ModuleComponents.Value._debugEventListeners) {
+                        listener.OnComponentRefMut(new Ecs<WorldType>.Entity(Ecs<WorldType>.Components<C>.Value.EntitiesData()[_count]), ref val);
                     }
                 }
                 return ref val;
@@ -46,12 +46,12 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public QueryComponentsIterator<WorldID, C> GetEnumerator() => this;
+        public QueryComponentsIterator<WorldType, C> GetEnumerator() => this;
 
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
             [MethodImpl(AggressiveInlining)]
             public void Dispose() {
-                Ecs<WorldID>.Components<C>.Value.AddBlocker(-1);
+                Ecs<WorldType>.Components<C>.Value.AddBlocker(-1);
             }
         #endif
     }
@@ -60,10 +60,10 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public ref struct QueryComponentsIterator<WorldID, C, QW>
+    public ref struct QueryComponentsIterator<WorldType, C, QW>
         where C : struct, IComponent
         where QW : struct, IQueryMethod
-        where WorldID : struct, IWorldId {
+        where WorldType : struct, IWorldType {
         private readonly C[] _data;                               //8
         private readonly int[] _entities; //8
         private int _count;                                       //4
@@ -72,14 +72,14 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public QueryComponentsIterator(QW with) {
             _with = with;
-            _data = Ecs<WorldID>.Components<C>.Value.Data();
-            _count = Ecs<WorldID>.Components<C>.Value.Count();
-            _entities = Ecs<WorldID>.Components<C>.Value.EntitiesData();
+            _data = Ecs<WorldType>.Components<C>.Value.Data();
+            _count = Ecs<WorldType>.Components<C>.Value.Count();
+            _entities = Ecs<WorldType>.Components<C>.Value.EntitiesData();
             var count = int.MaxValue;
             int[] entities = null;
-            with.SetData<WorldID>(ref count, ref entities);
+            with.SetData<WorldType>(ref count, ref entities);
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            Ecs<WorldID>.Components<C>.Value.AddBlocker(1);
+            Ecs<WorldType>.Components<C>.Value.AddBlocker(1);
             #endif
         }
 
@@ -88,9 +88,9 @@ namespace FFS.Libraries.StaticEcs {
             get {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 ref var val = ref _data[_count];
-                if (Ecs<WorldID>.ModuleComponents.Value._debugEventListeners != null) {
-                    foreach (var listener in Ecs<WorldID>.ModuleComponents.Value._debugEventListeners) {
-                        listener.OnComponentRefMut(new Ecs<WorldID>.Entity(_entities[_count]), ref val);
+                if (Ecs<WorldType>.ModuleComponents.Value._debugEventListeners != null) {
+                    foreach (var listener in Ecs<WorldType>.ModuleComponents.Value._debugEventListeners) {
+                        listener.OnComponentRefMut(new Ecs<WorldType>.Entity(_entities[_count]), ref val);
                     }
                 }
                 return ref val;
@@ -116,14 +116,14 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public QueryComponentsIterator<WorldID, C, QW> GetEnumerator() => this;
+        public QueryComponentsIterator<WorldType, C, QW> GetEnumerator() => this;
 
         [MethodImpl(AggressiveInlining)]
         public void Dispose() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            Ecs<WorldID>.Components<C>.Value.AddBlocker(-1);
+            Ecs<WorldType>.Components<C>.Value.AddBlocker(-1);
             #endif
-            _with.Dispose<WorldID>();
+            _with.Dispose<WorldType>();
         }
     }
 }

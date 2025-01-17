@@ -10,7 +10,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> {
+    public abstract partial class Ecs<WorldType> {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
@@ -25,18 +25,18 @@ namespace FFS.Libraries.StaticEcs {
             public static Entity FromIdx(int idx) => new(idx);
 
             [MethodImpl(AggressiveInlining)]
-            public short Version() => World.EntityVersion(this);
+            public short Version() => StandardComponents<EntityVersion>.Value.RefMutInternal(this).Value;
             
             int IEntity.GetId() => _id;
 
             [MethodImpl(AggressiveInlining)]
-            Type IEntity.WorldIdType() => typeof(WorldID);
+            Type IEntity.WorldTypeType() => typeof(WorldType);
 
             [MethodImpl(AggressiveInlining)]
-            IWorld IEntity.World() => Worlds.Get(typeof(WorldID));
+            IWorld IEntity.World() => Worlds.Get(typeof(WorldType));
 
             [MethodImpl(AggressiveInlining)]
-            public bool IsActual() => World.EntityVersion(this) > 0;
+            public bool IsActual() => StandardComponents<EntityVersion>.Value.RefMutInternal(this).Value > 0;
 
             [MethodImpl(AggressiveInlining)]
             public Entity Clone() => World.CloneEntity(this);
@@ -61,7 +61,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public PackedEntity Pack() => new() { _entity = _id, _version = World.EntityVersion(this) };
+            public PackedEntity Pack() => new() { _entity = _id, _version = StandardComponents<EntityVersion>.Value.RefMutInternal(this).Value };
 
             [MethodImpl(AggressiveInlining)]
             public void Destroy() => World.DestroyEntity(this);
@@ -235,7 +235,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C1>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new AddComponentFunction<WorldID, C1>(),
+                    new AddComponentFunction<WorldType, C1>(),
                     onCreate
                 );
             }
@@ -248,7 +248,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C2>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new AddComponentFunction<WorldID, C1, C2>(),
+                    new AddComponentFunction<WorldType, C1, C2>(),
                     onCreate
                 );
             }
@@ -263,7 +263,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C3>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new AddComponentFunction<WorldID, C1, C2, C3>(),
+                    new AddComponentFunction<WorldType, C1, C2, C3>(),
                     onCreate
                 );
             }
@@ -280,7 +280,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C4>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new AddComponentFunction<WorldID, C1, C2, C3, C4>(),
+                    new AddComponentFunction<WorldType, C1, C2, C3, C4>(),
                     onCreate
                 );
             }
@@ -299,7 +299,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C5>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new AddComponentFunction<WorldID, C1, C2, C3, C4, C5>(),
+                    new AddComponentFunction<WorldType, C1, C2, C3, C4, C5>(),
                     onCreate
                 );
             }
@@ -309,7 +309,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C1>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new PutComponentFunction<WorldID, C1>(c1),
+                    new PutComponentFunction<WorldType, C1>(c1),
                     onCreate
                 );
             }
@@ -322,7 +322,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C2>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new PutComponentFunction<WorldID, C1, C2>(c1, c2),
+                    new PutComponentFunction<WorldType, C1, C2>(c1, c2),
                     onCreate
                 );
             }
@@ -337,7 +337,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C3>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new PutComponentFunction<WorldID, C1, C2, C3>(c1, c2, c3),
+                    new PutComponentFunction<WorldType, C1, C2, C3>(c1, c2, c3),
                     onCreate
                 );
             }
@@ -354,7 +354,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C4>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new PutComponentFunction<WorldID, C1, C2, C3, C4>(c1, c2, c3, c4),
+                    new PutComponentFunction<WorldType, C1, C2, C3, C4>(c1, c2, c3, c4),
                     onCreate
                 );
             }
@@ -373,7 +373,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C5>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new PutComponentFunction<WorldID, C1, C2, C3, C4, C5>(c1, c2, c3, c4, c5),
+                    new PutComponentFunction<WorldType, C1, C2, C3, C4, C5>(c1, c2, c3, c4, c5),
                     onCreate
                 );
             }
@@ -385,7 +385,7 @@ namespace FFS.Libraries.StaticEcs {
                 ModuleComponents.Value.GetPool(component).EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new AddComponentOnCreateEntity1<WorldID>(component),
+                    new AddComponentOnCreateEntity1<WorldType>(component),
                     onCreate
                 );
             }
@@ -396,7 +396,7 @@ namespace FFS.Libraries.StaticEcs {
                 ModuleComponents.Value.GetPool(comp2).EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new AddComponentOnCreateEntity2<WorldID>(comp1, comp2),
+                    new AddComponentOnCreateEntity2<WorldType>(comp1, comp2),
                     onCreate
                 );
             }
@@ -408,7 +408,7 @@ namespace FFS.Libraries.StaticEcs {
                 ModuleComponents.Value.GetPool(comp3).EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new AddComponentOnCreateEntity3<WorldID>(comp1, comp2, comp3),
+                    new AddComponentOnCreateEntity3<WorldType>(comp1, comp2, comp3),
                     onCreate
                 );
             }
@@ -421,7 +421,7 @@ namespace FFS.Libraries.StaticEcs {
                 ModuleComponents.Value.GetPool(comp4).EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new AddComponentOnCreateEntity4<WorldID>(comp1, comp2, comp3, comp4),
+                    new AddComponentOnCreateEntity4<WorldType>(comp1, comp2, comp3, comp4),
                     onCreate
                 );
             }
@@ -435,7 +435,7 @@ namespace FFS.Libraries.StaticEcs {
                 ModuleComponents.Value.GetPool(comp5).EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
-                    new AddComponentOnCreateEntity5<WorldID>(comp1, comp2, comp3, comp4, comp5),
+                    new AddComponentOnCreateEntity5<WorldType>(comp1, comp2, comp3, comp4, comp5),
                     onCreate
                 );
             }
@@ -461,7 +461,7 @@ namespace FFS.Libraries.StaticEcs {
         
         internal int GetId();
         
-        internal Type WorldIdType();
+        internal Type WorldTypeType();
 
         internal IWorld World();
         
@@ -480,9 +480,9 @@ namespace FFS.Libraries.StaticEcs {
         internal short _version;
 
         [MethodImpl(AggressiveInlining)]
-        public readonly bool TryUnpack<WorldID>(out Ecs<WorldID>.Entity entity) where WorldID : struct, IWorldId {
-            entity = Ecs<WorldID>.Entity.FromIdx(_entity);
-            return Ecs<WorldID>.World.EntityVersion(entity) == _version;
+        public readonly bool TryUnpack<WorldType>(out Ecs<WorldType>.Entity entity) where WorldType : struct, IWorldType {
+            entity = Ecs<WorldType>.Entity.FromIdx(_entity);
+            return Ecs<WorldType>.StandardComponents<EntityVersion>.Value.RefMutInternal(entity).Value == _version;
         }
 
         [MethodImpl(AggressiveInlining)]

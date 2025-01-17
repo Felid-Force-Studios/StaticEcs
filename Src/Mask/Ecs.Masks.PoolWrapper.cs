@@ -10,7 +10,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> {
+    public abstract partial class Ecs<WorldType> {
         public interface IMasksWrapper: IRawPool {
             public MaskDynId DynamicId();
             
@@ -75,10 +75,10 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            object IRawPool.GetRaw(int entity) => default(T);
+            object IStandardRawPool.GetRaw(int entity) => default(T);
 
             [MethodImpl(AggressiveInlining)]
-            void IRawPool.PutRaw(int entity, object value) => Masks<T>.Value.Set(new Entity(entity));
+            void IStandardRawPool.PutRaw(int entity, object value) => Masks<T>.Value.Set(new Entity(entity));
 
             [MethodImpl(AggressiveInlining)]
             bool IRawPool.Has(int entity) => Masks<T>.Value.Has(new Entity(entity));
@@ -94,7 +94,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            void IRawPool.Copy(int srcEntity, int dstEntity) {
+            void IStandardRawPool.Copy(int srcEntity, int dstEntity) {
                 if (Masks<T>.Value.Has(new Entity(srcEntity))) {
                     Masks<T>.Value.Set(new Entity(dstEntity));
                 }
@@ -107,7 +107,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            int IRawPool.Capacity() => -1;
+            int IStandardRawPool.Capacity() => -1;
 
             [MethodImpl(AggressiveInlining)]
             void IMasksWrapper.Clear() => Masks<T>.Value.Clear();

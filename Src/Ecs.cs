@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -10,7 +9,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> where WorldID : struct, IWorldId {
+    public abstract partial class Ecs<WorldType> where WorldType : struct, IWorldType {
         internal static EcsConfig cfg;
 
         [MethodImpl(AggressiveInlining)]
@@ -43,6 +42,7 @@ namespace FFS.Libraries.StaticEcs {
     public struct EcsConfig {
         public uint BaseEntitiesCount;
         public uint BaseDeletedEntitiesCount;
+        public uint BaseStandardComponentTypesCount;
         public uint BaseComponentTypesCount;
         public uint BaseMaskTypesCount;
         public uint BaseTagTypesCount;
@@ -51,6 +51,7 @@ namespace FFS.Libraries.StaticEcs {
         public static EcsConfig Default() => new() {
             BaseEntitiesCount = 256,
             BaseDeletedEntitiesCount = 256,
+            BaseStandardComponentTypesCount = 4,
             BaseComponentTypesCount = 64,
             BaseMaskTypesCount = 64,
             BaseTagTypesCount = 64,

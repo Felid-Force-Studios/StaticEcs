@@ -10,7 +10,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> {
+    public abstract partial class Ecs<WorldType> {
         public interface ITagsWrapper: IRawPool {
             public TagDynId DynamicId();
             
@@ -92,10 +92,10 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            object IRawPool.GetRaw(int entity) => default(T);
+            object IStandardRawPool.GetRaw(int entity) => default(T);
 
             [MethodImpl(AggressiveInlining)]
-            void IRawPool.PutRaw(int entity, object value) => Tags<T>.Value.Set(new Entity(entity));
+            void IStandardRawPool.PutRaw(int entity, object value) => Tags<T>.Value.Set(new Entity(entity));
 
             [MethodImpl(AggressiveInlining)]
             bool IRawPool.Has(int entity) => Tags<T>.Value.Has(new Entity(entity));
@@ -107,13 +107,13 @@ namespace FFS.Libraries.StaticEcs {
             bool IRawPool.Delete(int entity) => Tags<T>.Value.Delete(new Entity(entity));
 
             [MethodImpl(AggressiveInlining)]
-            void IRawPool.Copy(int srcEntity, int dstEntity) => Tags<T>.Value.Copy(new Entity(srcEntity), new Entity(dstEntity));
+            void IStandardRawPool.Copy(int srcEntity, int dstEntity) => Tags<T>.Value.Copy(new Entity(srcEntity), new Entity(dstEntity));
 
             [MethodImpl(AggressiveInlining)]
             void IRawPool.Move(int entity, int target) => Tags<T>.Value.Move(new Entity(entity), new Entity(target));
 
             [MethodImpl(AggressiveInlining)]
-            int IRawPool.Capacity() => Tags<T>.Value.EntitiesData().Length;
+            int IStandardRawPool.Capacity() => Tags<T>.Value.EntitiesData().Length;
 
             [MethodImpl(AggressiveInlining)]
             int[] ITagsWrapper.EntitiesData() => Tags<T>.Value.EntitiesData();

@@ -12,7 +12,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> {
+    public abstract partial class Ecs<WorldType> {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
@@ -43,7 +43,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal MaskDynId RegisterMask<T>() where T : struct, IMask {
+            internal MaskDynId RegisterMaskType<T>() where T : struct, IMask {
                 if (MaskInfo<T>.IsRegistered()) {
                     return Masks<T>.Value.DynamicId();
                 }
@@ -64,7 +64,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal ushort MasksCount(Entity entity) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.ModuleMasks, Method: MasksCount, World not initialized");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleMasks, Method: MasksCount, World not initialized");
                 #endif
                 return BitMask.Len(entity._id);
             }
@@ -72,8 +72,8 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal IMasksWrapper GetPool(MaskDynId id) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.ModuleMasks, Method: GetPool, World not initialized");
-                if (id.Value >= _poolsCount) throw new Exception($"Ecs<{typeof(WorldID)}>.ModuleMasks, Method: GetPool, Mask type for dyn id {id.Value} not registered");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleMasks, Method: GetPool, World not initialized");
+                if (id.Value >= _poolsCount) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleMasks, Method: GetPool, Mask type for dyn id {id.Value} not registered");
                 #endif
                 return _pools[id.Value];
             }
@@ -81,8 +81,8 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal IMasksWrapper GetPool(Type maskType) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.ModuleMasks, Method: GetPool, World not initialized");
-                if (!_poolIdxByType.ContainsKey(maskType)) throw new Exception($"Ecs<{typeof(WorldID)}>.ModuleMasks, Method: GetPool, Mask type {maskType} not registered");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleMasks, Method: GetPool, World not initialized");
+                if (!_poolIdxByType.ContainsKey(maskType)) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleMasks, Method: GetPool, Mask type {maskType} not registered");
                 #endif
                 return _pools[_poolIdxByType[maskType]];
             }
@@ -90,8 +90,8 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal MasksWrapper<T> GetPool<T>() where T : struct, IMask {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.ModuleMasks, Method: GetPool, World not initialized");
-                if (!MaskInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldID)}>.ModuleMasks, Method: GetPool<{typeof(T)}>, Mask type not registered");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleMasks, Method: GetPool, World not initialized");
+                if (!MaskInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleMasks, Method: GetPool<{typeof(T)}>, Mask type not registered");
                 #endif
                 return default;
             }
@@ -99,7 +99,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal bool TryGetPool(MaskDynId id, out IMasksWrapper pool) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.ModuleMasks, Method: GetPool, World not initialized");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleMasks, Method: GetPool, World not initialized");
                 #endif
                 if (id.Value >= _poolsCount) {
                     pool = default;
@@ -113,7 +113,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal bool TryGetPool(Type maskType, out IMasksWrapper pool) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.ModuleMasks, Method: GetPool, World not initialized");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleMasks, Method: GetPool, World not initialized");
                 #endif
                 if (!_poolIdxByType.TryGetValue(maskType, out var idx)) {
                     pool = default;
@@ -127,7 +127,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal bool TryGetPool<T>(out MasksWrapper<T> pool) where T : struct, IMask {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.ModuleMasks, Method: GetPool, World not initialized");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleMasks, Method: GetPool, World not initialized");
                 #endif
                 pool = default;
                 return MaskInfo<T>.IsRegistered();
@@ -166,7 +166,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal void GetAllMasks(Entity entity, List<IMask> result) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.ModuleMasks, Method: GetAllMasks, World not initialized");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleMasks, Method: GetAllMasks, World not initialized");
                 #endif
                 var bufId = BitMask.BorrowBuf();
                 BitMask.CopyToBuffer(entity._id, bufId);

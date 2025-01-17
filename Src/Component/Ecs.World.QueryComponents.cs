@@ -9,7 +9,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> {
+    public abstract partial class Ecs<WorldType> {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
@@ -23,9 +23,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public QueryComponentsIterator<WorldID, C, W> For<C>()
+            public QueryComponentsIterator<WorldType, C, W> For<C>()
                 where C : struct, IComponent {
-                return new QueryComponentsIterator<WorldID, C, W>(With);
+                return new QueryComponentsIterator<WorldType, C, W>(With);
             }
 
             #region BY_STRUCT
@@ -33,7 +33,7 @@ namespace FFS.Libraries.StaticEcs {
             public void For<C1, R>(R runner = default)
                 where C1 : struct, IComponent
                 where R : struct, IQueryFunction<C1> {
-                var iterator = default(QueryFunctionRunner<WorldID, C1, W>);
+                var iterator = default(QueryFunctionRunner<WorldType, C1, W>);
                 iterator.Run(ref runner, With);
             }
             
@@ -41,7 +41,7 @@ namespace FFS.Libraries.StaticEcs {
             public void For<C1, R>(ref R runner)
                 where C1 : struct, IComponent
                 where R : struct, IQueryFunction<C1> {
-                var iterator = default(QueryFunctionRunner<WorldID, C1, W>);
+                var iterator = default(QueryFunctionRunner<WorldType, C1, W>);
                 iterator.Run(ref runner, With);
             }
 
@@ -50,7 +50,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2> {
-                QueryFunctionRunner<WorldID, C1, C2, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, W>.Run(ref runner, With);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -58,7 +58,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2> {
-                QueryFunctionRunner<WorldID, C1, C2, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, W>.Run(ref runner, With);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -67,7 +67,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, W>.Run(ref runner, With);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -76,7 +76,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, W>.Run(ref runner, With);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -86,7 +86,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3, C4> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, W>.Run(ref runner, With);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -96,7 +96,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3, C4> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, W>.Run(ref runner, With);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -107,7 +107,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C4 : struct, IComponent
                 where C5 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3, C4, C5> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, W>.Run(ref runner, With);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -118,7 +118,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C4 : struct, IComponent
                 where C5 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3, C4, C5> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, W>.Run(ref runner, With);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -130,7 +130,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C5 : struct, IComponent
                 where C6 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, W>.Run(ref runner, With);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -142,7 +142,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C5 : struct, IComponent
                 where C6 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, W>.Run(ref runner, With);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -155,7 +155,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C6 : struct, IComponent
                 where C7 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6, C7> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, W>.Run(ref runner, With);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -168,7 +168,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C6 : struct, IComponent
                 where C7 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6, C7> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, W>.Run(ref runner, With);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -182,7 +182,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C7 : struct, IComponent
                 where C8 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6, C7, C8> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, C8, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, C8, W>.Run(ref runner, With);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -196,65 +196,65 @@ namespace FFS.Libraries.StaticEcs {
                 where C7 : struct, IComponent
                 where C8 : struct, IComponent
                 where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6, C7, C8> {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, C8, W>.Run(ref runner, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, C8, W>.Run(ref runner, With);
             }
             #endregion
 
             #region BY_DELEGATE
             [MethodImpl(AggressiveInlining)]
-            public void For<C1>(DelegateQueryFunction<WorldID, C1> function)
+            public void For<C1>(DelegateQueryFunction<WorldType, C1> function)
                 where C1 : struct, IComponent {
-                var iterator = default(QueryFunctionRunner<WorldID, C1, W>);
+                var iterator = default(QueryFunctionRunner<WorldType, C1, W>);
                 iterator.Run(function, With);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void For<C1, C2>(DelegateQueryFunction<WorldID, C1, C2> function)
+            public void For<C1, C2>(DelegateQueryFunction<WorldType, C1, C2> function)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
-                QueryFunctionRunner<WorldID, C1, C2, W>.Run(function, With);
+                QueryFunctionRunner<WorldType, C1, C2, W>.Run(function, With);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void For<C1, C2, C3>(DelegateQueryFunction<WorldID, C1, C2, C3> function)
+            public void For<C1, C2, C3>(DelegateQueryFunction<WorldType, C1, C2, C3> function)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent {
-                QueryFunctionRunner<WorldID, C1, C2, C3, W>.Run(function, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, W>.Run(function, With);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void For<C1, C2, C3, C4>(DelegateQueryFunction<WorldID, C1, C2, C3, C4> function)
+            public void For<C1, C2, C3, C4>(DelegateQueryFunction<WorldType, C1, C2, C3, C4> function)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, W>.Run(function, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, W>.Run(function, With);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void For<C1, C2, C3, C4, C5>(DelegateQueryFunction<WorldID, C1, C2, C3, C4, C5> function)
+            public void For<C1, C2, C3, C4, C5>(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5> function)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent
                 where C5 : struct, IComponent {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, W>.Run(function, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, W>.Run(function, With);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void For<C1, C2, C3, C4, C5, C6>(DelegateQueryFunction<WorldID, C1, C2, C3, C4, C5, C6> function)
+            public void For<C1, C2, C3, C4, C5, C6>(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6> function)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent
                 where C5 : struct, IComponent
                 where C6 : struct, IComponent {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, W>.Run(function, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, W>.Run(function, With);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void For<C1, C2, C3, C4, C5, C6, C7>(DelegateQueryFunction<WorldID, C1, C2, C3, C4, C5, C6, C7> function)
+            public void For<C1, C2, C3, C4, C5, C6, C7>(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6, C7> function)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -262,11 +262,11 @@ namespace FFS.Libraries.StaticEcs {
                 where C5 : struct, IComponent
                 where C6 : struct, IComponent
                 where C7 : struct, IComponent {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, W>.Run(function, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, W>.Run(function, With);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void For<C1, C2, C3, C4, C5, C6, C7, C8>(DelegateQueryFunction<WorldID, C1, C2, C3, C4, C5, C6, C7, C8> function)
+            public void For<C1, C2, C3, C4, C5, C6, C7, C8>(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6, C7, C8> function)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -275,7 +275,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C6 : struct, IComponent
                 where C7 : struct, IComponent
                 where C8 : struct, IComponent {
-                QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, C8, W>.Run(function, With);
+                QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, C8, W>.Run(function, With);
             }
             #endregion
         }
@@ -296,9 +296,9 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                public static QueryComponentsIterator<WorldID, C> For<C>()
+                public static QueryComponentsIterator<WorldType, C> For<C>()
                     where C : struct, IComponent {
-                    return new QueryComponentsIterator<WorldID, C>(default);
+                    return new QueryComponentsIterator<WorldType, C>(default);
                 }
 
                 #region BY_RUNNER
@@ -306,7 +306,7 @@ namespace FFS.Libraries.StaticEcs {
                 public static void For<C1, R>(R runner = default)
                     where C1 : struct, IComponent
                     where R : struct, IQueryFunction<C1> {
-                    var iterator = default(QueryFunctionRunner<WorldID, C1, WithNothing>);
+                    var iterator = default(QueryFunctionRunner<WorldType, C1, WithNothing>);
                     iterator.Run(ref runner, default);
                 }
                 
@@ -314,7 +314,7 @@ namespace FFS.Libraries.StaticEcs {
                 public static void For<C1, R>(ref R runner)
                     where C1 : struct, IComponent
                     where R : struct, IQueryFunction<C1> {
-                    var iterator = default(QueryFunctionRunner<WorldID, C1, WithNothing>);
+                    var iterator = default(QueryFunctionRunner<WorldType, C1, WithNothing>);
                     iterator.Run(ref runner, default);
                 }
 
@@ -323,7 +323,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2> {
-                    QueryFunctionRunner<WorldID, C1, C2, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, WithNothing>.Run(ref runner, default);
                 }
                 
                 [MethodImpl(AggressiveInlining)]
@@ -331,7 +331,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2> {
-                    QueryFunctionRunner<WorldID, C1, C2, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, WithNothing>.Run(ref runner, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
@@ -340,7 +340,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C2 : struct, IComponent
                     where C3 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, WithNothing>.Run(ref runner, default);
                 }
                 
                 [MethodImpl(AggressiveInlining)]
@@ -349,7 +349,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C2 : struct, IComponent
                     where C3 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, WithNothing>.Run(ref runner, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
@@ -359,7 +359,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C3 : struct, IComponent
                     where C4 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3, C4> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, WithNothing>.Run(ref runner, default);
                 }
                 
                 [MethodImpl(AggressiveInlining)]
@@ -369,7 +369,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C3 : struct, IComponent
                     where C4 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3, C4> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, WithNothing>.Run(ref runner, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
@@ -380,7 +380,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C4 : struct, IComponent
                     where C5 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3, C4, C5> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, WithNothing>.Run(ref runner, default);
                 }
                 
                 [MethodImpl(AggressiveInlining)]
@@ -391,7 +391,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C4 : struct, IComponent
                     where C5 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3, C4, C5> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, WithNothing>.Run(ref runner, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
@@ -403,7 +403,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C5 : struct, IComponent
                     where C6 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, WithNothing>.Run(ref runner, default);
                 }
                 
                 [MethodImpl(AggressiveInlining)]
@@ -415,7 +415,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C5 : struct, IComponent
                     where C6 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, WithNothing>.Run(ref runner, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
@@ -428,7 +428,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C6 : struct, IComponent
                     where C7 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6, C7> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, WithNothing>.Run(ref runner, default);
                 }
                 
                 [MethodImpl(AggressiveInlining)]
@@ -441,7 +441,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C6 : struct, IComponent
                     where C7 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6, C7> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, WithNothing>.Run(ref runner, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
@@ -455,7 +455,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C7 : struct, IComponent
                     where C8 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6, C7, C8> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, C8, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, C8, WithNothing>.Run(ref runner, default);
                 }
                 
                 [MethodImpl(AggressiveInlining)]
@@ -469,65 +469,65 @@ namespace FFS.Libraries.StaticEcs {
                     where C7 : struct, IComponent
                     where C8 : struct, IComponent
                     where R : struct, IQueryFunction<C1, C2, C3, C4, C5, C6, C7, C8> {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, C8, WithNothing>.Run(ref runner, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, C8, WithNothing>.Run(ref runner, default);
                 }
                 #endregion
 
                 #region BY_DELEGATE
                 [MethodImpl(AggressiveInlining)]
-                public static void For<C1>(DelegateQueryFunction<WorldID, C1> function)
+                public static void For<C1>(DelegateQueryFunction<WorldType, C1> function)
                     where C1 : struct, IComponent {
-                    var iterator = default(QueryFunctionRunner<WorldID, C1, WithNothing>);
+                    var iterator = default(QueryFunctionRunner<WorldType, C1, WithNothing>);
                     iterator.Run(function, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                public static void For<C1, C2>(DelegateQueryFunction<WorldID, C1, C2> function)
+                public static void For<C1, C2>(DelegateQueryFunction<WorldType, C1, C2> function)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent {
-                    QueryFunctionRunner<WorldID, C1, C2, WithNothing>.Run(function, default);
+                    QueryFunctionRunner<WorldType, C1, C2, WithNothing>.Run(function, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                public static void For<C1, C2, C3>(DelegateQueryFunction<WorldID, C1, C2, C3> function)
+                public static void For<C1, C2, C3>(DelegateQueryFunction<WorldType, C1, C2, C3> function)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
                     where C3 : struct, IComponent {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, WithNothing>.Run(function, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, WithNothing>.Run(function, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                public static void For<C1, C2, C3, C4>(DelegateQueryFunction<WorldID, C1, C2, C3, C4> function)
+                public static void For<C1, C2, C3, C4>(DelegateQueryFunction<WorldType, C1, C2, C3, C4> function)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
                     where C3 : struct, IComponent
                     where C4 : struct, IComponent {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, WithNothing>.Run(function, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, WithNothing>.Run(function, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                public static void For<C1, C2, C3, C4, C5>(DelegateQueryFunction<WorldID, C1, C2, C3, C4, C5> function)
+                public static void For<C1, C2, C3, C4, C5>(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5> function)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
                     where C3 : struct, IComponent
                     where C4 : struct, IComponent
                     where C5 : struct, IComponent {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, WithNothing>.Run(function, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, WithNothing>.Run(function, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                public static void For<C1, C2, C3, C4, C5, C6>(DelegateQueryFunction<WorldID, C1, C2, C3, C4, C5, C6> function)
+                public static void For<C1, C2, C3, C4, C5, C6>(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6> function)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
                     where C3 : struct, IComponent
                     where C4 : struct, IComponent
                     where C5 : struct, IComponent
                     where C6 : struct, IComponent {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, WithNothing>.Run(function, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, WithNothing>.Run(function, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                public static void For<C1, C2, C3, C4, C5, C6, C7>(DelegateQueryFunction<WorldID, C1, C2, C3, C4, C5, C6, C7> function)
+                public static void For<C1, C2, C3, C4, C5, C6, C7>(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6, C7> function)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
                     where C3 : struct, IComponent
@@ -535,11 +535,11 @@ namespace FFS.Libraries.StaticEcs {
                     where C5 : struct, IComponent
                     where C6 : struct, IComponent
                     where C7 : struct, IComponent {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, WithNothing>.Run(function, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, WithNothing>.Run(function, default);
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                public static void For<C1, C2, C3, C4, C5, C6, C7, C8>(DelegateQueryFunction<WorldID, C1, C2, C3, C4, C5, C6, C7, C8> function)
+                public static void For<C1, C2, C3, C4, C5, C6, C7, C8>(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6, C7, C8> function)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
                     where C3 : struct, IComponent
@@ -548,7 +548,7 @@ namespace FFS.Libraries.StaticEcs {
                     where C6 : struct, IComponent
                     where C7 : struct, IComponent
                     where C8 : struct, IComponent {
-                    QueryFunctionRunner<WorldID, C1, C2, C3, C4, C5, C6, C7, C8, WithNothing>.Run(function, default);
+                    QueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, C8, WithNothing>.Run(function, default);
                 }
                 #endregion
             }

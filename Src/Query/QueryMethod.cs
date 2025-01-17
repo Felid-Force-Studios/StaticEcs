@@ -3,22 +3,22 @@
 namespace FFS.Libraries.StaticEcs {
     
     public interface IQueryMethod {
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType;
         
         public bool CheckEntity(int entityId);
 
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId;
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType;
     }
     
     public static class Extension {
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool CheckOne<WorldID>(this IQueryMethod method, Ecs<WorldID>.Entity entity) where WorldID : struct, IWorldId {
-            var count = 0;
+        public static bool CheckOne<WorldType>(this IQueryMethod method, Ecs<WorldType>.Entity entity) where WorldType : struct, IWorldType {
+            var count = int.MaxValue;
             int[] entities = null;
-            method.SetData<WorldID>(ref count, ref entities);
+            method.SetData<WorldType>(ref count, ref entities);
             var checkEntity = method.CheckEntity(entity._id);
-            method.Dispose<WorldID>();
+            method.Dispose<WorldType>();
             return checkEntity;
         }
     }

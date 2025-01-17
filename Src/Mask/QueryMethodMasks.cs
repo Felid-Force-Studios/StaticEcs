@@ -24,10 +24,10 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _all.SetMask<WorldID>(_incBufId);
+            _all.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -36,7 +36,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -51,9 +51,9 @@ namespace FFS.Libraries.StaticEcs {
         private ushort _id;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
-            _id = Ecs<WorldID>.Masks<C1>.Value.id;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
+            _id = Ecs<WorldType>.Masks<C1>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -62,7 +62,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId { }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
     }
 
     #if ENABLE_IL2CPP
@@ -77,10 +77,10 @@ namespace FFS.Libraries.StaticEcs {
         private ushort _id2;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldID>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldID>.Masks<C2>.Value.id;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
+            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -89,7 +89,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId { }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
     }
 
     #if ENABLE_IL2CPP
@@ -106,11 +106,11 @@ namespace FFS.Libraries.StaticEcs {
         private ushort _id3;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldID>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldID>.Masks<C2>.Value.id;
-            _id3 = Ecs<WorldID>.Masks<C3>.Value.id;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
+            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
+            _id3 = Ecs<WorldType>.Masks<C3>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -119,7 +119,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId { }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
     }
 
     #if ENABLE_IL2CPP
@@ -136,10 +136,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -148,7 +148,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -168,10 +168,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -180,7 +180,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -201,10 +201,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -213,7 +213,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -235,10 +235,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -247,7 +247,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -270,10 +270,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -282,7 +282,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -313,13 +313,13 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
             _excBufId = _bitMask.BorrowBuf();
 
-            _all.SetMask<WorldID>(_incBufId);
-            _exc.SetMask<WorldID>(_excBufId);
+            _all.SetMask<WorldType>(_incBufId);
+            _exc.SetMask<WorldType>(_excBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -328,7 +328,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
             _bitMask.DropBuf();
         }
@@ -355,10 +355,10 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _excBufId = _bitMask.BorrowBuf();
-            _exc.SetMask<WorldID>(_excBufId);
+            _exc.SetMask<WorldType>(_excBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -367,7 +367,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -382,9 +382,9 @@ namespace FFS.Libraries.StaticEcs {
         private ushort _id;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
-            _id = Ecs<WorldID>.Masks<C1>.Value.id;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
+            _id = Ecs<WorldType>.Masks<C1>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -393,7 +393,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId { }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
     }
 
     #if ENABLE_IL2CPP
@@ -408,10 +408,10 @@ namespace FFS.Libraries.StaticEcs {
         private ushort _id2;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldID>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldID>.Masks<C2>.Value.id;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
+            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -420,7 +420,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId { }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
     }
 
     #if ENABLE_IL2CPP
@@ -437,11 +437,11 @@ namespace FFS.Libraries.StaticEcs {
         private ushort _id3;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldID>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldID>.Masks<C2>.Value.id;
-            _id3 = Ecs<WorldID>.Masks<C3>.Value.id;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
+            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
+            _id3 = Ecs<WorldType>.Masks<C3>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -450,7 +450,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId { }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
     }
 
     #if ENABLE_IL2CPP
@@ -467,10 +467,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -479,7 +479,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -499,10 +499,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -511,7 +511,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -532,10 +532,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -544,7 +544,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -566,10 +566,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -578,7 +578,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -601,10 +601,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -613,7 +613,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -638,10 +638,10 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _anyBufId = _bitMask.BorrowBuf();
-            _any.SetMask<WorldID>(_anyBufId);
+            _any.SetMask<WorldType>(_anyBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -650,7 +650,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -667,10 +667,10 @@ namespace FFS.Libraries.StaticEcs {
         private ushort _id2;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldID>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldID>.Masks<C2>.Value.id;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
+            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -679,7 +679,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId { }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
     }
 
     #if ENABLE_IL2CPP
@@ -696,11 +696,11 @@ namespace FFS.Libraries.StaticEcs {
         private ushort _id3;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldID>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldID>.Masks<C2>.Value.id;
-            _id3 = Ecs<WorldID>.Masks<C3>.Value.id;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
+            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
+            _id3 = Ecs<WorldType>.Masks<C3>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -709,7 +709,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId { }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
     }
 
     #if ENABLE_IL2CPP
@@ -726,10 +726,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -738,7 +738,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -758,10 +758,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -770,7 +770,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -791,10 +791,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -803,7 +803,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -825,10 +825,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -837,7 +837,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }
@@ -860,10 +860,10 @@ namespace FFS.Libraries.StaticEcs {
         private byte _incBufId;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            _bitMask = Ecs<WorldID>.ModuleMasks.Value.BitMask;
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldID>(_incBufId);
+            _types.SetMask<WorldType>(_incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -872,7 +872,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
     }

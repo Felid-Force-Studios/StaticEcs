@@ -1,10 +1,11 @@
-![Version](https://img.shields.io/badge/version-0.9.0-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-0.9.2.1-blue.svg?style=for-the-badge)
 
 ### ЯЗЫК
 [RU](./README_RU.md)
 [EN](./README.md)
 ___
 ### [BENCHMARKS](./Benchmark.md)
+### [Unity module](https://github.com/Felid-Force-Studios/StaticEcs-Unity)
  
 # Static ECS - C# Entity component system framework
 - Легковесность
@@ -31,9 +32,10 @@ ___
     * [Entity](#entity)
     * [PackedEntity](#packedentity)
     * [Component](#component)
+    * [StandardComponent](#standardComponent)
     * [Tag](#tag)
     * [Mask](#mask)
-    * [WorldId](#worldId)
+    * [WorldType](#WorldType)
     * [Ecs](#ecs)
     * [World](#world)
     * [Systems](#systems)
@@ -55,7 +57,7 @@ ___
 * [Telegram](https://t.me/felid_force_studios)
 # Установка
 * ### В виде исходников
-  Со страцины релизов или как архив из нужной ветки. В ветки `master` стабильная проверенная версия
+  Со страцины релизов или как архив из нужной ветки. В ветке `master` стабильная проверенная версия
 * ### Установка для Unity
   Как git модуль `https://github.com/Felid-Force-Studios/StaticEcs.git` в Unity PackageManager или добавления в `Packages/manifest.json`:
 
@@ -67,18 +69,18 @@ using FFS.Libraries.StaticEcs;
 public struct Position : IComponent { public Vector3 Val; }
 public struct Velocity : IComponent { public float Val; }
 
-// Определяем идентификатор мира
-public struct MyWorldID : IWorldId { }
+// Определяем тип мира
+public struct MyWorldType : IWorldType { }
 
 // Определяем типы-алиасы для удобного доступа к типам библиотеки
-public abstract class MyEsc : Ecs<MyWorldID> { }
-public abstract class MyWorld : Ecs<MyWorldID>.World { }
+public abstract class MyEcs : Ecs<MyWorldType> { }
+public abstract class MyWorld : MyEcs.World { }
 
-// Определяем идентификатор систем
-public struct MySystemsID : ISystemsId { }
+// Определяем тип систем
+public struct MySystemsType : ISystemsType { }
 
 // Определяем тип-алиас для удобного доступа к системам
-public abstract class MySystems : Systems<MySystemsID> { }
+public abstract class MySystems : MyEcs.Systems<MySystemsType> { }
 
 // Определояем системы
 public readonly struct VelocitySystem : IUpdateSystem {
@@ -92,19 +94,24 @@ public readonly struct VelocitySystem : IUpdateSystem {
 public class Program {
     public static void Main() {
         // Создаем данные мира
-        MyEsc.Create(EcsConfig.Default());
+        MyEcs.Create(EcsConfig.Default());
+        
+        // Регестрируем компоненты
+        MyWorld.RegisterComponentType<Position>();
+        MyWorld.RegisterComponentType<Velocity>();
+        
         // Инициализацируем мир
-        MyEsc.Initialize();
+        MyEcs.Initialize();
         
         // Создаем системы
         MySystems.Create();
-        MySystems.AddUpdateSystem<VelocitySystem>();
+        MySystems.AddUpdate(new VelocitySystem());
 
         // Инициализацируем системы
         MySystems.Initialize();
 
         // Создание сущности
-        var entity = MyEsc.Entity.New(
+        var entity = MyEcs.Entity.New(
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
         );
@@ -113,7 +120,7 @@ public class Program {
         // Уничтожение систем
         MySystems.Destroy();
         // Уничтожение мира и очистка всех данных
-        MyEsc.Destroy();
+        MyEcs.Destroy();
     }
 }
 ```
@@ -140,12 +147,12 @@ public class Program {
 // Создание возможно только с указанием начальных компонентов
 // Создание одной сущности
 // Способ 1 - с указанием типа компонента (методы перегрузки от 1-5 компонентов)
-var entity = MyEsc.Entity.New<Position>();
-var entity = MyEsc.Entity.New<Position, Velocity, Name>();
+var entity = MyEcs.Entity.New<Position>();
+var entity = MyEcs.Entity.New<Position, Velocity, Name>();
 
 // Способ 2 - с указанием значения компонента (методы перегрузки от 1-5 компонентов)
-var entity = MyEsc.Entity.New(new Position(x: 1, y: 1, z: 2));
-var entity = MyEsc.Entity.New(
+var entity = MyEcs.Entity.New(new Position(x: 1, y: 1, z: 2));
+var entity = MyEcs.Entity.New(
             new Name { Val = "SomeName" },
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
@@ -154,28 +161,28 @@ var entity = MyEsc.Entity.New(
 // Создание множества сущностей
 // Способ 1 - с указанием типа компонента (методы перегрузки от 1-5 компонентов)
 int count = 100;
-MyEsc.Entity.NewOnes<Position>(count);
+MyEcs.Entity.NewOnes<Position>(count);
 
 // Способ 2 - с указанием типа компонента (методы перегрузки от 1-5 компонентов) + делегата инициализации каждой сущности
 int count = 100;
-MyEsc.Entity.NewOnes<Position>(count, static entity => {
+MyEcs.Entity.NewOnes<Position>(count, static entity => {
     // some init logic for each entity
 });
 
 // Способ 3 - с указанием значения компонента (методы перегрузки от 1-5 компонентов)
 int count = 100;
-MyEsc.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2));
+MyEcs.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2));
 
 // Способ 4 - с указанием значения компонента (методы перегрузки от 1-5 компонентов) + делегата инициализации каждой сущности
 int count = 100;
-MyEsc.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2), static entity => {
+MyEcs.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2), static entity => {
     // some init logic for each entity
 });
 ```
 
 - Основные операции:
 ```csharp
-var entity = MyEsc.Entity.New(
+var entity = MyEcs.Entity.New(
             new Name { Val = "SomeName" },
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
@@ -186,10 +193,10 @@ short version = entity.Version();        // Получить версию сущ
 var clone = entity.Clone();              // Клонировать сущность и все компоненты, теги, маски
 entity.Destroy();                        // Удалить сущность и все компоненты, теги, маски
 
-var entity2 = MyEsc.Entity.New<Name>();
+var entity2 = MyEcs.Entity.New<Name>();
 clone.CopyTo(entity2);                   // Копировать все компоненты, теги, маски в указанную сущность
 
-var entity3 = MyEsc.Entity.New<Name>();
+var entity3 = MyEcs.Entity.New<Name>();
 entity2.MoveTo(entity3);                 // Перенести все компоненты в указанную сущность и удалить текущую
 
 PackedEntity packed = entity3.Pack();  // Упаковать сущность с мета информацией о версии для передачи
@@ -215,7 +222,7 @@ PackedEntity packedEntity = entity.Pack();
 ```csharp
 PackedEntity packedEntity = entity.Pack();
 // Попытаться распаковать сущность в мире идентификатор которого указан через параметр типа, возвращает true если сущность успешно распакована, в out распакованя сущность
-if (packedEntity.TryUnpack<WorldID>(out var unpackedEntity)) {
+if (packedEntity.TryUnpack<WorldType>(out var unpackedEntity)) {
     // ...
 }
 
@@ -225,12 +232,13 @@ bool equals = packedEntity.Equals(packedEntity2);     // Проверить ид
 </details>
 
 ### Component
-Компонент - наделяет сущность свойствами  
+Компонент - наделяет сущность свойствами
  - Cущность не может существовать без компонентов, так как сущность без данных это просто идентификатор
  - При удалении последнего компонента сущность удаляется
  - Дает возможность строить запросы поиска только по компонентам
  - Представлен в виде пользовательской структуры с маркер интерфейсом `IComponent`  
- - Представлен в виде struct исключительно по соображениям производительности
+ - Представлен в виде struct исключительно по соображениям производительности  
+
 Пример:
 ```c#
 public struct Position : IComponent {
@@ -238,16 +246,28 @@ public struct Position : IComponent {
 }
 ```
 
+**ВАЖНО** ❗️  
+Требуется регистрация в мире между созданием и инициализацией  
+
+Пример:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.World.RegisterComponentType<Position>();
+//...
+MyEcs.Initialize();
+```
+
 <details><summary><u><b>Использование 👇</b></u></summary>
 
 - Создание:
 ```c#
 // Способ 1 - при создании сущности (аналогично методу Add())
-var entity = MyEsc.Entity.New<Position>();
+var entity = MyEcs.Entity.New<Position>();
 
 // Или через значение  (аналогично методу Put())
 // Нужно быть осторожным с AutoInit и AutoReset (смотри дополнительные возможности)
-var entity = MyEsc.Entity.New(new Position(x: 1, y: 1, z: 2));
+var entity = MyEcs.Entity.New(new Position(x: 1, y: 1, z: 2));
 
 // Добавление компонента на сущность и возврат ref значения на компонент (в DEBUG режиме будет ошибка если он уже существует на сущности)
 ref var position = ref entity.Add<Position>();
@@ -268,7 +288,7 @@ entity.Put(new Position(x: 1, y: 1, z: 2));
 ```
 - Основные операции:
 ```c#
-var entity = MyEsc.Entity.New(
+var entity = MyEcs.Entity.New(
             new Name { Val = "Player" },
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
@@ -296,9 +316,86 @@ entity.HasAnyOf<Position, Velocity, Name>();
 bool deleted = entity.Delete<Position>();  // deleted = true если компонент был удален, false если компонента не было изначально
 bool deleted = entity.Delete<Position, Velocity, Name>();  // deleted = true если ВСЕ компоненты был удалены, false если хотя бы 1 компонента не было изначально
 
-var entity2 = MyEsc.Entity.New<Name>();
+var entity2 = MyEcs.Entity.New<Name>();
 // Скопировать указанные компоненты на другую сущность (методы перегрузки от 1-5 компонентов)
 entity.CopyComponentsTo<Position, Velocity>(entity2);
+```
+</details>
+
+### StandardComponent
+Стандартный компонент - стандартные свойства сущности, присутствует на каждой создаваемой сущности по умолчанию  
+> Следует использовать в случаях когда ВСЕ сущности в мире должны содержать компоненты какого либо типа  
+> например если компонент позиции должен быть на каждой сущности без исключения, стоит использовать стандартный компонент  
+> так как скорость доступа выше, и не будет дополнительных затрат по памяти
+> 
+> Также может быть использован для небольших компонентов размером 1-8 байт, если не требуется строить логику на базе наличия или отсутсвия компонента
+> 
+> Например внутреняя версия сущности `entity.Version()` является стандартным компонентом
+- Оптимизированное хранилище и прямой доступ к данным по идентификатору сущности
+- Не может быть удален, только изменен
+- При удалении последнего компонента `IComponent`, Стандартный компонент не учитываются и сущность удаляется
+- Не учавствует в запросах, так как присутствует на всех сущностях
+- Представлен в виде пользовательской структуры с маркер интерфейсом `IStandardComponent`
+
+Пример:
+```c#
+public struct EnitiyType : IStandardComponent {
+    public int Val;
+}
+```
+
+**ВАЖНО** ❗️  
+Требуется регистрация в мире между созданием и инициализацией
+
+Пример:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.World.RegisterStandardComponentType<EnitiyType>();
+//...
+MyEcs.Initialize();
+```
+
+**ВАЖНО** ❗️  
+Если требуется автоматическая инициализация при создании сущности или автоматический сброс при удалении сущности  
+необходимо явно зарегестрировать обработчики
+
+Пример:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.World.RegisterStandardComponentType<EnitiyType>();
+
+// При создании сущности будет вызвана данная функция  
+MyEcs.StandardComponents<EnitiyType>.SetAutoInit((ref EnitiyType component) => component.Val = 1);
+
+// При уничтожении сущности будет вызвана данная функция  
+MyEcs.StandardComponents<EnitiyType>.SetAutoReset((ref EnitiyType component) => component.Val = -1);
+
+// При копировании стандартных компонентов будет вызвана данная сущности вместо простого копирования
+MyEcs.StandardComponents<EnitiyType>.SetAutoCopy((ref EnitiyType src, ref EnitiyType dst) => dst.Val = src.Val);
+//...
+MyEcs.Initialize();
+```
+
+<details><summary><u><b>Использование 👇</b></u></summary>
+
+- Основные операции:
+```c#
+ // Получить количество стандартных компонентов на сущности
+int standardComponentsCount = entity.StandardComponentsCount();
+
+// Получить ref ссылку на стандартный компонент на чтение\запись
+ref var enitiyType = ref entity.RefMutStandard<EnitiyType>();
+enitiyType.Val = 123;
+
+// Получить ref ссылку на стандартный компонент только на чтение
+ref readonly var readOnlyEnitiyType = ref entity.RefStandard<EnitiyType>();
+//readOnlyEnitiyType.Val = 123;  -   ERROR
+
+var entity2 = MyEcs.Entity.New<SomeComponent>();
+// Скопировать указанные стандартные компоненты на другую сущность (методы перегрузки от 1-5 компонентов)
+entity.CopyStandardComponentsTo<EnitiyType>(entity2);
 ```
 </details>
 
@@ -314,16 +411,24 @@ entity.CopyComponentsTo<Position, Velocity>(entity2);
 public struct Unit : ITag { }
 ```
 
+**ВАЖНО** ❗️  
+Требуется регистрация в мире между созданием и инициализацией
+
+Пример:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.World.RegisterTagType<Unit>();
+//...
+MyEcs.Initialize();
+```
+
 <details><summary><u><b>Использование 👇</b></u></summary>
 
 - Создание:
 ```c#
 // Добавление тега на сущность (в DEBUG режиме будет ошибка если он уже существует на сущности) (методы перегрузки от 1-5 тегов)
-entity.AddTag<Unit, Player>();
-
-// Добавление тега на сущность если его еще нет
-entity.TryAddTag<Unit>();
-entity.TryAddTag<Unit>(out bool added); // перегрузка где added = true если тег новый
+entity.SetTag<Unit, Player>();
 ```
 - Основные операции:
 ```c#
@@ -354,6 +459,18 @@ bool deleted = entity.DeleteTag<Unit, Player>();  // deleted = true если В�
 public struct Visible : IMask { }
 ```
 
+**ВАЖНО** ❗️  
+Требуется регистрация в мире между созданием и инициализацией
+
+Пример:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.World.RegisterMaskType<Visible>();
+//...
+MyEcs.Initialize();
+```
+
 <details><summary><u><b>Использование 👇</b></u></summary>
 
 - Создание:
@@ -378,40 +495,40 @@ entity.DeleteMask<Frozen>();
 ```
 </details>
 
-### WorldId
+### WorldType
 Тип-тег-идентификатор мира, служит для изоляции статических данных при создании разных миров в одном процессе
-- Представлен в виде пользовательской структуры без данных с маркер интерфейсом `IWorldId` 
+- Представлен в виде пользовательской структуры без данных с маркер интерфейсом `IWorldType` 
 
 Пример:
 ```c#
-public struct MainWorldId : IWorldId { }
-public struct MiniGameWorldId : IWorldId { }
+public struct MainWorldType : IWorldType { }
+public struct MiniGameWorldType : IWorldType { }
 ```
 
 ### Ecs
 Точка входа в библиотеку, отвечающая за доступ, создание, инициализацию, работу и уничтожение данных мира
-- Представлен в виде статического класса `Ecs<T>` параметризованного `IWorldId`
-> ВАЖНО! Так как тип- идентификатор `IWorldId` определяет доступ к конкретному миру  
+- Представлен в виде статического класса `Ecs<T>` параметризованного `IWorldType`
+> ВАЖНО! Так как тип- идентификатор `IWorldType` определяет доступ к конкретному миру  
 > Есть три способа работы с библиотекой:  
 
 Первый способ - как есть через полное обращение (очень неудобно):
 ```c#
-public struct MainWorldId : IWorldId { }
+public struct MainWorldType : IWorldType { }
 
-Ecs<MainWorldId>.Create(EcsConfig.Default());
-Ecs<MainWorldId>.World.GetEntitiesCount();
+Ecs<MainWorldType>.Create(EcsConfig.Default());
+Ecs<MainWorldType>.World.EntitiesCount();
 
-var entity = Ecs<MainWorldId>.Entity.New<Position>();
+var entity = Ecs<MainWorldType>.Entity.New<Position>();
 ```
 
 Второй способ - чуть более удобный, использовать статические импорты или статические алиасы (придется писать в каждом файле)
 ```c#
-using static FFS.Libraries.StaticEcs.Ecs<MainWorldId>;
+using static FFS.Libraries.StaticEcs.Ecs<MainWorldType>;
 
-public struct MainWorldId : IWorldId { }
+public struct MainWorldType : IWorldType { }
 
 Create(EcsConfig.Default());
-World.GetEntitiesCount();
+World.EntitiesCount();
 
 var entity = Entity.New<Position>();
 ```
@@ -419,31 +536,31 @@ var entity = Entity.New<Position>();
 Трейтий способ - самый удобный, использовать типы-алиасы в корневом неймспейсе (не требуется писать в каждом файле)  
 Везде в примерах будет использован именно этот способ
 ```c#
-public struct MainWorldId : IWorldId { }
+public struct MainWorldType : IWorldType { }
 
-public abstract class MyEsc : Ecs<MainWorldId> { }
-public abstract class MyWorld : Ecs<MainWorldId>.World { }
+public abstract class MyEcs : Ecs<MainWorldType> { }
+public abstract class MyWorld : Ecs<MainWorldType>.World { }
 
-MyEsc.Create(EcsConfig.Default());
-MyWorld.GetEntitiesCount();
+MyEcs.Create(EcsConfig.Default());
+MyWorld.EntitiesCount();
 
-var entity = MyEsc.Entity.New<Position>();
+var entity = MyEcs.Entity.New<Position>();
 ```
 
 <details><summary><u><b>Использование 👇</b></u></summary>
 
 ```c#
 // Определяем ID мира
-public struct MainWorldId : IWorldId { }
+public struct MainWorldType : IWorldType { }
 
 // Регестрируем типы - алиасы
-public abstract class MyEsc : Ecs<MainWorldId> { }
-public abstract class MyWorld : Ecs<MainWorldId>.World { }
+public abstract class MyEcs : Ecs<MainWorldType> { }
+public abstract class MyWorld : MyEcs.World { }
 
 // Создание мира с дефолтной конфигурацие
-MyEsc.Create(EcsConfig.Default());
+MyEcs.Create(EcsConfig.Default());
 // Или кастомной
-MyEsc.Create(new() {
+MyEcs.Create(new() {
             BaseEntitiesCount = 256,        // Базовый размер массива сущностей при создания мира
             BaseDeletedEntitiesCount = 256, // Базовый размер массива удаленных сущностей при создания мира
             BaseComponentTypesCount = 64    // Базовый размер всех разновидностей типов компонентов (количество пулов под каждый тип)
@@ -453,49 +570,47 @@ MyEsc.Create(new() {
             BaseTagPoolCount = 128,         // Базовый размер массива тегов определнного типа (может быть переопределнно для конкретного типа при явной регистрации)
         });
 
-MyWorld.         // Доступ к миру для MainWorldId (ID мира)
-MyEsc.Entity.    // Доступ к сущности для MainWorldId (ID мира)
-MyEsc.Context.   // Доступ к контексту для MainWorldId (ID мира)
-MyEsc.Components.// Доступ к компонентам для MainWorldId (ID мира)
-MyEsc.Tags.      // Доступ к тегам для MainWorldId (ID мира)
-MyEsc.Masks.     // Доступ к маскам для MainWorldId (ID мира)
+MyWorld.         // Доступ к миру для MainWorldType (ID мира)
+MyEcs.Entity.    // Доступ к сущности для MainWorldType (ID мира)
+MyEcs.Context.   // Доступ к контексту для MainWorldType (ID мира)
+MyEcs.Components.// Доступ к компонентам для MainWorldType (ID мира)
+MyEcs.Tags.      // Доступ к тегам для MainWorldType (ID мира)
+MyEcs.Masks.     // Доступ к маскам для MainWorldType (ID мира)
 
 // Инициализация мира
-MyEsc.Initialize();
+MyEcs.Initialize();
 
 // Уничтожение и очистка данных мира
-MyEsc.Destroy();
+MyEcs.Destroy();
 
 ```
 </details>
 
 ### World
 Мир, содержит мета информацию сущностей, контролирует и менеджируют создание и удаление сущностей
-- Представлен в виде статического класса `Ecs<IWorldId>.World`
+- Представлен в виде статического класса `Ecs<IWorldType>.World`
 
 <details><summary><u><b>Использование 👇</b></u></summary>
 
 - Создание:
 ```c#
 // Создается только при вызове
-MyEsc.Create(config);
+MyEcs.Create(config);
 
 // Инициализируется только при вызове
-MyEsc.Initialize();
+MyEcs.Initialize();
 ```
 - Основные операции:
 ```c#
-// Явная регистрация типа компонента (По умолчанию регистрируется автоматически и лениво)
-// Может быть полезоно при NativeAot
-// Также для указания базового размера массива даных компонентов этого типа
-// Также для получения динамического идентификатора типа компонента (раздел дополнительные возможности)
-var positionComponentId = MyWorld.RegisterComponent<Position>(256);
+// При регистрации компонента возможно указать базовой размер массива даных компонентов этого типа
+// Также возвращается динамическй идентификатор типа компонента (раздел дополнительные возможности)
+var positionComponentId = MyWorld.RegisterComponentType<Position>(256);
 
-// аналогично RegisterComponent но для тегов
-var unitTagId = MyWorld.RegisterTag<Unit>(256);
+// аналогично RegisterComponentType, но для тегов
+var unitTagId = MyWorld.RegisterTagType<Unit>(256);
 
-// аналогично RegisterComponent но для масок
-var visibleMaskId = MyWorld.RegisterMask<Visible>();
+// аналогично RegisterComponentType, но для масок
+var visibleMaskId = MyWorld.RegisterMaskType<Visible>();
 
 // true если мир инициализирован
 bool initialized = MyWorld.IsInitialized();
@@ -510,7 +625,7 @@ int entitiesCapacity = MyWorld.EntitiesCapacity();
 short entityVersion = MyWorld.EntityVersion(entity);
 
 // Удалить сущность и все ее компоненты - аналогично entity.Destroy();
-MyWorld.DeleteEntity(entity);
+MyWorld.DestroyEntity(entity);
 
 // Копировать все компоненты теги и маски с одной сущности на другую - аналогично entitySrc.CopyTo(entityTarget);
 MyWorld.CopyEntityData(entitySrc, entityTarget);
@@ -524,20 +639,20 @@ var str = MyWorld.ToPrettyStringEntity(entity);
 ```
 </details>
 
-### SystemsId
+### SystemsType
 Тип-тег-идентификатор систем, служит для изоляции статических данных при создании групп систем в одном процессе
-- Представлен в виде пользовательской структуры без данных с маркер интерфейсом `ISystemsId`
+- Представлен в виде пользовательской структуры без данных с маркер интерфейсом `ISystemsType`
 
 Пример:
 ```c#
-public struct BaseSystemsId : ISystemsId { }
-public struct FixedSystemsId : ISystemsId { }
-public struct LateSystemsId : ISystemsId { }
+public struct BaseSystemsType : ISystemsType { }
+public struct FixedSystemsType : ISystemsType { }
+public struct LateSystemsType : ISystemsType { }
 ```
 
 ### Systems
 Системы, контролирует и менеджируют создание и запуск систем
-- Представлен в виде статического класса `Systems<ISystemsId>`
+- Представлен в виде статического класса `Systems<ISystemsType>`
 
 <details><summary><u><b>Использование 👇</b></u></summary>
 
@@ -579,45 +694,43 @@ public struct SomeDestroySystem : IDestroySystem {
 - Создание и операции:
 ```c#
 // Определяем идентификатор систем
-public struct MySystemsID : ISystemsId { }
+public struct MySystemsType : ISystemsType { }
 
 // Определяем тип-алиас для удобного доступа к системам
-public abstract class MySystems : Systems<MySystemsID> { }
+public abstract class MySystems : MyEcs.Systems<MySystemsType> { }
 
 // Здесь будет созданны структуры для систем
 MySystems.Create();
 
 // Добавление системы НЕ реализующей IUpdateSystem, то есть Init и\или Destroy системы
-MySystems.AddCallOnceSystem<SomeInitSystem>();
-MySystems.AddCallOnceSystem<SomeDestroySystem>();
-MySystems.AddCallOnceSystem<SomeInitDestroySystem>();
+MySystems.AddCallOnce(new SomeInitSystem());
+MySystems.AddCallOnce(new SomeDestroySystem>());
+MySystems.AddCallOnce(new SomeInitDestroySystem>());
 
 // Добавление системы реализующей IUpdateSystem, с наличием любых имплементаций таких как Init или Destroy
-MySystems.AddUpdateSystem<SomeComboSystem>();
+MySystems.AddUpdate(new SomeComboSystem());
 
-// Важно! Системы запускаются в том порядке в котором зарегистрированны
+// Важно! Системы запускаются в порядке перeданным вторым аргументом (по умолчанию order 0)
+MySystems.AddUpdate(new SomeComboSystem(), order: 3);
+
 // это значит что сначала будут запущены все Init системы в том порядке в котором добавлены
 // затем в игровом цикле будут выполняться по порядку все Update системы
 // затем по порядку вызовутся все системы типа Destroy при уничтожении мира
 
-// Важно! Системы могут быть структурами или классами с пустым конструктором, и не инициализируются пользователем 
+// Важно! Системы могут быть структурами или классами
 // (использование структур может существенно увеличить производительность для небольших систем)
-// Они будут созданы в процессе регистрации и все дополнительные поля должны быть получены из контекста (Ecs.Context) или проинициализированны с помощью IInitSystem метода Init()
 
-// Все это позволяет подключать системы пачками что может существенно увеличить производительность
-// A также позволяет делать системы более атомарными (небольшими функциональными блоками)
-
+// Есть возможность подключать системы батчами что может существенно увеличить производительность
 // Добавление батча систем, каждая система может реализовывать любые типы систем но обязана иметь реализацию IUpdateSystem
-// Ecs.SystemsBatch тип имеет перегрузки для разного количества систем
-MySystems.AddBatchUpdateSystem<Ecs.SystemsBatch<
-    SomeUpdateSystem1,
-    SomeComboSystem1,
-    SomeComboSystem2,
-    SomeComboSystem3,
-    SomeComboSystem4,
-    SomeComboSystem5,
-    SomeComboSystem
->>();
+MySystems.AddUpdate(
+    new SomeUpdateSystem1(),
+    new SomeComboSystem1(),
+    new SomeComboSystem2(),
+    new SomeComboSystem3(),
+    new SomeComboSystem4(),
+    new SomeComboSystem5(),
+    new SomeComboSystem()
+);
 
 // Здесь будут вызваны все Init системы
 MySystems.Initialize();
@@ -632,7 +745,7 @@ MySystems.Destroy();
 
 ### Context
 Контекст - альтернатива DI, простой механизм хранения и передачи пользовательских данных и сервисов в системы и другие методы
-- Представлен в виде статического класса `Ecs<IWorldId>.Context<T>`
+- Представлен в виде статического класса `Ecs<IWorldType>.Context<T>`
 
 <details><summary><u><b>Использование 👇</b></u></summary>
 
@@ -934,9 +1047,9 @@ public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, Ecs.IQueryFunctio
 ```csharp
 // После вызова Ecs.Create(EcsConfig.Default());
 // Можно явно зарегистрировать типы компонентов и получить структуру содержащую идентифкатор типа
-ComponentDynId positionId = MyWorld.RegisterComponent<Position>();
-TagDynId unitTagId = MyWorld.RegisterTag<Unit>();
-MaskDynId frozenMaskId = MyWorld.RegisterMask<Frozen>();
+ComponentDynId positionId = MyWorld.RegisterComponentType<Position>();
+TagDynId unitTagId = MyWorld.RegisterTagType<Unit>();
+MaskDynId frozenMaskId = MyWorld.RegisterMaskType<Frozen>();
 
 // Альтернативно можно после инициализации мира в любой момент получить данные идентификаторы след образом:
 ComponentDynId positionId = Ecs.Components.DynamicId<Position>();
@@ -1022,6 +1135,18 @@ public struct WeatherChanged : IEvent {
 }
 ```
 
+**ВАЖНО** ❗️  
+Требуется регистрация в мире между созданием и инициализацией
+
+Пример:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.Events.RegisterEventType<WeatherChanged>();
+//...
+MyEcs.Initialize();
+```
+
 <details><summary><u><b>Использование 👇</b></u></summary>
 
 - Создание и базовые операции:
@@ -1085,14 +1210,14 @@ weatherChangedEventReceiver.MarkAsReadAll();
 // производительность в il2Cpp (в Mono нет разницы) может быть лучше во втором варианте на 10-40%
 // это же касается тегов и масок и всех остальных методов HasAllOf<>, Delete<> и тд
 ref var position = ref entity.RefMut<Position>(); // сахарный метод через сущность
-ref var position = ref Ecs.Components<Position>.RefMut(entity); // прямой вызов
+ref var position = ref Ecs.Components<Position>.Value.RefMut(entity); // прямой вызов
 ```
 ```csharp
 // так же можно использовать методы расширения которые практически приближены по производительности к прямому вызову
 // Для их создания можно воспользоваться шаблоном live template для rider (читать далее) или кодогенерацией (WIP)
 public static class PositionExtension {
     [MethodImpl(AggressiveInlining)]
-    public static ref Position RefMutPosition(this Ecs.Entity entity) {
+    public static ref Position MutPosition(this Ecs.Entity entity) {
         return ref Ecs.Components<Position>.Value.RefMut(entity);
     }
 }
@@ -1102,12 +1227,12 @@ Component live template
 ```csharp
 public static class $COMPONENT$Extension {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ref $COMPONENT$ RefMut$COMPONENT$(this $ECS$.Entity entity) {
+    public static ref $COMPONENT$ Mut$COMPONENT$(this $ECS$.Entity entity) {
         return ref $ECS$.Components<$COMPONENT$>.Value.RefMut(entity);
     }
     
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ref readonly $COMPONENT$ Ref$COMPONENT$(this $ECS$.Entity entity) {
+    public static ref readonly $COMPONENT$ $COMPONENT$(this $ECS$.Entity entity) {
         return ref $ECS$.Components<$COMPONENT$>.Value.Ref(entity);
     }
     
@@ -1152,13 +1277,8 @@ Tag live template
 ```csharp
 public static class $TAG$Extension {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static void Add$TAG$(this $Ecs$.Entity entity) {
-        $Ecs$.Tags<$TAG$>.Value.Add(entity);
-    }
-
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static void TryAdd$TAG$(this $Ecs$.Entity entity) {
-        $Ecs$.Tags<$TAG$>.Value.TryAdd(entity);
+    public static void Set$TAG$(this $Ecs$.Entity entity) {
+        $Ecs$.Tags<$TAG$>.Value.Set(entity);
     }
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -1177,7 +1297,7 @@ Mask live template
 ```csharp
 public static class $MASK$Extension {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static void Add$MASK$(this $Ecs$.Entity entity) {
+    public static void Set$MASK$(this $Ecs$.Entity entity) {
         $Ecs$.Masks<$MASK$>.Value.Set(entity);
     }
 
@@ -1203,12 +1323,12 @@ using FFS.Libraries.StaticEcs;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
-public struct MyWorldId : IWorldId { }
-public struct MySystemsId : ISystemsId { }
+public struct MyWorldType : IWorldType { }
+public struct MySystemsType : ISystemsType { }
 
-public abstract class MyEcs : Ecs<MyWorldId> { }
+public abstract class MyEcs : Ecs<MyWorldType> { }
 public abstract class MyWorld : MyEcs.World { }
-public abstract class MySystems : Systems<MySystemsId> { }
+public abstract class MySystems : MyEcs.Systems<MySystemsType> { }
 
 public struct Position : IComponent {
     public Transform Value;
@@ -1253,14 +1373,19 @@ public class Main : MonoBehaviour {
     
     void Start() {
         MyEcs.Create(EcsConfig.Default());
+        
+        MyWorld.RegisterComponentType<Position>();
+        MyWorld.RegisterComponentType<Direction>();
+        MyWorld.RegisterComponentType<Velocity>();
+        
         MyEcs.Initialize();
         
         MyEcs.Context<SceneData>.Set(sceneData);
         
         MySystems.Create();
         
-        MySystems.AddCallOnceSystem<CreateRandomEntities>();
-        MySystems.AddUpdateSystem<UpdatePositions>();
+        MySystems.AddCallOnce(new CreateRandomEntities());
+        MySystems.AddUpdate(new UpdatePositions());
         
         MySystems.Initialize();
     }
@@ -1280,4 +1405,4 @@ public class Main : MonoBehaviour {
 **WIP**
 
 # Лицензия
-[MIT license](./LICENSE)
+[MIT license](./LICENSE.md)

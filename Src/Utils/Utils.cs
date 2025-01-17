@@ -67,14 +67,14 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> where WorldID : struct, IWorldId {
-        internal static FileLogger<WorldID> FileLogger;
+    public abstract partial class Ecs<WorldType> where WorldType : struct, IWorldType {
+        internal static FileLogger<WorldType> FileLogger;
         
-        public static void CreateFileLogger(string logsFilePath, OperationType[] excludedOperations = null, ICsvColumnHandler<WorldID>[] columnWriters = null) {
-            if (World.Status != WorldStatus.Created) throw new Exception($"Ecs<{typeof(WorldID)}>, Method: CreateFileLogger, world status not `Created`");
+        public static void CreateFileLogger(string logsFilePath, OperationType[] excludedOperations = null, ICsvColumnHandler<WorldType>[] columnWriters = null) {
+            if (World.Status != WorldStatus.Created) throw new Exception($"Ecs<{typeof(WorldType)}>, Method: CreateFileLogger, world status not `Created`");
             if (FileLogger != null) throw new Exception("File logger already added");
 
-            FileLogger = new FileLogger<WorldID>(logsFilePath, excludedOperations, columnWriters);
+            FileLogger = new FileLogger<WorldType>(logsFilePath, excludedOperations, columnWriters);
             FileLogger.Enable();
         }
         
@@ -127,22 +127,22 @@ namespace FFS.Libraries.StaticEcs {
         public void WriteColumn(StreamWriter writer);
     }
 
-    public interface ICsvColumnHandler<WorldId> where WorldId : struct, IWorldId {
+    public interface ICsvColumnHandler<WorldType> where WorldType : struct, IWorldType {
         public string ColumnName();
 
-        public void TryAddColumn(Ecs<WorldId>.Entity entity, StreamWriter writer);
+        public void TryAddColumn(Ecs<WorldType>.Entity entity, StreamWriter writer);
     }
 
-    public struct CsvColumnComponentHandler<WorldId, T> : ICsvColumnHandler<WorldId>
-        where WorldId : struct, IWorldId
+    public struct CsvColumnComponentHandler<WorldType, T> : ICsvColumnHandler<WorldType>
+        where WorldType : struct, IWorldType
         where T : struct, IComponent, ICsvWriter {
         public string ColumnName() {
             return typeof(T).Name;
         }
 
-        public void TryAddColumn(Ecs<WorldId>.Entity entity, StreamWriter writer) {
-            if (Ecs<WorldId>.Components<T>.Value.Has(entity)) {
-                Ecs<WorldId>.Components<T>.Value.RefMutInternal(entity).WriteColumn(writer);
+        public void TryAddColumn(Ecs<WorldType>.Entity entity, StreamWriter writer) {
+            if (Ecs<WorldType>.ModuleComponents.ComponentInfo<T>.IsRegistered() && Ecs<WorldType>.Components<T>.Value.Has(entity)) {
+                Ecs<WorldType>.Components<T>.Value.RefMutInternal(entity).WriteColumn(writer);
             }
 
             writer.Write(";");
@@ -174,33 +174,31 @@ namespace FFS.Libraries.StaticEcs {
         }
     }
 
-    public sealed class FileLogger<WorldId> : Ecs<WorldId>.IWorldDebugEventListener,
-                                              Ecs<WorldId>.IComponentsDebugEventListener
+    public sealed class FileLogger<WorldType> : Ecs<WorldType>.IWorldDebugEventListener,
+                                              Ecs<WorldType>.IComponentsDebugEventListener
                                               #if !FFS_ECS_DISABLE_TAGS
-                                              , Ecs<WorldId>.ITagDebugEventListener,
+                                              , Ecs<WorldType>.ITagDebugEventListener
                                               #endif
                                               #if !FFS_ECS_DISABLE_MASKS
-                                              Ecs<WorldId>.IMaskDebugEventListener,
+                                              , Ecs<WorldType>.IMaskDebugEventListener
                                               #endif
                                               #if !FFS_ECS_DISABLE_EVENTS
-                                              Ecs<WorldId>.IEventsDebugEventListener
+                                              , Ecs<WorldType>.IEventsDebugEventListener
                                               #endif
-        where WorldId : struct, IWorldId {
-        internal static readonly Ecs<WorldId>.Entity EmptyEntity = Ecs<WorldId>.Entity.FromIdx(-1);
-
-
+        where WorldType : struct, IWorldType {
+        internal static readonly Ecs<WorldType>.Entity EmptyEntity = Ecs<WorldType>.Entity.FromIdx(-1);
 
         internal readonly string LogsFilePath;
         internal readonly DateTime DateTime;
         internal readonly bool[] ExcludedOperations;
-        internal readonly ICsvColumnHandler<WorldId>[] ColumnWriters;
+        internal readonly ICsvColumnHandler<WorldType>[] ColumnWriters;
 
         internal StreamWriter Writer;
         internal int Lines;
         internal int Part;
         internal bool Enabled;
 
-        internal FileLogger(string logsFilePath, OperationType[] excludedOperations = null, ICsvColumnHandler<WorldId>[] columnWriters = null) {
+        internal FileLogger(string logsFilePath, OperationType[] excludedOperations = null, ICsvColumnHandler<WorldType>[] columnWriters = null) {
             LogsFilePath = logsFilePath;
             DateTime = DateTime.Now;
             ExcludedOperations = new bool[Enum.GetValues(typeof(OperationType)).Length];
@@ -210,11 +208,16 @@ namespace FFS.Libraries.StaticEcs {
                 }
             }
 
-            ColumnWriters = columnWriters ?? Array.Empty<ICsvColumnHandler<WorldId>>();
+            ColumnWriters = columnWriters ?? Array.Empty<ICsvColumnHandler<WorldType>>();
             var files = Directory.GetFiles(logsFilePath);
             foreach (var file in files) {
-                if (file.Contains($"entities_log_{typeof(WorldId).Name}")) {
-                    File.Delete(file);
+                if (file.Contains($"entities_log_{typeof(WorldType).Name}")) {
+                    try {
+                        File.Delete(file);
+                    }
+                    catch (Exception e) {
+                        // ignored
+                    }
                 }
             }
 
@@ -223,16 +226,16 @@ namespace FFS.Libraries.StaticEcs {
 
         public void Enable() {
             if (!Enabled) {
-                Ecs<WorldId>.World.AddWorldDebugEventListener(this);
-                Ecs<WorldId>.World.AddComponentsDebugEventListener(this);
+                Ecs<WorldType>.World.AddWorldDebugEventListener(this);
+                Ecs<WorldType>.World.AddComponentsDebugEventListener(this);
                 #if !FFS_ECS_DISABLE_TAGS
-                Ecs<WorldId>.World.AddTagDebugEventListener(this);
+                Ecs<WorldType>.World.AddTagDebugEventListener(this);
                 #endif
                 #if !FFS_ECS_DISABLE_MASKS
-                Ecs<WorldId>.World.AddMaskDebugEventListener(this);
+                Ecs<WorldType>.World.AddMaskDebugEventListener(this);
                 #endif
                 #if !FFS_ECS_DISABLE_EVENTS
-                Ecs<WorldId>.Events.AddEventsDebugEventListener(this);
+                Ecs<WorldType>.Events.AddEventsDebugEventListener(this);
                 #endif
                 Enabled = true;
             }
@@ -240,16 +243,16 @@ namespace FFS.Libraries.StaticEcs {
 
         public void Disable() {
             if (Enabled) {
-                Ecs<WorldId>.World.RemoveWorldDebugEventListener(this);
-                Ecs<WorldId>.World.RemoveComponentsDebugEventListener(this);
+                Ecs<WorldType>.World.RemoveWorldDebugEventListener(this);
+                Ecs<WorldType>.World.RemoveComponentsDebugEventListener(this);
                 #if !FFS_ECS_DISABLE_TAGS
-                Ecs<WorldId>.World.RemoveTagDebugEventListener(this);
+                Ecs<WorldType>.World.RemoveTagDebugEventListener(this);
                 #endif
                 #if !FFS_ECS_DISABLE_MASKS
-                Ecs<WorldId>.World.RemoveMaskDebugEventListener(this);
+                Ecs<WorldType>.World.RemoveMaskDebugEventListener(this);
                 #endif
                 #if !FFS_ECS_DISABLE_EVENTS
-                Ecs<WorldId>.Events.RemoveEventsDebugEventListener(this);
+                Ecs<WorldType>.Events.RemoveEventsDebugEventListener(this);
                 #endif
                 Writer.Flush();
                 Enabled = false;
@@ -257,7 +260,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         private void CreateWriter() {
-            Writer = new StreamWriter($"{LogsFilePath}/entities_log_{typeof(WorldId).Name}_{Part}_{DateTime:yyyy_MM_dd_HH_mm_ss}.csv", true, Encoding.UTF8);
+            Writer = new StreamWriter($"{LogsFilePath}/entities_log_{typeof(WorldType).Name}_{Part}_{DateTime:yyyy_MM_dd_HH_mm_ss}.csv", true, Encoding.UTF8);
 
             Writer.Write("EntityId");
             Writer.Write(";");
@@ -292,7 +295,7 @@ namespace FFS.Libraries.StaticEcs {
             Write(EmptyEntity, operation, type);
         }
 
-        public void Write(Ecs<WorldId>.Entity entity, OperationType operation, string type) {
+        public void Write(Ecs<WorldType>.Entity entity, OperationType operation, string type) {
             if (ExcludedOperations[(int) operation]) {
                 return;
             }
@@ -310,7 +313,11 @@ namespace FFS.Libraries.StaticEcs {
             Writer.Write(";");
 
             foreach (var columnWriter in ColumnWriters) {
-                columnWriter.TryAddColumn(entity, Writer);
+                if (entity._id >= 0) {
+                    columnWriter.TryAddColumn(entity, Writer);
+                } else {
+                    Writer.Write(";");
+                }
             }
 
             Writer.Write(FileLogger.MethodName(operation));
@@ -330,63 +337,63 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        public void OnEntityCreated(Ecs<WorldId>.Entity entity) {
+        public void OnEntityCreated(Ecs<WorldType>.Entity entity) {
             Write(entity, OperationType.EntityCreate, null);
         }
 
-        public void OnEntityDestroyed(Ecs<WorldId>.Entity entity) {
+        public void OnEntityDestroyed(Ecs<WorldType>.Entity entity) {
             Write(entity, OperationType.EntityDestroy, null);
         }
 
-        public void OnComponentRef<T>(Ecs<WorldId>.Entity entity, ref T component) where T : struct, IComponent {
+        public void OnComponentRef<T>(Ecs<WorldType>.Entity entity, ref T component) where T : struct, IComponent {
             Write(entity, OperationType.ComponentRef, TypeData<T>.Name);
         }
 
-        public void OnComponentRefMut<T>(Ecs<WorldId>.Entity entity, ref T component) where T : struct, IComponent {
+        public void OnComponentRefMut<T>(Ecs<WorldType>.Entity entity, ref T component) where T : struct, IComponent {
             Write(entity, OperationType.ComponentRefMut, TypeData<T>.Name);
         }
 
-        public void OnComponentAdd<T>(Ecs<WorldId>.Entity entity, ref T component) where T : struct, IComponent {
+        public void OnComponentAdd<T>(Ecs<WorldType>.Entity entity, ref T component) where T : struct, IComponent {
             Write(entity, OperationType.ComponentAdd, TypeData<T>.Name);
         }
 
-        public void OnComponentPut<T>(Ecs<WorldId>.Entity entity, ref T component) where T : struct, IComponent {
+        public void OnComponentPut<T>(Ecs<WorldType>.Entity entity, ref T component) where T : struct, IComponent {
             Write(entity, OperationType.ComponentPut, TypeData<T>.Name);
         }
 
-        public void OnComponentDelete<T>(Ecs<WorldId>.Entity entity, ref T component) where T : struct, IComponent {
+        public void OnComponentDelete<T>(Ecs<WorldType>.Entity entity, ref T component) where T : struct, IComponent {
             Write(entity, OperationType.ComponentDelete, TypeData<T>.Name);
         }
         #if !FFS_ECS_DISABLE_TAGS
-        public void OnTagAdd<T>(Ecs<WorldId>.Entity entity) where T : struct, ITag {
+        public void OnTagAdd<T>(Ecs<WorldType>.Entity entity) where T : struct, ITag {
             Write(entity, OperationType.TagAdd, TypeData<T>.Name);
         }
 
-        public void OnTagDelete<T>(Ecs<WorldId>.Entity entity) where T : struct, ITag {
+        public void OnTagDelete<T>(Ecs<WorldType>.Entity entity) where T : struct, ITag {
             Write(entity, OperationType.TagDelete, TypeData<T>.Name);
         }
         #endif
         
         #if !FFS_ECS_DISABLE_MASKS
-        public void OnMaskSet<T>(Ecs<WorldId>.Entity entity) where T : struct, IMask {
+        public void OnMaskSet<T>(Ecs<WorldType>.Entity entity) where T : struct, IMask {
             Write(entity, OperationType.MaskSet, TypeData<T>.Name);
         }
 
-        public void OnMaskDelete<T>(Ecs<WorldId>.Entity entity) where T : struct, IMask {
+        public void OnMaskDelete<T>(Ecs<WorldType>.Entity entity) where T : struct, IMask {
             Write(entity, OperationType.MaskDelete, TypeData<T>.Name);
         }
         #endif
 
         #if !FFS_ECS_DISABLE_EVENTS
-        public void OnEventSent<T>(Ecs<WorldId>.Event<T> value) where T : struct, IEvent {
+        public void OnEventSent<T>(Ecs<WorldType>.Event<T> value) where T : struct, IEvent {
             Write(EmptyEntity, OperationType.EventAdd, TypeData<T>.Name);
         }
 
-        public void OnEventReadAll<T>(Ecs<WorldId>.Event<T> value) where T : struct, IEvent {
+        public void OnEventReadAll<T>(Ecs<WorldType>.Event<T> value) where T : struct, IEvent {
             Write(EmptyEntity, OperationType.EventDelete, TypeData<T>.Name);
         }
 
-        public void OnEventSuppress<T>(Ecs<WorldId>.Event<T> value) where T : struct, IEvent {
+        public void OnEventSuppress<T>(Ecs<WorldType>.Event<T> value) where T : struct, IEvent {
             Write(EmptyEntity, OperationType.EventDelete, TypeData<T>.Name);
         }
         #endif

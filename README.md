@@ -1,10 +1,11 @@
-![Version](https://img.shields.io/badge/version-0.9.0-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-0.9.2.1-blue.svg?style=for-the-badge)
 
 ### LANGUAGE
 [RU](./README_RU.md)
 [EN](./README.md)
 ___
 ### [BENCHMARKS](./Benchmark.md)
+### [Unity module](https://github.com/Felid-Force-Studios/StaticEcs-Unity)
 
 # Static ECS - C# Entity component system framework
 - Lightweight
@@ -31,9 +32,10 @@ ___
     * [Entity](#entity)
     * [PackedEntity](#packedentity)
     * [Component](#component)
+    * [StandardComponent](#standardComponent)
     * [Tag](#tag)
     * [Mask](#mask)
-    * [WorldId](#worldId)
+    * [WorldType](#WorldType)
     * [Ecs](#ecs)
     * [World](#world)
     * [Systems](#systems)
@@ -67,18 +69,18 @@ using FFS.Libraries.StaticEcs;
 public struct Position : IComponent { public Vector3 Val; }
 public struct Velocity : IComponent { public float Val; }
 
-// Define the world identifier
-public struct MyWorldID : IWorldId { }
+// Define the world type
+public struct MyWorldType : IWorldType { }
 
 // Define type-aliases for easy access to library types
-public abstract class MyEsc : Ecs<MyWorldID> { }
-public abstract class MyWorld : Ecs<MyWorldID>.World { }
+public abstract class MyEcs : Ecs<MyWorldType> { }
+public abstract class MyWorld : MyEcs.World { }
 
-// Define the systems identifier
-public struct MySystemsID : ISystemsId { }
+// Define the systems type
+public struct MySystemsType : ISystemsType { }
 
 // Define type-alias for easy access to systems
-public abstract class MySystems : Systems<MySystemsID> { }
+public abstract class MySystems : MyEcs.Systems<MySystemsType> { }
 
 // Define systems
 public readonly struct VelocitySystem : IUpdateSystem {
@@ -92,19 +94,24 @@ public readonly struct VelocitySystem : IUpdateSystem {
 public class Program {
     public static void Main() {
         // Creating world data
-        MyEsc.Create(EcsConfig.Default());
+        MyEcs.Create(EcsConfig.Default());
+        
+        // Registering components
+        MyWorld.RegisterComponentType<Position>();
+        MyWorld.RegisterComponentType<Velocity>();
+        
         // Initializing the world
-        MyEsc.Initialize();
+        MyEcs.Initialize();
         
         // Creating systems
         MySystems.Create();
-        MySystems.AddUpdateSystem<VelocitySystem>();
+        MySystems.AddUpdate(new VelocitySystem());
 
         // Initializing systems
         MySystems.Initialize();
 
         // Creating entity
-        var entity = MyEsc.Entity.New(
+        var entity = MyEcs.Entity.New(
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
         );
@@ -113,7 +120,7 @@ public class Program {
         // Destroying systems
         MySystems.Destroy();
         // Destroying the world and deleting all data
-        MyEsc.Destroy();
+        MyEcs.Destroy();
     }
 }
 ```
@@ -140,12 +147,12 @@ Entity - serves to identify an object in the game world and access attached comp
 // Creation is only possible with the initial components specified
 // Creating a single entity
 // Method 1 - with component type (overload methods from 1-5 components)
-var entity = MyEsc.Entity.New<Position>();
-var entity = MyEsc.Entity.New<Position, Velocity, Name>();
+var entity = MyEcs.Entity.New<Position>();
+var entity = MyEcs.Entity.New<Position, Velocity, Name>();
 
 // Method 2 - with component value (overload methods from 1-5 components)
-var entity = MyEsc.Entity.New(new Position(x: 1, y: 1, z: 2));
-var entity = MyEsc.Entity.New(
+var entity = MyEcs.Entity.New(new Position(x: 1, y: 1, z: 2));
+var entity = MyEcs.Entity.New(
             new Name { Val = "SomeName" },
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
@@ -154,7 +161,7 @@ var entity = MyEsc.Entity.New(
 // Creating multiple entities
 // Method 1 - with component type (overload methods from 1-5 components)
 int count = 100;
-MyEsc.Entity.NewOnes<Position>(count);
+MyEcs.Entity.NewOnes<Position>(count);
 
 // Method 2 - specifying component type (overload methods from 1-5 components) + delegate initialization of each entity
 int count = 100;
@@ -164,18 +171,18 @@ Ecs.Entity.NewOnes<Position>(count, static entity => {
 
 // Method 3 - with component value (overload methods from 1-5 components)
 int count = 100;
-MyEsc.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2));
+MyEcs.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2));
 
 // Method 4 - with component value (overload methods from 1-5 components) + initialization delegate of each entity
 int count = 100;
-MyEsc.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2), static entity => {
+MyEcs.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2), static entity => {
     // some init logic for each entity
 });
 ```
 
 - Basic operations:
 ```csharp
-var entity = MyEsc.Entity.New(
+var entity = MyEcs.Entity.New(
             new Name { Val = "SomeName" },
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
@@ -186,10 +193,10 @@ short version = entity.Version();        // Get entity version
 var clone = entity.Clone();              // Clone the entity and all components, tags, masks
 entity.Destroy();                        // Delete the entity and all components, tags, masks
 
-var entity2 = MyEsc.Entity.New<Name>();
+var entity2 = MyEcs.Entity.New<Name>();
 clone.CopyTo(entity2);                   // Copy all components, tags, masks to the specified entity
 
-var entity3 = MyEsc.Entity.New<Name>();
+var entity3 = MyEcs.Entity.New<Name>();
 entity2.MoveTo(entity3);                 // Move all components to the specified entity and delete the current entity
 
 PackedEntity packed = entity3.Pack();  // Pack an entity with meta information about the version to be transmitted
@@ -215,7 +222,7 @@ PackedEntity packedEntity = entity.Pack();
 ```csharp
 PackedEntity packedEntity = entity.Pack();
 // Attempt to unpack an entity in the world whose identifier is specified via the type parameter, returns true if the entity is successfully unpacked, in out unpacked entity
-if (packedEntity.TryUnpack<WorldID>(out var unpackedEntity)) {
+if (packedEntity.TryUnpack<WorldType>(out var unpackedEntity)) {
     // ...
 }
 
@@ -238,16 +245,28 @@ public struct Position : IComponent {
 }
 ```
 
+**IMPORTANT** ❗️  
+Requires registration in the world between creation and initialization
+
+Example:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.World.RegisterComponentType<Position>();
+//...
+MyEcs.Initialize();
+```
+
 <details><summary><u><b>Usage 👇</b></u></summary>
 
 - Creation:
 ```c#
 // Method 1 - when creating an entity (similar to the Add() method)
-var entity = MyEsc.Entity.New<Position>();
+var entity = MyEcs.Entity.New<Position>();
 
 // Or via a value (similar to the Put() method)
 // Be careful with AutoInit and AutoReset (see additional features)
-var entity = MyEsc.Entity.New(new Position(x: 1, y: 1, z: 2));
+var entity = MyEcs.Entity.New(new Position(x: 1, y: 1, z: 2));
 
 // Adding a component to an entity and returning a ref value to the component (in DEBUG mode there will be an error if it already exists on the entity).
 ref var position = ref entity.Add<Position>();
@@ -268,7 +287,7 @@ entity.Put(new Position(x: 1, y: 1, z: 2));
 ```
 - Basic operations:
 ```c#
-var entity = MyEsc.Entity.New(
+var entity = MyEcs.Entity.New(
             new Name { Val = "Player" },
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
@@ -296,9 +315,87 @@ entity.HasAnyOf<Position, Velocity, Name>();
 bool deleted = entity.Delete<Position>();  // deleted = true if the component has been deleted, false if the component was not there originally
 bool deleted = entity.Delete<Position, Velocity, Name>();  // deleted = true if ALL components have been deleted, false if at least 1 component was not there originally
 
-var entity2 = MyEsc.Entity.New<Name>();
+var entity2 = MyEcs.Entity.New<Name>();
 // Copy the specified components to another entity (overload methods from 1-5 components)
 entity.CopyComponentsTo<Position, Velocity>(entity2);
+```
+</details>
+
+
+### StandardComponent
+Default Component - standard entity properties, present on every entity created by default
+> Should be used when ALL entities in the world must contain components of some type  
+> for example, if the position component must be on every entity without exception, you should use the standard component  
+> as the access times are faster, and there will be no additional memory overhead
+>
+> Can also be used for small components 1-8 bytes in size, if no logic is required based on the presence or absence of a component
+>
+> For example, the internal version of an entity `entity.Version()` is a standard component
+- Optimized storage and direct access to data by entity ID
+- Cannot be deleted, only modified
+- When the last `IComponent` is deleted, the Standard Component is ignored and the entity is deleted
+- Not included in queries, as it is present on all entities
+- Represented as a custom structure with a `IStandardComponent` marker interface
+
+Example:
+```c#
+public struct EnitiyType : IStandardComponent {
+    public int Val;
+}
+```
+
+**IMPORTANT** ❗️  
+Requires registration in the world between creation and initialization
+
+Example:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.World.RegisterStandardComponentType<EnitiyType>();
+//...
+MyEcs.Initialize();
+```
+
+**IMPORTANT** ❗️  
+If automatic initialization when creating an entity or automatic reset when deleting an entity is required  
+handlers must be explicitly registered
+
+Example:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.World.RegisterStandardComponentType<EnitiyType>();
+
+// This function will be called when the entity is created  
+MyEcs.StandardComponents<EnitiyType>.SetAutoInit((ref EnitiyType component) => component.Val = 1);
+
+// This function will be called when the entity is destroyed  
+MyEcs.StandardComponents<EnitiyType>.SetAutoReset((ref EnitiyType component) => component.Val = -1);
+
+// When copying standard components, this entity will be called instead of just copying it
+MyEcs.StandardComponents<EnitiyType>.SetAutoCopy((ref EnitiyType src, ref EnitiyType dst) => dst.Val = src.Val);
+//...
+MyEcs.Initialize();
+```
+
+<details><summary><u><b>Usage 👇</b></u></summary>
+
+- Basic operations:
+```c#
+// Get the number of standard components per entity
+int standardComponentsCount = entity.StandardComponentsCount();
+
+// Get ref reference to a standard read/write component
+ref var enitiyType = ref entity.RefMutStandard<EnitiyType>();
+enitiyType.Val = 123;
+
+// Get ref reference to a standard read-only component
+ref readonly var readOnlyEnitiyType = ref entity.RefStandard<EnitiyType>();
+//readOnlyEnitiyType.Val = 123;  -   ERROR
+
+var entity2 = MyEcs.Entity.New<SomeComponent>();
+// Copy the specified standard components to another entity (overload methods from 1-5 components)
+entity.CopyStandardComponentsTo<EnitiyType>(entity2);
 ```
 </details>
 
@@ -314,16 +411,24 @@ Example:
 public struct Unit : ITag { }
 ```
 
+**IMPORTANT** ❗️  
+Requires registration in the world between creation and initialization
+
+Example:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.World.RegisterTagType<Unit>();
+//...
+MyEcs.Initialize();
+```
+
 <details><summary><u><b>Usage 👇</b></u></summary>
 
 - Creation:
 ```c#
 // Adding a tag to an entity (in DEBUG mode there will be an error if it already exists on the entity) (overload methods from 1-5 tags)
-entity.AddTag<Unit, Player>();
-
-// Adding a tag to an entity if it does not already exist
-entity.TryAddTag<Unit>();
-entity.TryAddTag<Unit>(out bool added); // overload where added = true if the tag is new
+entity.SetTag<Unit, Player>();
 ```
 - Basic operations:
 ```c#
@@ -354,6 +459,18 @@ Example:
 public struct Visible : IMask { }
 ```
 
+**IMPORTANT** ❗️  
+Requires registration in the world between creation and initialization
+
+Example:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.World.RegisterMaskType<Visible>();
+//...
+MyEcs.Initialize();
+```
+
 <details><summary><u><b>Usage 👇</b></u></summary>
 
 - Creation:
@@ -378,40 +495,40 @@ entity.DeleteMask<Frozen>();
 ```
 </details>
 
-### WorldId
+### WorldType
 World identifier type-tag, used to isolate static data when creating different worlds in the same process
-- Represented as a user structure without data with a marker interface `IWorldId` 
+- Represented as a user structure without data with a marker interface `IWorldType` 
 
 Example:
 ```c#
-public struct MainWorldId : IWorldId { }
-public struct MiniGameWorldId : IWorldId { }
+public struct MainWorldType : IWorldType { }
+public struct MiniGameWorldType : IWorldType { }
 ```
 
 ### Ecs
 Library entry point responsible for accessing, creating, initializing, operating, and destroying world data
-- Represented as a static class `Ecs<T>` parameterized by `IWorldId`
-> IMPORTANT: Since the type-identifier `IWorldId` defines access to a specific world   
+- Represented as a static class `Ecs<T>` parameterized by `IWorldType`
+> IMPORTANT: Since the type-identifier `IWorldType` defines access to a specific world   
 > There are three ways to work with the framework:
 
 The first way is as is via full address (very inconvenient):
 ```c#
-public struct MainWorldId : IWorldId { }
+public struct MainWorldType : IWorldType { }
 
-Ecs<MainWorldId>.Create(EcsConfig.Default());
-Ecs<MainWorldId>.World.GetEntitiesCount();
+Ecs<MainWorldType>.Create(EcsConfig.Default());
+Ecs<MainWorldType>.World.EntitiesCount();
 
-var entity = Ecs<MainWorldId>.Entity.New<Position>();
+var entity = Ecs<MainWorldType>.Entity.New<Position>();
 ```
 
 The second way is a little more convenient, use static imports or static aliases (you'll have to write in each file)
 ```c#
-using static FFS.Libraries.StaticEcs.Ecs<MainWorldId>;
+using static FFS.Libraries.StaticEcs.Ecs<MainWorldType>;
 
-public struct MainWorldId : IWorldId { }
+public struct MainWorldType : IWorldType { }
 
 Create(EcsConfig.Default());
-World.GetEntitiesCount();
+World.EntitiesCount();
 
 var entity = Entity.New<Position>();
 ```
@@ -419,31 +536,31 @@ var entity = Entity.New<Position>();
 The third way is the most convenient, use type-aliases in the root namespace (no need to write in every file)  
 This is the method that will be used everywhere in the examples
 ```c#
-public struct MainWorldId : IWorldId { }
+public struct MainWorldType : IWorldType { }
 
-public abstract class MyEsc : Ecs<MainWorldId> { }
-public abstract class MyWorld : Ecs<MainWorldId>.World { }
+public abstract class MyEcs : Ecs<MainWorldType> { }
+public abstract class MyWorld : Ecs<MainWorldType>.World { }
 
-MyEsc.Create(EcsConfig.Default());
-MyWorld.GetEntitiesCount();
+MyEcs.Create(EcsConfig.Default());
+MyWorld.EntitiesCount();
 
-var entity = MyEsc.Entity.New<Position>();
+var entity = MyEcs.Entity.New<Position>();
 ```
 
 <details><summary><u><b>Usage 👇</b></u></summary>
 
 ```c#
 // Defining the world ID
-public struct MainWorldId : IWorldId { }
+public struct MainWorldType : IWorldType { }
 
 // Register types - aliases
-public abstract class MyEsc : Ecs<MainWorldId> { }
-public abstract class MyWorld : Ecs<MainWorldId>.World { }
+public abstract class MyEcs : Ecs<MainWorldType> { }
+public abstract class MyWorld : Ecs<MainWorldType>.World { }
 
 // Creating a world with a default configuration
-MyEsc.Create(EcsConfig.Default());
+MyEcs.Create(EcsConfig.Default());
 // Or a custom one
-MyEsc.Create(new() {
+MyEcs.Create(new() {
             BaseEntitiesCount = 256,        // Base size of the entity array when creating a world
             BaseDeletedEntitiesCount = 256, // Base size of the deleted entity array when creating a world
             BaseComponentTypesCount = 64    // Base size of all variants of component types (number of pools for each type)
@@ -453,49 +570,47 @@ MyEsc.Create(new() {
             BaseTagPoolCount = 128,         // Base size of the data array of tags of a certain type (can be overridden for a specific type by explicit registration)
         });
 
-MyWorld.         // World access for MainWorldId (world ID)
-MyEsc.Entity.    // Entity access for MainWorldId (world ID)
-MyEsc.Context.   // Access to context for MainWorldId (world ID)
-MyEsc.Components.// Access to components for MainWorldId (world ID)
-MyEsc.Tags.      // Access to tags for MainWorldId (world ID)
-MyEsc.Masks.     // Access to masks for MainWorldId (world ID)
+MyWorld.         // World access for MainWorldType (world ID)
+MyEcs.Entity.    // Entity access for MainWorldType (world ID)
+MyEcs.Context.   // Access to context for MainWorldType (world ID)
+MyEcs.Components.// Access to components for MainWorldType (world ID)
+MyEcs.Tags.      // Access to tags for MainWorldType (world ID)
+MyEcs.Masks.     // Access to masks for MainWorldType (world ID)
 
 // Initialization of the world
-MyEsc.Initialize();
+MyEcs.Initialize();
 
 // Destroying and deleting the world's data
-MyEsc.Destroy();
+MyEcs.Destroy();
 
 ```
 </details>
 
 ### World
 World, contains meta information of entities, controls and manages creation and deletion of entities
-- Represented as a static class `Ecs<IWorldId>.World`
+- Represented as a static class `Ecs<IWorldType>.World`
 
 <details><summary><u><b>Usage 👇</b></u></summary>
 
 - Creation:
 ```c#
 // It is created only when called
-MyEsc.Create(config);
+MyEcs.Create(config);
 
 // Initialized only when called
-MyEsc.Initialize();
+MyEcs.Initialize();
 ```
 - Basic operations:
 ```c#
-// Explicit registration of component type (By default it is registered automatically and lazy)
-// Might be useful with NativeAot
-// Also to specify the base size of the array of given components of this type
-// Also for getting the dynamic identifier of the component type (section Advanced Features)
-var positionComponentId = MyWorld.RegisterComponent<Position>(256);
+// When registering a component, it is possible to specify the base size of the data array of components of this type
+// The dynamic identifier of the component type is also returned (section Additional Features)
+var positionComponentId = MyWorld.RegisterComponentType<Position>(256);
 
-// similar to RegisterComponent but for tags
-var unitTagId = MyWorld.RegisterTag<Unit>(256);
+// similar to RegisterComponentType, but for tags
+var unitTagId = MyWorld.RegisterTagType<Unit>(256);
 
-// similar to RegisterComponent but for masks
-var visibleMaskId = MyWorld.RegisterMask<Visible>();
+// similar to RegisterComponentType, but for masks
+var visibleMaskId = MyWorld.RegisterMaskType<Visible>();
 
 // true if the world is initialized
 bool initialized = MyWorld.IsInitialized();
@@ -510,7 +625,7 @@ int entitiesCapacity = MyWorld.EntitiesCapacity();
 short entityVersion = MyWorld.EntityVersion(entity);
 
 // Delete an entity and all its components - similar to entity.Destroy();
-MyWorld.DeleteEntity(entity);
+MyWorld.DestroyEntity(entity);
 
 // Copy all component tags and masks from one entity to another - similar to entitySrc.CopyTo(entityTarget);
 MyWorld.CopyEntityData(entitySrc, entityTarget);
@@ -524,20 +639,20 @@ var str = MyWorld.ToPrettyStringEntity(entity);
 ```
 </details>
 
-### SystemsId
+### SystemsType
 Type-tag system identifier, used to isolate static data when creating groups of systems in the same process
-- Represented as a user structure without data with a marker interface `ISystemsId`
+- Represented as a user structure without data with a marker interface `ISystemsType`
 
 Пример:
 ```c#
-public struct BaseSystemsId : ISystemsId { }
-public struct FixedSystemsId : ISystemsId { }
-public struct LateSystemsId : ISystemsId { }
+public struct BaseSystemsType : ISystemsType { }
+public struct FixedSystemsType : ISystemsType { }
+public struct LateSystemsType : ISystemsType { }
 ```
 
 ### Systems
 Systems, controls and manages the creation and run of systems
-- Represented as a static class `Systems<ISystemsId>`
+- Represented as a static class `Systems<ISystemsType>`
 
 <details><summary><u><b>Usage 👇</b></u></summary>
 
@@ -579,45 +694,43 @@ public struct SomeDestroySystem : IDestroySystem {
 - Создание и операции:
 ```c#
 // Define system identifier
-public struct MySystemsID : ISystemsId { }
+public struct MySystemsType : ISystemsType { }
 
 // Define type-alias for easy access to systems
-public abstract class MySystems : Systems<MySystemsID> { }
+public abstract class MySystems : MyEcs.Systems<MySystemsType> { }
 
 // The structures for the systems will be created here
 MySystems.Create();
 
 // Adding a system NOT implementing IUpdateSystem, i.e. Init and / or Destroy system
-MySystems.AddCallOnceSystem<SomeInitSystem>();
-MySystems.AddCallOnceSystem<SomeDestroySystem>();
-MySystems.AddCallOnceSystem<SomeInitDestroySystem>();
+MySystems.AddCallOnce(new SomeInitSystem());
+MySystems.AddCallOnce(new SomeDestroySystem>());
+MySystems.AddCallOnce(new SomeInitDestroySystem>());
 
 // Adding a system implementing IUpdateSystem, with any implementations such as Init or Destroy.
-MySystems.AddUpdateSystem<SomeComboSystem>();
+MySystems.AddUpdate(new SomeComboSystem());
 
-// Important! The systems are started in the order in which they are registered
+// Important! The systems are started in the order passed by the second argument (default order 0)
+MySystems.AddUpdate(new SomeComboSystem(), order: 3);
+
 // this means that first all Init systems will be started in the order in which they were added.
 // then in the game loop all Update systems will be executed in order.
 // then all Destroy type systems will be called in order when the world is destroyed.
 
-// Important! Systems can be structures or classes with an empty constructor, and are not initialized by the user 
+// Important! Systems can be structures or classes
 // (using structures can significantly increase perfomance for small systems)
-// They will be created during the registration process and all additional fields must be obtained from the context (Ecs.Context) or initialized using IInitSystem method Init().
 
-// All this allows you to connect systems in batches, which can significantly increase perfomance
-// A also allows to make systems more atomic (small functional blocks)
-
-// Adding a SystemsBatch, each system can implement any type of system but must have an IUpdateSystem implementation
-// Ecs.SystemsBatch type has overloads for different number of systems
-MySystems.AddBatchUpdateSystem<Ecs.SystemsBatch<
-    SomeUpdateSystem1,
-    SomeComboSystem1,
-    SomeComboSystem2,
-    SomeComboSystem3,
-    SomeComboSystem4,
-    SomeComboSystem5,
-    SomeComboSystem
->>();
+// It is possible to connect systems in batches, which can significantly increase performance
+// Adding a batches of systems, each system can implement any types of systems but must have IUpdateSystem implementation.
+MySystems.AddUpdate(
+    new SomeUpdateSystem1(),
+    new SomeComboSystem1(),
+    new SomeComboSystem2(),
+    new SomeComboSystem3(),
+    new SomeComboSystem4(),
+    new SomeComboSystem5(),
+    new SomeComboSystem()
+);
 
 // All Init systems will be called here
 MySystems.Initialize();
@@ -632,7 +745,7 @@ MySystems.Destroy();
 
 ### Context
 Context is an alternative to DI, a simple mechanism for storing and transferring user data and services to systems and other methods
-- Represented as a static class `Ecs<IWorldId>.Context<T>`
+- Represented as a static class `Ecs<IWorldType>.Context<T>`
 
 <details><summary><u><b>Usage 👇</b></u></summary>
 
@@ -934,9 +1047,9 @@ How it works:
 ```csharp
 // After calling Ecs.Create(EcsConfig.Default());
 // You can explicitly register component types and get a structure containing the type identifier
-ComponentDynId positionId = MyWorld.RegisterComponent<Position>();
-TagDynId unitTagId = MyWorld.RegisterTag<Unit>();
-MaskDynId frozenMaskId = MyWorld.RegisterMask<Frozen>();
+ComponentDynId positionId = MyWorld.RegisterComponentType<Position>();
+TagDynId unitTagId = MyWorld.RegisterTagType<Unit>();
+MaskDynId frozenMaskId = MyWorld.RegisterMaskType<Frozen>();
 
 // Alternatively, it is possible to get these identifiers at any time after initializing the world in the following way:
 ComponentDynId positionId = Ecs.Components.DynamicId<Position>();
@@ -1022,6 +1135,18 @@ public struct WeatherChanged : IEvent {
 }
 ```
 
+**IMPORTANT** ❗️  
+Requires registration in the world between creation and initialization
+
+Example:
+```c#
+MyEcs.Create(EcsConfig.Default());
+//...
+MyEcs.Events.RegisterEventType<WeatherChanged>()
+//...
+MyEcs.Initialize();
+```
+
 <details><summary><u><b>Usage 👇</b></u></summary>
 
 - Creation and basic operations:
@@ -1085,7 +1210,7 @@ For example:
 // Performance in il2Cpp (there is no difference in Mono) can be better in the second option by 10-40%
 // The same applies to tags and masks and all other methods HasAllOf<>, Delete<>, etc.
 ref var position = ref entity.RefMut<Position>(); // sugar method via the entity
-ref var position = ref Ecs.Components<Position>.RefMut(entity); // direct call
+ref var position = ref Ecs.Components<Position>.Value.RefMut(entity); // direct call
 ```
 ```csharp
 // It is also possible to use extension methods that are practically close in performance to the direct call
@@ -1102,12 +1227,12 @@ Component live template
 ```csharp
 public static class $COMPONENT$Extension {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ref $COMPONENT$ RefMut$COMPONENT$(this $ECS$.Entity entity) {
+    public static ref $COMPONENT$ Mut$COMPONENT$(this $ECS$.Entity entity) {
         return ref $ECS$.Components<$COMPONENT$>.Value.RefMut(entity);
     }
     
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static ref readonly $COMPONENT$ Ref$COMPONENT$(this $ECS$.Entity entity) {
+    public static ref readonly $COMPONENT$ $COMPONENT$(this $ECS$.Entity entity) {
         return ref $ECS$.Components<$COMPONENT$>.Value.Ref(entity);
     }
     
@@ -1152,13 +1277,8 @@ Tag live template
 ```csharp
 public static class $TAG$Extension {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static void Add$TAG$(this $Ecs$.Entity entity) {
-        $Ecs$.Tags<$TAG$>.Value.Add(entity);
-    }
-
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static void TryAdd$TAG$(this $Ecs$.Entity entity) {
-        $Ecs$.Tags<$TAG$>.Value.TryAdd(entity);
+    public static void Set$TAG$(this $Ecs$.Entity entity) {
+        $Ecs$.Tags<$TAG$>.Value.Set(entity);
     }
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -1177,7 +1297,7 @@ Mask live template
 ```csharp
 public static class $MASK$Extension {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static void Add$MASK$(this $Ecs$.Entity entity) {
+    public static void Set$MASK$(this $Ecs$.Entity entity) {
         $Ecs$.Masks<$MASK$>.Value.Set(entity);
     }
 
@@ -1203,12 +1323,12 @@ using FFS.Libraries.StaticEcs;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
-public struct MyWorldId : IWorldId { }
-public struct MySystemsId : ISystemsId { }
+public struct MyWorldType : IWorldType { }
+public struct MySystemsType : ISystemsType { }
 
-public abstract class MyEcs : Ecs<MyWorldId> { }
+public abstract class MyEcs : Ecs<MyWorldType> { }
 public abstract class MyWorld : MyEcs.World { }
-public abstract class MySystems : Systems<MySystemsId> { }
+public abstract class MySystems : MyEcs.Systems<MySystemsType> { }
 
 public struct Position : IComponent {
     public Transform Value;
@@ -1253,14 +1373,19 @@ public class Main : MonoBehaviour {
     
     void Start() {
         MyEcs.Create(EcsConfig.Default());
+                
+        MyWorld.RegisterComponentType<Position>();
+        MyWorld.RegisterComponentType<Direction>();
+        MyWorld.RegisterComponentType<Velocity>();
+        
         MyEcs.Initialize();
         
         MyEcs.Context<SceneData>.Set(sceneData);
         
         MySystems.Create();
         
-        MySystems.AddCallOnceSystem<CreateRandomEntities>();
-        MySystems.AddUpdateSystem<UpdatePositions>();
+        MySystems.AddCallOnce(new CreateRandomEntities());
+        MySystems.AddUpdate(new UpdatePositions());
         
         MySystems.Initialize();
     }
@@ -1280,4 +1405,4 @@ public class Main : MonoBehaviour {
 **WIP**
 
 # License
-[MIT license](./LICENSE)
+[MIT license](./LICENSE.md)

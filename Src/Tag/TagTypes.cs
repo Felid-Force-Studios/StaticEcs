@@ -7,12 +7,12 @@ using Unity.IL2CPP.CompilerServices;
 
 namespace FFS.Libraries.StaticEcs {
     public interface IComponentTags {
-        public void SetData<WorldID>(ref int minCount, ref int[] _entities) where WorldID : struct, IWorldId;
+        public void SetData<WorldType>(ref int minCount, ref int[] _entities) where WorldType : struct, IWorldType;
 
-        public void SetMask<WorldID>(byte bufId) where WorldID : struct, IWorldId;
+        public void SetMask<WorldType>(byte bufId) where WorldType : struct, IWorldType;
 
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId;
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType;
         #endif
     }
     
@@ -66,28 +66,28 @@ namespace FFS.Libraries.StaticEcs {
         public static TagAllAndNoneTypes<Tag<C1>, T> AllAndNone<T>(T without = default) where T : struct, IComponentTags => default;
         
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void SetMask<WorldID>(byte bufId) where WorldID : struct, IWorldId {
+        public void SetMask<WorldType>(byte bufId) where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            BlockTags<WorldID>(1);
+            BlockTags<WorldType>(1);
             #endif
 
-            Ecs<WorldID>.ModuleTags.Value.BitMask.SetInBuffer(bufId, Ecs<WorldID>.Tags<C1>.Value.id);
+            Ecs<WorldType>.ModuleTags.Value.BitMask.SetInBuffer(bufId, Ecs<WorldType>.Tags<C1>.Value.id);
         }
 
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            BlockTags<WorldID>(-1);
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            BlockTags<WorldType>(-1);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void BlockTags<WorldID>(int val) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.AddBlocker(val);
+        public void BlockTags<WorldType>(int val) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.AddBlocker(val);
         }
         #endif
     }
@@ -114,33 +114,33 @@ namespace FFS.Libraries.StaticEcs {
         
        
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void SetMask<WorldID>(byte bufId) where WorldID : struct, IWorldId {
+        public void SetMask<WorldType>(byte bufId) where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            BlockTags<WorldID>(1);
+            BlockTags<WorldType>(1);
             #endif
 
-            Ecs<WorldID>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
-                                                    Ecs<WorldID>.Tags<C1>.Value.id,
-                                                    Ecs<WorldID>.Tags<C2>.Value.id);
+            Ecs<WorldType>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
+                                                    Ecs<WorldType>.Tags<C1>.Value.id,
+                                                    Ecs<WorldType>.Tags<C2>.Value.id);
         }
 
 
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            BlockTags<WorldID>(-1);
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            BlockTags<WorldType>(-1);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void BlockTags<WorldID>(int val) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C2>.Value.AddBlocker(val);
+        public void BlockTags<WorldType>(int val) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C2>.Value.AddBlocker(val);
         }
         #endif
     }
@@ -167,35 +167,35 @@ namespace FFS.Libraries.StaticEcs {
         public static TagAny<C1, C2, C3> Any() => default;
        
        [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void SetMask<WorldID>(byte bufId) where WorldID : struct, IWorldId {
+        public void SetMask<WorldType>(byte bufId) where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            BlockTags<WorldID>(1);
+            BlockTags<WorldType>(1);
             #endif
 
-            Ecs<WorldID>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
-                                                    Ecs<WorldID>.Tags<C1>.Value.id,
-                                                    Ecs<WorldID>.Tags<C2>.Value.id,
-                                                    Ecs<WorldID>.Tags<C3>.Value.id);
+            Ecs<WorldType>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
+                                                    Ecs<WorldType>.Tags<C1>.Value.id,
+                                                    Ecs<WorldType>.Tags<C2>.Value.id,
+                                                    Ecs<WorldType>.Tags<C3>.Value.id);
         }
 
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            BlockTags<WorldID>(-1);
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            BlockTags<WorldType>(-1);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void BlockTags<WorldID>(int val) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C2>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C3>.Value.AddBlocker(val);
+        public void BlockTags<WorldType>(int val) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C2>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C3>.Value.AddBlocker(val);
         }
         #endif
     }
@@ -223,38 +223,38 @@ namespace FFS.Libraries.StaticEcs {
         public static TagAny<C1, C2, C3, C4> Any() => default;
         
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetMask<WorldID>(byte bufId) where WorldID : struct, IWorldId {
+        public void SetMask<WorldType>(byte bufId) where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            BlockTags<WorldID>(1);
+            BlockTags<WorldType>(1);
             #endif
 
-            Ecs<WorldID>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
-                                                    Ecs<WorldID>.Tags<C1>.Value.id,
-                                                    Ecs<WorldID>.Tags<C2>.Value.id,
-                                                    Ecs<WorldID>.Tags<C3>.Value.id,
-                                                    Ecs<WorldID>.Tags<C4>.Value.id);
+            Ecs<WorldType>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
+                                                    Ecs<WorldType>.Tags<C1>.Value.id,
+                                                    Ecs<WorldType>.Tags<C2>.Value.id,
+                                                    Ecs<WorldType>.Tags<C3>.Value.id,
+                                                    Ecs<WorldType>.Tags<C4>.Value.id);
         }
 
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            BlockTags<WorldID>(-1);
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            BlockTags<WorldType>(-1);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void BlockTags<WorldID>(int val) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C2>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C3>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C4>.Value.AddBlocker(val);
+        public void BlockTags<WorldType>(int val) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C2>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C3>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C4>.Value.AddBlocker(val);
         }
         #endif
     }
@@ -283,41 +283,41 @@ namespace FFS.Libraries.StaticEcs {
         public static TagAny<C1, C2, C3, C4, C5> Any() => default;
        
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C5>.Value.SetDataIfCountLess(ref minCount, ref entities);
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C5>.Value.SetDataIfCountLess(ref minCount, ref entities);
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void SetMask<WorldID>(byte bufId) where WorldID : struct, IWorldId {
+        public void SetMask<WorldType>(byte bufId) where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            BlockTags<WorldID>(1);
+            BlockTags<WorldType>(1);
             #endif
 
-            Ecs<WorldID>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
-                                                    Ecs<WorldID>.Tags<C1>.Value.id,
-                                                    Ecs<WorldID>.Tags<C2>.Value.id,
-                                                    Ecs<WorldID>.Tags<C3>.Value.id,
-                                                    Ecs<WorldID>.Tags<C4>.Value.id,
-                                                    Ecs<WorldID>.Tags<C5>.Value.id);
+            Ecs<WorldType>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
+                                                    Ecs<WorldType>.Tags<C1>.Value.id,
+                                                    Ecs<WorldType>.Tags<C2>.Value.id,
+                                                    Ecs<WorldType>.Tags<C3>.Value.id,
+                                                    Ecs<WorldType>.Tags<C4>.Value.id,
+                                                    Ecs<WorldType>.Tags<C5>.Value.id);
         }
        
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            BlockTags<WorldID>(-1);
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            BlockTags<WorldType>(-1);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void BlockTags<WorldID>(int val) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C2>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C3>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C4>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C5>.Value.AddBlocker(val);
+        public void BlockTags<WorldType>(int val) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C2>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C3>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C4>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C5>.Value.AddBlocker(val);
         }
         #endif
     }
@@ -347,44 +347,44 @@ namespace FFS.Libraries.StaticEcs {
         public static TagAny<C1, C2, C3, C4, C5, C6> Any() => default;
        
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C5>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C6>.Value.SetDataIfCountLess(ref minCount, ref entities);
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C5>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C6>.Value.SetDataIfCountLess(ref minCount, ref entities);
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void SetMask<WorldID>(byte bufId) where WorldID : struct, IWorldId {
+        public void SetMask<WorldType>(byte bufId) where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            BlockTags<WorldID>(1);
+            BlockTags<WorldType>(1);
             #endif
 
-            Ecs<WorldID>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
-                                                    Ecs<WorldID>.Tags<C1>.Value.id,
-                                                    Ecs<WorldID>.Tags<C2>.Value.id,
-                                                    Ecs<WorldID>.Tags<C3>.Value.id,
-                                                    Ecs<WorldID>.Tags<C4>.Value.id,
-                                                    Ecs<WorldID>.Tags<C5>.Value.id,
-                                                    Ecs<WorldID>.Tags<C6>.Value.id);
+            Ecs<WorldType>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
+                                                    Ecs<WorldType>.Tags<C1>.Value.id,
+                                                    Ecs<WorldType>.Tags<C2>.Value.id,
+                                                    Ecs<WorldType>.Tags<C3>.Value.id,
+                                                    Ecs<WorldType>.Tags<C4>.Value.id,
+                                                    Ecs<WorldType>.Tags<C5>.Value.id,
+                                                    Ecs<WorldType>.Tags<C6>.Value.id);
         }
        
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            BlockTags<WorldID>(-1);
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            BlockTags<WorldType>(-1);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void BlockTags<WorldID>(int val) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C2>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C3>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C4>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C5>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C6>.Value.AddBlocker(val);
+        public void BlockTags<WorldType>(int val) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C2>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C3>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C4>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C5>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C6>.Value.AddBlocker(val);
         }
         #endif
     }
@@ -415,47 +415,47 @@ namespace FFS.Libraries.StaticEcs {
         public static TagAny<C1, C2, C3, C4, C5, C6, C7> Any() => default;
        
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C5>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C6>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C7>.Value.SetDataIfCountLess(ref minCount, ref entities);
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C5>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C6>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C7>.Value.SetDataIfCountLess(ref minCount, ref entities);
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void SetMask<WorldID>(byte bufId) where WorldID : struct, IWorldId {
+        public void SetMask<WorldType>(byte bufId) where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            BlockTags<WorldID>(1);
+            BlockTags<WorldType>(1);
             #endif
 
-            Ecs<WorldID>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
-                                                    Ecs<WorldID>.Tags<C1>.Value.id,
-                                                    Ecs<WorldID>.Tags<C2>.Value.id,
-                                                    Ecs<WorldID>.Tags<C3>.Value.id,
-                                                    Ecs<WorldID>.Tags<C4>.Value.id,
-                                                    Ecs<WorldID>.Tags<C5>.Value.id,
-                                                    Ecs<WorldID>.Tags<C6>.Value.id,
-                                                    Ecs<WorldID>.Tags<C7>.Value.id);
+            Ecs<WorldType>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
+                                                    Ecs<WorldType>.Tags<C1>.Value.id,
+                                                    Ecs<WorldType>.Tags<C2>.Value.id,
+                                                    Ecs<WorldType>.Tags<C3>.Value.id,
+                                                    Ecs<WorldType>.Tags<C4>.Value.id,
+                                                    Ecs<WorldType>.Tags<C5>.Value.id,
+                                                    Ecs<WorldType>.Tags<C6>.Value.id,
+                                                    Ecs<WorldType>.Tags<C7>.Value.id);
         }
        
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            BlockTags<WorldID>(-1);
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            BlockTags<WorldType>(-1);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void BlockTags<WorldID>(int val) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C2>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C3>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C4>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C5>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C6>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C7>.Value.AddBlocker(val);
+        public void BlockTags<WorldType>(int val) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C2>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C3>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C4>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C5>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C6>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C7>.Value.AddBlocker(val);
         }
         #endif
     }
@@ -488,50 +488,50 @@ namespace FFS.Libraries.StaticEcs {
 
        
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minCount, ref int[] entities) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C5>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C6>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C7>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            Ecs<WorldID>.Tags<C8>.Value.SetDataIfCountLess(ref minCount, ref entities);
+        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C5>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C6>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C7>.Value.SetDataIfCountLess(ref minCount, ref entities);
+            Ecs<WorldType>.Tags<C8>.Value.SetDataIfCountLess(ref minCount, ref entities);
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void SetMask<WorldID>(byte bufId) where WorldID : struct, IWorldId {
+        public void SetMask<WorldType>(byte bufId) where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            BlockTags<WorldID>(1);
+            BlockTags<WorldType>(1);
             #endif
 
-            Ecs<WorldID>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
-                                                    Ecs<WorldID>.Tags<C1>.Value.id,
-                                                    Ecs<WorldID>.Tags<C2>.Value.id,
-                                                    Ecs<WorldID>.Tags<C3>.Value.id,
-                                                    Ecs<WorldID>.Tags<C4>.Value.id,
-                                                    Ecs<WorldID>.Tags<C5>.Value.id,
-                                                    Ecs<WorldID>.Tags<C6>.Value.id,
-                                                    Ecs<WorldID>.Tags<C7>.Value.id,
-                                                    Ecs<WorldID>.Tags<C8>.Value.id);
+            Ecs<WorldType>.ModuleTags.Value.BitMask.SetInBuffer(bufId, 
+                                                    Ecs<WorldType>.Tags<C1>.Value.id,
+                                                    Ecs<WorldType>.Tags<C2>.Value.id,
+                                                    Ecs<WorldType>.Tags<C3>.Value.id,
+                                                    Ecs<WorldType>.Tags<C4>.Value.id,
+                                                    Ecs<WorldType>.Tags<C5>.Value.id,
+                                                    Ecs<WorldType>.Tags<C6>.Value.id,
+                                                    Ecs<WorldType>.Tags<C7>.Value.id,
+                                                    Ecs<WorldType>.Tags<C8>.Value.id);
         }
         
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            BlockTags<WorldID>(-1);
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            BlockTags<WorldType>(-1);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void BlockTags<WorldID>(int val) where WorldID : struct, IWorldId {
-            Ecs<WorldID>.Tags<C1>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C2>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C3>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C4>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C5>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C6>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C7>.Value.AddBlocker(val);
-            Ecs<WorldID>.Tags<C8>.Value.AddBlocker(val);
+        public void BlockTags<WorldType>(int val) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Tags<C1>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C2>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C3>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C4>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C5>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C6>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C7>.Value.AddBlocker(val);
+            Ecs<WorldType>.Tags<C8>.Value.AddBlocker(val);
         }
         #endif
     }

@@ -13,7 +13,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct EventReceiver<WorldID, T> where T : struct, IEvent where WorldID : struct, IWorldId {
+    public struct EventReceiver<WorldType, T> where T : struct, IEvent where WorldType : struct, IWorldType {
         internal int _id;
 
         [MethodImpl(AggressiveInlining)]
@@ -24,26 +24,26 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void MarkAsReadAll() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (_id < 0) throw new Exception($"[ Ecs<{typeof(WorldID)}>.EventReceiver<{typeof(T)}>.MarkAsReadAll ] receiver is deleted");
+            if (_id < 0) throw new Exception($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.MarkAsReadAll ] receiver is deleted");
             #endif
-            Ecs<WorldID>.Events.Pool<T>.Value.MarkAsReadAll(_id);
+            Ecs<WorldType>.Events.Pool<T>.Value.MarkAsReadAll(_id);
         }
             
         [MethodImpl(AggressiveInlining)]
         public void SuppressAll() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (_id < 0) throw new Exception($"[ Ecs<{typeof(WorldID)}>.EventReceiver<{typeof(T)}>.SuppressAll ] receiver is deleted");
+            if (_id < 0) throw new Exception($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.SuppressAll ] receiver is deleted");
             #endif
-            Ecs<WorldID>.Events.Pool<T>.Value.ClearEvents(_id);
+            Ecs<WorldType>.Events.Pool<T>.Value.ClearEvents(_id);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public Ecs<WorldID>.EventIterator<T> GetEnumerator() {
+        public Ecs<WorldType>.EventIterator<T> GetEnumerator() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (_id < 0) throw new Exception($"[ Ecs<{typeof(WorldID)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] receiver is deleted");
-            if (Ecs<WorldID>.Events.Pool<T>.Value.IsBlocked()) throw new Exception($"[ Ecs<{typeof(WorldID)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] event pool is blocked");
+            if (_id < 0) throw new Exception($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] receiver is deleted");
+            if (Ecs<WorldType>.Events.Pool<T>.Value.IsBlocked()) throw new Exception($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] event pool is blocked");
             #endif
-            return new Ecs<WorldID>.EventIterator<T>(_id);
+            return new Ecs<WorldType>.EventIterator<T>(_id);
         }
     }
     
@@ -51,7 +51,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> {
+    public abstract partial class Ecs<WorldType> {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]

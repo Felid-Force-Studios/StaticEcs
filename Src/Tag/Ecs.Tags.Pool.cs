@@ -11,7 +11,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> {
+    public abstract partial class Ecs<WorldType> {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
@@ -34,10 +34,10 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public void Set(Entity entity) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, Method: Add, World not initialized");
-                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, Method: Add, Tag type not registered");
-                if (!entity.IsActual()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Add, cannot access ID - {id} from deleted entity");
-                if (IsBlocked()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Add,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Add, World not initialized");
+                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Add, Tag type not registered");
+                if (!entity.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Add, cannot access ID - {id} from deleted entity");
+                if (IsBlocked()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Add,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
                 #endif
 
                 var eid = entity._id;
@@ -67,9 +67,9 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public bool Has(Entity entity) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, Method: Has, World not initialized");
-                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, Method: Has, Tag type not registered");
-                if (!entity.IsActual()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Has, cannot access ID - {id} from deleted entity");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Has, World not initialized");
+                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Has, Tag type not registered");
+                if (!entity.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Has, cannot access ID - {id} from deleted entity");
                 #endif
                 return _dataIdxByEntityId[entity._id] >= 0;
             }
@@ -77,10 +77,10 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public bool Delete(Entity entity) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, Method: Delete, World not initialized");
-                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, Method: Delete, Tag type not registered");
-                if (!entity.IsActual()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: DelInternal, cannot access ID - {id} from deleted entity");
-                if (IsBlocked()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: DelInternal,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Delete, World not initialized");
+                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Delete, Tag type not registered");
+                if (!entity.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: DelInternal, cannot access ID - {id} from deleted entity");
+                if (IsBlocked()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: DelInternal,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
                 #endif
 
                 ref var idx = ref _dataIdxByEntityId[entity._id];
@@ -112,11 +112,11 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public void Copy(Entity src, Entity dst) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, Method: Copy, World not initialized");
-                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, Method: Copy, Tag type not registered");
-                if (!src.IsActual()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
-                if (!dst.IsActual()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
-                if (IsBlocked()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Copy,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
+                if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Copy, World not initialized");
+                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Copy, Tag type not registered");
+                if (!src.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
+                if (!dst.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
+                if (IsBlocked()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Copy,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
                 #endif
 
                 if (Has(src)) {
@@ -156,15 +156,15 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public TagDynId DynamicId() {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (World.Status < WorldStatus.Created) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, Method: DynamicId, World not created");
-                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldID)}>.Tags<{typeof(T)}>, Method: DynamicId, Tag type not registered");
+                if (World.Status < WorldStatus.Created) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: DynamicId, World not created");
+                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: DynamicId, Tag type not registered");
                 #endif
                 return new TagDynId(id);
             }
 
             [MethodImpl(AggressiveInlining)]
             internal void SetDataIfCountLess(ref int count, ref int[] entities) {
-                if (_tagCount < count || count == 0) {
+                if (_tagCount < count) {
                     count = _tagCount;
                     entities = _entities;
                 }
@@ -184,7 +184,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal void SetDataIfCountMore(ref int count, ref int[] entities) {
-                if (_tagCount > count || count == 0) {
+                if (_tagCount > count) {
                     count = _tagCount;
                     entities = _entities;
                 }
@@ -218,7 +218,7 @@ namespace FFS.Libraries.StaticEcs {
             internal void AddBlocker(int amount) {
                 _blockers += amount;
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (_blockers < 0) throw new Exception($"TagsPool<{typeof(WorldID)}, {typeof(T)}>, Method: AddBlocker, incorrect pool user balance when attempting to release");
+                if (_blockers < 0) throw new Exception($"TagsPool<{typeof(WorldType)}, {typeof(T)}>, Method: AddBlocker, incorrect pool user balance when attempting to release");
                 #endif
             }
 

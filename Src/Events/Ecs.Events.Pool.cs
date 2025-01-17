@@ -40,61 +40,61 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public readonly struct EventPoolWrapper<WorldID, T> : IEventPoolWrapper where T : struct, IEvent where WorldID : struct, IWorldId {
+    public readonly struct EventPoolWrapper<WorldType, T> : IEventPoolWrapper where T : struct, IEvent where WorldType : struct, IWorldType {
         [MethodImpl(AggressiveInlining)]
-        internal ref T Get(int idx) => ref Ecs<WorldID>.Events.Pool<T>.Value.Get(idx);
+        internal ref T Get(int idx) => ref Ecs<WorldType>.Events.Pool<T>.Value.Get(idx);
 
         [MethodImpl(AggressiveInlining)]
-        public bool Add(T value) => Ecs<WorldID>.Events.Pool<T>.Value.Add(value);
+        public bool Add(T value) => Ecs<WorldType>.Events.Pool<T>.Value.Add(value);
 
         [MethodImpl(AggressiveInlining)]
-        IEvent IEventPoolWrapper.GetRaw(int idx) => Ecs<WorldID>.Events.Pool<T>.Value.Get(idx);
+        IEvent IEventPoolWrapper.GetRaw(int idx) => Ecs<WorldType>.Events.Pool<T>.Value.Get(idx);
 
         [MethodImpl(AggressiveInlining)]
-        void IEventPoolWrapper.Destroy() => Ecs<WorldID>.Events.Pool<T>.Value.Destroy();
+        void IEventPoolWrapper.Destroy() => Ecs<WorldType>.Events.Pool<T>.Value.Destroy();
 
         [MethodImpl(AggressiveInlining)]
-        public bool AddRaw(IEvent value) => Ecs<WorldID>.Events.Pool<T>.Value.Add((T) value);
+        public bool AddRaw(IEvent value) => Ecs<WorldType>.Events.Pool<T>.Value.Add((T) value);
 
         [MethodImpl(AggressiveInlining)]
-        void IEventPoolWrapper.PutRaw(int idx, IEvent value) => Ecs<WorldID>.Events.Pool<T>.Value.Get(idx) = (T) value;
+        void IEventPoolWrapper.PutRaw(int idx, IEvent value) => Ecs<WorldType>.Events.Pool<T>.Value.Get(idx) = (T) value;
 
         [MethodImpl(AggressiveInlining)]
-        public bool Add() => Ecs<WorldID>.Events.Pool<T>.Value.Add();
+        public bool Add() => Ecs<WorldType>.Events.Pool<T>.Value.Add();
 
         [MethodImpl(AggressiveInlining)]
-        void IEventPoolWrapper.Del(int idx) => Ecs<WorldID>.Events.Pool<T>.Value.Del(idx, true);
+        void IEventPoolWrapper.Del(int idx) => Ecs<WorldType>.Events.Pool<T>.Value.Del(idx, true);
 
         [MethodImpl(AggressiveInlining)]
-        short IEventPoolWrapper.Version(int idx) => Ecs<WorldID>.Events.Pool<T>.Value._versions[idx];
+        short IEventPoolWrapper.Version(int idx) => Ecs<WorldType>.Events.Pool<T>.Value._versions[idx];
 
         [MethodImpl(AggressiveInlining)]
-        bool IEventPoolWrapper.IsDeleted(int idx) => Ecs<WorldID>.Events.Pool<T>.Value._versions[idx] <= 0;
+        bool IEventPoolWrapper.IsDeleted(int idx) => Ecs<WorldType>.Events.Pool<T>.Value._versions[idx] <= 0;
 
         [MethodImpl(AggressiveInlining)]
-        int IEventPoolWrapper.UnreadCount(int idx) => Ecs<WorldID>.Events.Pool<T>.Value._dataReceiverUnreadCount[idx];
+        int IEventPoolWrapper.UnreadCount(int idx) => Ecs<WorldType>.Events.Pool<T>.Value._dataReceiverUnreadCount[idx];
 
         [MethodImpl(AggressiveInlining)]
-        int IEventPoolWrapper.Last() => Ecs<WorldID>.Events.Pool<T>.Value._dataCount - 1;
+        int IEventPoolWrapper.Last() => Ecs<WorldType>.Events.Pool<T>.Value._dataCount - 1;
 
         [MethodImpl(AggressiveInlining)]
-        int IEventPoolWrapper.NotDeletedCount() => Ecs<WorldID>.Events.Pool<T>.Value._notDeletedCount;
+        int IEventPoolWrapper.NotDeletedCount() => Ecs<WorldType>.Events.Pool<T>.Value._notDeletedCount;
 
         [MethodImpl(AggressiveInlining)]
-        int IEventPoolWrapper.Capacity() => Ecs<WorldID>.Events.Pool<T>.Value._data.Length;
+        int IEventPoolWrapper.Capacity() => Ecs<WorldType>.Events.Pool<T>.Value._data.Length;
 
         [MethodImpl(AggressiveInlining)]
-        int IEventPoolWrapper.ReceiversCount() => Ecs<WorldID>.Events.Pool<T>.Value._receiversCount - Ecs<WorldID>.Events.Pool<T>.Value._deletedReceiversCount;
+        int IEventPoolWrapper.ReceiversCount() => Ecs<WorldType>.Events.Pool<T>.Value._receiversCount - Ecs<WorldType>.Events.Pool<T>.Value._deletedReceiversCount;
 
         [MethodImpl(AggressiveInlining)]
-        internal void Del(int idx) => Ecs<WorldID>.Events.Pool<T>.Value.Del(idx, true);
+        internal void Del(int idx) => Ecs<WorldType>.Events.Pool<T>.Value.Del(idx, true);
     }
     
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> {
+    public abstract partial class Ecs<WorldType> {
         
         public abstract partial class Events {
             #if ENABLE_IL2CPP
@@ -138,7 +138,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal EventReceiver<WorldID, T> CreateReceiver() {
+                internal EventReceiver<WorldType, T> CreateReceiver() {
                     #if DEBUG || FFS_ECS_ENABLE_DEBUG
                     if (_blockers > 0) throw new Exception($"[ Ecs<{typeof(World)}>.Events.Pool<{typeof(T)}>.CreateReceiver ] event pool cannot be changed, it is in read-only mode");
                     #endif
@@ -149,7 +149,7 @@ namespace FFS.Libraries.StaticEcs {
                     if (_deletedReceiversCount > 0) {
                         var receiver = _deletedReceivers[--_deletedReceiversCount];
                         _dataReceiverOffsets[receiver] = _dataFirstIdx;
-                        return new EventReceiver<WorldID, T>(receiver);
+                        return new EventReceiver<WorldType, T>(receiver);
                     }
                     
                     if (_receiversCount == _dataReceiverOffsets.Length) {
@@ -159,11 +159,11 @@ namespace FFS.Libraries.StaticEcs {
                         }
                     }
                     
-                    return new EventReceiver<WorldID, T>(_receiversCount++);
+                    return new EventReceiver<WorldType, T>(_receiversCount++);
                 }
                 
                 [MethodImpl(AggressiveInlining)]
-                internal void DeleteReceiver(ref EventReceiver<WorldID, T> receiver) {
+                internal void DeleteReceiver(ref EventReceiver<WorldType, T> receiver) {
                     #if DEBUG || FFS_ECS_ENABLE_DEBUG
                     if (_blockers > 0) throw new Exception($"[ Ecs<{typeof(World)}>.Events.Pool<{typeof(T)}>.DeleteReceiver ] event pool cannot be changed, it is in read-only mode");
                     #endif

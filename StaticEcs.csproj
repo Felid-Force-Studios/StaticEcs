@@ -18,7 +18,7 @@
         <RootNamespace>FFS.Libraries.StaticEcs</RootNamespace>
         
         <Title>StaticECS</Title>
-        <Version>0.9.0</Version>
+        <Version>0.9.2.1</Version>
         <Authors>Felid-Force-Studios</Authors>
         <Description>C# Entity Component System Framework</Description>
         <Copyright>Felid-Force-Studios</Copyright>
@@ -51,52 +51,7 @@
         <Reference Include="System"/>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="Src\Component\Component.cs" />
-        <Compile Include="Src\Component\ComponentTypes.cs" />
-        <Compile Include="Src\Component\ComponentTypesRaw.cs" />
-        <Compile Include="Src\Component\Ecs.Components.cs" />
-        <Compile Include="Src\Component\Ecs.Components.Pool.cs" />
-        <Compile Include="Src\Component\Ecs.Components.PoolWrapper.cs" />
-        <Compile Include="Src\Component\Ecs.Entity.Component.cs" />
-        <Compile Include="Src\Component\Ecs.World.QueryComponents.cs" />
-        <Compile Include="Src\Component\QueryIterator.cs" />
-        <Compile Include="Src\Component\QueryMethodComponents.cs" />
-        <Compile Include="Src\Component\QueryRunner.cs" />
-        <Compile Include="Src\Ecs.Context.cs" />
-        <Compile Include="Src\Ecs.cs" />
-        <Compile Include="Src\Ecs.Entity.cs" />
-        <Compile Include="Src\Ecs.World.cs" />
-        <Compile Include="Src\Events\Ecs.Event.cs" />
-        <Compile Include="Src\Events\Ecs.EventReceiver.cs" />
-        <Compile Include="Src\Events\Ecs.Events.cs" />
-        <Compile Include="Src\Events\Ecs.Events.Pool.cs" />
-        <Compile Include="Src\Mask\Ecs.Entity.Mask.cs" />
-        <Compile Include="Src\Mask\Ecs.Masks.cs" />
-        <Compile Include="Src\Mask\Ecs.Masks.Pool.cs" />
-        <Compile Include="Src\Mask\Ecs.Masks.PoolWrapper.cs" />
-        <Compile Include="Src\Mask\Mask.cs" />
-        <Compile Include="Src\Mask\MaskTypes.cs" />
-        <Compile Include="Src\Mask\MaskTypesRaw.cs" />
-        <Compile Include="Src\Mask\QueryMethodMasks.cs" />
-        <Compile Include="Src\Query\OnCreateEntityFunctions.cs" />
-        <Compile Include="Src\Query\QueryIterator.cs" />
-        <Compile Include="Src\Query\QueryMethod.cs" />
-        <Compile Include="Src\Query\QueryWith.cs" />
-        <Compile Include="Src\Query\QueryWithAdds.cs" />
-        <Compile Include="Src\Query\World.Query.cs" />
-        <Compile Include="Src\System\BatchSystems.cs" />
-        <Compile Include="Src\System\System.cs" />
-        <Compile Include="Src\System\Systems.cs" />
-        <Compile Include="Src\Tag\Ecs.Tags.cs" />
-        <Compile Include="Src\Tag\Ecs.Tags.Pool.cs" />
-        <Compile Include="Src\Tag\Ecs.Tags.PoolWrapper.cs" />
-        <Compile Include="Src\Tag\Entity.Tag.cs" />
-        <Compile Include="Src\Tag\QueryMethodTags.cs" />
-        <Compile Include="Src\Tag\Tag.cs" />
-        <Compile Include="Src\Tag\TagTypes.cs" />
-        <Compile Include="Src\Tag\TagTypesRaw.cs" />
-        <Compile Include="Src\Utils\BitMask.cs" />
-        <Compile Include="Src\Utils\Utils.cs" />
+        <Compile Include="Src/**/*.cs" />
     </ItemGroup>
     <ItemGroup>
       <Content Include="Benchmark.md" />

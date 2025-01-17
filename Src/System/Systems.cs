@@ -7,18 +7,18 @@ using Unity.IL2CPP.CompilerServices;
 #endif
 
 namespace FFS.Libraries.StaticEcs {
-    public interface ISystemsId { }
+    public interface ISystemsType { }
     
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> where WorldID : struct, IWorldId {
+    public abstract partial class Ecs<WorldType> where WorldType : struct, IWorldType {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
-        public abstract partial class Systems<SysID> where SysID : struct, ISystemsId {
+        public abstract partial class Systems<SysType> where SysType : struct, ISystemsType {
             internal static ISystemsBatch[] _batchSystems;
             internal static (ISystem system, short order)[] _allSystems;
             internal static int _allSystemsCount;
@@ -34,13 +34,13 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void AddCallOnceSystem<S>(S system, short order = 0) where S : ICallOnceSystem {
+            public static void AddCallOnce<S>(S system, short order = 0) where S : ICallOnceSystem {
                 EnsureSize();
                 _allSystems[_allSystemsCount++] = (system, order);
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<S01>(S01 s01, short order = 0) where S01 : IUpdateSystem {
+            public static void AddUpdate<S01>(S01 s01, short order = 0) where S01 : IUpdateSystem {
                 EnsureSize();
                 _updateSystemsCount += 1;
                 _allSystems[_allSystemsCount++] = (new SystemsBatch<S01>(s01), order);
@@ -117,7 +117,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02
             >(
                 S01 s01, S02 s02,
@@ -130,7 +130,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03
             >(
                 S01 s01, S02 s02, S03 s03,
@@ -143,7 +143,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04
             >(
                 S01 s01, S02 s02, S03 s03, S04 s04,
@@ -156,7 +156,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05
             >(
                 S01 s01, S02 s02, S03 s03, S04 s04, S05 s05,
@@ -169,7 +169,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06
             >(
                 S01 s01, S02 s02, S03 s03, S04 s04, S05 s05, S06 s06,
@@ -182,7 +182,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07
             >(
                 S01 s01, S02 s02, S03 s03, S04 s04, S05 s05, S06 s06, S07 s07,
@@ -195,7 +195,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07, S08
             >(
                 S01 s01, S02 s02, S03 s03, S04 s04, S05 s05, S06 s06, S07 s07, S08 s08,
@@ -208,7 +208,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07, S08,
                 S09
             >(
@@ -228,7 +228,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07, S08,
                 S09, S10
             >(
@@ -248,7 +248,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07, S08,
                 S09, S10, S11
             >(
@@ -268,7 +268,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07, S08,
                 S09, S10, S11, S12
             >(
@@ -288,7 +288,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07, S08,
                 S09, S10, S11, S12, S13
             >(
@@ -308,7 +308,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07, S08,
                 S09, S10, S11, S12, S13, S14
             >(
@@ -328,7 +328,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07, S08,
                 S09, S10, S11, S12, S13, S14, S15
             >(
@@ -348,7 +348,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07, S08,
                 S09, S10, S11, S12, S13, S14, S15, S16
             >(
@@ -368,7 +368,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07, S08,
                 S09, S10, S11, S12, S13, S14, S15, S16,
                 S17, S18, S19, S20, S21, S22, S23, S24
@@ -393,7 +393,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static void AddUpdateSystem<
+            public static void AddUpdate<
                 S01, S02, S03, S04, S05, S06, S07, S08,
                 S09, S10, S11, S12, S13, S14, S15, S16,
                 S17, S18, S19, S20, S21, S22, S23, S24,

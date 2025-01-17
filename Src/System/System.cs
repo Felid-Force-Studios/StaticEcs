@@ -31,7 +31,7 @@ namespace FFS.Libraries.StaticEcs {
         internal void Destroy();
         
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
-        internal void Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res);
+        internal void Info(List<SystemInfo> res);
 
         internal bool SetActive(int sysIdx, bool active);
         #endif
@@ -41,12 +41,12 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> where WorldID : struct, IWorldId {
+    public abstract partial class Ecs<WorldType> where WorldType : struct, IWorldType {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
-        public abstract partial class Systems<SysID> {
+        public abstract partial class Systems<SysType> {
             #if ENABLE_IL2CPP
             [Il2CppSetOption(Option.NullChecks, false)]
             [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
@@ -132,8 +132,14 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                internal (string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem) Info() {
-                    return (TypeData<TSystem>.Name, Time, Active, initSystem, destroySystem);
+                internal SystemInfo Info() {
+                    return new SystemInfo {
+                        SystemType = typeof(TSystem),
+                        Enabled = Active,
+                        AvgUpdateTime = Time,
+                        InitSystem = initSystem,
+                        DestroySystem = destroySystem
+                    };
                 }
                 
                 internal bool SetActive(bool val) {
@@ -144,4 +150,14 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
     }
+    
+    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+    internal struct SystemInfo {
+        public System.Type SystemType;
+        public float AvgUpdateTime;
+        public bool Enabled;
+        public bool InitSystem;
+        public bool DestroySystem;
+    }
+    #endif
 }

@@ -13,12 +13,12 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> where WorldID : struct, IWorldId {
+    public abstract partial class Ecs<WorldType> where WorldType : struct, IWorldType {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
-        public abstract partial class Systems<SysID> {
+        public abstract partial class Systems<SysType> {
             #if ENABLE_IL2CPP
             [Il2CppSetOption(Option.NullChecks, false)]
             [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
@@ -74,7 +74,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
                     res.Add(s09.Info()); res.Add(s10.Info()); res.Add(s11.Info()); res.Add(s12.Info()); res.Add(s13.Info()); res.Add(s14.Info()); res.Add(s15.Info()); res.Add(s16.Info());
@@ -141,7 +141,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
                     res.Add(s09.Info()); res.Add(s10.Info()); res.Add(s11.Info()); res.Add(s12.Info()); res.Add(s13.Info()); res.Add(s14.Info()); res.Add(s15.Info()); res.Add(s16.Info());
@@ -197,7 +197,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
                     res.Add(s09.Info()); res.Add(s10.Info()); res.Add(s11.Info()); res.Add(s12.Info()); res.Add(s13.Info()); res.Add(s14.Info()); res.Add(s15.Info()); res.Add(s16.Info());
@@ -251,7 +251,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
                     res.Add(s09.Info()); res.Add(s10.Info()); res.Add(s11.Info()); res.Add(s12.Info()); res.Add(s13.Info()); res.Add(s14.Info()); res.Add(s15.Info());
@@ -305,7 +305,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
                     res.Add(s09.Info()); res.Add(s10.Info()); res.Add(s11.Info()); res.Add(s12.Info()); res.Add(s13.Info()); res.Add(s14.Info());
@@ -359,7 +359,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
                     res.Add(s09.Info()); res.Add(s10.Info()); res.Add(s11.Info()); res.Add(s12.Info()); res.Add(s13.Info());
@@ -413,7 +413,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
                     res.Add(s09.Info()); res.Add(s10.Info()); res.Add(s11.Info()); res.Add(s12.Info());
@@ -467,7 +467,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
                     res.Add(s09.Info()); res.Add(s10.Info()); res.Add(s11.Info());
@@ -521,7 +521,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
                     res.Add(s09.Info()); res.Add(s10.Info());
@@ -575,7 +575,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
                     res.Add(s09.Info());
@@ -619,7 +619,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
                 }
@@ -661,7 +661,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info());
                 }
@@ -703,7 +703,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info());
                 }
@@ -745,7 +745,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info());
                 }
@@ -787,7 +787,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info());
                 }
@@ -829,7 +829,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info());
                 }
@@ -871,7 +871,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info());
                 }
@@ -913,7 +913,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                void ISystemsBatch.Info(List<(string name, float avgUpdateTime, bool enabled, bool initSystem, bool destroySystem)> res) {
+                void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info());
                 }

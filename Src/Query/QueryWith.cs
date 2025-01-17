@@ -97,7 +97,7 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     public readonly struct WithNothing : IPrimaryQueryMethod {
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minComponentsCount, ref int[] minEntities) where WorldID : struct, IWorldId { }
+        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType { }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(int entityId) {
@@ -105,7 +105,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId { }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
     }
 
     #if ENABLE_IL2CPP
@@ -121,8 +121,8 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minComponentsCount, ref int[] minEntities) where WorldID : struct, IWorldId {
-            _qm1.SetData<WorldID>(ref minComponentsCount, ref minEntities);
+        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+            _qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -131,8 +131,8 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            _qm1.Dispose<WorldID>();
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            _qm1.Dispose<WorldType>();
         }
     }
 
@@ -152,9 +152,9 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minComponentsCount, ref int[] minEntities) where WorldID : struct, IWorldId {
-            qm1.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm2.SetData<WorldID>(ref minComponentsCount, ref minEntities);
+        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+            qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -163,9 +163,9 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            qm1.Dispose<WorldID>();
-            qm2.Dispose<WorldID>();
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Dispose<WorldType>();
+            qm2.Dispose<WorldType>();
         }
     }
 
@@ -188,10 +188,10 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minComponentsCount, ref int[] minEntities) where WorldID : struct, IWorldId {
-            qm1.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm2.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm3.SetData<WorldID>(ref minComponentsCount, ref minEntities);
+        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+            qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -200,10 +200,10 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            qm1.Dispose<WorldID>();
-            qm2.Dispose<WorldID>();
-            qm3.Dispose<WorldID>();
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Dispose<WorldType>();
+            qm2.Dispose<WorldType>();
+            qm3.Dispose<WorldType>();
         }
     }
 
@@ -229,11 +229,11 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minComponentsCount, ref int[] minEntities) where WorldID : struct, IWorldId {
-            qm1.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm2.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm3.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm4.SetData<WorldID>(ref minComponentsCount, ref minEntities);
+        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+            qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm4.SetData<WorldType>(ref minComponentsCount, ref minEntities);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -242,11 +242,11 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            qm1.Dispose<WorldID>();
-            qm2.Dispose<WorldID>();
-            qm3.Dispose<WorldID>();
-            qm4.Dispose<WorldID>();
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Dispose<WorldType>();
+            qm2.Dispose<WorldType>();
+            qm3.Dispose<WorldType>();
+            qm4.Dispose<WorldType>();
         }
     }
 
@@ -275,12 +275,12 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minComponentsCount, ref int[] minEntities) where WorldID : struct, IWorldId {
-            qm1.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm2.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm3.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm4.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm5.SetData<WorldID>(ref minComponentsCount, ref minEntities);
+        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+            qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm4.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm5.SetData<WorldType>(ref minComponentsCount, ref minEntities);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -289,12 +289,12 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            qm1.Dispose<WorldID>();
-            qm2.Dispose<WorldID>();
-            qm3.Dispose<WorldID>();
-            qm4.Dispose<WorldID>();
-            qm5.Dispose<WorldID>();
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Dispose<WorldType>();
+            qm2.Dispose<WorldType>();
+            qm3.Dispose<WorldType>();
+            qm4.Dispose<WorldType>();
+            qm5.Dispose<WorldType>();
         }
     }
 
@@ -326,13 +326,13 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minComponentsCount, ref int[] minEntities) where WorldID : struct, IWorldId {
-            qm1.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm2.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm3.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm4.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm5.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm6.SetData<WorldID>(ref minComponentsCount, ref minEntities);
+        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+            qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm4.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm5.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm6.SetData<WorldType>(ref minComponentsCount, ref minEntities);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -341,13 +341,13 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            qm1.Dispose<WorldID>();
-            qm2.Dispose<WorldID>();
-            qm3.Dispose<WorldID>();
-            qm4.Dispose<WorldID>();
-            qm5.Dispose<WorldID>();
-            qm6.Dispose<WorldID>();
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Dispose<WorldType>();
+            qm2.Dispose<WorldType>();
+            qm3.Dispose<WorldType>();
+            qm4.Dispose<WorldType>();
+            qm5.Dispose<WorldType>();
+            qm6.Dispose<WorldType>();
         }
     }
 
@@ -382,14 +382,14 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minComponentsCount, ref int[] minEntities) where WorldID : struct, IWorldId {
-            qm1.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm2.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm3.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm4.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm5.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm6.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm7.SetData<WorldID>(ref minComponentsCount, ref minEntities);
+        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+            qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm4.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm5.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm6.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm7.SetData<WorldType>(ref minComponentsCount, ref minEntities);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -398,14 +398,14 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            qm1.Dispose<WorldID>();
-            qm2.Dispose<WorldID>();
-            qm3.Dispose<WorldID>();
-            qm4.Dispose<WorldID>();
-            qm5.Dispose<WorldID>();
-            qm6.Dispose<WorldID>();
-            qm7.Dispose<WorldID>();
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Dispose<WorldType>();
+            qm2.Dispose<WorldType>();
+            qm3.Dispose<WorldType>();
+            qm4.Dispose<WorldType>();
+            qm5.Dispose<WorldType>();
+            qm6.Dispose<WorldType>();
+            qm7.Dispose<WorldType>();
         }
     }
 
@@ -444,15 +444,15 @@ namespace FFS.Libraries.StaticEcs {
 
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldID>(ref int minComponentsCount, ref int[] minEntities) where WorldID : struct, IWorldId {
-            qm1.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm2.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm3.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm4.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm5.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm6.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm7.SetData<WorldID>(ref minComponentsCount, ref minEntities);
-            qm8.SetData<WorldID>(ref minComponentsCount, ref minEntities);
+        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+            qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm4.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm5.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm6.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm7.SetData<WorldType>(ref minComponentsCount, ref minEntities);
+            qm8.SetData<WorldType>(ref minComponentsCount, ref minEntities);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -461,15 +461,15 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldID>() where WorldID : struct, IWorldId {
-            qm1.Dispose<WorldID>();
-            qm2.Dispose<WorldID>();
-            qm3.Dispose<WorldID>();
-            qm4.Dispose<WorldID>();
-            qm5.Dispose<WorldID>();
-            qm6.Dispose<WorldID>();
-            qm7.Dispose<WorldID>();
-            qm8.Dispose<WorldID>();
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Dispose<WorldType>();
+            qm2.Dispose<WorldType>();
+            qm3.Dispose<WorldType>();
+            qm4.Dispose<WorldType>();
+            qm5.Dispose<WorldType>();
+            qm6.Dispose<WorldType>();
+            qm7.Dispose<WorldType>();
+            qm8.Dispose<WorldType>();
         }
     }
 }

@@ -11,7 +11,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public abstract partial class Ecs<WorldID> {
+    public abstract partial class Ecs<WorldType> {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
@@ -48,11 +48,11 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static void Set(T value) {
                 if (value == null) {
-                    throw new Exception($"{typeof(T).Name} is null, Context<{typeof(WorldID)}>");
+                    throw new Exception($"{typeof(T).Name} is null, Context<{typeof(WorldType)}>");
                 }
 
                 if (_has) {
-                    throw new Exception($"{typeof(T).Name} already exist in container Context<{typeof(WorldID)}>");
+                    throw new Exception($"{typeof(T).Name} already exist in container Context<{typeof(WorldType)}>");
                 }
 
                 _has = true;
@@ -62,7 +62,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static void Replace(T value) {
                 if (value == null) {
-                    throw new Exception($"{typeof(T).Name} is null, Context<{typeof(WorldID)}>");
+                    throw new Exception($"{typeof(T).Name} is null, Context<{typeof(WorldType)}>");
                 }
 
                 _has = true;
@@ -107,11 +107,11 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static void Set<T>(string key, T value) {
                 if (value == null) {
-                    throw new Exception($"{typeof(T).Name} is null, NamedContext<{typeof(WorldID)}>");
+                    throw new Exception($"{typeof(T).Name} is null, NamedContext<{typeof(WorldType)}>");
                 }
 
                 if (_values.ContainsKey(key)) {
-                    throw new Exception($"{typeof(T).Name} already exist in container NamedContext<{typeof(WorldID)}>");
+                    throw new Exception($"{typeof(T).Name} already exist in container NamedContext<{typeof(WorldType)}>");
                 }
 
                 _values[key] = value;
@@ -120,7 +120,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static void Replace<T>(string key, T value) {
                 if (value == null) {
-                    throw new Exception($"{typeof(T).Name} is null, NamedContext<{typeof(WorldID)}>");
+                    throw new Exception($"{typeof(T).Name} is null, NamedContext<{typeof(WorldType)}>");
                 }
                 
                 _values[key] = value;
