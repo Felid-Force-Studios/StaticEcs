@@ -3,6 +3,7 @@ using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
+#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
 
 namespace FFS.Libraries.StaticEcs {
 
@@ -24,15 +25,14 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
-            _all.SetBitMask<WorldType>(_incBufId);
-            _all.SetData<WorldType>(ref minCount, ref entities);
+            _all.SetAllData<WorldType>(ref minCount, ref entities, _incBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAll(entityId, _incBufId);
         }
 
@@ -51,28 +51,26 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     public struct All<C1> : IPrimaryQueryMethod, ISealedQueryMethod 
         where C1 : struct, IComponent {
-        private int[] m1;
+        private uint[] m1;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
-            var types = default(Types<C1>);
-            types.SetData<WorldType>(ref minCount, ref entities);
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities, out var _);
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            types.BlockComponents<WorldType>(1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
             #endif
             m1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
-            return m1[entityId] >= 0;
+        public bool CheckEntity(uint entityId) {
+            return m1[entityId] != Utils.EmptyComponent;
         }
 
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            var types = default(Types<C1>);
-            types.BlockComponents<WorldType>(-1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
             #endif
         }
     }
@@ -84,30 +82,31 @@ namespace FFS.Libraries.StaticEcs {
     public struct All<C1, C2> : IPrimaryQueryMethod, ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent {
-        private int[] m1;
-        private int[] m2;
+        private uint[] m1;
+        private uint[] m2;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
-            var types = default(Types<C1, C2>);
-            types.SetData<WorldType>(ref minCount, ref entities);
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities, out var _);
+            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities, out var _);
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            types.BlockComponents<WorldType>(1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
+            Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
             #endif
             m1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
             m2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
-            return m1[entityId] >= 0 && m2[entityId] >= 0;
+        public bool CheckEntity(uint entityId) {
+            return m1[entityId] != Utils.EmptyComponent && m2[entityId] != Utils.EmptyComponent;
         }
 
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            var types = default(Types<C1, C2>);
-            types.BlockComponents<WorldType>(-1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
+            Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
             #endif
         }
     }
@@ -120,16 +119,19 @@ namespace FFS.Libraries.StaticEcs {
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent {
-        private int[] m1;
-        private int[] m2;
-        private int[] m3;
+        private uint[] m1;
+        private uint[] m2;
+        private uint[] m3;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
-            var types = default(Types<C1, C2, C3>);
-            types.SetData<WorldType>(ref minCount, ref entities);
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities, out var _);
+            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities, out var _);
+            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref minCount, ref entities, out var _);
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            types.BlockComponents<WorldType>(1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
+            Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
+            Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
             #endif
             m1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
             m2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
@@ -137,15 +139,16 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
-            return m1[entityId] >= 0 && m2[entityId] >= 0 && m3[entityId] >= 0;
+        public bool CheckEntity(uint entityId) {
+            return m1[entityId] != Utils.EmptyComponent && m2[entityId] != Utils.EmptyComponent && m3[entityId] != Utils.EmptyComponent;
         }
 
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            var types = default(Types<C1, C2, C3>);
-            types.BlockComponents<WorldType>(-1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
+            Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
+            Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
             #endif
         }
     }
@@ -159,17 +162,22 @@ namespace FFS.Libraries.StaticEcs {
         where C2 : struct, IComponent 
         where C3 : struct, IComponent 
         where C4 : struct, IComponent {
-        private int[] m1;
-        private int[] m2;
-        private int[] m3;
-        private int[] m4;
+        private uint[] m1;
+        private uint[] m2;
+        private uint[] m3;
+        private uint[] m4;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
-            var types = default(Types<C1, C2, C3, C4>);
-            types.SetData<WorldType>(ref minCount, ref entities);
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
+            Ecs<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities, out var _);
+            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities, out var _);
+            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref minCount, ref entities, out var _);
+            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref minCount, ref entities, out var _);
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            types.BlockComponents<WorldType>(1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
+            Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
+            Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
+            Ecs<WorldType>.Components<C4>.Value.AddBlocker(1);
             #endif
             m1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
             m2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
@@ -178,15 +186,17 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
-            return m1[entityId] >= 0 && m2[entityId] >= 0 && m3[entityId] >= 0 && m4[entityId] >= 0;
+        public bool CheckEntity(uint entityId) {
+            return m1[entityId] != Utils.EmptyComponent && m2[entityId] != Utils.EmptyComponent && m3[entityId] != Utils.EmptyComponent && m4[entityId] != Utils.EmptyComponent;
         }
 
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            var types = default(Types<C1, C2, C3, C4>);
-            types.BlockComponents<WorldType>(-1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
+            Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
+            Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
+            Ecs<WorldType>.Components<C4>.Value.AddBlocker(-1);
             #endif
         }
     }
@@ -206,15 +216,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
-            _types.SetBitMask<WorldType>(_bufId);
-            _types.SetData<WorldType>(ref minCount, ref entities);
+            _types.SetAllData<WorldType>(ref minCount, ref entities, _bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAll(entityId, _bufId);
         }
 
@@ -243,15 +252,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5, C6> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
-            _types.SetBitMask<WorldType>(_bufId);
-            _types.SetData<WorldType>(ref minCount, ref entities);
+            _types.SetAllData<WorldType>(ref minCount, ref entities, _bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAll(entityId, _bufId);
         }
 
@@ -281,15 +289,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5, C6, C7> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
-            _types.SetBitMask<WorldType>(_bufId);
-            _types.SetData<WorldType>(ref minCount, ref entities);
+            _types.SetAllData<WorldType>(ref minCount, ref entities, _bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAll(entityId, _bufId);
         }
 
@@ -320,15 +327,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5, C6, C7, C8> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
-            _types.SetBitMask<WorldType>(_bufId);
-            _types.SetData<WorldType>(ref minCount, ref entities);
+            _types.SetAllData<WorldType>(ref minCount, ref entities, _bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAll(entityId, _bufId);
         }
 
@@ -367,19 +373,17 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _incBufId = _bitMask.BorrowBuf();
             _excBufId = _bitMask.BorrowBuf();
 
-            _all.SetBitMask<WorldType>(_incBufId);
-            _all.SetData<WorldType>(ref minCount, ref entities);
-
+            _all.SetAllData<WorldType>(ref minCount, ref entities, _incBufId);
             _exc.SetBitMask<WorldType>(_excBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAllAndExc(entityId, _incBufId, _excBufId);
         }
 
@@ -401,7 +405,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct NoneTypes<TComponents> : IQueryMethod, ISealedQueryMethod
+    public struct NoneTypes<TComponents> : ISealedQueryMethod
         where TComponents : struct, IComponentTypes {
         private BitMask _bitMask;
         public TComponents _exc;
@@ -415,14 +419,14 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _excBufId = _bitMask.BorrowBuf();
             _exc.SetBitMask<WorldType>(_excBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.NotHasAny(entityId, _excBufId);
         }
 
@@ -439,29 +443,27 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1> : IQueryMethod, ISealedQueryMethod 
+    public struct None<C1> : ISealedQueryMethod 
         where C1 : struct, IComponent {
-        private int[] m1;
+        private uint[] m1;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            var types = default(Types<C1>);
-            types.BlockComponents<WorldType>(1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
             #endif
             m1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
-            return m1[entityId] < 0;
+        public bool CheckEntity(uint entityId) {
+            return m1[entityId] == Utils.EmptyComponent;
         }
 
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            var types = default(Types<C1>);
-            types.BlockComponents<WorldType>(-1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
             #endif
         }
     }
@@ -470,32 +472,32 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2> : IQueryMethod, ISealedQueryMethod 
+    public struct None<C1, C2> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent {
-        private int[] m1;
-        private int[] m2;
+        private uint[] m1;
+        private uint[] m2;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            var types = default(Types<C1, C2>);
-            types.BlockComponents<WorldType>(1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
+            Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
             #endif
             m1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
             m2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
-            return m1[entityId] < 0 && m2[entityId] < 0;
+        public bool CheckEntity(uint entityId) {
+            return m1[entityId] == Utils.EmptyComponent && m2[entityId] == Utils.EmptyComponent;
         }
 
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            var types = default(Types<C1, C2>);
-            types.BlockComponents<WorldType>(-1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
+            Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
             #endif
         }
     }
@@ -504,7 +506,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3> : IQueryMethod, ISealedQueryMethod 
+    public struct None<C1, C2, C3> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent {
@@ -513,15 +515,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
-            _types.SetData<WorldType>(ref minCount, ref entities);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.NotHasAny(entityId, _bufId);
         }
 
@@ -538,7 +539,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3, C4> : IQueryMethod, ISealedQueryMethod 
+    public struct None<C1, C2, C3, C4> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent 
@@ -548,15 +549,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
-            _types.SetData<WorldType>(ref minCount, ref entities);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.NotHasAny(entityId, _bufId);
         }
 
@@ -574,7 +574,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3, C4, C5> : IQueryMethod, ISealedQueryMethod 
+    public struct None<C1, C2, C3, C4, C5> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent 
@@ -585,15 +585,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
-            _types.SetData<WorldType>(ref minCount, ref entities);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.NotHasAny(entityId, _bufId);
         }
 
@@ -610,7 +609,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3, C4, C5, C6> : IQueryMethod, ISealedQueryMethod 
+    public struct None<C1, C2, C3, C4, C5, C6> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent 
@@ -622,15 +621,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5, C6> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
-            _types.SetData<WorldType>(ref minCount, ref entities);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.NotHasAny(entityId, _bufId);
         }
 
@@ -647,7 +645,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3, C4, C5, C6, C7> : IQueryMethod, ISealedQueryMethod 
+    public struct None<C1, C2, C3, C4, C5, C6, C7> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent 
@@ -660,15 +658,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5, C6, C7> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
-            _types.SetData<WorldType>(ref minCount, ref entities);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.NotHasAny(entityId, _bufId);
         }
 
@@ -685,7 +682,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3, C4, C5, C6, C7, C8> : IQueryMethod, ISealedQueryMethod 
+    public struct None<C1, C2, C3, C4, C5, C6, C7, C8> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent 
@@ -699,15 +696,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5, C6, C7, C8> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
-            _types.SetData<WorldType>(ref minCount, ref entities);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.NotHasAny(entityId, _bufId);
         }
 
@@ -727,7 +723,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyTypes<TComponents> : IQueryMethod, ISealedQueryMethod where TComponents : struct, IComponentTypes {
+    public struct AnyTypes<TComponents> : ISealedQueryMethod where TComponents : struct, IComponentTypes {
         private BitMask _bitMask;
         public TComponents _any;
         private byte _anyBufId;
@@ -740,14 +736,14 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _anyBufId = _bitMask.BorrowBuf();
             _any.SetBitMask<WorldType>(_anyBufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAny(entityId, _anyBufId);
         }
 
@@ -764,32 +760,32 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2> : IQueryMethod, ISealedQueryMethod 
+    public struct Any<C1, C2> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent {
-        private int[] m1;
-        private int[] m2;
+        private uint[] m1;
+        private uint[] m2;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            var types = default(Types<C1, C2>);
-            types.BlockComponents<WorldType>(1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
+            Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
             #endif
             m1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
             m2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
-            return m1[entityId] >= 0 || m2[entityId] >= 0;
+        public bool CheckEntity(uint entityId) {
+            return m1[entityId] != Utils.EmptyComponent || m2[entityId] != Utils.EmptyComponent;
         }
 
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            var types = default(Types<C1, C2>);
-            types.BlockComponents<WorldType>(-1);
+            Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
+            Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
             #endif
         }
     }
@@ -798,7 +794,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2, C3> : IQueryMethod, ISealedQueryMethod 
+    public struct Any<C1, C2, C3> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent {
@@ -807,14 +803,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAny(entityId, _bufId);
         }
 
@@ -831,7 +827,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2, C3, C4> : IQueryMethod, ISealedQueryMethod 
+    public struct Any<C1, C2, C3, C4> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent 
@@ -841,14 +837,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAny(entityId, _bufId);
         }
 
@@ -866,7 +862,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2, C3, C4, C5> : IQueryMethod, ISealedQueryMethod 
+    public struct Any<C1, C2, C3, C4, C5> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent 
@@ -877,14 +873,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAny(entityId, _bufId);
         }
 
@@ -901,7 +897,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2, C3, C4, C5, C6> : IQueryMethod, ISealedQueryMethod 
+    public struct Any<C1, C2, C3, C4, C5, C6> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent 
@@ -913,14 +909,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5, C6> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAny(entityId, _bufId);
         }
 
@@ -937,7 +933,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2, C3, C4, C5, C6, C7> : IQueryMethod, ISealedQueryMethod 
+    public struct Any<C1, C2, C3, C4, C5, C6, C7> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent 
@@ -950,14 +946,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5, C6, C7> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAny(entityId, _bufId);
         }
 
@@ -974,7 +970,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2, C3, C4, C5, C6, C7, C8> : IQueryMethod, ISealedQueryMethod 
+    public struct Any<C1, C2, C3, C4, C5, C6, C7, C8> : ISealedQueryMethod 
         where C1 : struct, IComponent 
         where C2 : struct, IComponent 
         where C3 : struct, IComponent 
@@ -988,14 +984,14 @@ namespace FFS.Libraries.StaticEcs {
         private Types<C1, C2, C3, C4, C5, C6, C7, C8> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleComponents.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _types.SetBitMask<WorldType>(_bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _bitMask.HasAny(entityId, _bufId);
         }
 

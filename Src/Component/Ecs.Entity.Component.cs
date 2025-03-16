@@ -336,57 +336,106 @@ namespace FFS.Libraries.StaticEcs {
 
             #region DELETE
             [MethodImpl(AggressiveInlining)]
-            public bool Delete<C>() where C : struct, IComponent {
-                return Components<C>.Value.Delete(this);
+            public void Delete<C>() where C : struct, IComponent {
+                Components<C>.Value.Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool Delete<C1, C2>()
+            public void Delete<C1, C2>()
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
-                var delC1 = Components<C1>.Value.Delete(this);
-                var delC2 = Components<C2>.Value.Delete(this);
-                return delC1 && delC2;
+                Components<C1>.Value.Delete(this);
+                Components<C2>.Value.Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool Delete<C1, C2, C3>()
+            public void Delete<C1, C2, C3>()
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent {
-                var delC1 = Components<C1>.Value.Delete(this);
-                var delC2 = Components<C2>.Value.Delete(this);
-                var delC3 = Components<C3>.Value.Delete(this);
-
-                return delC1 && delC2 && delC3;
+                Components<C1>.Value.Delete(this);
+                Components<C2>.Value.Delete(this);
+                Components<C3>.Value.Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool Delete<C1, C2, C3, C4>()
+            public void Delete<C1, C2, C3, C4>()
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent {
-                var delC1 = Components<C1>.Value.Delete(this);
-                var delC2 = Components<C2>.Value.Delete(this);
-                var delC3 = Components<C3>.Value.Delete(this);
-                var delC4 = Components<C4>.Value.Delete(this);
-
-                return delC1 && delC2 && delC3 && delC4;
+                Components<C1>.Value.Delete(this);
+                Components<C2>.Value.Delete(this);
+                Components<C3>.Value.Delete(this);
+                Components<C4>.Value.Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool Delete<C1, C2, C3, C4, C5>()
+            public void Delete<C1, C2, C3, C4, C5>()
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent
                 where C5 : struct, IComponent {
-                var delC1 = Components<C1>.Value.Delete(this);
-                var delC2 = Components<C2>.Value.Delete(this);
-                var delC3 = Components<C3>.Value.Delete(this);
-                var delC4 = Components<C4>.Value.Delete(this);
-                var delC5 = Components<C5>.Value.Delete(this);
+                Components<C1>.Value.Delete(this);
+                Components<C2>.Value.Delete(this);
+                Components<C3>.Value.Delete(this);
+                Components<C4>.Value.Delete(this);
+                Components<C5>.Value.Delete(this);
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDelete<C>() where C : struct, IComponent {
+                return Components<C>.Value.TryDelete(this);
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDelete<C1, C2>()
+                where C1 : struct, IComponent
+                where C2 : struct, IComponent {
+                var delC1 = Components<C1>.Value.TryDelete(this);
+                var delC2 = Components<C2>.Value.TryDelete(this);
+                return delC1 && delC2;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDelete<C1, C2, C3>()
+                where C1 : struct, IComponent
+                where C2 : struct, IComponent
+                where C3 : struct, IComponent {
+                var delC1 = Components<C1>.Value.TryDelete(this);
+                var delC2 = Components<C2>.Value.TryDelete(this);
+                var delC3 = Components<C3>.Value.TryDelete(this);
+
+                return delC1 && delC2 && delC3;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDelete<C1, C2, C3, C4>()
+                where C1 : struct, IComponent
+                where C2 : struct, IComponent
+                where C3 : struct, IComponent
+                where C4 : struct, IComponent {
+                var delC1 = Components<C1>.Value.TryDelete(this);
+                var delC2 = Components<C2>.Value.TryDelete(this);
+                var delC3 = Components<C3>.Value.TryDelete(this);
+                var delC4 = Components<C4>.Value.TryDelete(this);
+
+                return delC1 && delC2 && delC3 && delC4;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDelete<C1, C2, C3, C4, C5>()
+                where C1 : struct, IComponent
+                where C2 : struct, IComponent
+                where C3 : struct, IComponent
+                where C4 : struct, IComponent
+                where C5 : struct, IComponent {
+                var delC1 = Components<C1>.Value.TryDelete(this);
+                var delC2 = Components<C2>.Value.TryDelete(this);
+                var delC3 = Components<C3>.Value.TryDelete(this);
+                var delC4 = Components<C4>.Value.TryDelete(this);
+                var delC5 = Components<C5>.Value.TryDelete(this);
 
                 return delC1 && delC2 && delC3 && delC4 && delC5;
             }
@@ -638,44 +687,79 @@ namespace FFS.Libraries.StaticEcs {
             
             #region DELETE
             [MethodImpl(AggressiveInlining)]
-            public bool Delete(ComponentDynId c) {
-                return ModuleComponents.Value.GetPool(c).Delete(this);
+            public void Delete(ComponentDynId c) {
+                ModuleComponents.Value.GetPool(c).Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool Delete(ComponentDynId c1, ComponentDynId c2) {
-                var delC1 = ModuleComponents.Value.GetPool(c1).Delete(this);
-                var delC2 = ModuleComponents.Value.GetPool(c2).Delete(this);
+            public void Delete(ComponentDynId c1, ComponentDynId c2) {
+                ModuleComponents.Value.GetPool(c1).Delete(this);
+                ModuleComponents.Value.GetPool(c2).Delete(this);
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void Delete(ComponentDynId c1, ComponentDynId c2, ComponentDynId c3) {
+                ModuleComponents.Value.GetPool(c1).Delete(this);
+                ModuleComponents.Value.GetPool(c2).Delete(this);
+                ModuleComponents.Value.GetPool(c3).Delete(this);
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void Delete(ComponentDynId c1, ComponentDynId c2, ComponentDynId c3, ComponentDynId c4) {
+                ModuleComponents.Value.GetPool(c1).Delete(this);
+                ModuleComponents.Value.GetPool(c2).Delete(this);
+                ModuleComponents.Value.GetPool(c3).Delete(this);
+                ModuleComponents.Value.GetPool(c4).Delete(this);
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void Delete(ComponentDynId c1, ComponentDynId c2, ComponentDynId c3, ComponentDynId c4, ComponentDynId c5) {
+                ModuleComponents.Value.GetPool(c1).Delete(this);
+                ModuleComponents.Value.GetPool(c2).Delete(this);
+                ModuleComponents.Value.GetPool(c3).Delete(this);
+                ModuleComponents.Value.GetPool(c4).Delete(this);
+                ModuleComponents.Value.GetPool(c5).Delete(this);
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDelete(ComponentDynId c) {
+                return ModuleComponents.Value.GetPool(c).TryDelete(this);
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDelete(ComponentDynId c1, ComponentDynId c2) {
+                var delC1 = ModuleComponents.Value.GetPool(c1).TryDelete(this);
+                var delC2 = ModuleComponents.Value.GetPool(c2).TryDelete(this);
 
                 return delC1 && delC2;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool Delete(ComponentDynId c1, ComponentDynId c2, ComponentDynId c3) {
-                var delC1 = ModuleComponents.Value.GetPool(c1).Delete(this);
-                var delC2 = ModuleComponents.Value.GetPool(c2).Delete(this);
-                var delC3 = ModuleComponents.Value.GetPool(c3).Delete(this);
+            public bool TryDelete(ComponentDynId c1, ComponentDynId c2, ComponentDynId c3) {
+                var delC1 = ModuleComponents.Value.GetPool(c1).TryDelete(this);
+                var delC2 = ModuleComponents.Value.GetPool(c2).TryDelete(this);
+                var delC3 = ModuleComponents.Value.GetPool(c3).TryDelete(this);
 
                 return delC1 && delC2 && delC3;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool Delete(ComponentDynId c1, ComponentDynId c2, ComponentDynId c3, ComponentDynId c4) {
-                var delC1 = ModuleComponents.Value.GetPool(c1).Delete(this);
-                var delC2 = ModuleComponents.Value.GetPool(c2).Delete(this);
-                var delC3 = ModuleComponents.Value.GetPool(c3).Delete(this);
-                var delC4 = ModuleComponents.Value.GetPool(c4).Delete(this);
+            public bool TryDelete(ComponentDynId c1, ComponentDynId c2, ComponentDynId c3, ComponentDynId c4) {
+                var delC1 = ModuleComponents.Value.GetPool(c1).TryDelete(this);
+                var delC2 = ModuleComponents.Value.GetPool(c2).TryDelete(this);
+                var delC3 = ModuleComponents.Value.GetPool(c3).TryDelete(this);
+                var delC4 = ModuleComponents.Value.GetPool(c4).TryDelete(this);
 
                 return delC1 && delC2 && delC3 && delC4;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool Delete(ComponentDynId c1, ComponentDynId c2, ComponentDynId c3, ComponentDynId c4, ComponentDynId c5) {
-                var delC1 = ModuleComponents.Value.GetPool(c1).Delete(this);
-                var delC2 = ModuleComponents.Value.GetPool(c2).Delete(this);
-                var delC3 = ModuleComponents.Value.GetPool(c3).Delete(this);
-                var delC4 = ModuleComponents.Value.GetPool(c4).Delete(this);
-                var delC5 = ModuleComponents.Value.GetPool(c5).Delete(this);
+            public bool TryDelete(ComponentDynId c1, ComponentDynId c2, ComponentDynId c3, ComponentDynId c4, ComponentDynId c5) {
+                var delC1 = ModuleComponents.Value.GetPool(c1).TryDelete(this);
+                var delC2 = ModuleComponents.Value.GetPool(c2).TryDelete(this);
+                var delC3 = ModuleComponents.Value.GetPool(c3).TryDelete(this);
+                var delC4 = ModuleComponents.Value.GetPool(c4).TryDelete(this);
+                var delC5 = ModuleComponents.Value.GetPool(c5).TryDelete(this);
 
                 return delC1 && delC2 && delC3 && delC4 && delC5;
             }
@@ -788,8 +872,13 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public bool Delete(Type componentType) {
-                return ModuleComponents.Value.GetPool(componentType).Delete(this);
+            public bool TryDelete(Type componentType) {
+                return ModuleComponents.Value.GetPool(componentType).TryDelete(this);
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public void Delete(Type componentType) {
+                ModuleComponents.Value.GetPool(componentType).Delete(this);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -826,7 +915,9 @@ namespace FFS.Libraries.StaticEcs {
         
         public ref C TryAdd<C>(out bool added) where C : struct, IComponent;
 
-        public bool Delete<C>() where C : struct, IComponent;
+        public bool TryDelete<C>() where C : struct, IComponent;
+        
+        public void Delete<C>() where C : struct, IComponent;
 
         public bool HasAllOf(ComponentDynId c);
         
@@ -836,7 +927,9 @@ namespace FFS.Libraries.StaticEcs {
         
         public void TryAdd(ComponentDynId c, out bool added);
 
-        public bool Delete(ComponentDynId c);
+        public bool TryDelete(ComponentDynId c);
+
+        public void Delete(ComponentDynId c);
 
         public bool HasAllOf(Type componentType);
 
@@ -850,6 +943,8 @@ namespace FFS.Libraries.StaticEcs {
 
         public void TryAdd(Type componentType, out bool added);
 
-        public bool Delete(Type componentType);
+        public bool TryDelete(Type componentType);
+        
+        public void Delete(Type componentType);
     }
 }

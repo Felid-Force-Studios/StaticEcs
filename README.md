@@ -1,11 +1,11 @@
-![Version](https://img.shields.io/badge/version-0.9.2.1-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-0.9.31-blue.svg?style=for-the-badge)
 
 ### LANGUAGE
 [RU](./README_RU.md)
 [EN](./README.md)
 ___
-### [BENCHMARKS](./Benchmark.md)
-### [Unity module](https://github.com/Felid-Force-Studios/StaticEcs-Unity)
+### 🚀 **[Benchmarks](./Benchmark.md)** 🚀
+### ⚙️ **[Unity module](https://github.com/Felid-Force-Studios/StaticEcs-Unity)** ⚙️
 
 # Static ECS - C# Entity component system framework
 - Lightweight
@@ -45,7 +45,8 @@ ___
     * [Component identifiers](#component-identifiers)
     * [Auto handlers](#auto-handlers)
     * [Events](#events)
-    * [Relations](#relation)
+    * [Relations](#relations)
+    * [Compiler directives](#compiler-directives)
 * [Performance](#perfomance)
 * [Engine integration](#engine-integration)
     * [Unity](#unity)
@@ -140,17 +141,25 @@ public class Program {
 Entity - serves to identify an object in the game world and access attached components
  - Represented as a 4 byte structure
 
+**ВАЖНО** ❗️  
+By default an entity can be created and exist without components, also when the last component is deleted it is not deleted  
+If you want to override this behavior, you must specify the compiler directive `FFS_ECS_LIFECYCLE_ENTITY`  
+More info: [Compiler directives](#compiler-directives)
+
 <details><summary><u><b>Usage 👇</b></u></summary>
 
 - Creation:
 ```csharp
-// Creation is only possible with the initial components specified
 // Creating a single entity
-// Method 1 - with component type (overload methods from 1-5 components)
+
+// Method 1 - creating an “empty” entity
+var entity = MyEcs.Entity.New();
+
+// Method 2 - with component type (overload methods from 1-5 components)
 var entity = MyEcs.Entity.New<Position>();
 var entity = MyEcs.Entity.New<Position, Velocity, Name>();
 
-// Method 2 - with component value (overload methods from 1-5 components)
+// Method 3 - with component value (overload methods from 1-5 components)
 var entity = MyEcs.Entity.New(new Position(x: 1, y: 1, z: 2));
 var entity = MyEcs.Entity.New(
             new Name { Val = "SomeName" },
@@ -233,8 +242,6 @@ bool equals = packedEntity.Equals(packedEntity2);     // Verify the identity of 
 
 ### Component
 Component - provides properties to an entity  
- - An entity cannot exist without components, because an entity without data is just an identifier
- - When the last component is deleted, the entity is deleted
  - Gives the ability to build search queries by component only
  - Presented as a custom structure with a marker interface `IComponent`  
  - Presented as struct solely for performance reasons
@@ -311,7 +318,12 @@ entity.HasAllOf<Position, Velocity, Name>();
 entity.HasAnyOf<Position, Name>();
 entity.HasAnyOf<Position, Velocity, Name>();
 
-// Remove a component from an entity (overload methods from 1-5 components)
+// Remove a component from an entity (in DEBUG mode there will be an error if the component does not exist on the entity,
+// cannot be used in a release if there is no guarantee that the component is present) (overload methods from 1-5 components)
+entity.Delete<Position>();
+entity.Delete<Position, Velocity, Name>();
+
+// Remove a component from an entity if it exists (overload methods from 1-5 components)
 bool deleted = entity.Delete<Position>();  // deleted = true if the component has been deleted, false if the component was not there originally
 bool deleted = entity.Delete<Position, Velocity, Name>();  // deleted = true if ALL components have been deleted, false if at least 1 component was not there originally
 
@@ -333,7 +345,6 @@ Default Component - standard entity properties, present on every entity created 
 > For example, the internal version of an entity `entity.Version()` is a standard component
 - Optimized storage and direct access to data by entity ID
 - Cannot be deleted, only modified
-- When the last `IComponent` is deleted, the Standard Component is ignored and the entity is deleted
 - Not included in queries, as it is present on all entities
 - Represented as a custom structure with a `IStandardComponent` marker interface
 
@@ -362,18 +373,30 @@ handlers must be explicitly registered
 
 Example:
 ```c#
+public struct EnitiyType : IStandardComponent {
+    public int Val;
+    
+    public void Init() {
+        Val = -1;
+    }
+    
+    public void Reset() {
+        Val = -1;
+    }
+    
+    public void CopyTo(ref EnitiyType dst) {
+        dst.Val = Val;
+    }
+}
+
 MyEcs.Create(EcsConfig.Default());
 //...
-MyEcs.World.RegisterStandardComponentType<EnitiyType>();
 
-// This function will be called when the entity is created  
-MyEcs.StandardComponents<EnitiyType>.SetAutoInit((ref EnitiyType component) => component.Val = 1);
-
-// This function will be called when the entity is destroyed  
-MyEcs.StandardComponents<EnitiyType>.SetAutoReset((ref EnitiyType component) => component.Val = -1);
-
-// When copying standard components, this entity will be called instead of just copying it
-MyEcs.StandardComponents<EnitiyType>.SetAutoCopy((ref EnitiyType src, ref EnitiyType dst) => dst.Val = src.Val);
+MyEcs.World.RegisterStandardComponentType<EnitiyType>(
+                autoInit: static (ref EnitiyType component) => component.Init(), // This function will be called when the entity is created  
+                autoReset: static (ref EnitiyType component) => component.Reset(), // This function will be called when the entity is destroyed  
+                autoCopy: static (ref EnitiyType src, ref EnitiyType dst) => src.CopyTo(ref dst), // When copying standard components, this entity will be called instead of just copying it
+            );
 //...
 MyEcs.Initialize();
 ```
@@ -402,7 +425,6 @@ entity.CopyStandardComponentsTo<EnitiyType>(entity2);
 ### Tag
 Tag - similar to a component, but does not contain any data, serves to label an entity  
  - Optimized storage, doesn't store massive amounts of data, doesn't slow down component searches, allows you to create multiple tags
- - When the last component is deleted, the Tags are ignored and the entity is deleted
  - Gives the option to build search queries based on tags only
  - Represented as a user structure without data with a marker interface `ITag`
 
@@ -442,15 +464,19 @@ entity.HasAllOfTags<Unit, Player>();
 // Check for the presence of at least one specified tag (overload methods from 2-3 tags)
 entity.HasAnyOfTags<Unit, Player>();
 
-// Remove a tag from an entity (overload methods from 1-5 tags)
-bool deleted = entity.DeleteTag<Unit>();  // deleted = true if the tag has been deleted, false if the tag was not there originally
-bool deleted = entity.DeleteTag<Unit, Player>();  // deleted = true if ALL tags have been deleted, false if at least 1 tag was not originally there.
+// Remove tag from entity (in DEBUG mode there will be an error if tag is not present, 
+// in release cannot be used if there is no guarantee that tag is present) (overload methods from 1-5 tags)
+entity.DeleteTag<Unit>();
+entity.DeleteTag<Unit, Player>();
+
+// Remove a tag from an entity if it has one (overload methods from 1-5 tags)
+bool deleted = entity.TryDeleteTag<Unit>();  // deleted = true if the tag has been deleted, false if the tag was not there originally
+bool deleted = entity.TryDeleteTag<Unit, Player>();  // deleted = true if ALL tags have been deleted, false if at least 1 tag was not originally there.
 ```
 </details>
 
 ### Mask
 Mask - similar to a tag, but uses only 1 bit of memory
-- When the last component is deleted, Masks as well as Tags are ignored and the entity is deleted
 - NOT Gives the option to build queries by masks only, can only be used as an additional search criterion
 - Represented as a user structure without data with a marker interface `IMask`
 
@@ -490,8 +516,12 @@ entity.HasAllOfMasks<Flammable, Frozen, Visible>();
 // Check for the presence of at least one specified mask (overload methods from 2-3 masks)
 entity.HasAnyOfMasks<Flammable, Frozen, Visible>();
 
-// Remove a mask from an entity (overload methods from 1-5 masks)
+// Remove mask from entity (In DEBUG mode there will be an error if the entity is not present, 
+// in release you cannot use if there is no guarantee that the mask is present) (overload methods from 1-5 masks)
 entity.DeleteMask<Frozen>();
+
+// Remove a mask from an entity if it exists (overload methods from 1-5 masks)
+var deleted = entity.TryDeleteMask<Frozen>();
 ```
 </details>
 
@@ -1094,33 +1124,17 @@ foreach (var entity in MyWorld.QueryEntities.With(with)) {
 By default, when adding or deleting a component, the data is filled with the default value, and when copying, the component is completely copied  
 To set your own logic of default initialization and resetting of the component you can use handlers
 
-**AutoInit** - replaces the behavior when creating a component via the Add method
 ```csharp
 MyEcs.Create(EcsConfig.Default());
 //...
-MyEcs.Components<Position>.SetAutoInit(static (ref Position position) => position.Val = Vector3.One);
+MyEcs.World.RegisterComponentType<Position>(
+                autoInit: static (ref Position position) => position.Val = Vector3.One, // replaces the behavior when creating a component via the Add method
+                autoReset: static (ref Position position) => position.Val = Vector3.One, // replaces the behavior when deleting a component via the Delete method
+                autoCopy: static (ref Position src, ref Position dst) => dst.Val = src.Val, // replaces the behavior when copying a component
+            );
 //...
 MyEcs.Initialize();
 ```
-
-**AutoReset** - replaces the behavior when deleting a component via the Delete method
-```csharp
-MyEcs.Create(EcsConfig.Default());
-//...
-MyEcs.Components<Position>.SetAutoInit(static (ref Position position) => position.Val = Vector3.One);
-//...
-MyEcs.Initialize();
-```
-
-**AutoCopy** - replaces the behavior when copying a component
-```csharp
-MyEcs.Create(EcsConfig.Default());
-//...
-MyEcs.Components<Position>.SetAutoCopy(static (ref Position src, ref Position dst) => dst.Val = src.Val);
-//...
-MyEcs.Initialize();
-```
-
 > **Important!** Keep in mind that creating an entity with a value or adding a component via the Put method  
 > completely replace the data in the component, bypassing the auto handlers installed
 
@@ -1201,6 +1215,27 @@ weatherChangedEventReceiver.MarkAsReadAll();
 ### Relations
 **WIP**
 
+### Compiler directives
+> `FFS_ECS_ENABLE_DEBUG`
+> Enables debug mode, by default enabled in `DEBUG`
+
+> `FFS_ECS_ENABLE_DEBUG_EVENTS`
+> Enables technical event functionality, enabled by default in `DEBUG`
+
+> `FFS_ECS_DISABLE_TAGS`
+> Completely removes all tag functionality from the compilation
+
+> `FFS_ECS_DISABLE_MASKS`
+> Completely removes all mask functionality from the compilation
+
+> `FFS_ECS_LIFECYCLE_ENTITY`
+> Changes the entity lifecycle management logic to automatic by making the following changes:
+> - Entity cannot be created without component - MyEcs.Entity.New() method is not available, empty entities are excluded
+> - When the last component of type `IComponent` is deleted, the entity is automatically deleted
+>   - The standard component is not taken into account
+>   - The tags is not taken into account
+>   - The masks is not taken into account
+
 # Perfomance
 Current benchmarks : [BENCHMARKS](./Benchmark.md)
 
@@ -1242,8 +1277,8 @@ public static class $COMPONENT$Extension {
     }
     
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static void Add$COMPONENT$(this $ECS$.Entity entity, $COMPONENT$ $COMPONENT$) {
-        $ECS$.Components<$COMPONENT$>.Value.Add(entity) = $COMPONENT$;
+    public static void Add$COMPONENT$(this $ECS$.Entity entity, $COMPONENT$ value) {
+        $ECS$.Components<$COMPONENT$>.Value.Add(entity) = value;
     }
     
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -1252,13 +1287,13 @@ public static class $COMPONENT$Extension {
     }
     
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static void TryAdd$COMPONENT$(this $ECS$.Entity entity, $COMPONENT$ $COMPONENT$) {
-        $ECS$.Components<$COMPONENT$>.Value.TryAdd(entity) = $COMPONENT$;
+    public static void TryAdd$COMPONENT$(this $ECS$.Entity entity, $COMPONENT$ value) {
+        $ECS$.Components<$COMPONENT$>.Value.TryAdd(entity) = value;
     }
     
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static void Put$COMPONENT$(this $ECS$.Entity entity, $COMPONENT$ $COMPONENT$) {
-        $ECS$.Components<$COMPONENT$>.Value.Put(entity, $COMPONENT$);
+    public static void Put$COMPONENT$(this $ECS$.Entity entity, $COMPONENT$ value) {
+        $ECS$.Components<$COMPONENT$>.Value.Put(entity, value);
     }
     
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -1269,6 +1304,28 @@ public static class $COMPONENT$Extension {
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public static bool Delete$COMPONENT$(this $ECS$.Entity entity) {
         return $ECS$.Components<$COMPONENT$>.Value.Del(entity);
+    }
+}
+```
+
+
+Standard component live template
+```csharp
+public static class $COMPONENT$Extension {
+    
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ref readonly $COMPONENT$ $COMPONENT$(this $ECS$.Entity entity) {
+        return ref $ECS$.StandardComponents<$COMPONENT$>.Value.Ref(entity);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static ref $COMPONENT$ Mut$COMPONENT$(this $ECS$.Entity entity) {
+        return ref $ECS$.StandardComponents<$COMPONENT$>.Value.RefMut(entity);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static void Set$COMPONENT$(this $ECS$.Entity entity, $COMPONENT$ value) {
+        $ECS$.StandardComponents<$COMPONENT$>.Value.RefMut(entity) = value;
     }
 }
 ```

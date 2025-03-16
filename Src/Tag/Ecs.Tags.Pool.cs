@@ -1,5 +1,6 @@
 ﻿#if !FFS_ECS_DISABLE_TAGS
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
@@ -19,12 +20,17 @@ namespace FFS.Libraries.StaticEcs {
         #endif
         public struct Tags<T> where T : struct, ITag {
             public static Tags<T> Value;
-            private const int Empty = -1;
+            
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+            internal List<ITagDebugEventListener> debugEventListeners;
+            #endif
+            
             private BitMask _bitMask;
-            private int[] _entities;
-            private int[] _dataIdxByEntityId;
-            private int _tagCount;
+            private uint[] _entities;
+            private uint[] _dataIdxByEntityId;
+            private uint _tagCount;
             internal ushort id;
+            private bool _registered;
 
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
             private int _blockers;
@@ -35,19 +41,19 @@ namespace FFS.Libraries.StaticEcs {
             public void Set(Entity entity) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Add, World not initialized");
-                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Add, Tag type not registered");
+                if (!_registered) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Add, Tag type not registered");
                 if (!entity.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Add, cannot access ID - {id} from deleted entity");
                 if (IsBlocked()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Add,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
                 #endif
 
                 var eid = entity._id;
                 ref var idx = ref _dataIdxByEntityId[entity._id];
-                if (idx >= 0) {
+                if (idx != Utils.EmptyComponent) {
                     return;
                 }
                 
                 if (_entities.Length == _tagCount) {
-                    Array.Resize(ref _entities, _tagCount << 1);
+                    Array.Resize(ref _entities, (int) (_tagCount << 1));
                 }
 
                 _entities[_tagCount] = eid;
@@ -56,10 +62,8 @@ namespace FFS.Libraries.StaticEcs {
                 _tagCount++;
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-                if (ModuleTags.Value._debugEventListeners != null) {
-                    foreach (var listener in ModuleTags.Value._debugEventListeners) {
-                        listener.OnTagAdd<T>(entity);
-                    }
+                foreach (var listener in debugEventListeners) {
+                    listener.OnTagAdd<T>(entity);
                 }
                 #endif
             }
@@ -68,41 +72,42 @@ namespace FFS.Libraries.StaticEcs {
             public bool Has(Entity entity) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Has, World not initialized");
-                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Has, Tag type not registered");
+                if (!_registered) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Has, Tag type not registered");
                 if (!entity.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Has, cannot access ID - {id} from deleted entity");
                 #endif
-                return _dataIdxByEntityId[entity._id] >= 0;
+                return _dataIdxByEntityId[entity._id] != Utils.EmptyComponent;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool Delete(Entity entity) {
+            public void Delete(Entity entity) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Delete, World not initialized");
-                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Delete, Tag type not registered");
-                if (!entity.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: DelInternal, cannot access ID - {id} from deleted entity");
-                if (IsBlocked()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: DelInternal,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
+                if (!_registered) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Delete, Tag type not registered");
+                if (!entity.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Delete, cannot access ID - {id} from deleted entity");
+                if (!Has(entity)) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Delete, cannot access ID - {id} tag not added");
+                if (IsBlocked()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Delete,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
                 #endif
 
                 ref var idx = ref _dataIdxByEntityId[entity._id];
-                if (idx >= 0) {
-                    _tagCount--;
+                _tagCount--;
 
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-                    if (ModuleTags.Value._debugEventListeners != null) {
-                        foreach (var listener in ModuleTags.Value._debugEventListeners) {
-                            listener.OnTagDelete<T>(entity);
-                        }
-                    }
-                    #endif
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                foreach (var listener in debugEventListeners) {
+                    listener.OnTagDelete<T>(entity);
+                }
+                #endif
                     
-                    if (idx != _tagCount) {
-                        var lastEntity = _entities[_tagCount];
-                        _entities[idx] = lastEntity;
-                        _dataIdxByEntityId[lastEntity] = idx;
-                    }
-
-                    _bitMask.Del(entity._id, id);
-                    idx = Empty;
+                var lastEntity = _entities[_tagCount];
+                _entities[idx] = lastEntity;
+                _dataIdxByEntityId[lastEntity] = idx;
+                idx = Utils.EmptyComponent;
+                _bitMask.Del(entity._id, id);
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDelete(Entity entity) {
+                if (Has(entity)) {
+                    Delete(entity);
                     return true;
                 }
 
@@ -113,7 +118,7 @@ namespace FFS.Libraries.StaticEcs {
             public void Copy(Entity src, Entity dst) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Copy, World not initialized");
-                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Copy, Tag type not registered");
+                if (!_registered) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Copy, Tag type not registered");
                 if (!src.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
                 if (!dst.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
                 if (IsBlocked()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Copy,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
@@ -131,7 +136,12 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public int Count() => _tagCount;
+            public uint Count() => _tagCount;
+                       
+            [MethodImpl(AggressiveInlining)]
+            public bool IsRegistered() {
+                return _registered;
+            }
 
             [MethodImpl(AggressiveInlining)]
             public string ToStringComponent(Entity entity) {
@@ -143,13 +153,14 @@ namespace FFS.Libraries.StaticEcs {
             internal void Create(ushort tagId, BitMask bitMask, uint baseCapacity = 128) {
                 _bitMask = bitMask;
                 id = tagId;
-                _entities = new int[baseCapacity];
+                _entities = new uint[baseCapacity];
                 _tagCount = 0;
-                _dataIdxByEntityId = new int[World.EntitiesCapacity()];
-                for (var i = 0; i < _dataIdxByEntityId.Length; i++) {
-                    _dataIdxByEntityId[i] = Empty;
+                _dataIdxByEntityId = new uint[World.EntitiesCapacity()];
+                for (uint i = 0; i < _dataIdxByEntityId.Length; i++) {
+                    _dataIdxByEntityId[i] = Utils.EmptyComponent;
                 }
-                ModuleTags.TagInfo<T>.Register();
+
+                _registered = true;
             }
             
             
@@ -157,41 +168,45 @@ namespace FFS.Libraries.StaticEcs {
             public TagDynId DynamicId() {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (World.Status < WorldStatus.Created) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: DynamicId, World not created");
-                if (!ModuleTags.TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: DynamicId, Tag type not registered");
+                if (!_registered) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: DynamicId, Tag type not registered");
                 #endif
                 return new TagDynId(id);
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal void SetDataIfCountLess(ref int count, ref int[] entities) {
+            internal void SetDataIfCountLess(ref uint count, ref uint[] entities, out ushort poolId) {
                 if (_tagCount < count) {
                     count = _tagCount;
                     entities = _entities;
                 }
+
+                poolId = id;
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal int[] EntitiesData() => _entities;
+            internal uint[] EntitiesData() => _entities;
 
             [MethodImpl(AggressiveInlining)]
-            internal void Resize(int cap) {
-                var lastLength = _dataIdxByEntityId.Length;
-                Array.Resize(ref _dataIdxByEntityId, cap);
+            internal void Resize(uint cap) {
+                var lastLength = (uint) _dataIdxByEntityId.Length;
+                Array.Resize(ref _dataIdxByEntityId, (int) cap);
                 for (var i = lastLength; i < cap; i++) {
-                    _dataIdxByEntityId[i] = Empty;
+                    _dataIdxByEntityId[i] = Utils.EmptyComponent;
                 }
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal void SetDataIfCountMore(ref int count, ref int[] entities) {
+            internal void SetDataIfCountMore(ref uint count, ref uint[] entities, out ushort poolId) {
                 if (_tagCount > count) {
                     count = _tagCount;
                     entities = _entities;
                 }
+
+                poolId = id;
             }
             
             [MethodImpl(AggressiveInlining)]
-            internal int[] GetDataIdxByEntityId() {
+            internal uint[] GetDataIdxByEntityId() {
                 return _dataIdxByEntityId;
             }
 
@@ -201,14 +216,21 @@ namespace FFS.Libraries.StaticEcs {
                 _dataIdxByEntityId = null;
                 _tagCount = 0;
                 id = 0;
-                ModuleTags.TagInfo<T>.Reset();
+                _registered = false;
+                _bitMask = null;
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                _blockers = 0;
+                #endif
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                debugEventListeners = null;
+                #endif
             }
 
             [MethodImpl(AggressiveInlining)]
             internal void Clear() {
                 Array.Clear(_entities, 0, _entities.Length);
                 for (var i = 0; i < _dataIdxByEntityId.Length; i++) {
-                    _dataIdxByEntityId[i] = Empty;
+                    _dataIdxByEntityId[i] = Utils.EmptyComponent;
                 }
                 _tagCount = 0;
             }

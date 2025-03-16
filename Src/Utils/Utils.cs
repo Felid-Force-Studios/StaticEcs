@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -19,6 +17,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption (Option.ArrayBoundsChecks, false)]
     #endif
     public static class Utils {
+
+        internal const uint EmptyComponent = uint.MaxValue;
+        
         internal static ushort CalculateMaskLen(ushort count) {
             var len = (ushort) (count >> 6);
             if (count - (len << 6) != 0) {
@@ -30,8 +31,8 @@ namespace FFS.Libraries.StaticEcs {
 
 
         [MethodImpl(AggressiveInlining)]
-        public static int CalculateSize(int value) {
-            var u = (uint) value;
+        public static uint CalculateSize(uint value) {
+            var u = value;
             if (u == 0) {
                 return 0;
             }
@@ -44,7 +45,7 @@ namespace FFS.Libraries.StaticEcs {
             u |= u >> 16;
             u++;
 
-            return (int) u;
+            return u;
         }
 
         internal static string GetGenericName(this Type type) {
@@ -53,7 +54,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             var genericArguments = type.GetGenericArguments();
-            var typeName = type.FullName.Substring(0, type.FullName.IndexOf('`')); // Убираем суффикс `1, `2 и т.д.
+            var typeName = type.FullName!.Substring(0, type.FullName.IndexOf('`')); // Убираем суффикс `1, `2 и т.д.
             var genericArgs = string.Join(", ", Array.ConvertAll(genericArguments, GetGenericName));
 
             return $"{typeName}<{genericArgs}>";
@@ -141,7 +142,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         public void TryAddColumn(Ecs<WorldType>.Entity entity, StreamWriter writer) {
-            if (Ecs<WorldType>.ModuleComponents.ComponentInfo<T>.IsRegistered() && Ecs<WorldType>.Components<T>.Value.Has(entity)) {
+            if (Ecs<WorldType>.Components<T>.Value.IsRegistered() && Ecs<WorldType>.Components<T>.Value.Has(entity)) {
                 Ecs<WorldType>.Components<T>.Value.RefMutInternal(entity).WriteColumn(writer);
             }
 
@@ -186,7 +187,7 @@ namespace FFS.Libraries.StaticEcs {
                                               , Ecs<WorldType>.IEventsDebugEventListener
                                               #endif
         where WorldType : struct, IWorldType {
-        internal static readonly Ecs<WorldType>.Entity EmptyEntity = Ecs<WorldType>.Entity.FromIdx(-1);
+        internal static readonly Ecs<WorldType>.Entity EmptyEntity = Ecs<WorldType>.Entity.FromIdx(uint.MaxValue);
 
         internal readonly string LogsFilePath;
         internal readonly DateTime DateTime;
@@ -215,7 +216,7 @@ namespace FFS.Libraries.StaticEcs {
                     try {
                         File.Delete(file);
                     }
-                    catch (Exception e) {
+                    catch (Exception _) {
                         // ignored
                     }
                 }
@@ -289,7 +290,7 @@ namespace FFS.Libraries.StaticEcs {
             Writer.Dispose();
         }
 
-        public void OnWorldResized(int capacity) { }
+        public void OnWorldResized(uint capacity) { }
         
         public void Write(OperationType operation, string type) {
             Write(EmptyEntity, operation, type);
@@ -300,20 +301,20 @@ namespace FFS.Libraries.StaticEcs {
                 return;
             }
             
-            if (entity._id >= 0) {
+            if (entity._id != uint.MaxValue) {
                 Writer.Write(entity._id);
             }
 
             Writer.Write(";");
             
-            if (entity._id >= 0) {
+            if (entity._id != uint.MaxValue) {
                 Writer.Write(entity.Version());
             }
 
             Writer.Write(";");
 
             foreach (var columnWriter in ColumnWriters) {
-                if (entity._id >= 0) {
+                if (entity._id != uint.MaxValue) {
                     columnWriter.TryAddColumn(entity, Writer);
                 } else {
                     Writer.Write(";");

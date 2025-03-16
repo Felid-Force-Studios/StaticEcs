@@ -11,10 +11,10 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     public ref struct QueryComponentsIterator<WorldType, C> where C : struct, IComponent where WorldType : struct, IWorldType {
         private readonly C[] _data; //8
-        private int _count;         //4
+        private uint _count;         //4
 
         [MethodImpl(AggressiveInlining)]
-        public QueryComponentsIterator(byte cs9fake) {
+        public QueryComponentsIterator(byte _) {
             _data = Ecs<WorldType>.Components<C>.Value.Data();
             _count = Ecs<WorldType>.Components<C>.Value.Count();
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -27,8 +27,8 @@ namespace FFS.Libraries.StaticEcs {
             get {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 ref var val = ref _data[_count];
-                if (Ecs<WorldType>.ModuleComponents.Value._debugEventListeners != null) {
-                    foreach (var listener in Ecs<WorldType>.ModuleComponents.Value._debugEventListeners) {
+                if (Ecs<WorldType>.Components<C>.Value.debugEventListeners != null) {
+                    foreach (var listener in Ecs<WorldType>.Components<C>.Value.debugEventListeners) {
                         listener.OnComponentRefMut(new Ecs<WorldType>.Entity(Ecs<WorldType>.Components<C>.Value.EntitiesData()[_count]), ref val);
                     }
                 }
@@ -41,8 +41,11 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public bool MoveNext() {
+            if (_count == 0) {
+                return false;
+            }
             _count--;
-            return _count >= 0;
+            return true;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -64,10 +67,10 @@ namespace FFS.Libraries.StaticEcs {
         where C : struct, IComponent
         where QW : struct, IQueryMethod
         where WorldType : struct, IWorldType {
-        private readonly C[] _data;                               //8
-        private readonly int[] _entities; //8
-        private int _count;                                       //4
-        private QW _with;                                         //???
+        private readonly C[] _data;        //8
+        private readonly uint[] _entities; //8
+        private uint _count;               //4
+        private QW _with;                  //???
 
         [MethodImpl(AggressiveInlining)]
         public QueryComponentsIterator(QW with) {
@@ -75,8 +78,8 @@ namespace FFS.Libraries.StaticEcs {
             _data = Ecs<WorldType>.Components<C>.Value.Data();
             _count = Ecs<WorldType>.Components<C>.Value.Count();
             _entities = Ecs<WorldType>.Components<C>.Value.EntitiesData();
-            var count = int.MaxValue;
-            int[] entities = null;
+            var count = uint.MaxValue;
+            uint[] entities = null;
             with.SetData<WorldType>(ref count, ref entities);
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
             Ecs<WorldType>.Components<C>.Value.AddBlocker(1);
@@ -88,8 +91,8 @@ namespace FFS.Libraries.StaticEcs {
             get {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 ref var val = ref _data[_count];
-                if (Ecs<WorldType>.ModuleComponents.Value._debugEventListeners != null) {
-                    foreach (var listener in Ecs<WorldType>.ModuleComponents.Value._debugEventListeners) {
+                if (Ecs<WorldType>.Components<C>.Value.debugEventListeners != null) {
+                    foreach (var listener in Ecs<WorldType>.Components<C>.Value.debugEventListeners) {
                         listener.OnComponentRefMut(new Ecs<WorldType>.Entity(_entities[_count]), ref val);
                     }
                 }
@@ -103,7 +106,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public bool MoveNext() {
             while (true) {
-                if (_count <= 0) {
+                if (_count == 0) {
                     return false;
                 }
 

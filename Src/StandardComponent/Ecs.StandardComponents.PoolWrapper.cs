@@ -7,15 +7,15 @@ using Unity.IL2CPP.CompilerServices;
 namespace FFS.Libraries.StaticEcs {
     
     public interface IStandardRawPool {
-        internal object GetRaw(int entity);
+        internal object GetRaw(uint entity);
             
-        internal void PutRaw(int entity, object value);
+        internal void PutRaw(uint entity, object value);
 
-        internal void Copy(int srcEntity, int dstEntity);
+        internal void Copy(uint srcEntity, uint dstEntity);
 
-        internal int Capacity();
+        internal uint Capacity();
         
-        public int Count();
+        public uint Count();
     }
     
     
@@ -37,7 +37,7 @@ namespace FFS.Libraries.StaticEcs {
 
             public bool TryCast<C>(out StandardComponentsWrapper<C> wrapper) where C : struct, IStandardComponent;
 
-            internal void Resize(int cap);
+            internal void Resize(uint cap);
 
             internal void Destroy();
 
@@ -79,19 +79,19 @@ namespace FFS.Libraries.StaticEcs {
             public void Copy(Entity srcEntity, Entity dstEntity) => StandardComponents<T>.Value.Copy(srcEntity, dstEntity);
 
             [MethodImpl(AggressiveInlining)]
-            object IStandardRawPool.GetRaw(int entity) => StandardComponents<T>.Value.RefMutInternal(new Entity(entity));
+            object IStandardRawPool.GetRaw(uint entity) => StandardComponents<T>.Value.RefMutInternal(new Entity(entity));
 
             [MethodImpl(AggressiveInlining)]
-            void IStandardRawPool.PutRaw(int entity, object value) => StandardComponents<T>.Value.RefMut(new Entity(entity)) = (T) value;
+            void IStandardRawPool.PutRaw(uint entity, object value) => StandardComponents<T>.Value.RefMut(new Entity(entity)) = (T) value;
 
             [MethodImpl(AggressiveInlining)]
-            void IStandardRawPool.Copy(int srcEntity, int dstEntity) => StandardComponents<T>.Value.Copy(new Entity(srcEntity), new Entity(dstEntity));
+            void IStandardRawPool.Copy(uint srcEntity, uint dstEntity) => StandardComponents<T>.Value.Copy(new Entity(srcEntity), new Entity(dstEntity));
 
             [MethodImpl(AggressiveInlining)]
-            int IStandardRawPool.Capacity() => StandardComponents<T>.Value.Data().Length;
+            uint IStandardRawPool.Capacity() => (uint) StandardComponents<T>.Value.Data().Length;
 
             [MethodImpl(AggressiveInlining)]
-            public int Count() => World.EntitiesCountWithoutDestroyed();
+            public uint Count() => World.EntitiesCountWithoutDestroyed();
 
             [MethodImpl(AggressiveInlining)]
             public bool Is<C>() where C : struct, IStandardComponent => StandardComponents<C>.Value.id == StandardComponents<T>.Value.id;
@@ -103,7 +103,7 @@ namespace FFS.Libraries.StaticEcs {
             string IStandardComponentsWrapper.ToStringComponent(Entity entity) => StandardComponents<T>.Value.ToStringComponent(entity);
 
             [MethodImpl(AggressiveInlining)]
-            void IStandardComponentsWrapper.Resize(int cap) => StandardComponents<T>.Value.Resize(cap);
+            void IStandardComponentsWrapper.Resize(uint cap) => StandardComponents<T>.Value.Resize(cap);
 
             [MethodImpl(AggressiveInlining)]
             void IStandardComponentsWrapper.Destroy() => StandardComponents<T>.Value.Destroy();

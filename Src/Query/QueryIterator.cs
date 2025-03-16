@@ -10,9 +10,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption (Option.ArrayBoundsChecks, false)]
     #endif
     public ref struct QueryEntitiesIterator<WorldType, QM> where QM : struct, IPrimaryQueryMethod where WorldType : struct, IWorldType {
-        private readonly int[] _entities; //8
-        private int _current;             //4
-        private int _count;               //4
+        private readonly uint[] _entities; //8
+        private uint _current;             //4
+        private uint _count;               //4
         private QM _queryMethod;          //???
 
         [MethodImpl(AggressiveInlining)]

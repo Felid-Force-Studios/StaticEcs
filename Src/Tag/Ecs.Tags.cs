@@ -35,6 +35,9 @@ namespace FFS.Libraries.StaticEcs {
                 _pools = new ITagsWrapper[baseComponentsCapacity];
                 _poolIdxByType = new Dictionary<Type, int>();
                 BitMask = new BitMask();
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                _debugEventListeners ??= new List<ITagDebugEventListener>();
+                #endif
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -44,11 +47,15 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal TagDynId RegisterTagType<C>(uint capacity) where C : struct, ITag {
-                if (TagInfo<C>.IsRegistered()) {
+                if (Tags<C>.Value.IsRegistered()) {
                     return Tags<C>.Value.DynamicId();
                 }
 
                 Tags<C>.Value.Create(_poolsCount, BitMask, capacity);
+                
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                Tags<C>.Value.debugEventListeners = _debugEventListeners;
+                #endif
                 
                 if (_poolsCount == _pools.Length) {
                     Array.Resize(ref _pools, _poolsCount << 1);
@@ -83,7 +90,7 @@ namespace FFS.Libraries.StaticEcs {
             internal TagsWrapper<T> GetPool<T>() where T : struct, ITag {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleTags, Method: GetPool<{typeof(T)}, World not initialized");
-                if (!TagInfo<T>.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleTags, Method: GetPool<{typeof(T)}>, Tag type not registered");
+                if (!Tags<T>.Value.IsRegistered()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleTags, Method: GetPool<{typeof(T)}>, Tag type not registered");
                 #endif
                 return default;
             }
@@ -122,7 +129,7 @@ namespace FFS.Libraries.StaticEcs {
                 if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleTags, Method: GetPool<{typeof(T)}, World not initialized");
                 #endif
                 pool = default;
-                return TagInfo<T>.IsRegistered();
+                return Tags<T>.Value.IsRegistered();
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -135,10 +142,8 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal void DestroyEntity(Entity entity) {
-                var id = BitMask.GetMinIndex(entity._id);
-                while (id >= 0) {
-                    _pools[id].Del(entity);
-                    id = BitMask.GetMinIndex(entity._id);
+                while (BitMask.GetMinIndex(entity._id, out var id)) {
+                    _pools[id].Delete(entity);
                 }
             }
             
@@ -147,11 +152,9 @@ namespace FFS.Libraries.StaticEcs {
                 var str = "Tags:\n";
                 var bufId = BitMask.BorrowBuf();
                 BitMask.CopyToBuffer(entity._id, bufId);
-                var id = BitMask.GetMinIndexBuffer(bufId);
-                while (id >= 0) {
+                while (BitMask.GetMinIndexBuffer(bufId, out var id)) {
                     str += _pools[id].ToStringComponent(entity);
                     BitMask.DelInBuffer(bufId, (ushort) id);
-                    id = BitMask.GetMinIndexBuffer(bufId);
                 }
                 BitMask.DropBuf();
                 return str;
@@ -165,11 +168,9 @@ namespace FFS.Libraries.StaticEcs {
                 result.Clear();
                 var bufId = BitMask.BorrowBuf();
                 BitMask.CopyToBuffer(entity._id, bufId);
-                var id = BitMask.GetMinIndexBuffer(bufId);
-                while (id >= 0) {
+                while (BitMask.GetMinIndexBuffer(bufId, out var id)) {
                     result.Add(_pools[id].GetRaw());
                     BitMask.DelInBuffer(bufId, (ushort) id);
-                    id = BitMask.GetMinIndexBuffer(bufId);
                 }
                 BitMask.DropBuf();
             }
@@ -178,18 +179,16 @@ namespace FFS.Libraries.StaticEcs {
             internal void CopyEntity(Entity srcEntity, Entity dstEntity) {
                 var bufId = BitMask.BorrowBuf();
                 BitMask.CopyToBuffer(srcEntity._id, bufId);
-                var id = BitMask.GetMinIndexBuffer(bufId);
-                while (id >= 0) {
+                while (BitMask.GetMinIndexBuffer(bufId, out var id)) {
                     _pools[id].Copy(srcEntity, dstEntity);
                     BitMask.DelInBuffer(bufId, (ushort) id);
-                    id = BitMask.GetMinIndexBuffer(bufId);
                 }
 
                 BitMask.DropBuf();
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal void Resize(int cap) {
+            internal void Resize(uint cap) {
                 for (int i = 0, iMax = _poolsCount; i < iMax; i++) {
                     _pools[i].Resize(cap);
                 }
@@ -218,22 +217,6 @@ namespace FFS.Libraries.StaticEcs {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 _debugEventListeners = default;
                 #endif
-            }
-
-            #if ENABLE_IL2CPP
-            [Il2CppEagerStaticClassConstruction]
-            #endif
-            public struct TagInfo<T> where T : struct, ITag {
-                private static bool Registered;
-
-                [MethodImpl(AggressiveInlining)]
-                internal static void Register() => Registered = true;
-
-                [MethodImpl(AggressiveInlining)]
-                internal static void Reset() => Registered = false;
-
-                [MethodImpl(AggressiveInlining)]
-                public static bool IsRegistered() => Registered;
             }
         }
         

@@ -1,1000 +1,1077 @@
-## Benchmark - [source code](https://github.com/blackbone/other-ecs-benchmarks/pull/7/commits/157e2faecd08921fc8ac90ef224ad0b4615bd4b3)
+## Benchmark - [source code](https://github.com/blackbone/other-ecs-benchmarks/pull/9/commits/cb081bd943c71598921084e6098813932b986768)
 
-BenchmarkDotNet v0.14.0, Windows 10 (10.0.19045.5131/22H2/2022Update)
+BenchmarkDotNet v0.14.0, Windows 10 (10.0.19045.5608/22H2/2022Update)
 AMD Ryzen 7 4800H with Radeon Graphics, 1 CPU, 16 logical and 8 physical cores
-.NET SDK 8.0.404
-[Host]     : .NET 8.0.11 (8.0.1124.51707), X64 RyuJIT AVX2
-Job-XWDGMM : .NET 8.0.11 (8.0.1124.51707), X64 RyuJIT AVX2
+.NET SDK 9.0.202
+[Host]     : .NET 9.0.3 (9.0.325.11113), X64 RyuJIT AVX2
+Job-TUUGWI : .NET 9.0.3 (9.0.325.11113), X64 RyuJIT AVX2
 
 Method=Run InvocationCount=1 RunStrategy=Throughput  
 UnrollFactor=1
 
 # Add1ComponentRandomOrder
 
-| Context                                     | EntityCount |                                          Mean |       Error |      StdDev |      Median |             Ratio | RatioSD |  Allocated |     Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|------------:|------------:|------------:|------------------:|--------:|-----------:|----------------:|
-| Arch                                        | 100000      |                                    8,819.9 μs |   733.73 μs | 2,140.32 μs |  8,271.5 μs |          baseline |         |     1072 B |                 |
-| DefaultECS                                  | 100000      |                                   10,694.3 μs |   350.95 μs | 1,018.16 μs | 10,671.5 μs |      1.28x slower |   0.30x |      400 B |      2.68x less |
-| DragonECS                                   | 100000      |                                    3,963.4 μs |    79.19 μs |   224.65 μs |  3,956.7 μs |      2.23x faster |   0.55x |      400 B |      2.68x less |
-| Fennecs                                     | 100000      |                                   47,672.0 μs |   743.06 μs |   658.70 μs | 47,587.2 μs |      5.69x slower |   1.21x | 49600400 B | 46,269.03x more |
-| FlecsNET                                    | 100000      |                                   88,778.0 μs | 1,236.98 μs | 1,157.08 μs | 88,676.0 μs |     10.60x slower |   2.26x |      400 B |      2.68x less |
-| Friflo                                      | 100000      |                                    4,064.5 μs |   270.73 μs |   772.41 μs |  3,850.2 μs |      2.24x faster |   0.67x |      400 B |      2.68x less |
-| LeoEcs                                      | 100000      |                                   16,779.7 μs |   329.41 μs |   541.22 μs | 16,784.5 μs |      2.00x slower |   0.43x |      400 B |      2.68x less |
-| LeoEcsLite                                  | 100000      |                                    4,475.2 μs |   260.84 μs |   765.01 μs |  4,333.5 μs |      2.03x faster |   0.59x |      400 B |      2.68x less |
-| Morpeh                                      | 100000      |                                   15,792.6 μs |   304.99 μs |   407.15 μs | 15,791.4 μs |      1.89x slower |   0.40x |      400 B |      2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**836.5 μs** |    27.43 μs |    77.37 μs |    827.8 μs | **10.63x faster** |   2.75x |      400 B |      2.68x less |
-| TinyEcs                                     | 100000      |                                    7,417.8 μs |   203.29 μs |   576.69 μs |  7,417.6 μs |      1.20x faster |   0.30x |  2400400 B |  2,239.18x more |
-| Xeno                                        | 100000      |                                    6,259.2 μs |   389.00 μs | 1,109.85 μs |  6,148.6 μs |      1.45x faster |   0.43x |      400 B |      2.68x less |
+| Context                 | EntityCount |        Mean |       Error |      StdDev |      Median |  Allocated |
+|-------------------------|-------------|------------:|------------:|------------:|------------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |    864.2 μs |    20.98 μs |    59.16 μs |    866.4 μs |       64 B |
+| MassiveEcsContext       | 100000      |    972.2 μs |    16.95 μs |    37.56 μs |    968.8 μs |      400 B |
+| FrifloContext           | 100000      |  4,128.4 μs |   284.37 μs |   811.32 μs |  4,008.2 μs |      400 B |
+| DragonECSContext        | 100000      |  4,129.5 μs |   128.97 μs |   361.66 μs |  4,038.3 μs |      400 B |
+| LeoEcsLiteContext       | 100000      |  5,117.2 μs |   325.94 μs |   935.19 μs |  4,874.4 μs |      400 B |
+| XenoContext             | 100000      |  8,378.0 μs |   480.55 μs | 1,378.80 μs |  7,984.9 μs |   983688 B |
+| ArchContext             | 100000      |  8,728.3 μs |   459.31 μs | 1,332.54 μs |  8,546.9 μs |     1120 B |
+| DefaultECSContext       | 100000      | 11,371.9 μs |   426.54 μs | 1,223.81 μs | 11,125.3 μs |       64 B |
+| TinyEcsContext          | 100000      | 13,290.3 μs |   265.38 μs |   703.75 μs | 13,170.9 μs |  2400400 B |
+| MorpehContext           | 100000      | 16,875.9 μs |   337.39 μs |   673.81 μs | 16,688.8 μs |      400 B |
+| LeoEcsContext           | 100000      | 17,501.7 μs |   347.94 μs |   710.74 μs | 17,248.6 μs |      400 B |
+| FennecsContext          | 100000      | 45,548.8 μs |   796.16 μs | 1,006.89 μs | 45,127.4 μs | 49600400 B |
+| FlecsNETContext         | 100000      | 87,363.8 μs | 1,698.43 μs | 2,324.83 μs | 86,303.9 μs |      400 B |
 
 # Add1Component
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |             Ratio | RatioSD |  Allocated |     Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|------------------:|--------:|-----------:|----------------:|
-| Arch                                        | 100000      |                                    3,726.4 μs |  31.68 μs |  28.08 μs |          baseline |         |     1072 B |                 |
-| DefaultECS                                  | 100000      |                                    1,329.7 μs |  12.90 μs |  11.44 μs |      2.80x faster |   0.03x |      400 B |      2.68x less |
-| DragonECS                                   | 100000      |                                      841.0 μs |  16.69 μs |  38.34 μs |      4.44x faster |   0.20x |      400 B |      2.68x less |
-| Fennecs                                     | 100000      |                                   34,711.3 μs | 501.54 μs | 444.60 μs |      9.32x slower |   0.13x | 49600400 B | 46,269.03x more |
-| FlecsNET                                    | 100000      |                                   63,623.6 μs | 905.04 μs | 846.58 μs |     17.07x slower |   0.25x |      400 B |      2.68x less |
-| Friflo                                      | 100000      |                                    1,530.2 μs |  17.34 μs |  23.15 μs |      2.44x faster |   0.04x |      400 B |      2.68x less |
-| LeoEcs                                      | 100000      |                                    3,354.0 μs |  66.93 μs |  82.19 μs |      1.11x faster |   0.03x |      400 B |      2.68x less |
-| LeoEcsLite                                  | 100000      |                                    1,508.7 μs |  27.42 μs |  56.64 μs |      2.47x faster |   0.08x |      400 B |      2.68x less |
-| Morpeh                                      | 100000      |                                    2,595.7 μs |  54.54 μs | 157.37 μs |      1.44x faster |   0.08x |      400 B |      2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**330.1 μs** |   6.24 μs |   5.53 μs | **11.29x faster** |   0.20x |      400 B |      2.68x less |
-| TinyEcs                                     | 100000      |                                    3,705.5 μs |  72.58 μs |  96.90 μs |      1.01x faster |   0.03x |  2400400 B |  2,239.18x more |
-| Xeno                                        | 100000      |                                    2,431.7 μs |  18.08 μs |  36.10 μs |      1.53x faster |   0.02x |      400 B |      2.68x less |
+| Context                 | EntityCount |        Mean |     Error |      StdDev |      Median |  Allocated |
+|-------------------------|-------------|------------:|----------:|------------:|------------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |    396.8 μs |   7.56 μs |     6.31 μs |    395.1 μs |      400 B |
+| MassiveEcsContext       | 100000      |    730.0 μs |  12.96 μs |    30.56 μs |    720.8 μs |      400 B |
+| DragonECSContext        | 100000      |  1,030.7 μs |  47.10 μs |   138.14 μs |    988.2 μs |      400 B |
+| DefaultECSContext       | 100000      |  1,479.2 μs |  52.74 μs |   148.77 μs |  1,422.7 μs |      400 B |
+| LeoEcsLiteContext       | 100000      |  1,573.4 μs |  13.25 μs |    21.40 μs |  1,567.0 μs |      400 B |
+| FrifloContext           | 100000      |  1,633.0 μs |  15.78 μs |    26.79 μs |  1,623.7 μs |      400 B |
+| MorpehContext           | 100000      |  2,599.1 μs |  51.91 μs |   115.03 μs |  2,588.7 μs |      400 B |
+| XenoContext             | 100000      |  3,275.9 μs |  64.86 μs |   116.96 μs |  3,239.6 μs |   983688 B |
+| LeoEcsContext           | 100000      |  3,544.1 μs |  70.59 μs |   109.90 μs |  3,510.4 μs |      400 B |
+| TinyEcsContext          | 100000      |  4,233.2 μs | 142.35 μs |   384.86 μs |  4,129.6 μs |  2400064 B |
+| ArchContext             | 100000      |  4,453.7 μs |  88.77 μs |   209.25 μs |  4,371.5 μs |     1744 B |
+| FennecsContext          | 100000      | 36,921.7 μs | 820.32 μs | 2,392.92 μs | 37,072.1 μs | 49600400 B |
+| FlecsNETContext         | 100000      | 61,170.6 μs | 474.07 μs |   395.87 μs | 61,250.7 μs |      400 B |
 
 # Add1RandomComponentRandomOrder
 
-| Context                                     | EntityCount |                                          Mean |    Error |   StdDev |            Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|---------:|---------:|-----------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      |                                      16.99 ms | 0.337 ms | 0.762 ms |         baseline |         |   2.29 MB |             |
-| DefaultECS                                  | 100000      |                                      21.66 ms | 0.432 ms | 0.562 ms |     1.28x slower |   0.07x |   2.29 MB |  1.00x less |
-| DragonECS                                   | 100000      |                                      17.94 ms | 0.159 ms | 0.149 ms |     1.06x slower |   0.05x |   2.29 MB |  1.00x less |
-| Fennecs                                     | 100000      |                                      58.77 ms | 0.653 ms | 0.579 ms |     3.47x slower |   0.16x |  50.35 MB | 21.99x more |
-| FlecsNET                                    | 100000      |                                     140.99 ms | 1.141 ms | 1.068 ms |     8.31x slower |   0.38x |   3.05 MB |  1.33x more |
-| Friflo                                      | 100000      |                                      14.34 ms | 0.379 ms | 1.094 ms |     1.19x faster |   0.10x |   3.05 MB |  1.33x more |
-| LeoEcs                                      | 100000      |                                      31.24 ms | 0.592 ms | 1.298 ms |     1.84x slower |   0.11x |   3.05 MB |  1.33x more |
-| LeoEcsLite                                  | 100000      |                                      17.56 ms | 0.344 ms | 0.536 ms |     1.04x slower |   0.06x |   2.29 MB |  1.00x less |
-| Morpeh                                      | 100000      |                                      28.49 ms | 0.287 ms | 0.268 ms |     1.68x slower |   0.08x |   2.29 MB |  1.00x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**10.83 ms** | 0.289 ms | 0.840 ms | **1.58x faster** |   0.14x |   2.29 MB |  1.00x less |
-| TinyEcs                                     | 100000      |                                      28.64 ms | 0.552 ms | 0.461 ms |     1.69x slower |   0.08x |   5.34 MB |  2.33x more |
-| Xeno                                        | 100000      |                                      21.20 ms | 0.422 ms | 0.934 ms |     1.25x slower |   0.08x |   3.79 MB |  1.66x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |  Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |   2.615 ms | 0.1292 ms | 0.3536 ms |   2.507 ms |      400 B |
+| MassiveEcsContext       | 100000      |   4.909 ms | 0.2931 ms | 0.8268 ms |   4.576 ms |      400 B |
+| FrifloContext           | 100000      |   6.195 ms | 0.2789 ms | 0.8001 ms |   6.127 ms |      112 B |
+| ArchContext             | 100000      |   9.415 ms | 0.1998 ms | 0.5700 ms |   9.288 ms |     1744 B |
+| DragonECSContext        | 100000      |  10.782 ms | 0.3259 ms | 0.9299 ms |  10.529 ms |      400 B |
+| LeoEcsLiteContext       | 100000      |  11.056 ms | 0.2199 ms | 0.5352 ms |  10.971 ms |      400 B |
+| TinyEcsContext          | 100000      |  14.087 ms | 0.3425 ms | 0.9435 ms |  13.936 ms |  2400064 B |
+| DefaultECSContext       | 100000      |  14.172 ms | 0.2742 ms | 0.4188 ms |  14.122 ms |      400 B |
+| XenoContext             | 100000      |  17.195 ms | 0.9590 ms | 2.6734 ms |  16.751 ms |   787632 B |
+| MorpehContext           | 100000      |  22.328 ms | 0.3432 ms | 0.3042 ms |  22.333 ms |      400 B |
+| LeoEcsContext           | 100000      |  24.819 ms | 0.4916 ms | 1.2864 ms |  24.747 ms |       64 B |
+| FennecsContext          | 100000      |  49.841 ms | 0.9961 ms | 1.6366 ms |  49.842 ms | 49600400 B |
+| FlecsNETContext         | 100000      | 126.121 ms | 0.4787 ms | 0.3737 ms | 126.187 ms |      400 B |
 
 # Add1RandomComponent
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |     Median |            Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------:|-----------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      |                                     10.472 ms | 0.0598 ms | 0.0499 ms |  10.470 ms |         baseline |         |   2.29 MB |             |
-| DefaultECS                                  | 100000      |                                      7.786 ms | 0.0245 ms | 0.0229 ms |   7.777 ms |     1.35x faster |   0.01x |   2.29 MB |  1.00x less |
-| DragonECS                                   | 100000      |                                      7.947 ms | 0.1566 ms | 0.2573 ms |   7.806 ms |     1.32x faster |   0.04x |   2.29 MB |  1.00x less |
-| Fennecs                                     | 100000      |                                     44.789 ms | 0.4027 ms | 0.3570 ms |  44.864 ms |     4.28x slower |   0.04x |  50.35 MB | 21.99x more |
-| FlecsNET                                    | 100000      |                                    123.506 ms | 0.4971 ms | 0.4151 ms | 123.327 ms |    11.79x slower |   0.07x |   3.05 MB |  1.33x more |
-| Friflo                                      | 100000      |                                      9.510 ms | 0.1167 ms | 0.2193 ms |   9.461 ms |     1.10x faster |   0.02x |   3.05 MB |  1.33x more |
-| LeoEcs                                      | 100000      |                                     13.387 ms | 0.2617 ms | 0.4584 ms |  13.438 ms |     1.28x slower |   0.04x |   3.05 MB |  1.33x more |
-| LeoEcsLite                                  | 100000      |                                      9.186 ms | 0.0663 ms | 0.1071 ms |   9.183 ms |     1.14x faster |   0.01x |   2.29 MB |  1.00x less |
-| Morpeh                                      | 100000      |                                     10.488 ms | 0.2082 ms | 0.1846 ms |  10.414 ms |     1.00x slower |   0.02x |   2.29 MB |  1.00x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**7.694 ms** | 0.0604 ms | 0.0472 ms |   7.679 ms | **1.36x faster** |   0.01x |   2.29 MB |  1.00x less |
-| TinyEcs                                     | 100000      |                                     19.178 ms | 0.1727 ms | 0.1531 ms |  19.190 ms |     1.83x slower |   0.02x |   5.34 MB |  2.33x more |
-| Xeno                                        | 100000      |                                     13.134 ms | 0.2459 ms | 0.2053 ms |  13.039 ms |     1.25x slower |   0.02x |   3.79 MB |  1.66x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |  Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |   1.681 ms | 0.0074 ms | 0.0058 ms |   1.681 ms |      400 B |
+| DragonECSContext        | 100000      |   2.911 ms | 0.0233 ms | 0.0195 ms |   2.908 ms |      400 B |
+| DefaultECSContext       | 100000      |   2.945 ms | 0.0509 ms | 0.0993 ms |   2.980 ms |      400 B |
+| MassiveEcsContext       | 100000      |   3.029 ms | 0.1381 ms | 0.3803 ms |   2.865 ms |      400 B |
+| FrifloContext           | 100000      |   3.543 ms | 0.0704 ms | 0.0811 ms |   3.559 ms |      400 B |
+| LeoEcsLiteContext       | 100000      |   4.109 ms | 0.0853 ms | 0.2276 ms |   4.047 ms |      400 B |
+| MorpehContext           | 100000      |   5.028 ms | 0.0922 ms | 0.0817 ms |   4.990 ms |      400 B |
+| TinyEcsContext          | 100000      |   5.376 ms | 0.1007 ms | 0.0892 ms |   5.366 ms |  2400400 B |
+| ArchContext             | 100000      |   5.663 ms | 0.0472 ms | 0.0442 ms |   5.648 ms |     1408 B |
+| XenoContext             | 100000      |   6.089 ms | 0.0853 ms | 0.0712 ms |   6.083 ms |   787632 B |
+| LeoEcsContext           | 100000      |   6.262 ms | 0.0881 ms | 0.1566 ms |   6.258 ms |      400 B |
+| FennecsContext          | 100000      |  33.970 ms | 0.5286 ms | 0.4945 ms |  33.887 ms | 49600400 B |
+| FlecsNETContext         | 100000      | 111.751 ms | 2.0706 ms | 1.7290 ms | 112.060 ms |      400 B |
 
 # Add2ComponentsRandomOrder
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |     Median |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                      8.630 ms | 0.2693 ms | 0.7856 ms |   8.517 ms |         baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                     13.926 ms | 0.3093 ms | 0.8874 ms |  13.882 ms |     1.63x slower |   0.17x |       400 B |       2.68x less |
-| DragonECS                                   | 100000      |                                      6.236 ms | 0.1237 ms | 0.3236 ms |   6.184 ms |     1.39x faster |   0.14x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                     95.385 ms | 0.8471 ms | 0.7509 ms |  95.012 ms |    11.14x slower |   0.96x | 113600400 B | 105,970.52x more |
-| FlecsNET                                    | 100000      |                                    152.545 ms | 1.3933 ms | 1.2351 ms | 152.754 ms |    17.82x slower |   1.54x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                      6.722 ms | 0.3005 ms | 0.8719 ms |   6.742 ms |     1.30x faster |   0.20x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                     20.039 ms | 0.3986 ms | 0.5456 ms |  19.999 ms |     2.34x slower |   0.21x |       400 B |       2.68x less |
-| LeoEcsLite                                  | 100000      |                                      7.500 ms | 0.3134 ms | 0.9141 ms |   7.502 ms |     1.17x faster |   0.18x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                     24.156 ms | 0.4837 ms | 1.3800 ms |  23.650 ms |     2.82x slower |   0.29x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**1.480 ms** | 0.0389 ms | 0.1098 ms |   1.456 ms | **5.86x faster** |   0.67x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                     17.197 ms | 0.2734 ms | 0.2807 ms |  17.181 ms |     2.01x slower |   0.18x |   4800400 B |   4,477.99x more |
-| Xeno                                        | 100000      |                                      8.055 ms | 0.3602 ms | 1.0277 ms |   7.950 ms |     1.09x faster |   0.17x |   1045224 B |     975.02x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   1.470 ms | 0.0430 ms | 0.1190 ms |       400 B |
+| MassiveEcsContext       | 100000      |   2.099 ms | 0.0454 ms | 0.1173 ms |       400 B |
+| FrifloContext           | 100000      |   6.489 ms | 0.3175 ms | 0.9111 ms |       400 B |
+| DragonECSContext        | 100000      |   6.504 ms | 0.1267 ms | 0.3382 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   8.423 ms | 0.4666 ms | 1.3685 ms |       112 B |
+| XenoContext             | 100000      |   9.828 ms | 0.4829 ms | 1.3855 ms |    983688 B |
+| ArchContext             | 100000      |  10.108 ms | 0.3215 ms | 0.9069 ms |      1456 B |
+| DefaultECSContext       | 100000      |  16.253 ms | 0.4367 ms | 1.2807 ms |       400 B |
+| TinyEcsContext          | 100000      |  16.811 ms | 0.3341 ms | 0.8195 ms |   4800400 B |
+| LeoEcsContext           | 100000      |  19.954 ms | 0.3923 ms | 0.7272 ms |       400 B |
+| MorpehContext           | 100000      |  23.750 ms | 0.4696 ms | 0.7029 ms |       400 B |
+| FennecsContext          | 100000      |  91.486 ms | 0.8186 ms | 0.7657 ms | 113600400 B |
+| FlecsNETContext         | 100000      | 197.377 ms | 1.2173 ms | 1.0791 ms |       400 B |
 
 # Add2Components
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                    5,258.7 μs |  52.62 μs |  46.65 μs |         baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                    2,629.8 μs |  40.04 μs |  37.46 μs |     2.00x faster |   0.03x |       400 B |       2.68x less |
-| DragonECS                                   | 100000      |                                    1,326.4 μs |  22.08 μs |  18.44 μs |     3.97x faster |   0.06x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                   78,989.4 μs | 392.64 μs | 327.87 μs |    15.02x slower |   0.14x | 113600400 B | 105,970.52x more |
-| FlecsNET                                    | 100000      |                                  136,841.1 μs | 738.66 μs | 690.94 μs |    26.02x slower |   0.26x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                    3,472.7 μs |  63.32 μs |  59.23 μs |     1.51x faster |   0.03x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                    5,498.1 μs |  24.76 μs |  21.95 μs |     1.05x slower |   0.01x |       400 B |       2.68x less |
-| LeoEcsLite                                  | 100000      |                                    3,235.1 μs |  32.41 μs |  31.83 μs |     1.63x faster |   0.02x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                    3,174.7 μs |  56.18 μs |  73.05 μs |     1.66x faster |   0.04x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**672.8 μs** |   3.37 μs |   2.98 μs | **7.82x faster** |   0.07x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                    6,982.9 μs | 121.55 μs | 107.75 μs |     1.33x slower |   0.02x |   4800400 B |   4,477.99x more |
-| Xeno                                        | 100000      |                                    3,090.2 μs |  34.97 μs |  67.37 μs |     1.70x faster |   0.04x |   1045224 B |     975.02x more |
+| Context                 | EntityCount |         Mean |       Error |      StdDev |   Allocated |
+|-------------------------|-------------|-------------:|------------:|------------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |     711.2 μs |     3.38 μs |     2.99 μs |       400 B |
+| DragonECSContext        | 100000      |   1,330.1 μs |    24.58 μs |    26.30 μs |       400 B |
+| MassiveEcsContext       | 100000      |   1,418.7 μs |    15.91 μs |    27.01 μs |       400 B |
+| DefaultECSContext       | 100000      |   2,733.2 μs |    38.92 μs |    32.50 μs |       400 B |
+| MorpehContext           | 100000      |   3,116.8 μs |    38.81 μs |    30.30 μs |        64 B |
+| LeoEcsLiteContext       | 100000      |   3,291.2 μs |    29.45 μs |    26.11 μs |       400 B |
+| FrifloContext           | 100000      |   3,436.8 μs |    48.65 μs |    37.98 μs |       400 B |
+| XenoContext             | 100000      |   3,589.3 μs |    70.39 μs |    78.24 μs |    983688 B |
+| LeoEcsContext           | 100000      |   5,511.7 μs |    99.10 μs |   132.29 μs |       400 B |
+| ArchContext             | 100000      |   6,345.3 μs |    64.92 μs |    57.55 μs |      1744 B |
+| TinyEcsContext          | 100000      |   7,375.1 μs |   140.14 μs |   143.92 μs |   4800400 B |
+| FennecsContext          | 100000      |  72,436.8 μs |   621.80 μs |   551.21 μs | 113600400 B |
+| FlecsNETContext         | 100000      | 162,026.3 μs | 2,829.77 μs | 2,362.98 μs |       400 B |
 
 # Add2RandomComponentsRandomOrder
 
-| Context                                     | EntityCount |                                          Mean |    Error |   StdDev |            Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|---------:|---------:|-----------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      |                                      19.74 ms | 0.424 ms | 1.230 ms |         baseline |         |   2.29 MB |             |
-| DefaultECS                                  | 100000      |                                      23.84 ms | 0.472 ms | 0.677 ms |     1.21x slower |   0.08x |   2.29 MB |  1.00x less |
-| DragonECS                                   | 100000      |                                      18.75 ms | 0.330 ms | 0.292 ms |     1.05x faster |   0.07x |   2.29 MB |  1.00x less |
-| Fennecs                                     | 100000      |                                     108.64 ms | 0.496 ms | 0.440 ms |     5.52x slower |   0.34x | 111.39 MB | 48.65x more |
-| FlecsNET                                    | 100000      |                                     166.72 ms | 1.084 ms | 0.961 ms |     8.48x slower |   0.52x |   3.05 MB |  1.33x more |
-| Friflo                                      | 100000      |                                      15.85 ms | 0.417 ms | 1.217 ms |     1.25x faster |   0.12x |   3.05 MB |  1.33x more |
-| LeoEcs                                      | 100000      |                                      34.31 ms | 0.650 ms | 0.667 ms |     1.74x slower |   0.11x |   3.05 MB |  1.33x more |
-| LeoEcsLite                                  | 100000      |                                      25.64 ms | 0.480 ms | 1.063 ms |     1.30x slower |   0.10x |   2.29 MB |  1.00x less |
-| Morpeh                                      | 100000      |                                      31.92 ms | 0.517 ms | 0.484 ms |     1.62x slower |   0.10x |   2.29 MB |  1.00x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**11.71 ms** | 0.566 ms | 1.624 ms | **1.72x faster** |   0.25x |   2.29 MB |  1.00x less |
-| TinyEcs                                     | 100000      |                                      33.06 ms | 0.254 ms | 0.212 ms |     1.68x slower |   0.10x |   7.63 MB |  3.33x more |
-| Xeno                                        | 100000      |                                      23.07 ms | 0.458 ms | 0.936 ms |     1.17x slower |   0.09x |   4.29 MB |  1.88x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   3.420 ms | 0.1930 ms | 0.5600 ms |   3.261 ms |       400 B |
+| MassiveEcsContext       | 100000      |   5.611 ms | 0.2149 ms | 0.5882 ms |   5.537 ms |       400 B |
+| FrifloContext           | 100000      |   9.188 ms | 0.3591 ms | 1.0303 ms |   9.051 ms |       400 B |
+| DragonECSContext        | 100000      |  12.239 ms | 0.2442 ms | 0.4526 ms |  12.139 ms |       400 B |
+| ArchContext             | 100000      |  12.694 ms | 0.2515 ms | 0.4965 ms |  12.571 ms |      1744 B |
+| XenoContext             | 100000      |  15.490 ms | 0.4930 ms | 1.4146 ms |  15.168 ms |    787632 B |
+| TinyEcsContext          | 100000      |  17.946 ms | 0.3540 ms | 0.2956 ms |  17.924 ms |   4800400 B |
+| LeoEcsLiteContext       | 100000      |  18.371 ms | 0.3790 ms | 1.0873 ms |  18.298 ms |       400 B |
+| DefaultECSContext       | 100000      |  18.813 ms | 0.3735 ms | 0.8582 ms |  18.614 ms |       400 B |
+| MorpehContext           | 100000      |  24.813 ms | 0.4892 ms | 0.5234 ms |  24.805 ms |       400 B |
+| LeoEcsContext           | 100000      |  28.571 ms | 0.7012 ms | 2.0231 ms |  27.940 ms |       400 B |
+| FennecsContext          | 100000      |  96.431 ms | 0.9178 ms | 0.7664 ms |  96.510 ms | 113600400 B |
+| FlecsNETContext         | 100000      | 237.303 ms | 4.3926 ms | 4.1088 ms | 234.932 ms |       400 B |
 
 # Add2RandomComponents
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |            Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      |                                     13.373 ms | 0.0713 ms | 0.0632 ms |         baseline |         |   2.29 MB |             |
-| DefaultECS                                  | 100000      |                                      9.712 ms | 0.0588 ms | 0.0522 ms |     1.38x faster |   0.01x |   2.29 MB |  1.00x less |
-| DragonECS                                   | 100000      |                                      8.564 ms | 0.0652 ms | 0.1108 ms |     1.56x faster |   0.02x |   2.29 MB |  1.00x less |
-| Fennecs                                     | 100000      |                                     91.379 ms | 0.5319 ms | 0.4976 ms |     6.83x slower |   0.05x | 111.39 MB | 48.65x more |
-| FlecsNET                                    | 100000      |                                    157.655 ms | 1.1228 ms | 1.0503 ms |    11.79x slower |   0.09x |   3.05 MB |  1.33x more |
-| Friflo                                      | 100000      |                                     12.057 ms | 0.1607 ms | 0.1342 ms |     1.11x faster |   0.01x |   3.05 MB |  1.33x more |
-| LeoEcs                                      | 100000      |                                     17.575 ms | 0.3364 ms | 0.4005 ms |     1.31x slower |   0.03x |   3.05 MB |  1.33x more |
-| LeoEcsLite                                  | 100000      |                                     13.163 ms | 0.1396 ms | 0.1714 ms |     1.02x faster |   0.01x |   2.29 MB |  1.00x less |
-| Morpeh                                      | 100000      |                                     12.213 ms | 0.1716 ms | 0.1521 ms |     1.10x faster |   0.01x |   2.29 MB |  1.00x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**7.793 ms** | 0.1104 ms | 0.0922 ms | **1.72x faster** |   0.02x |   2.29 MB |  1.00x less |
-| TinyEcs                                     | 100000      |                                     32.669 ms | 0.3236 ms | 0.2703 ms |     2.44x slower |   0.02x |   7.63 MB |  3.33x more |
-| Xeno                                        | 100000      |                                     12.346 ms | 0.2259 ms | 0.1764 ms |     1.08x faster |   0.02x |   4.29 MB |  1.88x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   2.043 ms | 0.0174 ms | 0.0163 ms |   2.037 ms |       400 B |
+| DragonECSContext        | 100000      |   3.482 ms | 0.0246 ms | 0.0206 ms |   3.481 ms |       400 B |
+| DefaultECSContext       | 100000      |   4.285 ms | 0.0524 ms | 0.0437 ms |   4.263 ms |       400 B |
+| MassiveEcsContext       | 100000      |   4.891 ms | 0.5860 ms | 1.7187 ms |   3.776 ms |       400 B |
+| FrifloContext           | 100000      |   5.377 ms | 0.0689 ms | 0.0846 ms |   5.366 ms |       400 B |
+| MorpehContext           | 100000      |   6.108 ms | 0.1011 ms | 0.0790 ms |   6.078 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   7.293 ms | 0.0733 ms | 0.0572 ms |   7.302 ms |       400 B |
+| XenoContext             | 100000      |   7.307 ms | 0.0883 ms | 0.0738 ms |   7.275 ms |    787632 B |
+| ArchContext             | 100000      |   8.219 ms | 0.1224 ms | 0.1022 ms |   8.230 ms |      1744 B |
+| TinyEcsContext          | 100000      |   8.567 ms | 0.1657 ms | 0.1384 ms |   8.538 ms |   4800400 B |
+| LeoEcsContext           | 100000      |   9.701 ms | 0.1925 ms | 0.2291 ms |   9.733 ms |       400 B |
+| FennecsContext          | 100000      |  77.875 ms | 1.3273 ms | 2.4270 ms |  77.489 ms | 113600400 B |
+| FlecsNETContext         | 100000      | 210.936 ms | 0.9781 ms | 0.9149 ms | 210.695 ms |       400 B |
 
 # Add3ComponentsRandomOrder
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |     Median |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                      9.575 ms | 0.2476 ms | 0.7223 ms |   9.617 ms |         baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                     17.971 ms | 0.3567 ms | 0.8949 ms |  17.989 ms |     1.89x slower |   0.17x |       400 B |       2.68x less |
-| DragonECS                                   | 100000      |                                     10.576 ms | 0.2109 ms | 0.3345 ms |  10.619 ms |     1.11x slower |   0.09x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                    151.817 ms | 1.8379 ms | 1.5348 ms | 151.827 ms |    15.94x slower |   1.20x | 184800400 B | 172,388.43x more |
-| FlecsNET                                    | 100000      |                                    268.794 ms | 4.4368 ms | 3.9331 ms | 270.525 ms |    28.23x slower |   2.15x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                      9.653 ms | 0.3152 ms | 0.8786 ms |   9.626 ms |     1.01x slower |   0.12x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                     23.120 ms | 0.3496 ms | 0.3099 ms |  23.089 ms |     2.43x slower |   0.18x |       400 B |       2.68x less |
-| LeoEcsLite                                  | 100000      |                                     11.705 ms | 0.3307 ms | 0.9218 ms |  11.617 ms |     1.23x slower |   0.13x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                     25.053 ms | 0.3557 ms | 0.3154 ms |  25.031 ms |     2.63x slower |   0.20x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**1.993 ms** | 0.0581 ms | 0.1600 ms |   1.948 ms | **4.83x faster** |   0.51x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                     20.767 ms | 0.3865 ms | 0.6970 ms |  20.688 ms |     2.18x slower |   0.18x |   7200400 B |   6,716.79x more |
-| Xeno                                        | 100000      |                                     10.749 ms | 0.5108 ms | 1.4655 ms |  10.480 ms |     1.13x slower |   0.18x |   1045232 B |     975.03x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   2.192 ms | 0.1100 ms | 0.3138 ms |   2.094 ms |       400 B |
+| MassiveEcsContext       | 100000      |   3.441 ms | 0.0808 ms | 0.2358 ms |   3.400 ms |       400 B |
+| FrifloContext           | 100000      |   9.014 ms | 0.3626 ms | 1.0287 ms |   9.059 ms |       400 B |
+| ArchContext             | 100000      |  10.741 ms | 0.2999 ms | 0.8509 ms |  10.627 ms |      1744 B |
+| DragonECSContext        | 100000      |  10.743 ms | 0.2121 ms | 0.4136 ms |  10.640 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |  13.422 ms | 0.2643 ms | 0.7539 ms |  13.319 ms |       400 B |
+| XenoContext             | 100000      |  13.652 ms | 0.2894 ms | 0.7674 ms |  13.647 ms |    983696 B |
+| DefaultECSContext       | 100000      |  19.222 ms | 0.3802 ms | 1.0660 ms |  18.979 ms |       400 B |
+| LeoEcsContext           | 100000      |  23.449 ms | 0.4359 ms | 0.8604 ms |  23.113 ms |       400 B |
+| MorpehContext           | 100000      |  25.740 ms | 0.4923 ms | 0.6226 ms |  25.586 ms |       400 B |
+| TinyEcsContext          | 100000      |  35.430 ms | 1.9097 ms | 5.6307 ms |  32.426 ms |  57532304 B |
+| FennecsContext          | 100000      | 144.353 ms | 1.3627 ms | 1.2080 ms | 144.044 ms | 184800400 B |
+| FlecsNETContext         | 100000      | 273.425 ms | 2.3467 ms | 2.0803 ms | 273.875 ms |       400 B |
 
 # Add3Components
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                      5.621 ms | 0.0772 ms | 0.0645 ms |         baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                      4.177 ms | 0.0333 ms | 0.0312 ms |     1.35x faster |   0.02x |       400 B |       2.68x less |
-| DragonECS                                   | 100000      |                                      2.040 ms | 0.0276 ms | 0.0231 ms |     2.75x faster |   0.04x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                    140.758 ms | 0.8871 ms | 0.8298 ms |    25.05x slower |   0.31x | 184800400 B | 172,388.43x more |
-| FlecsNET                                    | 100000      |                                    227.358 ms | 1.5572 ms | 1.4566 ms |    40.46x slower |   0.51x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                      6.111 ms | 0.0212 ms | 0.0283 ms |     1.09x slower |   0.01x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                      8.074 ms | 0.0718 ms | 0.0672 ms |     1.44x slower |   0.02x |       400 B |       2.68x less |
-| LeoEcsLite                                  | 100000      |                                      5.825 ms | 0.0464 ms | 0.0434 ms |     1.04x slower |   0.01x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                      3.974 ms | 0.0552 ms | 0.0489 ms |     1.41x faster |   0.02x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**1.082 ms** | 0.0102 ms | 0.0096 ms | **5.19x faster** |   0.07x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                     19.667 ms | 0.3004 ms | 0.2346 ms |     3.50x slower |   0.06x |   7200400 B |   6,716.79x more |
-| Xeno                                        | 100000      |                                      3.683 ms | 0.0355 ms | 0.0658 ms |     1.53x faster |   0.03x |   1045232 B |     975.03x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   1.062 ms | 0.0097 ms | 0.0081 ms |   1.060 ms |       400 B |
+| DragonECSContext        | 100000      |   1.963 ms | 0.0360 ms | 0.0539 ms |   1.957 ms |       400 B |
+| MassiveEcsContext       | 100000      |   2.135 ms | 0.0504 ms | 0.1446 ms |   2.060 ms |       400 B |
+| MorpehContext           | 100000      |   3.996 ms | 0.0795 ms | 0.0946 ms |   4.008 ms |        64 B |
+| DefaultECSContext       | 100000      |   4.120 ms | 0.0817 ms | 0.0908 ms |   4.086 ms |       400 B |
+| XenoContext             | 100000      |   4.223 ms | 0.0515 ms | 0.0402 ms |   4.224 ms |    983696 B |
+| FrifloContext           | 100000      |   5.777 ms | 0.0964 ms | 0.1472 ms |   5.729 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   6.110 ms | 0.0959 ms | 0.0850 ms |   6.115 ms |       112 B |
+| ArchContext             | 100000      |   6.996 ms | 0.1194 ms | 0.1058 ms |   6.971 ms |      1408 B |
+| LeoEcsContext           | 100000      |   8.011 ms | 0.1488 ms | 0.2759 ms |   7.924 ms |       400 B |
+| TinyEcsContext          | 100000      |  25.264 ms | 2.0780 ms | 6.0944 ms |  21.871 ms |  57532304 B |
+| FennecsContext          | 100000      | 121.252 ms | 1.7178 ms | 1.5228 ms | 120.924 ms | 184800400 B |
+| FlecsNETContext         | 100000      | 232.786 ms | 2.0729 ms | 1.9390 ms | 232.328 ms |       400 B |
 
 # Add3RandomComponentsRandomOrder
 
-| Context                                     | EntityCount |                                          Mean |    Error |   StdDev |    Median |            Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|---------:|---------:|----------:|-----------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      |                                      19.36 ms | 0.493 ms | 1.333 ms |  18.92 ms |         baseline |         |   2.29 MB |             |
-| DefaultECS                                  | 100000      |                                      27.44 ms | 0.498 ms | 0.817 ms |  27.43 ms |     1.42x slower |   0.10x |   2.29 MB |  1.00x less |
-| DragonECS                                   | 100000      |                                      20.44 ms | 0.398 ms | 0.458 ms |  20.48 ms |     1.06x slower |   0.07x |   2.29 MB |  1.00x less |
-| Fennecs                                     | 100000      |                                     163.52 ms | 0.914 ms | 0.763 ms | 163.61 ms |     8.48x slower |   0.53x | 179.29 MB | 78.30x more |
-| FlecsNET                                    | 100000      |                                     328.14 ms | 1.104 ms | 1.032 ms | 327.95 ms |    17.02x slower |   1.06x |   3.05 MB |  1.33x more |
-| Friflo                                      | 100000      |                                      18.87 ms | 0.372 ms | 0.398 ms |  18.79 ms |     1.03x faster |   0.07x |   3.05 MB |  1.33x more |
-| LeoEcs                                      | 100000      |                                      42.37 ms | 0.711 ms | 0.760 ms |  42.39 ms |     2.20x slower |   0.14x |   3.05 MB |  1.33x more |
-| LeoEcsLite                                  | 100000      |                                      32.16 ms | 0.634 ms | 0.623 ms |  32.24 ms |     1.67x slower |   0.11x |   2.29 MB |  1.00x less |
-| Morpeh                                      | 100000      |                                      34.84 ms | 0.332 ms | 0.277 ms |  34.80 ms |     1.81x slower |   0.11x |   2.29 MB |  1.00x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**10.77 ms** | 0.229 ms | 0.658 ms |  10.76 ms | **1.80x faster** |   0.16x |   2.29 MB |  1.00x less |
-| TinyEcs                                     | 100000      |                                      49.42 ms | 1.450 ms | 4.252 ms |  51.38 ms |     2.56x slower |   0.27x |   9.92 MB |  4.33x more |
-| Xeno                                        | 100000      |                                      23.61 ms | 0.470 ms | 1.248 ms |  23.56 ms |     1.22x slower |   0.10x |   4.05 MB |  1.77x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   4.743 ms | 0.4582 ms | 1.3510 ms |   4.152 ms |       400 B |
+| MassiveEcsContext       | 100000      |   6.951 ms | 0.2198 ms | 0.5943 ms |   6.876 ms |       400 B |
+| FrifloContext           | 100000      |  13.109 ms | 0.3991 ms | 1.1516 ms |  12.951 ms |       400 B |
+| DragonECSContext        | 100000      |  14.786 ms | 0.2942 ms | 0.6458 ms |  14.652 ms |       400 B |
+| ArchContext             | 100000      |  16.129 ms | 0.7696 ms | 2.2693 ms |  15.551 ms |      1744 B |
+| XenoContext             | 100000      |  19.565 ms | 0.4771 ms | 1.3536 ms |  19.416 ms |    787664 B |
+| DefaultECSContext       | 100000      |  23.399 ms | 0.4674 ms | 1.2796 ms |  23.149 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |  26.179 ms | 0.5207 ms | 1.2476 ms |  26.057 ms |       400 B |
+| MorpehContext           | 100000      |  30.343 ms | 0.5824 ms | 1.5445 ms |  30.083 ms |       400 B |
+| LeoEcsContext           | 100000      |  34.458 ms | 0.6171 ms | 0.9237 ms |  34.424 ms |       400 B |
+| TinyEcsContext          | 100000      |  37.687 ms | 2.3413 ms | 6.8296 ms |  34.254 ms |  57532304 B |
+| FennecsContext          | 100000      | 151.198 ms | 2.9625 ms | 2.6262 ms | 150.506 ms | 184800400 B |
+| FlecsNETContext         | 100000      | 310.308 ms | 2.1757 ms | 1.9287 ms | 310.102 ms |       400 B |
 
 # Add3RandomComponents
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |            Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      |                                     13.132 ms | 0.0569 ms | 0.0444 ms |         baseline |         |   2.29 MB |             |
-| DefaultECS                                  | 100000      |                                     11.240 ms | 0.1144 ms | 0.1070 ms |     1.17x faster |   0.01x |   2.29 MB |  1.00x less |
-| DragonECS                                   | 100000      |                                      9.558 ms | 0.1012 ms | 0.1242 ms |     1.37x faster |   0.02x |   2.29 MB |  1.00x less |
-| Fennecs                                     | 100000      |                                    145.696 ms | 1.5052 ms | 1.3343 ms |    11.09x slower |   0.10x | 179.29 MB | 78.30x more |
-| FlecsNET                                    | 100000      |                                    308.592 ms | 1.0801 ms | 0.9019 ms |    23.50x slower |   0.10x |   3.05 MB |  1.33x more |
-| Friflo                                      | 100000      |                                     15.382 ms | 0.0358 ms | 0.0317 ms |     1.17x slower |   0.00x |   3.05 MB |  1.33x more |
-| LeoEcs                                      | 100000      |                                     22.660 ms | 0.4324 ms | 0.4627 ms |     1.73x slower |   0.03x |   4.05 MB |  1.77x more |
-| LeoEcsLite                                  | 100000      |                                     18.484 ms | 0.1257 ms | 0.1049 ms |     1.41x slower |   0.01x |   2.29 MB |  1.00x less |
-| Morpeh                                      | 100000      |                                     12.797 ms | 0.1782 ms | 0.1579 ms |     1.03x faster |   0.01x |   2.29 MB |  1.00x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**8.902 ms** | 0.1414 ms | 0.1254 ms | **1.48x faster** |   0.02x |   2.29 MB |  1.00x less |
-| TinyEcs                                     | 100000      |                                     38.137 ms | 0.7203 ms | 0.7397 ms |     2.90x slower |   0.06x |   9.92 MB |  4.33x more |
-| Xeno                                        | 100000      |                                     12.767 ms | 0.1689 ms | 0.3526 ms |     1.03x faster |   0.03x |  68.05 MB | 29.72x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   2.336 ms | 0.0051 ms | 0.0043 ms |   2.337 ms |       400 B |
+| DragonECSContext        | 100000      |   4.167 ms | 0.0582 ms | 0.0647 ms |   4.159 ms |       400 B |
+| MassiveEcsContext       | 100000      |   4.829 ms | 0.0406 ms | 0.0783 ms |   4.812 ms |       400 B |
+| DefaultECSContext       | 100000      |   5.599 ms | 0.1095 ms | 0.1076 ms |   5.555 ms |       400 B |
+| MorpehContext           | 100000      |   6.853 ms | 0.0474 ms | 0.0370 ms |   6.848 ms |       400 B |
+| XenoContext             | 100000      |   7.641 ms | 0.1381 ms | 0.3414 ms |   7.543 ms |    787664 B |
+| ArchContext             | 100000      |   8.376 ms | 0.1607 ms | 0.1579 ms |   8.322 ms |      1744 B |
+| FrifloContext           | 100000      |   8.423 ms | 0.0738 ms | 0.0616 ms |   8.418 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |  11.864 ms | 0.0739 ms | 0.0577 ms |  11.864 ms |       400 B |
+| LeoEcsContext           | 100000      |  15.542 ms | 0.2987 ms | 0.2794 ms |  15.617 ms |       112 B |
+| TinyEcsContext          | 100000      |  26.790 ms | 2.0935 ms | 6.1398 ms |  23.056 ms |  57531968 B |
+| FennecsContext          | 100000      | 128.606 ms | 1.8891 ms | 1.7671 ms | 127.892 ms | 184800400 B |
+| FlecsNETContext         | 100000      | 284.572 ms | 1.6003 ms | 1.4187 ms | 284.450 ms |       400 B |
 
 # Add4ComponentsRandomOrder
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |     Median |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                      9.910 ms | 0.3224 ms | 0.9454 ms |  10.089 ms |         baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                     20.984 ms | 0.4126 ms | 1.0427 ms |  20.823 ms |     2.14x slower |   0.23x |       400 B |       2.68x less |
-| DragonECS                                   | 100000      |                                     12.755 ms | 0.2324 ms | 0.1814 ms |  12.703 ms |     1.30x slower |   0.13x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                    219.496 ms | 1.7198 ms | 1.4361 ms | 219.592 ms |    22.35x slower |   2.16x | 268800400 B | 250,746.64x more |
-| FlecsNET                                    | 100000      |                                    341.030 ms | 0.4741 ms | 0.4203 ms | 340.907 ms |    34.73x slower |   3.35x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                     12.089 ms | 0.3785 ms | 1.1099 ms |  11.678 ms |     1.23x slower |   0.16x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                     25.780 ms | 0.4997 ms | 0.4907 ms |  25.926 ms |     2.63x slower |   0.26x |       400 B |       2.68x less |
-| LeoEcsLite                                  | 100000      |                                     16.004 ms | 0.4683 ms | 1.3662 ms |  15.770 ms |     1.63x slower |   0.21x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                     29.748 ms | 0.5777 ms | 0.6421 ms |  29.738 ms |     3.03x slower |   0.30x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**3.538 ms** | 0.2983 ms | 0.8413 ms |   3.240 ms | **2.94x faster** |   0.65x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                     24.546 ms | 0.4822 ms | 0.7069 ms |  24.347 ms |     2.50x slower |   0.25x |   9600400 B |   8,955.60x more |
-| Xeno                                        | 100000      |                                     13.221 ms | 0.3069 ms | 0.8556 ms |  13.249 ms |     1.35x slower |   0.16x |   1045232 B |     975.03x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   3.078 ms | 0.1780 ms | 0.5106 ms |   2.938 ms |       400 B |
+| MassiveEcsContext       | 100000      |   5.368 ms | 0.3726 ms | 1.0508 ms |   4.888 ms |       112 B |
+| FrifloContext           | 100000      |  12.377 ms | 0.2889 ms | 0.8242 ms |  12.205 ms |       400 B |
+| DragonECSContext        | 100000      |  12.743 ms | 0.2539 ms | 0.6035 ms |  12.653 ms |       400 B |
+| ArchContext             | 100000      |  13.654 ms | 0.8473 ms | 2.4851 ms |  13.370 ms |      1120 B |
+| XenoContext             | 100000      |  15.968 ms | 0.6115 ms | 1.7047 ms |  15.596 ms |    983696 B |
+| LeoEcsLiteContext       | 100000      |  21.945 ms | 1.5506 ms | 4.4240 ms |  20.902 ms |       400 B |
+| DefaultECSContext       | 100000      |  24.115 ms | 0.9139 ms | 2.6223 ms |  23.068 ms |       400 B |
+| LeoEcsContext           | 100000      |  27.156 ms | 0.5210 ms | 0.4873 ms |  27.220 ms |       400 B |
+| MorpehContext           | 100000      |  31.457 ms | 0.7378 ms | 2.1051 ms |  31.176 ms |       400 B |
+| TinyEcsContext          | 100000      |  42.391 ms | 2.4545 ms | 7.1598 ms |  40.093 ms |   9600400 B |
+| FennecsContext          | 100000      | 203.985 ms | 2.0196 ms | 1.6864 ms | 203.814 ms | 268800400 B |
+| FlecsNETContext         | 100000      | 332.370 ms | 1.8946 ms | 1.7722 ms | 332.526 ms |       400 B |
 
 # Add4Components
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                      5.875 ms | 0.0525 ms | 0.0438 ms |         baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                      5.160 ms | 0.0385 ms | 0.0341 ms |     1.14x faster |   0.01x |       400 B |       2.68x less |
-| DragonECS                                   | 100000      |                                      2.745 ms | 0.0247 ms | 0.0219 ms |     2.14x faster |   0.02x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                    195.604 ms | 0.8188 ms | 0.7659 ms |    33.30x slower |   0.27x | 268800400 B | 250,746.64x more |
-| FlecsNET                                    | 100000      |                                    295.940 ms | 2.5707 ms | 2.4046 ms |    50.38x slower |   0.54x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                      8.150 ms | 0.0582 ms | 0.0544 ms |     1.39x slower |   0.01x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                     12.153 ms | 0.1866 ms | 0.1457 ms |     2.07x slower |   0.03x |       400 B |       2.68x less |
-| LeoEcsLite                                  | 100000      |                                      8.535 ms | 0.0682 ms | 0.0570 ms |     1.45x slower |   0.01x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                      5.072 ms | 0.0603 ms | 0.0564 ms |     1.16x faster |   0.01x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**1.438 ms** | 0.0284 ms | 0.0291 ms | **4.09x faster** |   0.09x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                     24.338 ms | 0.3869 ms | 0.4300 ms |     4.14x slower |   0.08x |   9600400 B |   8,955.60x more |
-| Xeno                                        | 100000      |                                      4.255 ms | 0.0585 ms | 0.0993 ms |     1.38x faster |   0.03x |   1045232 B |     975.03x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   1.420 ms | 0.0151 ms | 0.0127 ms |   1.424 ms |       400 B |
+| DragonECSContext        | 100000      |   2.545 ms | 0.0455 ms | 0.0403 ms |   2.540 ms |       400 B |
+| MassiveEcsContext       | 100000      |   2.694 ms | 0.0093 ms | 0.0072 ms |   2.696 ms |       400 B |
+| MorpehContext           | 100000      |   4.824 ms | 0.0516 ms | 0.0483 ms |   4.824 ms |       400 B |
+| XenoContext             | 100000      |   4.893 ms | 0.0957 ms | 0.0940 ms |   4.862 ms |    983696 B |
+| DefaultECSContext       | 100000      |   5.437 ms | 0.0945 ms | 0.0838 ms |   5.457 ms |       400 B |
+| ArchContext             | 100000      |   7.002 ms | 0.0462 ms | 0.0386 ms |   7.004 ms |      1744 B |
+| FrifloContext           | 100000      |   8.077 ms | 0.1532 ms | 0.2429 ms |   7.977 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   8.451 ms | 0.0515 ms | 0.0430 ms |   8.449 ms |       400 B |
+| LeoEcsContext           | 100000      |  12.157 ms | 0.1204 ms | 0.1067 ms |  12.129 ms |       112 B |
+| TinyEcsContext          | 100000      |  30.183 ms | 2.4580 ms | 7.2476 ms |  25.107 ms |   9600112 B |
+| FennecsContext          | 100000      | 185.914 ms | 3.6717 ms | 6.4307 ms | 184.143 ms | 268800064 B |
+| FlecsNETContext         | 100000      | 294.637 ms | 1.8993 ms | 1.7766 ms | 294.268 ms |       400 B |
 
 # CreateEmptyEntity
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |     Median |             Ratio | RatioSD | Allocated |    Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------:|------------------:|--------:|----------:|---------------:|
-| Arch                                        | 100000      |                                    3,622.0 μs |  71.45 μs |  87.74 μs | 3,640.1 μs |          baseline |         |    1072 B |                |
-| DefaultECS                                  | 100000      |                                    1,323.6 μs |  14.99 μs |  12.51 μs | 1,321.0 μs |      2.74x faster |   0.07x |     400 B |     2.68x less |
-| DragonECS                                   | 100000      |                                      608.6 μs |   9.97 μs |   8.33 μs |   608.5 μs |      5.95x faster |   0.16x |     400 B |     2.68x less |
-| Fennecs                                     | 100000      |                                    1,805.8 μs |  27.57 μs |  24.44 μs | 1,793.3 μs |      2.01x faster |   0.05x |     400 B |     2.68x less |
-| FlecsNET                                    | 100000      |                                    7,976.5 μs | 153.97 μs | 177.31 μs | 7,955.8 μs |      2.20x slower |   0.07x |     400 B |     2.68x less |
-| Friflo                                      | 100000      |                                      958.2 μs |  18.82 μs |  16.68 μs |   952.0 μs |      3.78x faster |   0.11x |     400 B |     2.68x less |
-| LeoEcs                                      | 100000      |                                      440.3 μs |   8.59 μs |  12.04 μs |   436.3 μs |      8.23x faster |   0.29x |     400 B |     2.68x less |
-| LeoEcsLite                                  | 100000      |                                      890.3 μs |   6.11 μs |   5.10 μs |   890.6 μs |      4.07x faster |   0.10x |     400 B |     2.68x less |
-| Morpeh                                      | 100000      | <span style="color: lightgreen;">**270.1 μs** |   4.15 μs |   6.58 μs |   269.8 μs |     13.42x faster |   0.45x |     400 B |     2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  |      <span style="color: white;">**286.9 μs** |   5.33 μs |   4.98 μs |   284.1 μs | **12.63x faster** |   0.37x |     400 B |     2.68x less |
-| TinyEcs                                     | 100000      |                                    2,976.5 μs |  59.44 μs | 131.72 μs | 2,920.4 μs |      1.22x faster |   0.06x | 3689200 B | 3,441.42x more |
-| Xeno                                        | 100000      |                                    1,249.8 μs |   4.98 μs |   4.16 μs | 1,248.8 μs |      2.90x faster |   0.07x |     400 B |     2.68x less |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median | Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|----------:|
+| MorpehContext           | 100000      |   290.2 μs |   5.25 μs |   9.59 μs |   289.4 μs |     400 B |
+| 📍 **StaticEcsContext** | 100000      |   298.5 μs |   3.01 μs |   2.51 μs |   298.0 μs |     112 B |
+| MassiveEcsContext       | 100000      |   317.4 μs |   4.79 μs |   3.74 μs |   317.5 μs |     400 B |
+| LeoEcsContext           | 100000      |   441.3 μs |   8.78 μs |  13.14 μs |   439.1 μs |      64 B |
+| DragonECSContext        | 100000      |   700.0 μs |  29.24 μs |  79.55 μs |   672.3 μs |      64 B |
+| LeoEcsLiteContext       | 100000      |   916.8 μs |   5.85 μs |   4.89 μs |   916.1 μs |     400 B |
+| FrifloContext           | 100000      | 1,157.4 μs | 111.67 μs | 323.98 μs | 1,254.0 μs |      64 B |
+| DefaultECSContext       | 100000      | 1,292.9 μs |  16.85 μs |  25.74 μs | 1,290.5 μs |     400 B |
+| XenoContext             | 100000      | 1,810.7 μs |  36.13 μs |  91.31 μs | 1,779.7 μs |     112 B |
+| FennecsContext          | 100000      | 1,915.4 μs |  33.74 μs |  76.15 μs | 1,900.2 μs |     112 B |
+| TinyEcsContext          | 100000      | 4,453.2 μs | 118.89 μs | 331.41 μs | 4,424.4 μs | 6146800 B |
+| ArchContext             | 100000      | 4,631.1 μs |  91.13 μs | 154.74 μs | 4,636.6 μs |     736 B |
+| FlecsNETContext         | 100000      | 8,123.4 μs | 159.17 μs | 261.52 μs | 8,165.1 μs |     400 B |
 
 # CreateEntityWith1Component
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |      Median |            Ratio | RatioSD |  Allocated |     Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|------------:|-----------------:|--------:|-----------:|----------------:|
-| Arch                                        | 100000      |                                    2,771.5 μs |  50.94 μs |  45.16 μs |  2,759.3 μs |         baseline |         |     1072 B |                 |
-| DefaultECS                                  | 100000      |                                    3,088.1 μs |  24.33 μs |  20.31 μs |  3,089.6 μs |     1.11x slower |   0.02x |      400 B |      2.68x less |
-| DragonECS                                   | 100000      |                                    1,962.8 μs |  76.96 μs | 220.82 μs |  1,849.0 μs |     1.43x faster |   0.14x |      400 B |      2.68x less |
-| Fennecs                                     | 100000      |                                   36,525.6 μs | 693.75 μs | 771.10 μs | 36,403.8 μs |    13.18x slower |   0.34x | 49600400 B | 46,269.03x more |
-| FlecsNET                                    | 100000      |                                   71,564.6 μs | 548.15 μs | 485.92 μs | 71,551.6 μs |    25.83x slower |   0.43x |      400 B |      2.68x less |
-| Friflo                                      | 100000      |                                    3,052.4 μs |  20.94 μs |  18.56 μs |  3,054.4 μs |     1.10x slower |   0.02x |      400 B |      2.68x less |
-| LeoEcs                                      | 100000      |                                    3,817.7 μs |  63.50 μs |  59.39 μs |  3,818.7 μs |     1.38x slower |   0.03x |      400 B |      2.68x less |
-| LeoEcsLite                                  | 100000      |                                    2,011.2 μs | 118.28 μs | 313.66 μs |  1,828.3 μs |     1.41x faster |   0.18x |      400 B |      2.68x less |
-| Morpeh                                      | 100000      |                                    2,845.9 μs |  27.61 μs |  23.06 μs |  2,841.3 μs |     1.03x slower |   0.02x |      400 B |      2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**611.6 μs** |  59.18 μs | 173.58 μs |    499.3 μs | **4.84x faster** |   1.13x |    12736 B |     11.88x more |
-| TinyEcs                                     | 100000      |                                    6,379.5 μs | 127.12 μs | 321.25 μs |  6,366.6 μs |     2.30x slower |   0.12x |  5941648 B |  5,542.58x more |
-| Xeno                                        | 100000      |                                    3,721.9 μs |  51.19 μs |  45.38 μs |  3,718.6 μs |     1.34x slower |   0.03x |  1045160 B |    974.96x more |
+| Context                 | EntityCount |        Mean |       Error |      StdDev |      Median |  Allocated |
+|-------------------------|-------------|------------:|------------:|------------:|------------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |    658.0 μs |    24.77 μs |    66.95 μs |    626.9 μs |      400 B |
+| DragonECSContext        | 100000      |  1,804.3 μs |    35.78 μs |    47.76 μs |  1,793.8 μs |      400 B |
+| LeoEcsLiteContext       | 100000      |  2,086.6 μs |    39.13 μs |   103.76 μs |  2,073.6 μs |      400 B |
+| MassiveEcsContext       | 100000      |  2,110.5 μs |    24.78 μs |    19.35 μs |  2,107.8 μs |      400 B |
+| FrifloContext           | 100000      |  2,516.5 μs |   227.58 μs |   603.51 μs |  2,123.1 μs |      400 B |
+| XenoContext             | 100000      |  2,586.1 μs |    50.32 μs |    63.64 μs |  2,579.8 μs |   983624 B |
+| MorpehContext           | 100000      |  2,944.6 μs |    74.84 μs |   201.06 μs |  2,897.1 μs |      400 B |
+| DefaultECSContext       | 100000      |  3,133.7 μs |    54.17 μs |    89.00 μs |  3,102.8 μs |       64 B |
+| LeoEcsContext           | 100000      |  3,996.9 μs |    79.59 μs |   216.54 μs |  3,969.9 μs |      400 B |
+| ArchContext             | 100000      |  4,181.2 μs |   310.66 μs |   915.98 μs |  3,714.2 μs |     1072 B |
+| TinyEcsContext          | 100000      |  8,012.0 μs |   240.02 μs |   657.06 μs |  7,910.9 μs |  8300944 B |
+| FennecsContext          | 100000      | 37,376.4 μs |   736.74 μs | 1,722.10 μs | 37,001.5 μs | 49600064 B |
+| FlecsNETContext         | 100000      | 78,954.4 μs | 1,554.19 μs | 2,020.89 μs | 79,281.4 μs |      112 B |
 
 # CreateEntityWith1RandomComponent
 
-| Context                                     | EntityCount | ChunkSize |                                          Mean |     Error |    StdDev |     Median |            Ratio | RatioSD |  Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|-----------|----------------------------------------------:|----------:|----------:|-----------:|-----------------:|--------:|-----------:|-----------------:|
-| Arch                                        | 100000      | 1         |                                      8.955 ms | 0.5202 ms | 1.5337 ms |   9.111 ms |         baseline |         | 28822320 B |                  |
-| DefaultECS                                  | 100000      | 1         |                                      6.282 ms | 0.1242 ms | 0.1037 ms |   6.241 ms |     1.43x faster |   0.24x |  3200400 B |      9.006x less |
-| DragonECS                                   | 100000      | 1         |                                      6.732 ms | 0.7226 ms | 2.0849 ms |   5.670 ms |     1.42x faster |   0.39x |      400 B | 72,055.800x less |
-| Fennecs                                     | 100000      | 1         |                                     39.894 ms | 0.7597 ms | 1.6516 ms |  39.159 ms |     4.60x slower |   0.92x | 49600400 B |      1.721x more |
-| FlecsNET                                    | 100000      | 1         |                                    133.596 ms | 2.3591 ms | 1.8418 ms | 133.407 ms |    15.42x slower |   3.01x |      400 B | 72,055.800x less |
-| Friflo                                      | 100000      | 1         |                                      5.529 ms | 0.0463 ms | 0.0569 ms |   5.511 ms |     1.62x faster |   0.28x |      400 B | 72,055.800x less |
-| LeoEcs                                      | 100000      | 1         |                                     17.091 ms | 0.3413 ms | 0.7633 ms |  17.079 ms |     1.97x slower |   0.39x |  8800400 B |      3.275x less |
-| LeoEcsLite                                  | 100000      | 1         |                                      8.076 ms | 1.2190 ms | 3.5171 ms |   6.035 ms |     1.28x faster |   0.46x |      400 B | 72,055.800x less |
-| Morpeh                                      | 100000      | 1         |                                      7.511 ms | 0.1672 ms | 0.4578 ms |   7.559 ms |     1.20x faster |   0.22x |      400 B | 72,055.800x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 1         | <span style="color: lightgreen;">**3.394 ms** | 0.1201 ms | 0.3426 ms |   3.349 ms | **2.66x faster** |   0.52x |      400 B | 72,055.800x less |
-| TinyEcs                                     | 100000      | 1         |                                     16.911 ms | 0.1653 ms | 0.1624 ms |  16.864 ms |     1.95x slower |   0.38x |  6007232 B |      4.798x less |
-| Xeno                                        | 100000      | 1         |                                      5.207 ms | 0.0961 ms | 0.1942 ms |   5.177 ms |     1.72x faster |   0.30x |      400 B | 72,055.800x less |
-|                                             |             |           |                                               |           |           |            |                  |         |            |                  |
-| Arch                                        | 100000      | 4         |                                      7.457 ms | 0.5188 ms | 1.5296 ms |   7.522 ms |         baseline |         | 28197664 B |                  |
-| DefaultECS                                  | 100000      | 4         |                                      4.912 ms | 0.0949 ms | 0.1362 ms |   4.875 ms |     1.52x faster |   0.31x |  3200400 B |      8.811x less |
-| DragonECS                                   | 100000      | 4         |                                      4.131 ms | 0.0834 ms | 0.2166 ms |   4.133 ms |     1.81x faster |   0.38x |      400 B | 70,494.160x less |
-| Fennecs                                     | 100000      | 4         |                                     38.289 ms | 0.5600 ms | 0.4372 ms |  38.438 ms |     5.40x slower |   1.34x | 49600400 B |      1.759x more |
-| FlecsNET                                    | 100000      | 4         |                                     97.974 ms | 0.8377 ms | 0.6540 ms |  98.115 ms |    13.81x slower |   3.42x |      400 B | 70,494.160x less |
-| Friflo                                      | 100000      | 4         |                                      3.394 ms | 0.0653 ms | 0.1349 ms |   3.406 ms |     2.20x faster |   0.46x |      400 B | 70,494.160x less |
-| LeoEcs                                      | 100000      | 4         |                                     14.057 ms | 0.2523 ms | 0.4352 ms |  13.905 ms |     1.98x slower |   0.49x |  8800400 B |      3.204x less |
-| LeoEcsLite                                  | 100000      | 4         |                                      9.973 ms | 0.1422 ms | 0.1110 ms |  10.025 ms |     1.41x slower |   0.35x |      400 B | 70,494.160x less |
-| Morpeh                                      | 100000      | 4         |                                      4.448 ms | 0.0956 ms | 0.2617 ms |   4.366 ms |     1.68x faster |   0.36x |      400 B | 70,494.160x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 4         | <span style="color: lightgreen;">**1.898 ms** | 0.1269 ms | 0.3578 ms |   1.845 ms | **4.06x faster** |   1.09x |      400 B | 70,494.160x less |
-| TinyEcs                                     | 100000      | 4         |                                      9.165 ms | 0.1818 ms | 0.3135 ms |   9.156 ms |     1.29x slower |   0.32x |  6007232 B |      4.694x less |
-| Xeno                                        | 100000      | 4         |                                      2.895 ms | 0.0573 ms | 0.1396 ms |   2.850 ms |     2.58x faster |   0.54x |      400 B | 70,494.160x less |
-|                                             |             |           |                                               |           |           |            |                  |         |            |                  |
-| Arch                                        | 100000      | 32        |                                      7.111 ms | 0.5267 ms | 1.5531 ms |   7.224 ms |         baseline |         | 28985968 B |                  |
-| DefaultECS                                  | 100000      | 32        |                                      4.553 ms | 0.0825 ms | 0.1333 ms |   4.507 ms |     1.56x faster |   0.34x |  3200400 B |      9.057x less |
-| DragonECS                                   | 100000      | 32        |                                      3.841 ms | 0.1262 ms | 0.3325 ms |   3.682 ms |     1.86x faster |   0.43x |      400 B | 72,464.920x less |
-| Fennecs                                     | 100000      | 32        |                                     36.373 ms | 0.4189 ms | 0.3498 ms |  36.405 ms |     5.42x slower |   1.43x | 49600400 B |      1.711x more |
-| FlecsNET                                    | 100000      | 32        |                                     87.061 ms | 0.9572 ms | 0.7473 ms |  86.949 ms |    12.96x slower |   3.43x |      400 B | 72,464.920x less |
-| Friflo                                      | 100000      | 32        |                                      2.698 ms | 0.0489 ms | 0.1253 ms |   2.637 ms |     2.64x faster |   0.59x |      400 B | 72,464.920x less |
-| LeoEcs                                      | 100000      | 32        |                                     12.123 ms | 0.2212 ms | 0.3172 ms |  12.107 ms |     1.80x slower |   0.48x |  8800400 B |      3.294x less |
-| LeoEcsLite                                  | 100000      | 32        |                                      5.929 ms | 1.2443 ms | 3.5900 ms |   3.418 ms |     1.62x faster |   0.80x |      400 B | 72,464.920x less |
-| Morpeh                                      | 100000      | 32        |                                      3.301 ms | 0.0746 ms | 0.2056 ms |   3.246 ms |     2.16x faster |   0.49x |      400 B | 72,464.920x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 32        | <span style="color: lightgreen;">**2.175 ms** | 0.2410 ms | 0.6875 ms |   2.198 ms | **3.66x faster** |   1.56x |      400 B | 72,464.920x less |
-| TinyEcs                                     | 100000      | 32        |                                      6.450 ms | 0.0938 ms | 0.1592 ms |   6.408 ms |     1.10x faster |   0.24x |  6023616 B |      4.812x less |
-| Xeno                                        | 100000      | 32        |                                      2.238 ms | 0.0444 ms | 0.0897 ms |   2.222 ms |     3.18x faster |   0.70x |      400 B | 72,464.920x less |
+| Context                 | EntityCount | ChunkSize |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      | 1         |   2.593 ms | 0.0508 ms | 0.0605 ms |   2.600 ms |       400 B |
+| FrifloContext           | 100000      | 1         |   4.564 ms | 0.1037 ms | 0.2804 ms |   4.647 ms |       400 B |
+| XenoContext             | 100000      | 1         |   4.667 ms | 0.0927 ms | 0.1139 ms |   4.660 ms |       400 B |
+| MassiveEcsContext       | 100000      | 1         |   4.887 ms | 0.0393 ms | 0.0307 ms |   4.896 ms |    527344 B |
+| DragonECSContext        | 100000      | 1         |   5.791 ms | 0.1416 ms | 0.3779 ms |   5.734 ms |       112 B |
+| LeoEcsLiteContext       | 100000      | 1         |   6.136 ms | 0.3673 ms | 0.9481 ms |   5.890 ms |       400 B |
+| DefaultECSContext       | 100000      | 1         |   6.342 ms | 0.1260 ms | 0.2272 ms |   6.278 ms |   3200112 B |
+| MorpehContext           | 100000      | 1         |   7.059 ms | 0.1827 ms | 0.5122 ms |   6.985 ms |       400 B |
+| ArchContext             | 100000      | 1         |   8.486 ms | 0.2978 ms | 0.8447 ms |   8.638 ms |  19488912 B |
+| TinyEcsContext          | 100000      | 1         |  16.153 ms | 1.2165 ms | 3.2682 ms |  17.967 ms |   8481216 B |
+| LeoEcsContext           | 100000      | 1         |  17.019 ms | 0.3397 ms | 0.8396 ms |  17.074 ms |   8800112 B |
+| FennecsContext          | 100000      | 1         |  39.963 ms | 0.7964 ms | 1.8927 ms |  39.439 ms | 653580392 B |
+| FlecsNETContext         | 100000      | 1         | 134.562 ms | 2.6479 ms | 2.9432 ms | 134.608 ms |       400 B |
+|                         |             |           |            |           |           |            |             |
+| 📍 **StaticEcsContext** | 100000      | 4         |   1.316 ms | 0.0260 ms | 0.0549 ms |   1.293 ms |       400 B |
+| XenoContext             | 100000      | 4         |   2.640 ms | 0.0522 ms | 0.1250 ms |   2.597 ms |       400 B |
+| FrifloContext           | 100000      | 4         |   2.956 ms | 0.0908 ms | 0.2455 ms |   2.834 ms |       400 B |
+| MassiveEcsContext       | 100000      | 4         |   3.077 ms | 0.3002 ms | 0.8466 ms |   3.093 ms |    401984 B |
+| DragonECSContext        | 100000      | 4         |   4.181 ms | 0.1682 ms | 0.4718 ms |   4.036 ms |       400 B |
+| MorpehContext           | 100000      | 4         |   4.504 ms | 0.1374 ms | 0.3785 ms |   4.452 ms |       400 B |
+| DefaultECSContext       | 100000      | 4         |   4.990 ms | 0.0969 ms | 0.2126 ms |   4.950 ms |   3200400 B |
+| ArchContext             | 100000      | 4         |   7.359 ms | 0.2800 ms | 0.8169 ms |   7.407 ms |  20201488 B |
+| LeoEcsLiteContext       | 100000      | 4         |   9.532 ms | 0.1563 ms | 0.1305 ms |   9.580 ms |       400 B |
+| TinyEcsContext          | 100000      | 4         |  10.219 ms | 0.2878 ms | 0.7632 ms |  10.421 ms |   8480928 B |
+| LeoEcsContext           | 100000      | 4         |  13.870 ms | 0.2682 ms | 0.4971 ms |  13.843 ms |   8800400 B |
+| FennecsContext          | 100000      | 4         |  36.919 ms | 0.7359 ms | 0.8475 ms |  36.886 ms |  49600400 B |
+| FlecsNETContext         | 100000      | 4         |  98.096 ms | 1.9552 ms | 1.8289 ms |  97.974 ms |       400 B |
+|                         |             |           |            |           |           |            |             |
+| 📍 **StaticEcsContext** | 100000      | 32        |   1.086 ms | 0.0217 ms | 0.0595 ms |   1.094 ms |       400 B |
+| XenoContext             | 100000      | 32        |   2.112 ms | 0.0424 ms | 0.1166 ms |   2.088 ms |       400 B |
+| MassiveEcsContext       | 100000      | 32        |   2.313 ms | 0.2474 ms | 0.6896 ms |   1.926 ms |    401896 B |
+| FrifloContext           | 100000      | 32        |   2.437 ms | 0.0493 ms | 0.1315 ms |   2.374 ms |       400 B |
+| MorpehContext           | 100000      | 32        |   3.319 ms | 0.0660 ms | 0.1643 ms |   3.285 ms |       400 B |
+| DragonECSContext        | 100000      | 32        |   3.953 ms | 0.1510 ms | 0.4183 ms |   3.928 ms |       400 B |
+| DefaultECSContext       | 100000      | 32        |   4.602 ms | 0.0920 ms | 0.1795 ms |   4.568 ms |   3200112 B |
+| LeoEcsLiteContext       | 100000      | 32        |   5.406 ms | 1.1291 ms | 3.2576 ms |   3.566 ms |       400 B |
+| ArchContext             | 100000      | 32        |   7.129 ms | 0.2950 ms | 0.8273 ms |   6.995 ms |  20092736 B |
+| TinyEcsContext          | 100000      | 32        |   8.675 ms | 0.2644 ms | 0.6826 ms |   8.533 ms |   8480928 B |
+| LeoEcsContext           | 100000      | 32        |  12.111 ms | 0.2550 ms | 0.6674 ms |  11.966 ms |   8800400 B |
+| FennecsContext          | 100000      | 32        |  35.400 ms | 0.7037 ms | 1.1161 ms |  35.116 ms |  49600064 B |
+| FlecsNETContext         | 100000      | 32        |  87.804 ms | 1.6961 ms | 2.3217 ms |  87.159 ms |       400 B |
 
 # CreateEntityWith2Components
 
-| Context                                     | EntityCount |                                          Mean |       Error |      StdDev |       Median |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|------------:|------------:|-------------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                    2,861.9 μs |    39.03 μs |    34.60 μs |   2,854.6 μs |         baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                    4,386.5 μs |    47.41 μs |    42.03 μs |   4,397.8 μs |     1.53x slower |   0.02x |        64 B |      16.75x less |
-| DragonECS                                   | 100000      |                                    2,568.7 μs |    49.98 μs |    64.98 μs |   2,562.4 μs |     1.11x faster |   0.03x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                   85,812.3 μs | 2,447.37 μs | 6,942.80 μs |  83,176.0 μs |    29.99x slower |   2.44x | 113600400 B | 105,970.52x more |
-| FlecsNET                                    | 100000      |                                  175,642.5 μs | 2,133.60 μs | 1,781.66 μs | 175,734.9 μs |    61.38x slower |   0.93x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                    4,906.8 μs |    62.94 μs |    58.88 μs |   4,885.7 μs |     1.71x slower |   0.03x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                    6,011.4 μs |    74.07 μs |    65.66 μs |   5,998.3 μs |     2.10x slower |   0.03x |       400 B |       2.68x less |
-| LeoEcsLite                                  | 100000      |                                    3,722.3 μs |    26.02 μs |    31.95 μs |   3,721.2 μs |     1.30x slower |   0.02x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                    3,786.1 μs |   131.35 μs |   374.74 μs |   3,709.9 μs |     1.32x slower |   0.13x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**833.9 μs** |    11.74 μs |    11.53 μs |     829.2 μs | **3.43x faster** |   0.06x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                   17,120.9 μs |   341.07 μs |   810.59 μs |  16,894.7 μs |     5.98x slower |   0.29x |   8341648 B |   7,781.39x more |
-| Xeno                                        | 100000      |                                    2,653.2 μs |    58.41 μs |   152.84 μs |   2,611.6 μs |     1.08x faster |   0.06x |   1045160 B |     974.96x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   1.103 ms | 0.0626 ms | 0.1765 ms |   1.014 ms |       112 B |
+| MassiveEcsContext       | 100000      |   1.916 ms | 0.1342 ms | 0.3719 ms |   1.694 ms |       400 B |
+| DragonECSContext        | 100000      |   2.359 ms | 0.0668 ms | 0.1929 ms |   2.268 ms |       400 B |
+| XenoContext             | 100000      |   2.520 ms | 0.1241 ms | 0.3560 ms |   2.360 ms |    983624 B |
+| ArchContext             | 100000      |   3.359 ms | 0.0260 ms | 0.0230 ms |   3.360 ms |       784 B |
+| MorpehContext           | 100000      |   3.511 ms | 0.0687 ms | 0.0764 ms |   3.507 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   3.763 ms | 0.0865 ms | 0.2522 ms |   3.663 ms |       400 B |
+| FrifloContext           | 100000      |   4.210 ms | 0.0829 ms | 0.1162 ms |   4.163 ms |       400 B |
+| DefaultECSContext       | 100000      |   4.363 ms | 0.0282 ms | 0.0250 ms |   4.364 ms |       400 B |
+| LeoEcsContext           | 100000      |   6.206 ms | 0.1221 ms | 0.2494 ms |   6.112 ms |       400 B |
+| TinyEcsContext          | 100000      |  24.354 ms | 0.4325 ms | 0.3377 ms |  24.374 ms |  10946800 B |
+| FennecsContext          | 100000      |  76.463 ms | 1.2396 ms | 1.0989 ms |  76.447 ms | 113600400 B |
+| FlecsNETContext         | 100000      | 176.070 ms | 2.3039 ms | 1.9239 ms | 176.356 ms |       400 B |
 
 # CreateEntityWith2RandomComponents
 
-| Context                                     | EntityCount | ChunkSize |                                          Mean |     Error |    StdDev |     Median |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|-----------|----------------------------------------------:|----------:|----------:|-----------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      | 1         |                                     10.829 ms | 0.8711 ms | 2.5410 ms |  10.382 ms |         baseline |         |  37494728 B |                  |
-| DefaultECS                                  | 100000      | 1         |                                      8.566 ms | 0.1631 ms | 0.3369 ms |   8.519 ms |     1.27x faster |   0.30x |   3200400 B |     11.716x less |
-| DragonECS                                   | 100000      | 1         |                                      6.541 ms | 0.1023 ms | 0.2202 ms |   6.514 ms |     1.66x faster |   0.39x |       400 B | 93,736.820x less |
-| Fennecs                                     | 100000      | 1         |                                     84.687 ms | 0.9305 ms | 0.7265 ms |  84.677 ms |     8.26x slower |   1.95x | 113600400 B |      3.030x more |
-| FlecsNET                                    | 100000      | 1         |                                    238.034 ms | 2.2141 ms | 1.8489 ms | 237.452 ms |    23.22x slower |   5.49x |       400 B | 93,736.820x less |
-| Friflo                                      | 100000      | 1         |                                      7.667 ms | 0.0620 ms | 0.0484 ms |   7.672 ms |     1.41x faster |   0.33x |       400 B | 93,736.820x less |
-| LeoEcs                                      | 100000      | 1         |                                     22.795 ms | 0.4527 ms | 0.9450 ms |  22.761 ms |     2.22x slower |   0.53x |   8800400 B |      4.261x less |
-| LeoEcsLite                                  | 100000      | 1         |                                      9.196 ms | 0.1816 ms | 0.3411 ms |   9.159 ms |     1.18x faster |   0.28x |       400 B | 93,736.820x less |
-| Morpeh                                      | 100000      | 1         |                                      8.572 ms | 0.1636 ms | 0.1818 ms |   8.534 ms |     1.26x faster |   0.30x |       400 B | 93,736.820x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 1         | <span style="color: lightgreen;">**3.675 ms** | 0.1483 ms | 0.4232 ms |   3.552 ms | **2.98x faster** |   0.77x |       400 B | 93,736.820x less |
-| TinyEcs                                     | 100000      | 1         |                                     28.126 ms | 0.3113 ms | 0.3057 ms |  28.009 ms |     2.74x slower |   0.65x |   8407232 B |      4.460x less |
-| Xeno                                        | 100000      | 1         |                                      5.990 ms | 0.1185 ms | 0.3183 ms |   6.037 ms |     1.81x faster |   0.43x |       400 B | 93,736.820x less |
-|                                             |             |           |                                               |           |           |            |                  |         |             |                  |
-| Arch                                        | 100000      | 4         |                                      8.882 ms | 0.7239 ms | 2.1345 ms |   8.870 ms |         baseline |         |  36889448 B |                  |
-| DefaultECS                                  | 100000      | 4         |                                      6.608 ms | 0.1298 ms | 0.2273 ms |   6.580 ms |     1.35x faster |   0.33x |   3200400 B |     11.527x less |
-| DragonECS                                   | 100000      | 4         |                                      5.606 ms | 0.6124 ms | 1.6868 ms |   4.867 ms |     1.68x faster |   0.52x |       400 B | 92,223.620x less |
-| Fennecs                                     | 100000      | 4         |                                     81.715 ms | 1.5846 ms | 1.3232 ms |  81.528 ms |     9.78x slower |   2.56x | 113600400 B |      3.079x more |
-| FlecsNET                                    | 100000      | 4         |                                    202.709 ms | 3.5561 ms | 3.9526 ms | 202.053 ms |    24.27x slower |   6.35x |       400 B | 92,223.620x less |
-| Friflo                                      | 100000      | 4         |                                      5.847 ms | 0.0599 ms | 0.0589 ms |   5.859 ms |     1.52x faster |   0.36x |       400 B | 92,223.620x less |
-| LeoEcs                                      | 100000      | 4         |                                     18.159 ms | 0.3509 ms | 0.4919 ms |  18.077 ms |     2.17x slower |   0.57x | 344345032 B |      9.335x more |
-| LeoEcsLite                                  | 100000      | 4         |                                      7.773 ms | 0.1631 ms | 0.4325 ms |   7.717 ms |     1.15x faster |   0.28x |       400 B | 92,223.620x less |
-| Morpeh                                      | 100000      | 4         |                                      5.431 ms | 0.1275 ms | 0.3532 ms |   5.415 ms |     1.64x faster |   0.41x |       400 B | 92,223.620x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 4         | <span style="color: lightgreen;">**2.744 ms** | 0.1852 ms | 0.5283 ms |   2.687 ms | **3.36x faster** |   1.04x |       400 B | 92,223.620x less |
-| TinyEcs                                     | 100000      | 4         |                                     19.667 ms | 0.2762 ms | 0.3781 ms |  19.589 ms |     2.35x slower |   0.62x |  75483328 B |      2.046x more |
-| Xeno                                        | 100000      | 4         |                                      3.835 ms | 0.0862 ms | 0.2302 ms |   3.853 ms |     2.32x faster |   0.57x |       400 B | 92,223.620x less |
-|                                             |             |           |                                               |           |           |            |                  |         |             |                  |
-| Arch                                        | 100000      | 32        |                                      8.898 ms | 0.6712 ms | 1.9685 ms |   8.745 ms |         baseline |         |  37882832 B |                  |
-| DefaultECS                                  | 100000      | 32        |                                      6.091 ms | 0.1175 ms | 0.1685 ms |   6.122 ms |     1.46x faster |   0.32x | 372299368 B |      9.828x more |
-| DragonECS                                   | 100000      | 32        |                                      6.001 ms | 0.7785 ms | 2.2463 ms |   4.804 ms |     1.64x faster |   0.58x |       400 B | 94,707.080x less |
-| Fennecs                                     | 100000      | 32        |                                     80.629 ms | 0.9835 ms | 0.7678 ms |  80.629 ms |     9.53x slower |   2.25x | 113600400 B |      2.999x more |
-| FlecsNET                                    | 100000      | 32        |                                    190.219 ms | 3.5987 ms | 3.5344 ms | 188.458 ms |    22.49x slower |   5.31x |       400 B | 94,707.080x less |
-| Friflo                                      | 100000      | 32        |                                      4.713 ms | 0.0442 ms | 0.0786 ms |   4.704 ms |     1.89x faster |   0.42x |       400 B | 94,707.080x less |
-| LeoEcs                                      | 100000      | 32        |                                     15.755 ms | 0.2901 ms | 0.2849 ms |  15.808 ms |     1.86x slower |   0.44x |   8800400 B |      4.305x less |
-| LeoEcsLite                                  | 100000      | 32        |                                      6.991 ms | 0.1865 ms | 0.4946 ms |   6.811 ms |     1.28x faster |   0.29x |       400 B | 94,707.080x less |
-| Morpeh                                      | 100000      | 32        |                                      4.287 ms | 0.0846 ms | 0.1101 ms |   4.256 ms |     2.08x faster |   0.46x |       400 B | 94,707.080x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 32        | <span style="color: lightgreen;">**2.404 ms** | 0.2598 ms | 0.7326 ms |   1.991 ms | **4.01x faster** |   1.38x |       400 B | 94,707.080x less |
-| TinyEcs                                     | 100000      | 32        |                                     17.252 ms | 0.3432 ms | 0.7746 ms |  17.211 ms |     2.04x slower |   0.49x |   8341648 B |      4.541x less |
-| Xeno                                        | 100000      | 32        |                                      3.103 ms | 0.0815 ms | 0.2176 ms |   3.136 ms |     2.88x faster |   0.67x |       400 B | 94,707.080x less |
+| Context                 | EntityCount | ChunkSize |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      | 1         |   3.200 ms | 0.0614 ms | 0.1596 ms |   3.194 ms |       400 B |
+| MassiveEcsContext       | 100000      | 1         |   5.484 ms | 0.1060 ms | 0.2639 ms |   5.468 ms |    818128 B |
+| XenoContext             | 100000      | 1         |   5.824 ms | 0.1131 ms | 0.2941 ms |   5.720 ms |       400 B |
+| DragonECSContext        | 100000      | 1         |   6.494 ms | 0.1285 ms | 0.3104 ms |   6.485 ms |       400 B |
+| FrifloContext           | 100000      | 1         |   6.616 ms | 0.0714 ms | 0.1153 ms |   6.660 ms |       400 B |
+| DefaultECSContext       | 100000      | 1         |   7.662 ms | 0.1469 ms | 0.1508 ms |   7.668 ms |   3200400 B |
+| MorpehContext           | 100000      | 1         |   8.101 ms | 0.1595 ms | 0.2621 ms |   8.043 ms |       112 B |
+| ArchContext             | 100000      | 1         |   8.780 ms | 0.2207 ms | 0.6261 ms |   8.847 ms |  20243008 B |
+| LeoEcsLiteContext       | 100000      | 1         |   9.069 ms | 0.1798 ms | 0.3909 ms |   8.910 ms |       400 B |
+| LeoEcsContext           | 100000      | 1         |  21.839 ms | 0.4366 ms | 0.8720 ms |  21.805 ms |   8800400 B |
+| TinyEcsContext          | 100000      | 1         |  29.947 ms | 0.8985 ms | 2.3193 ms |  31.130 ms |  10880928 B |
+| FennecsContext          | 100000      | 1         |  79.981 ms | 1.5655 ms | 2.1946 ms |  79.826 ms | 113600400 B |
+| FlecsNETContext         | 100000      | 1         | 235.320 ms | 3.1086 ms | 2.7557 ms | 234.435 ms |       400 B |
+|                         |             |           |            |           |           |            |             |
+| 📍 **StaticEcsContext** | 100000      | 4         |   1.878 ms | 0.0372 ms | 0.0831 ms |   1.860 ms |       400 B |
+| XenoContext             | 100000      | 4         |   3.387 ms | 0.0662 ms | 0.0837 ms |   3.387 ms |       400 B |
+| DragonECSContext        | 100000      | 4         |   4.829 ms | 0.1477 ms | 0.4117 ms |   4.668 ms |       400 B |
+| MassiveEcsContext       | 100000      | 4         |   5.153 ms | 1.0126 ms | 2.8560 ms |   3.766 ms |    818992 B |
+| FrifloContext           | 100000      | 4         |   5.271 ms | 0.0938 ms | 0.1042 ms |   5.241 ms |       400 B |
+| MorpehContext           | 100000      | 4         |   5.331 ms | 0.1184 ms | 0.3241 ms |   5.265 ms |       112 B |
+| DefaultECSContext       | 100000      | 4         |   6.319 ms | 0.1229 ms | 0.1682 ms |   6.302 ms |   3200400 B |
+| ArchContext             | 100000      | 4         |   7.098 ms | 0.2424 ms | 0.7033 ms |   7.175 ms |  20925344 B |
+| LeoEcsLiteContext       | 100000      | 4         |   7.465 ms | 0.1488 ms | 0.3840 ms |   7.327 ms |       400 B |
+| LeoEcsContext           | 100000      | 4         |  18.063 ms | 0.3467 ms | 0.6071 ms |  18.005 ms |   8800400 B |
+| TinyEcsContext          | 100000      | 4         |  27.273 ms | 1.7803 ms | 5.1365 ms |  24.966 ms |  10881216 B |
+| FennecsContext          | 100000      | 4         |  80.944 ms | 1.5566 ms | 1.2999 ms |  81.027 ms | 113600400 B |
+| FlecsNETContext         | 100000      | 4         | 198.212 ms | 2.8209 ms | 2.3556 ms | 197.363 ms |       400 B |
+|                         |             |           |            |           |           |            |             |
+| 📍 **StaticEcsContext** | 100000      | 32        |   1.583 ms | 0.0325 ms | 0.0891 ms |   1.572 ms |       400 B |
+| XenoContext             | 100000      | 32        |   2.984 ms | 0.0702 ms | 0.1934 ms |   2.979 ms |       400 B |
+| FrifloContext           | 100000      | 32        |   4.294 ms | 0.0694 ms | 0.1336 ms |   4.268 ms |       400 B |
+| MorpehContext           | 100000      | 32        |   4.360 ms | 0.0806 ms | 0.1231 ms |   4.344 ms |       400 B |
+| MassiveEcsContext       | 100000      | 32        |   4.431 ms | 0.9323 ms | 2.6297 ms |   3.207 ms |    887528 B |
+| DragonECSContext        | 100000      | 32        |   4.466 ms | 0.1424 ms | 0.3946 ms |   4.392 ms |       112 B |
+| DefaultECSContext       | 100000      | 32        |   6.098 ms | 0.1213 ms | 0.3088 ms |   6.031 ms |   3200400 B |
+| LeoEcsLiteContext       | 100000      | 32        |   6.831 ms | 0.1280 ms | 0.3373 ms |   6.723 ms |       400 B |
+| ArchContext             | 100000      | 32        |   6.956 ms | 0.2286 ms | 0.6704 ms |   7.021 ms |  21064072 B |
+| LeoEcsContext           | 100000      | 32        |  16.118 ms | 0.2497 ms | 0.5044 ms |  16.045 ms |   8800112 B |
+| TinyEcsContext          | 100000      | 32        |  26.701 ms | 1.7982 ms | 5.2738 ms |  23.591 ms |  10881216 B |
+| FennecsContext          | 100000      | 32        |  79.005 ms | 1.5028 ms | 1.3322 ms |  79.137 ms | 113600400 B |
+| FlecsNETContext         | 100000      | 32        | 190.383 ms | 3.5242 ms | 3.2965 ms | 189.939 ms |       400 B |
 
 # CreateEntityWith3Components
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                      3.107 ms | 0.0581 ms | 0.0670 ms |         baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                      5.759 ms | 0.0975 ms | 0.0864 ms |     1.85x slower |   0.05x |       400 B |       2.68x less |
-| DragonECS                                   | 100000      |                                      3.183 ms | 0.0436 ms | 0.0387 ms |     1.03x slower |   0.02x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                    136.069 ms | 2.6476 ms | 3.6240 ms |    43.82x slower |   1.45x | 184800400 B | 172,388.43x more |
-| FlecsNET                                    | 100000      |                                    241.771 ms | 3.5409 ms | 5.7179 ms |    77.86x slower |   2.40x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                      8.304 ms | 0.1450 ms | 0.1357 ms |     2.67x slower |   0.07x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                      8.867 ms | 0.1519 ms | 0.1421 ms |     2.86x slower |   0.07x |       112 B |       9.57x less |
-| LeoEcsLite                                  | 100000      |                                      6.708 ms | 0.0621 ms | 0.0519 ms |     2.16x slower |   0.05x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                      4.455 ms | 0.0860 ms | 0.1388 ms |     1.43x slower |   0.05x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**1.167 ms** | 0.0103 ms | 0.0091 ms | **2.66x faster** |   0.06x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                     21.173 ms | 0.4218 ms | 0.9081 ms |     6.82x slower |   0.32x |  10889200 B |  10,157.84x more |
-| Xeno                                        | 100000      |                                      5.301 ms | 0.0930 ms | 0.0726 ms |     1.71x slower |   0.04x |   1045160 B |     974.96x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   1.380 ms | 0.0119 ms | 0.0100 ms |   1.377 ms |       400 B |
+| MassiveEcsContext       | 100000      |   2.432 ms | 0.0448 ms | 0.0598 ms |   2.416 ms |       400 B |
+| DragonECSContext        | 100000      |   2.956 ms | 0.0527 ms | 0.0493 ms |   2.941 ms |       400 B |
+| XenoContext             | 100000      |   3.145 ms | 0.1191 ms | 0.3219 ms |   3.183 ms |    983624 B |
+| ArchContext             | 100000      |   3.428 ms | 0.0474 ms | 0.0396 ms |   3.413 ms |      1072 B |
+| MorpehContext           | 100000      |   4.277 ms | 0.0563 ms | 0.0499 ms |   4.287 ms |       400 B |
+| DefaultECSContext       | 100000      |   5.667 ms | 0.0389 ms | 0.0325 ms |   5.667 ms |       400 B |
+| FrifloContext           | 100000      |   6.202 ms | 0.0764 ms | 0.0750 ms |   6.180 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   6.365 ms | 0.0386 ms | 0.0342 ms |   6.369 ms |       400 B |
+| LeoEcsContext           | 100000      |   8.328 ms | 0.0467 ms | 0.0754 ms |   8.312 ms |       400 B |
+| TinyEcsContext          | 100000      |  31.877 ms | 2.4838 ms | 7.2059 ms |  27.851 ms |  63432560 B |
+| FennecsContext          | 100000      | 129.669 ms | 2.5857 ms | 4.5961 ms | 128.397 ms | 184800400 B |
+| FlecsNETContext         | 100000      | 238.407 ms | 1.4350 ms | 1.1983 ms | 238.742 ms |       400 B |
 
 # CreateEntityWith3RandomComponents
 
-| Context                                     | EntityCount | ChunkSize |                                          Mean |     Error |    StdDev |     Median |            Ratio | RatioSD |    Allocated |       Alloc Ratio |
-|---------------------------------------------|-------------|-----------|----------------------------------------------:|----------:|----------:|-----------:|-----------------:|--------:|-------------:|------------------:|
-| Arch                                        | 100000      | 1         |                                     12.422 ms | 1.2945 ms | 3.7350 ms |  11.515 ms |         baseline |         |   47701336 B |                   |
-| DefaultECS                                  | 100000      | 1         |                                      9.907 ms | 0.1963 ms | 0.1639 ms |   9.851 ms |     1.25x faster |   0.38x |  204527184 B |       4.288x more |
-| DragonECS                                   | 100000      | 1         |                                      7.698 ms | 0.1422 ms | 0.3031 ms |   7.644 ms |     1.62x faster |   0.49x |        400 B | 119,253.340x less |
-| Fennecs                                     | 100000      | 1         |                                    141.346 ms | 1.3644 ms | 1.1393 ms | 140.905 ms |    12.30x slower |   3.22x |  184800400 B |       3.874x more |
-| FlecsNET                                    | 100000      | 1         |                                    312.960 ms | 6.0805 ms | 7.4674 ms | 310.873 ms |    27.24x slower |   7.16x |        400 B | 119,253.340x less |
-| Friflo                                      | 100000      | 1         |                                     10.821 ms | 0.1996 ms | 0.1867 ms |  10.757 ms |     1.15x faster |   0.34x |        400 B | 119,253.340x less |
-| LeoEcs                                      | 100000      | 1         |                                     29.435 ms | 0.5817 ms | 1.1750 ms |  29.214 ms |     2.56x slower |   0.68x |    8800400 B |       5.420x less |
-| LeoEcsLite                                  | 100000      | 1         |                                     14.470 ms | 0.2752 ms | 0.3380 ms |  14.402 ms |     1.26x slower |   0.33x |        400 B | 119,253.340x less |
-| Morpeh                                      | 100000      | 1         |                                      9.692 ms | 0.2498 ms | 0.7004 ms |   9.586 ms |     1.29x faster |   0.40x |        400 B | 119,253.340x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 1         | <span style="color: lightgreen;">**4.708 ms** | 0.1391 ms | 0.3900 ms |   4.674 ms | **2.66x faster** |   0.83x |        400 B | 119,253.340x less |
-| TinyEcs                                     | 100000      | 1         |                                     33.097 ms | 0.6168 ms | 1.0964 ms |  32.680 ms |     2.88x slower |   0.76x | 1352984536 B |      28.364x more |
-| Xeno                                        | 100000      | 1         |                                      6.710 ms | 0.1306 ms | 0.3180 ms |   6.792 ms |     1.86x faster |   0.56x |        400 B | 119,253.340x less |
-|                                             |             |           |                                               |           |           |            |                  |         |              |                   |
-| Arch                                        | 100000      | 4         |                                     11.329 ms | 1.4060 ms | 4.1235 ms |   9.964 ms |         baseline |         |   46936456 B |                   |
-| DefaultECS                                  | 100000      | 4         |                                      8.473 ms | 0.1663 ms | 0.1980 ms |   8.427 ms |     1.34x faster |   0.49x |    3200400 B |      14.666x less |
-| DragonECS                                   | 100000      | 4         |                                      5.777 ms | 0.1354 ms | 0.3566 ms |   5.668 ms |     1.97x faster |   0.72x |        400 B | 117,341.140x less |
-| Fennecs                                     | 100000      | 4         |                                    136.650 ms | 1.0878 ms | 0.9084 ms | 136.236 ms |    13.52x slower |   4.20x |  184800400 B |       3.937x more |
-| FlecsNET                                    | 100000      | 4         |                                    273.751 ms | 4.8557 ms | 4.7689 ms | 271.550 ms |    27.08x slower |   8.43x |        400 B | 117,341.140x less |
-| Friflo                                      | 100000      | 4         |                                      8.768 ms | 0.1668 ms | 0.1393 ms |   8.829 ms |     1.29x faster |   0.47x |        400 B | 117,341.140x less |
-| LeoEcs                                      | 100000      | 4         |                                     25.680 ms | 0.5034 ms | 1.0283 ms |  25.532 ms |     2.54x slower |   0.80x |    8800400 B |       5.333x less |
-| LeoEcsLite                                  | 100000      | 4         |                                     13.293 ms | 0.3256 ms | 0.8858 ms |  12.978 ms |     1.31x slower |   0.42x |        400 B | 117,341.140x less |
-| Morpeh                                      | 100000      | 4         |                                      6.772 ms | 0.1664 ms | 0.4610 ms |   6.681 ms |     1.68x faster |   0.62x |        400 B | 117,341.140x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 4         | <span style="color: lightgreen;">**3.471 ms** | 0.1665 ms | 0.4695 ms |   3.303 ms | **3.32x faster** |   1.28x |        400 B | 117,341.140x less |
-| TinyEcs                                     | 100000      | 4         |                                     24.749 ms | 0.4501 ms | 0.9688 ms |  24.467 ms |     2.45x slower |   0.77x |   10823616 B |       4.336x less |
-| Xeno                                        | 100000      | 4         |                                      4.806 ms | 0.0987 ms | 0.2668 ms |   4.883 ms |     2.37x faster |   0.87x |        400 B | 117,341.140x less |
-|                                             |             |           |                                               |           |           |            |                  |         |              |                   |
-| Arch                                        | 100000      | 32        |                                     10.322 ms | 1.0482 ms | 3.0410 ms |   9.726 ms |         baseline |         |   47303848 B |                   |
-| DefaultECS                                  | 100000      | 32        |                                      7.929 ms | 0.1575 ms | 0.2543 ms |   7.864 ms |     1.30x faster |   0.38x |    3200400 B |      14.781x less |
-| DragonECS                                   | 100000      | 32        |                                      5.323 ms | 0.1309 ms | 0.3424 ms |   5.301 ms |     1.95x faster |   0.58x |        400 B | 118,259.620x less |
-| Fennecs                                     | 100000      | 32        |                                    138.701 ms | 2.4187 ms | 2.7854 ms | 138.930 ms |    14.56x slower |   3.99x |  184800400 B |       3.907x more |
-| FlecsNET                                    | 100000      | 32        |                                    259.107 ms | 5.0785 ms | 4.5020 ms | 257.524 ms |    27.20x slower |   7.45x |        400 B | 118,259.620x less |
-| Friflo                                      | 100000      | 32        |                                      7.506 ms | 0.1322 ms | 0.1032 ms |   7.511 ms |     1.38x faster |   0.40x |        400 B | 118,259.620x less |
-| LeoEcs                                      | 100000      | 32        |                                     22.307 ms | 0.4437 ms | 0.9833 ms |  21.937 ms |     2.34x slower |   0.65x |   92126192 B |       1.948x more |
-| LeoEcsLite                                  | 100000      | 32        |                                     11.763 ms | 0.2342 ms | 0.5335 ms |  11.556 ms |     1.23x slower |   0.34x |        400 B | 118,259.620x less |
-| Morpeh                                      | 100000      | 32        |                                      5.705 ms | 0.1124 ms | 0.2296 ms |   5.757 ms |     1.81x faster |   0.54x |        400 B | 118,259.620x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 32        | <span style="color: lightgreen;">**3.588 ms** | 0.2023 ms | 0.5605 ms |   3.436 ms | **2.94x faster** |   0.96x |        400 B | 118,259.620x less |
-| TinyEcs                                     | 100000      | 32        |                                     21.457 ms | 0.3327 ms | 0.5180 ms |  21.328 ms |     2.25x slower |   0.62x |   10823616 B |       4.370x less |
-| Xeno                                        | 100000      | 32        |                                      3.909 ms | 0.1055 ms | 0.2853 ms |   3.865 ms |     2.65x faster |   0.80x |        400 B | 118,259.620x less |
+| Context                 | EntityCount | ChunkSize |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      | 1         |   4.571 ms | 0.2162 ms | 0.6063 ms |   4.519 ms |       400 B |
+| XenoContext             | 100000      | 1         |   6.515 ms | 0.1664 ms | 0.4527 ms |   6.346 ms |       400 B |
+| MassiveEcsContext       | 100000      | 1         |   6.774 ms | 0.1020 ms | 0.1965 ms |   6.774 ms |   1089712 B |
+| DragonECSContext        | 100000      | 1         |   7.129 ms | 0.1219 ms | 0.2598 ms |   7.074 ms |       400 B |
+| ArchContext             | 100000      | 1         |   9.097 ms | 0.1812 ms | 0.5141 ms |   9.112 ms |  20043408 B |
+| MorpehContext           | 100000      | 1         |   9.274 ms | 0.2792 ms | 0.7828 ms |   9.199 ms |       400 B |
+| FrifloContext           | 100000      | 1         |   9.732 ms | 0.1897 ms | 0.2721 ms |   9.624 ms | 301990264 B |
+| DefaultECSContext       | 100000      | 1         |  10.151 ms | 0.1943 ms | 0.3880 ms |  10.057 ms |   3200400 B |
+| LeoEcsLiteContext       | 100000      | 1         |  13.739 ms | 0.2603 ms | 0.3384 ms |  13.718 ms |       400 B |
+| LeoEcsContext           | 100000      | 1         |  28.651 ms | 0.5729 ms | 1.5092 ms |  28.469 ms |   8800400 B |
+| TinyEcsContext          | 100000      | 1         |  36.434 ms | 2.0898 ms | 6.1618 ms |  33.355 ms |  63498432 B |
+| FennecsContext          | 100000      | 1         | 135.064 ms | 2.6782 ms | 5.4101 ms | 134.006 ms | 184800400 B |
+| FlecsNETContext         | 100000      | 1         | 312.287 ms | 5.3448 ms | 4.9995 ms | 310.534 ms |       400 B |
+|                         |             |           |            |           |           |            |             |
+| 📍 **StaticEcsContext** | 100000      | 4         |   2.947 ms | 0.1476 ms | 0.4090 ms |   2.945 ms |        64 B |
+| XenoContext             | 100000      | 4         |   4.293 ms | 0.0844 ms | 0.2209 ms |   4.242 ms |       400 B |
+| MassiveEcsContext       | 100000      | 4         |   4.832 ms | 0.0959 ms | 0.2085 ms |   4.814 ms |   1371920 B |
+| DragonECSContext        | 100000      | 4         |   5.529 ms | 0.1402 ms | 0.3885 ms |   5.505 ms |       400 B |
+| MorpehContext           | 100000      | 4         |   6.647 ms | 0.1972 ms | 0.5297 ms |   6.575 ms |       400 B |
+| ArchContext             | 100000      | 4         |   7.774 ms | 0.2188 ms | 0.6278 ms |   7.757 ms |  20400736 B |
+| FrifloContext           | 100000      | 4         |   8.162 ms | 0.1617 ms | 0.1862 ms |   8.141 ms |       400 B |
+| DefaultECSContext       | 100000      | 4         |   8.558 ms | 0.1641 ms | 0.3533 ms |   8.481 ms |   3200400 B |
+| LeoEcsLiteContext       | 100000      | 4         |  12.245 ms | 0.2446 ms | 0.4153 ms |  12.095 ms |       400 B |
+| LeoEcsContext           | 100000      | 4         |  25.372 ms | 0.4982 ms | 0.9833 ms |  25.145 ms |   8800400 B |
+| TinyEcsContext          | 100000      | 4         |  33.695 ms | 2.3476 ms | 6.9219 ms |  29.459 ms |  63498432 B |
+| FennecsContext          | 100000      | 4         | 131.051 ms | 2.5377 ms | 5.2407 ms | 129.989 ms | 184800400 B |
+| FlecsNETContext         | 100000      | 4         | 274.014 ms | 5.2392 ms | 4.3750 ms | 271.908 ms |       400 B |
+|                         |             |           |            |           |           |            |             |
+| 📍 **StaticEcsContext** | 100000      | 32        |   2.569 ms | 0.1506 ms | 0.4122 ms |   2.543 ms |        64 B |
+| XenoContext             | 100000      | 32        |   3.823 ms | 0.0855 ms | 0.2311 ms |   3.778 ms |       400 B |
+| MassiveEcsContext       | 100000      | 32        |   4.262 ms | 0.0902 ms | 0.2345 ms |   4.233 ms |   1391720 B |
+| DragonECSContext        | 100000      | 32        |   4.947 ms | 0.1185 ms | 0.3224 ms |   4.867 ms |       400 B |
+| MorpehContext           | 100000      | 32        |   5.724 ms | 0.1081 ms | 0.2771 ms |   5.702 ms |        64 B |
+| FrifloContext           | 100000      | 32        |   7.049 ms | 0.2067 ms | 0.5694 ms |   6.877 ms |       400 B |
+| ArchContext             | 100000      | 32        |   7.487 ms | 0.2016 ms | 0.5519 ms |   7.447 ms |  20453488 B |
+| DefaultECSContext       | 100000      | 32        |   8.082 ms | 0.1388 ms | 0.3326 ms |   8.011 ms |   3200400 B |
+| LeoEcsLiteContext       | 100000      | 32        |  11.347 ms | 0.2036 ms | 0.4994 ms |  11.139 ms |       400 B |
+| LeoEcsContext           | 100000      | 32        |  21.864 ms | 0.5689 ms | 1.5184 ms |  21.392 ms |   8800400 B |
+| TinyEcsContext          | 100000      | 32        |  31.655 ms | 2.2767 ms | 6.7130 ms |  28.097 ms |  63498144 B |
+| FennecsContext          | 100000      | 32        | 131.383 ms | 2.5549 ms | 3.2312 ms | 130.213 ms | 184800400 B |
+| FlecsNETContext         | 100000      | 32        | 263.063 ms | 4.5175 ms | 4.0046 ms | 262.505 ms |       400 B |
 
 # CreateEntityWith4Components
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |     Median |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                      3.324 ms | 0.0505 ms | 0.0422 ms |   3.312 ms |         baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                      7.101 ms | 0.0742 ms | 0.0658 ms |   7.100 ms |     2.14x slower |   0.03x |       400 B |       2.68x less |
-| DragonECS                                   | 100000      |                                      4.003 ms | 0.1076 ms | 0.3122 ms |   3.898 ms |     1.20x slower |   0.09x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                    196.846 ms | 1.2350 ms | 1.0948 ms | 196.696 ms |    59.23x slower |   0.79x | 268800112 B | 250,746.37x more |
-| FlecsNET                                    | 100000      |                                    319.231 ms | 3.6476 ms | 3.4119 ms | 320.355 ms |    96.06x slower |   1.53x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                     10.342 ms | 0.0490 ms | 0.0435 ms |  10.345 ms |     3.11x slower |   0.04x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                     12.032 ms | 0.1366 ms | 0.1141 ms |  12.026 ms |     3.62x slower |   0.06x |       400 B |       2.68x less |
-| LeoEcsLite                                  | 100000      |                                      9.462 ms | 0.1857 ms | 0.3301 ms |   9.303 ms |     2.85x slower |   0.10x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                      5.702 ms | 0.1124 ms | 0.1051 ms |   5.699 ms |     1.72x slower |   0.04x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**1.693 ms** | 0.0896 ms | 0.2512 ms |   1.590 ms | **2.00x faster** |   0.25x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                     32.393 ms | 0.9152 ms | 2.4743 ms |  31.756 ms |     9.75x slower |   0.75x |  13289200 B |  12,396.64x more |
-| Xeno                                        | 100000      |                                      4.201 ms | 0.1304 ms | 0.3479 ms |   4.111 ms |     1.26x slower |   0.11x |   1045160 B |     974.96x more |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   1.797 ms | 0.0971 ms | 0.2708 ms |   1.742 ms |       400 B |
+| MassiveEcsContext       | 100000      |   3.070 ms | 0.0101 ms | 0.0084 ms |   3.069 ms |       400 B |
+| DragonECSContext        | 100000      |   3.640 ms | 0.0691 ms | 0.0577 ms |   3.645 ms |       400 B |
+| ArchContext             | 100000      |   3.669 ms | 0.0685 ms | 0.0535 ms |   3.653 ms |      1072 B |
+| XenoContext             | 100000      |   4.427 ms | 0.2882 ms | 0.8362 ms |   4.099 ms |    983336 B |
+| MorpehContext           | 100000      |   5.364 ms | 0.0531 ms | 0.0471 ms |   5.372 ms |       400 B |
+| DefaultECSContext       | 100000      |   7.052 ms | 0.0377 ms | 0.0315 ms |   7.058 ms |       400 B |
+| FrifloContext           | 100000      |   8.796 ms | 0.1698 ms | 0.2086 ms |   8.760 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   9.488 ms | 0.1886 ms | 0.3496 ms |   9.397 ms |       400 B |
+| LeoEcsContext           | 100000      |  10.997 ms | 0.1862 ms | 0.1555 ms |  11.043 ms |        64 B |
+| TinyEcsContext          | 100000      |  36.615 ms | 2.5843 ms | 7.5792 ms |  32.345 ms |  15746800 B |
+| FennecsContext          | 100000      | 182.442 ms | 1.8639 ms | 1.4552 ms | 182.417 ms | 268800400 B |
+| FlecsNETContext         | 100000      | 306.803 ms | 4.2538 ms | 3.7709 ms | 305.643 ms |       400 B |
 
 # DeleteEntity
 
-| Context                                     | EntityCount |                                           Mean |     Error |      StdDev |     Median |            Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|-----------------------------------------------:|----------:|------------:|-----------:|-----------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      |                                     1,130.2 ns | 133.54 ns |   385.29 ns | 1,100.0 ns |         baseline |         |    1072 B |             |
-| DefaultECS                                  | 100000      |                                     2,269.9 ns | 210.21 ns |   596.33 ns | 2,100.0 ns |     2.30x slower |   1.15x |     400 B |  2.68x less |
-| DragonECS                                   | 100000      |                                       334.9 ns |  30.76 ns |    83.69 ns |   300.0 ns |     3.61x faster |   1.60x |     400 B |  2.68x less |
-| Fennecs                                     | 100000      |                                     1,284.0 ns | 197.98 ns |   583.74 ns | 1,100.0 ns |     1.30x slower |   0.84x |     112 B |  9.57x less |
-| FlecsNET                                    | 100000      |                                       795.8 ns |  48.21 ns |   139.11 ns |   800.0 ns |     1.46x faster |   0.55x |     400 B |  2.68x less |
-| Friflo                                      | 100000      |                                     2,629.6 ns | 423.18 ns | 1,114.84 ns | 2,300.0 ns |     2.67x slower |   1.64x |     136 B |  7.88x less |
-| LeoEcs                                      | 100000      |                                     2,708.5 ns | 237.42 ns |   677.39 ns | 2,650.0 ns |     2.75x slower |   1.36x |      64 B | 16.75x less |
-| LeoEcsLite                                  | 100000      |                                       258.0 ns |  25.06 ns |    69.02 ns |   200.0 ns |     4.70x faster |   2.09x |     400 B |  2.68x less |
-| Morpeh                                      | 100000      |                                     2,850.0 ns | 291.63 ns |   822.55 ns | 2,600.0 ns |     2.89x slower |   1.50x |     400 B |  2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**175.3 ns]** |  19.90 ns |    56.45 ns |   200.0 ns | **7.29x faster** |   3.80x |     400 B |  2.68x less |
-| TinyEcs                                     | 100000      |                                     3,349.4 ns | 862.82 ns | 2,361.95 ns | 2,500.0 ns |     3.40x slower |   2.94x |      88 B | 12.18x less |
-| Xeno                                        | 100000      |                                       837.6 ns |  89.86 ns |   249.01 ns |   750.0 ns |     1.45x faster |   0.61x |      88 B | 12.18x less |
+| Context                 | EntityCount |        Mean |     Error |    StdDev |     Median | Allocated |
+|-------------------------|-------------|------------:|----------:|----------:|-----------:|----------:|
+| FlecsNETContext         | 100000      |    82.72 ns |  14.44 ns |  38.05 ns |   100.0 ns |      64 B |
+| 📍 **StaticEcsContext** | 100000      |   111.70 ns |  30.35 ns |  86.58 ns |   100.0 ns |     112 B |
+| MassiveEcsContext       | 100000      |   131.18 ns |  23.81 ns |  67.53 ns |   100.0 ns |     400 B |
+| LeoEcsLiteContext       | 100000      |   200.00 ns |  26.34 ns |  73.44 ns |   200.0 ns |     400 B |
+| DragonECSContext        | 100000      |   204.44 ns |  52.39 ns | 146.04 ns |   200.0 ns |     400 B |
+| ArchContext             | 100000      |   424.00 ns | 115.40 ns | 340.27 ns |   300.0 ns |    1072 B |
+| FennecsContext          | 100000      |   474.74 ns |  82.66 ns | 239.81 ns |   450.0 ns |     112 B |
+| XenoContext             | 100000      |   580.90 ns |  96.39 ns | 267.09 ns |   500.0 ns |     136 B |
+| LeoEcsContext           | 100000      |   839.36 ns | 136.69 ns | 389.99 ns |   800.0 ns |     400 B |
+| DefaultECSContext       | 100000      | 1,287.37 ns | 152.11 ns | 436.44 ns | 1,200.0 ns |     400 B |
+| MorpehContext           | 100000      | 1,496.67 ns | 142.43 ns | 397.03 ns | 1,400.0 ns |     400 B |
+| FrifloContext           | 100000      | 1,592.55 ns | 136.01 ns | 388.06 ns | 1,500.0 ns |      88 B |
+| TinyEcsContext          | 100000      | 2,209.34 ns | 245.41 ns | 688.15 ns | 2,050.0 ns |     136 B |
 
 # FourRemoveOneComponent
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |      Median |             Ratio | RatioSD |  Allocated |       Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|------------:|------------------:|--------:|-----------:|------------------:|
-| Arch                                        | 100000      |                                   39,794.5 μs | 456.30 μs | 356.25 μs | 39,786.9 μs |          baseline |         | 25602304 B |                   |
-| DefaultECS                                  | 100000      |                                    1,100.0 μs |  22.02 μs |  42.94 μs |  1,087.9 μs |     36.23x faster |   1.37x |      400 B |  64,005.760x less |
-| DragonECS                                   | 100000      |                                    1,008.6 μs |  23.65 μs |  63.52 μs |    989.0 μs |     39.60x faster |   2.29x |      400 B |  64,005.760x less |
-| Fennecs                                     | 100000      |                                   62,572.3 μs | 864.21 μs | 674.71 μs | 62,527.1 μs |      1.57x slower |   0.02x | 65600400 B |       2.562x more |
-| FlecsNET                                    | 100000      |                                   72,955.0 μs | 905.18 μs | 846.71 μs | 72,628.8 μs |      1.83x slower |   0.03x |      400 B |  64,005.760x less |
-| Friflo                                      | 100000      |                                    2,605.4 μs |  39.27 μs |  36.73 μs |  2,590.1 μs |     15.28x faster |   0.24x |      400 B |  64,005.760x less |
-| LeoEcs                                      | 100000      |                                    7,991.6 μs |  77.96 μs |  69.11 μs |  7,989.9 μs |      4.98x faster |   0.06x |      112 B | 228,592.000x less |
-| LeoEcsLite                                  | 100000      |                                    3,494.8 μs |  39.87 μs |  33.30 μs |  3,486.6 μs |     11.39x faster |   0.14x |      400 B |  64,005.760x less |
-| Morpeh                                      | 100000      |                                    3,015.9 μs |  59.97 μs | 163.15 μs |  3,014.7 μs |     13.23x faster |   0.72x |      400 B |  64,005.760x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**443.6 μs** |   8.86 μs |  19.62 μs |    434.6 μs | **89.88x faster** |   3.85x |      400 B |  64,005.760x less |
-| TinyEcs                                     | 100000      |                                      722.9 μs |  11.77 μs |  10.43 μs |    722.0 μs |     55.06x faster |   0.90x |      400 B |  64,005.760x less |
-| Xeno                                        | 100000      |                                    2,529.0 μs |  20.22 μs |  16.88 μs |  2,522.6 μs |     15.74x faster |   0.17x |      400 B |  64,005.760x less |
+| Context                 | EntityCount |        Mean |       Error |      StdDev |      Median |  Allocated |
+|-------------------------|-------------|------------:|------------:|------------:|------------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |    537.8 μs |     5.88 μs |     4.91 μs |    539.0 μs |      400 B |
+| MassiveEcsContext       | 100000      |    666.9 μs |     5.41 μs |     4.51 μs |    666.7 μs |      400 B |
+| TinyEcsContext          | 100000      |    803.2 μs |    22.91 μs |    63.88 μs |    773.9 μs |      400 B |
+| DragonECSContext        | 100000      |  1,054.1 μs |    39.53 μs |   108.21 μs |  1,022.0 μs |      112 B |
+| DefaultECSContext       | 100000      |  1,111.4 μs |    16.67 μs |    13.92 μs |  1,112.8 μs |      400 B |
+| FrifloContext           | 100000      |  2,794.5 μs |    38.13 μs |    31.84 μs |  2,788.4 μs |      400 B |
+| MorpehContext           | 100000      |  2,958.1 μs |    58.36 μs |   142.04 μs |  2,932.6 μs |      400 B |
+| XenoContext             | 100000      |  3,116.7 μs |    48.40 μs |    69.41 μs |  3,091.3 μs |   983696 B |
+| LeoEcsLiteContext       | 100000      |  3,352.9 μs |    45.67 μs |    35.66 μs |  3,349.9 μs |      400 B |
+| LeoEcsContext           | 100000      |  6,744.5 μs |   101.62 μs |    90.08 μs |  6,733.9 μs |      400 B |
+| ArchContext             | 100000      | 40,207.3 μs |   517.43 μs |   484.01 μs | 40,015.7 μs | 25603864 B |
+| FennecsContext          | 100000      | 56,941.4 μs | 1,078.00 μs | 1,401.71 μs | 56,559.5 μs | 65600064 B |
+| FlecsNETContext         | 100000      | 70,826.9 μs | 1,041.69 μs |   923.43 μs | 71,080.1 μs |      400 B |
 
 # FourRemoveThreeComponents
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |             Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|------------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                     41.217 ms | 0.1730 ms | 0.1534 ms |          baseline |         |  25602304 B |                  |
-| DefaultECS                                  | 100000      |                                      3.025 ms | 0.0444 ms | 0.0436 ms |     13.63x faster |   0.20x |       400 B | 64,005.760x less |
-| DragonECS                                   | 100000      |                                      2.451 ms | 0.0326 ms | 0.0527 ms |     16.83x faster |   0.35x |       400 B | 64,005.760x less |
-| Fennecs                                     | 100000      |                                    151.130 ms | 1.2281 ms | 1.0255 ms |      3.67x slower |   0.03x | 162400400 B |      6.343x more |
-| FlecsNET                                    | 100000      |                                    164.282 ms | 1.9170 ms | 1.6008 ms |      3.99x slower |   0.04x |       400 B | 64,005.760x less |
-| Friflo                                      | 100000      |                                      5.914 ms | 0.1050 ms | 0.0876 ms |      6.97x faster |   0.10x |       400 B | 64,005.760x less |
-| LeoEcs                                      | 100000      |                                     15.002 ms | 0.1684 ms | 0.1406 ms |      2.75x faster |   0.03x |       400 B | 64,005.760x less |
-| LeoEcsLite                                  | 100000      |                                      8.760 ms | 0.1224 ms | 0.1145 ms |      4.71x faster |   0.06x |       400 B | 64,005.760x less |
-| Morpeh                                      | 100000      |                                      2.793 ms | 0.0492 ms | 0.0483 ms |     14.76x faster |   0.25x |       400 B | 64,005.760x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**1.477 ms** | 0.0088 ms | 0.0078 ms | **27.90x faster** |   0.17x |       400 B | 64,005.760x less |
-| TinyEcs                                     | 100000      |                                      2.334 ms | 0.0418 ms | 0.0349 ms |     17.66x faster |   0.26x |       400 B | 64,005.760x less |
-| Xeno                                        | 100000      |                                      3.509 ms | 0.0492 ms | 0.0436 ms |     11.75x faster |   0.15x |       400 B | 64,005.760x less |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   1.777 ms | 0.0121 ms | 0.0094 ms |   1.781 ms |       400 B |
+| MassiveEcsContext       | 100000      |   1.976 ms | 0.0376 ms | 0.0333 ms |   1.966 ms |       400 B |
+| DragonECSContext        | 100000      |   2.517 ms | 0.0496 ms | 0.1139 ms |   2.479 ms |       400 B |
+| MorpehContext           | 100000      |   2.815 ms | 0.0472 ms | 0.0369 ms |   2.823 ms |       400 B |
+| DefaultECSContext       | 100000      |   3.202 ms | 0.0491 ms | 0.0410 ms |   3.197 ms |        64 B |
+| XenoContext             | 100000      |   5.023 ms | 0.0914 ms | 0.0714 ms |   5.018 ms |    983688 B |
+| FrifloContext           | 100000      |   6.078 ms | 0.0872 ms | 0.0728 ms |   6.053 ms |        64 B |
+| TinyEcsContext          | 100000      |   7.535 ms | 2.2204 ms | 6.5121 ms |   4.167 ms |        64 B |
+| LeoEcsLiteContext       | 100000      |   8.422 ms | 0.1672 ms | 0.1717 ms |   8.383 ms |       400 B |
+| LeoEcsContext           | 100000      |  15.123 ms | 0.2107 ms | 0.1645 ms |  15.091 ms |       400 B |
+| ArchContext             | 100000      |  43.966 ms | 0.8360 ms | 0.8585 ms |  43.823 ms |  25609048 B |
+| FennecsContext          | 100000      | 136.602 ms | 1.1793 ms | 0.9848 ms | 136.556 ms | 162400064 B |
+| FlecsNETContext         | 100000      | 157.208 ms | 1.3868 ms | 1.1581 ms | 157.370 ms |       400 B |
 
 # FourRemoveTwoComponents
 
-| Context                                     | EntityCount |                                          Mean |       Error |      StdDev |       Median |             Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|------------:|------------:|-------------:|------------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                   40,428.8 μs |   306.36 μs |   271.58 μs |  40,499.8 μs |          baseline |         |  25602304 B |                  |
-| DefaultECS                                  | 100000      |                                    2,027.3 μs |    14.73 μs |    12.30 μs |   2,030.4 μs |     19.94x faster |   0.17x |       400 B | 64,005.760x less |
-| DragonECS                                   | 100000      |                                    1,699.9 μs |    28.43 μs |    70.28 μs |   1,678.6 μs |     23.82x faster |   0.94x |       400 B | 64,005.760x less |
-| Fennecs                                     | 100000      |                                  107,672.5 μs | 2,121.45 μs | 1,984.41 μs | 107,236.1 μs |      2.66x slower |   0.05x | 118400064 B |      4.625x more |
-| FlecsNET                                    | 100000      |                                  120,569.8 μs | 2,124.96 μs | 1,774.44 μs | 119,945.9 μs |      2.98x slower |   0.05x |       400 B | 64,005.760x less |
-| Friflo                                      | 100000      |                                    4,304.9 μs |    67.14 μs |    62.81 μs |   4,272.4 μs |      9.39x faster |   0.15x |       400 B | 64,005.760x less |
-| LeoEcs                                      | 100000      |                                   11,092.9 μs |    75.39 μs |    58.86 μs |  11,120.0 μs |      3.64x faster |   0.03x |       400 B | 64,005.760x less |
-| LeoEcsLite                                  | 100000      |                                    6,012.2 μs |    50.01 μs |    46.78 μs |   6,013.8 μs |      6.72x faster |   0.07x |       400 B | 64,005.760x less |
-| Morpeh                                      | 100000      |                                    3,337.9 μs |    66.54 μs |   111.17 μs |   3,316.2 μs |     12.12x faster |   0.40x |       400 B | 64,005.760x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**950.0 μs** |    11.53 μs |    10.22 μs |     947.2 μs | **42.56x faster** |   0.51x |       400 B | 64,005.760x less |
-| TinyEcs                                     | 100000      |                                    1,275.2 μs |    67.06 μs |   196.69 μs |   1,172.2 μs |     32.37x faster |   4.36x |       400 B | 64,005.760x less |
-| Xeno                                        | 100000      |                                    3,270.3 μs |    61.75 μs |   103.18 μs |   3,270.7 μs |     12.37x faster |   0.39x |   1045224 B |     24.495x less |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   1.133 ms | 0.0093 ms | 0.0078 ms |   1.131 ms |       400 B |
+| MassiveEcsContext       | 100000      |   1.290 ms | 0.0088 ms | 0.0068 ms |   1.290 ms |       400 B |
+| DragonECSContext        | 100000      |   1.733 ms | 0.0316 ms | 0.0681 ms |   1.709 ms |       400 B |
+| DefaultECSContext       | 100000      |   2.134 ms | 0.0114 ms | 0.0101 ms |   2.133 ms |       400 B |
+| TinyEcsContext          | 100000      |   2.581 ms | 0.0444 ms | 0.0371 ms |   2.577 ms |       112 B |
+| MorpehContext           | 100000      |   3.350 ms | 0.0670 ms | 0.1877 ms |   3.291 ms |       400 B |
+| XenoContext             | 100000      |   3.580 ms | 0.0582 ms | 0.1240 ms |   3.541 ms |    983688 B |
+| FrifloContext           | 100000      |   4.436 ms | 0.0353 ms | 0.0295 ms |   4.433 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   6.464 ms | 0.0632 ms | 0.0560 ms |   6.462 ms |       400 B |
+| LeoEcsContext           | 100000      |  10.732 ms | 0.2106 ms | 0.1969 ms |  10.711 ms |       112 B |
+| ArchContext             | 100000      |  41.328 ms | 0.6571 ms | 0.6146 ms |  41.132 ms |  25609336 B |
+| FennecsContext          | 100000      | 104.582 ms | 1.6727 ms | 1.5647 ms | 103.810 ms | 118400400 B |
+| FlecsNETContext         | 100000      | 122.086 ms | 1.0503 ms | 0.9311 ms | 122.197 ms |       400 B |
 
 # OneAddOneComponent
 
-| Context                                     | EntityCount |                                          Mean |       Error |      StdDev |             Ratio | RatioSD |  Allocated |     Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|------------:|------------:|------------------:|--------:|-----------:|----------------:|
-| Arch                                        | 100000      |                                    6,403.7 μs |    58.20 μs |    45.44 μs |          baseline |         |     1072 B |                 |
-| DefaultECS                                  | 100000      |                                    1,336.1 μs |    21.72 μs |    41.84 μs |      4.80x faster |   0.15x |      400 B |      2.68x less |
-| DragonECS                                   | 100000      |                                      859.3 μs |    17.15 μs |    47.52 μs |      7.47x faster |   0.40x |      400 B |      2.68x less |
-| Fennecs                                     | 100000      |                                   44,503.9 μs |   577.75 μs |   540.43 μs |      6.95x slower |   0.09x | 64000400 B | 59,701.87x more |
-| FlecsNET                                    | 100000      |                                   89,494.0 μs | 1,075.31 μs | 1,005.85 μs |     13.98x slower |   0.18x |      400 B |      2.68x less |
-| Friflo                                      | 100000      |                                    1,993.6 μs |    28.51 μs |    28.00 μs |      3.21x faster |   0.05x |      400 B |      2.68x less |
-| LeoEcs                                      | 100000      |                                    3,621.5 μs |    50.80 μs |    47.52 μs |      1.77x faster |   0.03x |      400 B |      2.68x less |
-| LeoEcsLite                                  | 100000      |                                    1,556.9 μs |    11.36 μs |     9.49 μs |      4.11x faster |   0.04x |      400 B |      2.68x less |
-| Morpeh                                      | 100000      |                                    2,989.8 μs |    59.70 μs |   158.31 μs |      2.15x faster |   0.11x |      400 B |      2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**330.7 μs** |     6.16 μs |     5.15 μs | **19.37x faster** |   0.32x |      400 B |      2.68x less |
-| TinyEcs                                     | 100000      |                                    3,738.1 μs |    73.79 μs |    78.95 μs |      1.71x faster |   0.04x |  2400400 B |  2,239.18x more |
-| Xeno                                        | 100000      |                                    2,440.8 μs |    39.57 μs |    60.43 μs |      2.63x faster |   0.06x |  1045224 B |    975.02x more |
+| Context                 | EntityCount |        Mean |     Error |      StdDev |  Allocated |
+|-------------------------|-------------|------------:|----------:|------------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |    400.0 μs |   4.71 μs |     3.93 μs |      400 B |
+| MassiveEcsContext       | 100000      |    725.4 μs |   3.41 μs |     5.20 μs |      112 B |
+| DragonECSContext        | 100000      |  1,046.3 μs |  29.06 μs |    83.37 μs |      400 B |
+| DefaultECSContext       | 100000      |  1,400.0 μs |  22.78 μs |    19.02 μs |      112 B |
+| LeoEcsLiteContext       | 100000      |  1,650.5 μs |  29.48 μs |    70.07 μs |      112 B |
+| FrifloContext           | 100000      |  2,075.9 μs |  40.84 μs |    54.52 μs |      400 B |
+| MorpehContext           | 100000      |  2,956.4 μs |  59.13 μs |   137.04 μs |      400 B |
+| XenoContext             | 100000      |  3,193.4 μs |  57.20 μs |   106.02 μs |   983688 B |
+| LeoEcsContext           | 100000      |  3,815.7 μs |  58.69 μs |    57.64 μs |      112 B |
+| TinyEcsContext          | 100000      |  3,960.1 μs |  79.18 μs |   175.45 μs |  2400400 B |
+| ArchContext             | 100000      |  7,595.3 μs | 151.62 μs |   292.12 μs |     1408 B |
+| FennecsContext          | 100000      | 44,202.2 μs | 872.84 μs | 1,551.47 μs | 64000112 B |
+| FlecsNETContext         | 100000      | 87,521.5 μs | 845.26 μs |   749.31 μs |      400 B |
 
 # OneAddThreeComponents
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                      7.917 ms | 0.0713 ms | 0.0595 ms |         baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                      4.166 ms | 0.0380 ms | 0.0356 ms |     1.90x faster |   0.02x |       400 B |       2.68x less |
-| DragonECS                                   | 100000      |                                      2.082 ms | 0.0240 ms | 0.0200 ms |     3.80x faster |   0.04x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                    168.570 ms | 3.2663 ms | 5.3667 ms |    21.29x slower |   0.69x | 219200400 B | 204,477.99x more |
-| FlecsNET                                    | 100000      |                                    269.503 ms | 5.0398 ms | 4.4676 ms |    34.04x slower |   0.60x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                      6.838 ms | 0.0447 ms | 0.0418 ms |     1.16x faster |   0.01x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                      8.963 ms | 0.0638 ms | 0.0566 ms |     1.13x slower |   0.01x |       400 B |       2.68x less |
-| LeoEcsLite                                  | 100000      |                                      6.430 ms | 0.0280 ms | 0.0234 ms |     1.23x faster |   0.01x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                      4.311 ms | 0.0618 ms | 0.0516 ms |     1.84x faster |   0.02x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**1.075 ms** | 0.0144 ms | 0.0120 ms | **7.37x faster** |   0.10x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                     20.371 ms | 0.3871 ms | 0.3022 ms |     2.57x slower |   0.04x |   7200400 B |   6,716.79x more |
-| Xeno                                        | 100000      |                                      3.754 ms | 0.0747 ms | 0.0860 ms |     2.11x faster |   0.05x |   1045232 B |     975.03x more |
+| Context                 | EntityCount |       Mean |      Error |     StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|-----------:|-----------:|-----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   1.094 ms |  0.0131 ms |  0.0116 ms |   1.091 ms |       400 B |
+| DragonECSContext        | 100000      |   1.961 ms |  0.0383 ms |  0.0470 ms |   1.957 ms |       400 B |
+| MassiveEcsContext       | 100000      |   2.051 ms |  0.0285 ms |  0.0253 ms |   2.049 ms |       112 B |
+| DefaultECSContext       | 100000      |   4.077 ms |  0.0391 ms |  0.0326 ms |   4.080 ms |       400 B |
+| XenoContext             | 100000      |   4.332 ms |  0.0735 ms |  0.1417 ms |   4.300 ms |    983360 B |
+| MorpehContext           | 100000      |   4.812 ms |  0.2834 ms |  0.7995 ms |   4.528 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   6.021 ms |  0.0718 ms |  0.0600 ms |   6.005 ms |       400 B |
+| FrifloContext           | 100000      |   6.615 ms |  0.0561 ms |  0.0468 ms |   6.601 ms |       400 B |
+| LeoEcsContext           | 100000      |   8.808 ms |  0.1722 ms |  0.1526 ms |   8.771 ms |       400 B |
+| ArchContext             | 100000      |   9.833 ms |  0.1953 ms |  0.5077 ms |   9.619 ms |      1744 B |
+| TinyEcsContext          | 100000      |  28.543 ms |  2.6022 ms |  7.5078 ms |  24.085 ms |   7200400 B |
+| FennecsContext          | 100000      | 211.036 ms | 12.9668 ms | 38.2328 ms | 219.107 ms | 219200400 B |
+| FlecsNETContext         | 100000      | 270.997 ms |  3.8597 ms |  3.0134 ms | 270.662 ms |       400 B |
 
 # OneAddTwoComponents
 
-| Context                                     | EntityCount |                                          Mean |       Error |      StdDev |       Median |             Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|------------:|------------:|-------------:|------------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                    7,781.6 μs |   152.40 μs |   135.10 μs |   7,745.6 μs |          baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                    2,625.2 μs |    50.51 μs |    49.61 μs |   2,631.4 μs |      2.97x faster |   0.07x |       400 B |       2.68x less |
-| DragonECS                                   | 100000      |                                    1,325.9 μs |    25.89 μs |    24.22 μs |   1,318.3 μs |      5.87x faster |   0.14x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                   99,828.4 μs | 1,963.30 μs | 2,260.94 μs |  99,141.1 μs |     12.83x slower |   0.35x | 135200400 B | 126,119.78x more |
-| FlecsNET                                    | 100000      |                                  163,825.4 μs | 2,649.73 μs | 2,478.56 μs | 164,164.8 μs |     21.06x slower |   0.46x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                    4,278.7 μs |    64.34 μs |    57.04 μs |   4,261.6 μs |      1.82x faster |   0.04x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                    5,891.6 μs |   107.81 μs |   100.85 μs |   5,902.4 μs |      1.32x faster |   0.03x |       400 B |       2.68x less |
-| LeoEcsLite                                  | 100000      |                                    3,493.0 μs |    55.36 μs |    46.23 μs |   3,485.2 μs |      2.23x faster |   0.05x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                    3,621.0 μs |    83.14 μs |   234.49 μs |   3,588.7 μs |      2.16x faster |   0.14x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**733.5 μs** |    22.92 μs |    64.64 μs |     712.0 μs | **10.68x faster** |   0.88x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                    6,969.4 μs |   133.92 μs |   159.42 μs |   6,931.8 μs |      1.12x faster |   0.03x |   4800400 B |   4,477.99x more |
-| Xeno                                        | 100000      |                                    3,145.7 μs |    60.90 μs |    74.78 μs |   3,111.2 μs |      2.48x faster |   0.07x |   1045232 B |     975.03x more |
+| Context                 | EntityCount |         Mean |       Error |      StdDev |   Allocated |
+|-------------------------|-------------|-------------:|------------:|------------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |     726.1 μs |    11.88 μs |    10.53 μs |       400 B |
+| DragonECSContext        | 100000      |   1,370.5 μs |    30.69 μs |    85.54 μs |       400 B |
+| MassiveEcsContext       | 100000      |   1,449.7 μs |    13.49 μs |    11.96 μs |       400 B |
+| DefaultECSContext       | 100000      |   2,776.1 μs |    49.02 μs |    52.45 μs |       112 B |
+| MorpehContext           | 100000      |   3,406.8 μs |    67.71 μs |    83.15 μs |       112 B |
+| LeoEcsLiteContext       | 100000      |   3,599.0 μs |    26.17 μs |    20.43 μs |       400 B |
+| XenoContext             | 100000      |   3,693.2 μs |    73.50 μs |   150.13 μs |    983408 B |
+| FrifloContext           | 100000      |   3,992.5 μs |    60.80 μs |   109.63 μs |       400 B |
+| LeoEcsContext           | 100000      |   6,473.9 μs |   124.96 μs |   128.33 μs |       400 B |
+| TinyEcsContext          | 100000      |   7,535.4 μs |   150.29 μs |   154.34 μs |   4800400 B |
+| ArchContext             | 100000      |   9,098.8 μs |   126.25 μs |   105.43 μs |      1744 B |
+| FennecsContext          | 100000      |  98,205.4 μs | 1,942.82 μs | 3,024.74 μs | 135200112 B |
+| FlecsNETContext         | 100000      | 192,712.4 μs | 1,920.44 μs | 1,796.38 μs |       400 B |
 
 # Remove1ComponentRandomOrder
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |    Median |             Ratio | RatioSD |  Allocated |       Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|----------:|------------------:|--------:|-----------:|------------------:|
-| Arch                                        | 100000      |                                     45.851 ms | 1.4942 ms | 4.2873 ms | 45.555 ms |          baseline |         | 43086488 B |                   |
-| DefaultECS                                  | 100000      |                                     10.045 ms | 0.5452 ms | 1.5818 ms |  9.709 ms |      4.67x faster |   0.80x |      400 B | 107,716.220x less |
-| DragonECS                                   | 100000      |                                      6.198 ms | 0.3028 ms | 0.8640 ms |  5.991 ms |      7.53x faster |   1.17x |      400 B | 107,716.220x less |
-| Fennecs                                     | 100000      |                                     42.932 ms | 0.8941 ms | 2.5219 ms | 42.582 ms |      1.07x faster |   0.12x | 36800064 B |       1.171x less |
-| FlecsNET                                    | 100000      |                                     93.715 ms | 2.8279 ms | 8.2492 ms | 93.028 ms |      2.06x slower |   0.26x |      400 B | 107,716.220x less |
-| Friflo                                      | 100000      |                                      4.801 ms | 0.3389 ms | 0.9613 ms |  4.564 ms |      9.89x faster |   1.98x |      400 B | 107,716.220x less |
-| LeoEcs                                      | 100000      |                                     39.002 ms | 1.5033 ms | 4.1905 ms | 38.746 ms |      1.19x faster |   0.17x |      400 B | 107,716.220x less |
-| LeoEcsLite                                  | 100000      |                                      6.679 ms | 0.5781 ms | 1.6680 ms |  6.360 ms |      7.27x faster |   1.83x |      400 B | 107,716.220x less |
-| Morpeh                                      | 100000      |                                     19.844 ms | 0.7795 ms | 2.2240 ms | 19.174 ms |      2.34x faster |   0.33x |      400 B | 107,716.220x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**2.482 ms** | 0.1624 ms | 0.4555 ms |  2.371 ms | **19.01x faster** |   3.49x |       64 B | 673,226.375x less |
-| TinyEcs                                     | 100000      |                                     13.360 ms | 0.9276 ms | 2.6163 ms | 12.694 ms |      3.55x faster |   0.70x |  1575160 B |      27.354x less |
-| Xeno                                        | 100000      |                                      8.007 ms | 0.4412 ms | 1.2728 ms |  8.007 ms |      5.87x faster |   1.09x |      400 B | 107,716.220x less |
+| Context                 | EntityCount |      Mean |     Error |    StdDev |    Median |  Allocated |
+|-------------------------|-------------|----------:|----------:|----------:|----------:|-----------:|
+| MassiveEcsContext       | 100000      |  1.246 ms | 0.0389 ms | 0.1038 ms |  1.232 ms |      400 B |
+| 📍 **StaticEcsContext** | 100000      |  1.532 ms | 0.0583 ms | 0.1691 ms |  1.543 ms |      400 B |
+| FrifloContext           | 100000      |  4.344 ms | 0.2894 ms | 0.8020 ms |  4.068 ms |      400 B |
+| DragonECSContext        | 100000      |  5.500 ms | 0.1087 ms | 0.2767 ms |  5.411 ms |      400 B |
+| LeoEcsLiteContext       | 100000      |  5.789 ms | 0.2558 ms | 0.7174 ms |  5.794 ms |      400 B |
+| XenoContext             | 100000      |  7.088 ms | 0.3628 ms | 1.0115 ms |  6.933 ms |      400 B |
+| DefaultECSContext       | 100000      |  8.670 ms | 0.1727 ms | 0.4172 ms |  8.582 ms |      400 B |
+| TinyEcsContext          | 100000      | 17.602 ms | 0.3476 ms | 0.6268 ms | 17.599 ms |  1575280 B |
+| MorpehContext           | 100000      | 18.659 ms | 0.3109 ms | 0.2756 ms | 18.735 ms |      400 B |
+| LeoEcsContext           | 100000      | 30.748 ms | 0.4731 ms | 0.4858 ms | 30.824 ms |      400 B |
+| FennecsContext          | 100000      | 36.537 ms | 0.5424 ms | 0.4529 ms | 36.559 ms | 36800400 B |
+| ArchContext             | 100000      | 37.293 ms | 0.5963 ms | 0.5578 ms | 37.247 ms | 27291216 B |
+| FlecsNETContext         | 100000      | 77.743 ms | 1.3897 ms | 1.2999 ms | 77.646 ms |      400 B |
 
 # Remove1Component
 
-| Context                                     | EntityCount |                                          Mean |     Error |      StdDev |      Median |             Ratio | RatioSD |  Allocated |       Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|------------:|------------:|------------------:|--------:|-----------:|------------------:|
-| Arch                                        | 100000      |                                   36,450.4 μs | 879.81 μs | 2,566.46 μs | 36,877.9 μs |          baseline |         | 43085872 B |                   |
-| DefaultECS                                  | 100000      |                                    1,045.7 μs |  20.22 μs |    27.68 μs |  1,034.0 μs |     34.88x faster |   2.60x |      400 B | 107,714.680x less |
-| DragonECS                                   | 100000      |                                    1,139.0 μs |  37.86 μs |    99.06 μs |  1,101.3 μs |     32.21x faster |   3.30x |      400 B | 107,714.680x less |
-| Fennecs                                     | 100000      |                                   31,040.5 μs | 328.92 μs |   274.67 μs | 30,992.5 μs |      1.17x faster |   0.08x | 36800400 B |       1.171x less |
-| FlecsNET                                    | 100000      |                                   53,376.1 μs | 382.24 μs |   319.19 μs | 53,317.4 μs |      1.47x slower |   0.11x |      400 B | 107,714.680x less |
-| Friflo                                      | 100000      |                                    1,369.3 μs |  26.51 μs |    38.02 μs |  1,356.8 μs |     26.64x faster |   2.00x |      400 B | 107,714.680x less |
-| LeoEcs                                      | 100000      |                                    3,804.2 μs |  27.76 μs |    67.56 μs |  3,796.2 μs |      9.58x faster |   0.69x |      400 B | 107,714.680x less |
-| LeoEcsLite                                  | 100000      |                                    1,821.4 μs |  18.20 μs |    36.35 μs |  1,811.0 μs |     20.02x faster |   1.45x |      400 B | 107,714.680x less |
-| Morpeh                                      | 100000      |                                    2,767.4 μs |  91.08 μs |   259.85 μs |  2,728.8 μs |     13.28x faster |   1.50x |      400 B | 107,714.680x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**736.6 μs** |  13.02 μs |    12.78 μs |    735.0 μs | **49.50x faster** |   3.57x |      400 B | 107,714.680x less |
-| TinyEcs                                     | 100000      |                                    3,774.6 μs |  74.23 μs |   131.94 μs |  3,774.0 μs |      9.67x faster |   0.75x |  1575160 B |      27.353x less |
-| Xeno                                        | 100000      |                                    2,391.3 μs |  19.61 μs |    26.18 μs |  2,383.4 μs |     15.24x faster |   1.08x |      400 B | 107,714.680x less |
+| Context                 | EntityCount |        Mean |       Error |      StdDev |  Allocated |
+|-------------------------|-------------|------------:|------------:|------------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |    538.7 μs |     1.65 μs |     1.38 μs |      400 B |
+| MassiveEcsContext       | 100000      |    661.3 μs |     3.75 μs |     7.48 μs |      400 B |
+| DefaultECSContext       | 100000      |  1,140.8 μs |    21.15 μs |    20.77 μs |      400 B |
+| FrifloContext           | 100000      |  1,511.1 μs |    15.96 μs |    13.33 μs |      400 B |
+| LeoEcsLiteContext       | 100000      |  1,860.4 μs |    28.91 μs |    58.41 μs |      400 B |
+| MorpehContext           | 100000      |  2,641.9 μs |    49.94 μs |   118.68 μs |      400 B |
+| XenoContext             | 100000      |  2,824.1 μs |    48.19 μs |    64.33 μs | 33554520 B |
+| LeoEcsContext           | 100000      |  3,929.0 μs |    64.11 μs |   136.62 μs |      400 B |
+| DragonECSContext        | 100000      |  3,994.0 μs |    42.07 μs |    35.13 μs |      400 B |
+| TinyEcsContext          | 100000      |  5,424.6 μs |    99.24 μs |   181.47 μs |  1640864 B |
+| FennecsContext          | 100000      | 27,710.2 μs |   551.61 μs | 1,101.62 μs | 36800400 B |
+| ArchContext             | 100000      | 30,906.9 μs |   448.64 μs |   374.63 μs | 26622024 B |
+| FlecsNETContext         | 100000      | 53,167.7 μs | 1,056.50 μs | 1,548.61 μs |      400 B |
 
 # Remove2ComponentsRandomOrder
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |     Median |             Ratio | RatioSD |  Allocated |       Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------:|------------------:|--------:|-----------:|------------------:|
-| Arch                                        | 100000      |                                     50.450 ms | 1.0474 ms | 2.9713 ms |  50.668 ms |          baseline |         | 43885720 B |                   |
-| DefaultECS                                  | 100000      |                                     17.653 ms | 0.5034 ms | 1.4525 ms |  17.406 ms |      2.88x faster |   0.28x |      400 B | 109,714.300x less |
-| DragonECS                                   | 100000      |                                     10.661 ms | 0.2113 ms | 0.4071 ms |  10.592 ms |      4.74x faster |   0.33x |      400 B | 109,714.300x less |
-| Fennecs                                     | 100000      |                                     86.662 ms | 1.4868 ms | 1.4602 ms |  86.619 ms |      1.72x slower |   0.11x | 75200400 B |       1.714x more |
-| FlecsNET                                    | 100000      |                                    137.380 ms | 2.6715 ms | 3.4736 ms | 137.243 ms |      2.73x slower |   0.18x |      400 B | 109,714.300x less |
-| Friflo                                      | 100000      |                                      9.785 ms | 0.9561 ms | 2.8040 ms |   9.019 ms |      5.55x faster |   1.47x |      400 B | 109,714.300x less |
-| LeoEcs                                      | 100000      |                                     39.488 ms | 1.0214 ms | 2.9471 ms |  38.858 ms |      1.28x faster |   0.12x |      400 B | 109,714.300x less |
-| LeoEcsLite                                  | 100000      |                                     11.554 ms | 0.6312 ms | 1.8009 ms |  11.254 ms |      4.47x faster |   0.71x |      400 B | 109,714.300x less |
-| Morpeh                                      | 100000      |                                     29.248 ms | 1.0029 ms | 2.8774 ms |  28.288 ms |      1.74x faster |   0.19x |      400 B | 109,714.300x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**5.223 ms** | 0.6286 ms | 1.7832 ms |   4.641 ms | **10.62x faster** |   3.02x |      400 B | 109,714.300x less |
-| TinyEcs                                     | 100000      |                                     21.761 ms | 1.7053 ms | 4.9745 ms |  20.619 ms |      2.43x faster |   0.50x |  1575160 B |      27.861x less |
-| Xeno                                        | 100000      |                                     11.668 ms | 0.6239 ms | 1.8101 ms |  11.135 ms |      4.42x faster |   0.69x |       64 B | 685,714.375x less |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |  Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |   3.606 ms | 0.1697 ms | 0.4730 ms |   3.453 ms |      400 B |
+| MassiveEcsContext       | 100000      |   3.658 ms | 0.1728 ms | 0.4931 ms |   3.575 ms |      400 B |
+| FrifloContext           | 100000      |   7.397 ms | 0.3666 ms | 1.0578 ms |   7.236 ms |      400 B |
+| DragonECSContext        | 100000      |  10.689 ms | 0.2126 ms | 0.5820 ms |  10.517 ms |      400 B |
+| LeoEcsLiteContext       | 100000      |  11.023 ms | 0.5708 ms | 1.6741 ms |  10.850 ms |      400 B |
+| XenoContext             | 100000      |  11.569 ms | 0.2480 ms | 0.6789 ms |  11.497 ms |      400 B |
+| DefaultECSContext       | 100000      |  16.950 ms | 0.3319 ms | 0.9085 ms |  16.649 ms |      400 B |
+| TinyEcsContext          | 100000      |  25.209 ms | 0.4524 ms | 0.4010 ms |  25.197 ms |  1575280 B |
+| MorpehContext           | 100000      |  28.644 ms | 0.6975 ms | 1.9901 ms |  28.178 ms |      400 B |
+| LeoEcsContext           | 100000      |  38.048 ms | 0.7480 ms | 1.2702 ms |  38.374 ms |      400 B |
+| ArchContext             | 100000      |  42.877 ms | 0.6798 ms | 0.6026 ms |  43.084 ms | 27308432 B |
+| FennecsContext          | 100000      |  76.045 ms | 1.1076 ms | 0.9818 ms |  75.699 ms | 75200400 B |
+| FlecsNETContext         | 100000      | 132.452 ms | 0.6242 ms | 0.4873 ms | 132.457 ms |      400 B |
 
 # Remove2Components
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |             Ratio | RatioSD |  Allocated |       Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|------------------:|--------:|-----------:|------------------:|
-| Arch                                        | 100000      |                                     40.892 ms | 1.3082 ms | 3.7953 ms |          baseline |         | 44605712 B |                   |
-| DefaultECS                                  | 100000      |                                      2.016 ms | 0.0395 ms | 0.0308 ms |     20.29x faster |   1.90x |      400 B | 111,514.280x less |
-| DragonECS                                   | 100000      |                                      6.719 ms | 0.1024 ms | 0.0908 ms |      6.09x faster |   0.57x |      400 B | 111,514.280x less |
-| Fennecs                                     | 100000      |                                     70.201 ms | 1.4007 ms | 3.5651 ms |      1.73x slower |   0.18x | 75200400 B |       1.686x more |
-| FlecsNET                                    | 100000      |                                    104.584 ms | 1.9587 ms | 1.7363 ms |      2.58x slower |   0.24x |      400 B | 111,514.280x less |
-| Friflo                                      | 100000      |                                      2.943 ms | 0.0449 ms | 0.0375 ms |     13.90x faster |   1.29x |      400 B | 111,514.280x less |
-| LeoEcs                                      | 100000      |                                      6.799 ms | 0.0378 ms | 0.0316 ms |      6.01x faster |   0.56x |      400 B | 111,514.280x less |
-| LeoEcsLite                                  | 100000      |                                      3.441 ms | 0.0511 ms | 0.0453 ms |     11.89x faster |   1.11x |      400 B | 111,514.280x less |
-| Morpeh                                      | 100000      |                                      3.292 ms | 0.0704 ms | 0.1997 ms |     12.47x faster |   1.37x |      400 B | 111,514.280x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**1.203 ms** | 0.0075 ms | 0.0063 ms | **33.98x faster** |   3.14x |      400 B | 111,514.280x less |
-| TinyEcs                                     | 100000      |                                      7.422 ms | 0.1440 ms | 0.1971 ms |      5.51x faster |   0.53x |  1575160 B |      28.318x less |
-| Xeno                                        | 100000      |                                      2.903 ms | 0.0535 ms | 0.0657 ms |     14.09x faster |   1.34x |      400 B | 111,514.280x less |
+| Context                 | EntityCount |      Mean |     Error |    StdDev |    Median |  Allocated |
+|-------------------------|-------------|----------:|----------:|----------:|----------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |  1.043 ms | 0.0049 ms | 0.0038 ms |  1.042 ms |      400 B |
+| MassiveEcsContext       | 100000      |  1.253 ms | 0.0233 ms | 0.0525 ms |  1.273 ms |      400 B |
+| DefaultECSContext       | 100000      |  2.119 ms | 0.0120 ms | 0.0100 ms |  2.116 ms |      400 B |
+| FrifloContext           | 100000      |  2.958 ms | 0.0538 ms | 0.0449 ms |  2.943 ms |      400 B |
+| MorpehContext           | 100000      |  3.141 ms | 0.0627 ms | 0.1619 ms |  3.113 ms |      400 B |
+| XenoContext             | 100000      |  3.312 ms | 0.0551 ms | 0.0755 ms |  3.294 ms |      400 B |
+| LeoEcsLiteContext       | 100000      |  3.354 ms | 0.0562 ms | 0.0498 ms |  3.341 ms |      400 B |
+| LeoEcsContext           | 100000      |  6.502 ms | 0.1193 ms | 0.2327 ms |  6.435 ms |      400 B |
+| DragonECSContext        | 100000      |  6.503 ms | 0.0375 ms | 0.0313 ms |  6.497 ms |      400 B |
+| TinyEcsContext          | 100000      | 10.571 ms | 0.1931 ms | 0.1806 ms | 10.569 ms |  1575280 B |
+| ArchContext             | 100000      | 34.924 ms | 0.2919 ms | 0.2587 ms | 34.907 ms | 27780560 B |
+| FennecsContext          | 100000      | 61.137 ms | 1.1247 ms | 0.9392 ms | 60.983 ms | 75200400 B |
+| FlecsNETContext         | 100000      | 98.938 ms | 1.0412 ms | 0.9230 ms | 98.941 ms |      400 B |
 
 # Remove3ComponentsRandomOrder
 
-| Context                                     | EntityCount |                                          Mean |     Error |   StdDev |     Median |            Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|---------:|-----------:|-----------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                     52.696 ms | 1.0497 ms | 1.997 ms |  52.730 ms |         baseline |         |  36831272 B |                  |
-| DefaultECS                                  | 100000      |                                     24.633 ms | 0.6310 ms | 1.780 ms |  23.862 ms |     2.15x faster |   0.16x |       400 B | 92,078.180x less |
-| DragonECS                                   | 100000      |                                     20.043 ms | 1.2675 ms | 3.637 ms |  20.165 ms |     2.72x faster |   0.50x |       400 B | 92,078.180x less |
-| Fennecs                                     | 100000      |                                    142.722 ms | 2.3351 ms | 2.596 ms | 142.219 ms |     2.71x slower |   0.11x | 128000400 B |      3.475x more |
-| FlecsNET                                    | 100000      |                                    194.726 ms | 3.4509 ms | 6.396 ms | 194.064 ms |     3.70x slower |   0.18x |       400 B | 92,078.180x less |
-| Friflo                                      | 100000      |                                     13.810 ms | 1.3862 ms | 4.066 ms |  12.350 ms |     4.13x faster |   1.11x |       400 B | 92,078.180x less |
-| LeoEcs                                      | 100000      |                                     53.929 ms | 1.7937 ms | 5.204 ms |  53.304 ms |     1.02x slower |   0.11x |       400 B | 92,078.180x less |
-| LeoEcsLite                                  | 100000      |                                     16.397 ms | 0.7372 ms | 2.103 ms |  16.216 ms |     3.26x faster |   0.42x |       400 B | 92,078.180x less |
-| Morpeh                                      | 100000      |                                     29.525 ms | 0.5878 ms | 1.160 ms |  29.474 ms |     1.79x faster |   0.10x |       400 B | 92,078.180x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**8.960 ms** | 0.7088 ms | 2.011 ms |   8.732 ms | **6.16x faster** |   1.32x |       400 B | 92,078.180x less |
-| TinyEcs                                     | 100000      |                                     25.436 ms | 1.0348 ms | 2.969 ms |  24.379 ms |     2.10x faster |   0.24x |   1640744 B |     22.448x less |
-| Xeno                                        | 100000      |                                     21.983 ms | 1.2994 ms | 3.770 ms |  21.749 ms |     2.47x faster |   0.42x |       400 B | 92,078.180x less |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|------------:|
+| MassiveEcsContext       | 100000      |   7.228 ms | 0.5104 ms | 1.4807 ms |   7.229 ms |       400 B |
+| 📍 **StaticEcsContext** | 100000      |   8.317 ms | 0.6452 ms | 1.8921 ms |   8.546 ms |       400 B |
+| FrifloContext           | 100000      |  12.576 ms | 1.3173 ms | 3.8217 ms |  10.874 ms |       400 B |
+| DragonECSContext        | 100000      |  13.959 ms | 0.2759 ms | 0.5759 ms |  13.970 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |  16.151 ms | 0.5088 ms | 1.4843 ms |  15.883 ms |       400 B |
+| XenoContext             | 100000      |  20.472 ms | 1.0471 ms | 3.0378 ms |  19.344 ms |        64 B |
+| DefaultECSContext       | 100000      |  24.878 ms | 0.4906 ms | 1.0666 ms |  24.629 ms |       400 B |
+| MorpehContext           | 100000      |  30.405 ms | 0.5949 ms | 0.7941 ms |  30.441 ms |       400 B |
+| TinyEcsContext          | 100000      |  33.412 ms | 0.9291 ms | 2.6357 ms |  32.192 ms |   1575280 B |
+| LeoEcsContext           | 100000      |  49.484 ms | 0.9644 ms | 0.9903 ms |  49.436 ms |       400 B |
+| ArchContext             | 100000      |  50.051 ms | 0.9708 ms | 1.1922 ms |  50.360 ms |  29477128 B |
+| FennecsContext          | 100000      | 127.649 ms | 0.9635 ms | 0.7523 ms | 127.568 ms | 128000400 B |
+| FlecsNETContext         | 100000      | 188.357 ms | 3.7546 ms | 3.8557 ms | 188.120 ms |       400 B |
 
 # Remove3Components
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |     Median |             Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|-----------:|------------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                     42.451 ms | 0.7955 ms | 1.6606 ms |  42.794 ms |          baseline |         |  38973776 B |                  |
-| DefaultECS                                  | 100000      |                                      3.088 ms | 0.0600 ms | 0.0691 ms |   3.061 ms |     13.75x faster |   0.61x |       400 B | 97,434.440x less |
-| DragonECS                                   | 100000      |                                      2.762 ms | 0.0552 ms | 0.0981 ms |   2.725 ms |     15.39x faster |   0.79x |       400 B | 97,434.440x less |
-| Fennecs                                     | 100000      |                                    118.240 ms | 2.2181 ms | 4.1114 ms | 117.502 ms |      2.79x slower |   0.15x | 128000400 B |      3.284x more |
-| FlecsNET                                    | 100000      |                                    141.532 ms | 1.5414 ms | 1.3664 ms | 141.189 ms |      3.34x slower |   0.14x |       400 B | 97,434.440x less |
-| Friflo                                      | 100000      |                                      4.864 ms | 0.0949 ms | 0.1585 ms |   4.822 ms |      8.74x faster |   0.43x |       400 B | 97,434.440x less |
-| LeoEcs                                      | 100000      |                                      9.646 ms | 0.1894 ms | 0.2105 ms |   9.564 ms |      4.40x faster |   0.19x |       400 B | 97,434.440x less |
-| LeoEcsLite                                  | 100000      |                                      5.704 ms | 0.1065 ms | 0.2651 ms |   5.580 ms |      7.46x faster |   0.43x |       400 B | 97,434.440x less |
-| Morpeh                                      | 100000      |                                      2.871 ms | 0.0571 ms | 0.1422 ms |   2.846 ms |     14.82x faster |   0.91x |       400 B | 97,434.440x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**1.812 ms** | 0.0244 ms | 0.0228 ms |   1.813 ms | **23.43x faster** |   0.95x |       400 B | 97,434.440x less |
-| TinyEcs                                     | 100000      |                                     12.900 ms | 0.2509 ms | 0.2224 ms |  12.987 ms |      3.29x faster |   0.14x |   1575160 B |     24.743x less |
-| Xeno                                        | 100000      |                                      3.525 ms | 0.0629 ms | 0.1270 ms |   3.499 ms |     12.06x faster |   0.63x |       400 B | 97,434.440x less |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   1.546 ms | 0.0222 ms | 0.0197 ms |       400 B |
+| MassiveEcsContext       | 100000      |   1.964 ms | 0.0371 ms | 0.0532 ms |       400 B |
+| DragonECSContext        | 100000      |   2.588 ms | 0.0281 ms | 0.0594 ms |       400 B |
+| MorpehContext           | 100000      |   2.785 ms | 0.0410 ms | 0.0383 ms |       400 B |
+| DefaultECSContext       | 100000      |   3.252 ms | 0.0412 ms | 0.0365 ms |       400 B |
+| XenoContext             | 100000      |   3.802 ms | 0.0695 ms | 0.0773 ms |       400 B |
+| FrifloContext           | 100000      |   4.757 ms | 0.0636 ms | 0.0531 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   5.516 ms | 0.0438 ms | 0.0366 ms |       400 B |
+| LeoEcsContext           | 100000      |   9.783 ms | 0.1271 ms | 0.1061 ms |       400 B |
+| TinyEcsContext          | 100000      |  14.728 ms | 0.1655 ms | 0.1548 ms |   1575280 B |
+| ArchContext             | 100000      |  41.484 ms | 0.6346 ms | 0.5299 ms |  28563952 B |
+| FennecsContext          | 100000      | 100.291 ms | 1.5630 ms | 2.4335 ms | 128000400 B |
+| FlecsNETContext         | 100000      | 141.363 ms | 0.8199 ms | 0.7268 ms |       400 B |
 
 # Remove4ComponentsRandomOrder
 
-| Context                                     | EntityCount |                                          Mean |    Error |   StdDev |    Median |            Ratio | RatioSD |   Allocated |       Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|---------:|---------:|----------:|-----------------:|--------:|------------:|------------------:|
-| Arch                                        | 100000      |                                      59.47 ms | 1.572 ms | 4.584 ms |  59.79 ms |         baseline |         |  45593408 B |                   |
-| DefaultECS                                  | 100000      |                                      33.88 ms | 0.895 ms | 2.538 ms |  32.78 ms |     1.76x faster |   0.18x |       400 B | 113,983.520x less |
-| DragonECS                                   | 100000      |                                      22.60 ms | 0.671 ms | 1.945 ms |  22.44 ms |     2.65x faster |   0.30x |       400 B | 113,983.520x less |
-| Fennecs                                     | 100000      |                                     205.61 ms | 3.918 ms | 4.812 ms | 204.94 ms |     3.48x slower |   0.28x | 193600400 B |       4.246x more |
-| FlecsNET                                    | 100000      |                                     225.08 ms | 1.879 ms | 1.665 ms | 224.58 ms |     3.81x slower |   0.29x |       400 B | 113,983.520x less |
-| Friflo                                      | 100000      |                                      13.83 ms | 0.489 ms | 1.373 ms |  13.30 ms |     4.39x faster |   0.53x |       400 B | 113,983.520x less |
-| LeoEcs                                      | 100000      |                                      58.74 ms | 0.869 ms | 0.726 ms |  58.59 ms |     1.01x faster |   0.08x |       400 B | 113,983.520x less |
-| LeoEcsLite                                  | 100000      |                                      23.16 ms | 0.973 ms | 2.759 ms |  22.61 ms |     2.60x faster |   0.35x |       400 B | 113,983.520x less |
-| Morpeh                                      | 100000      |                                      48.08 ms | 1.255 ms | 3.660 ms |  47.06 ms |     1.24x faster |   0.13x |       400 B | 113,983.520x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**13.68 ms** | 0.584 ms | 1.686 ms |  13.67 ms | **4.36x faster** |   0.60x |        64 B | 712,397.000x less |
-| TinyEcs                                     | 100000      |                                      35.09 ms | 0.988 ms | 2.704 ms |  34.70 ms |     1.70x faster |   0.18x |   1575160 B |      28.945x less |
-| Xeno                                        | 100000      |                                      25.33 ms | 1.120 ms | 3.231 ms |  24.58 ms |     2.38x faster |   0.33x |       400 B | 113,983.520x less |
+| Context                 | EntityCount |      Mean |    Error |   StdDev |    Median |   Allocated |
+|-------------------------|-------------|----------:|---------:|---------:|----------:|------------:|
+| MassiveEcsContext       | 100000      |  11.82 ms | 0.891 ms | 2.600 ms |  11.10 ms |       400 B |
+| 📍 **StaticEcsContext** | 100000      |  13.60 ms | 0.700 ms | 2.041 ms |  13.05 ms |       400 B |
+| FrifloContext           | 100000      |  16.68 ms | 0.834 ms | 2.459 ms |  16.38 ms |       400 B |
+| DragonECSContext        | 100000      |  22.42 ms | 0.752 ms | 2.193 ms |  21.91 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |  22.56 ms | 0.600 ms | 1.760 ms |  22.46 ms |       400 B |
+| XenoContext             | 100000      |  25.95 ms | 0.588 ms | 1.688 ms |  25.83 ms |       400 B |
+| DefaultECSContext       | 100000      |  34.38 ms | 0.887 ms | 2.517 ms |  33.15 ms |       400 B |
+| TinyEcsContext          | 100000      |  40.30 ms | 0.676 ms | 0.600 ms |  40.30 ms |   1575280 B |
+| MorpehContext           | 100000      |  46.90 ms | 0.863 ms | 1.265 ms |  47.03 ms |       400 B |
+| ArchContext             | 100000      |  53.10 ms | 0.728 ms | 0.681 ms |  53.04 ms |  29038336 B |
+| LeoEcsContext           | 100000      |  65.09 ms | 1.299 ms | 3.491 ms |  65.55 ms |       400 B |
+| FennecsContext          | 100000      | 198.00 ms | 3.923 ms | 5.626 ms | 199.36 ms | 193600400 B |
+| FlecsNETContext         | 100000      | 236.43 ms | 4.529 ms | 5.216 ms | 233.97 ms |       400 B |
 
 # Remove4Components
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |             Ratio | RatioSD |   Allocated |       Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|------------------:|--------:|------------:|------------------:|
-| Arch                                        | 100000      |                                     46.675 ms | 0.9694 ms | 2.7969 ms |          baseline |         |  46051264 B |                   |
-| DefaultECS                                  | 100000      |                                      3.991 ms | 0.0300 ms | 0.0266 ms |     11.70x faster |   0.70x |       400 B | 115,128.160x less |
-| DragonECS                                   | 100000      |                                      3.505 ms | 0.0502 ms | 0.0866 ms |     13.32x faster |   0.85x |       400 B | 115,128.160x less |
-| Fennecs                                     | 100000      |                                    179.631 ms | 3.4948 ms | 3.5889 ms |      3.86x slower |   0.25x | 193600400 B |       4.204x more |
-| FlecsNET                                    | 100000      |                                    179.919 ms | 1.4471 ms | 1.2084 ms |      3.87x slower |   0.24x |       400 B | 115,128.160x less |
-| Friflo                                      | 100000      |                                      6.883 ms | 0.0559 ms | 0.0436 ms |      6.78x faster |   0.41x |       400 B | 115,128.160x less |
-| LeoEcs                                      | 100000      |                                     13.442 ms | 0.1031 ms | 0.0861 ms |      3.47x faster |   0.21x |       400 B | 115,128.160x less |
-| LeoEcsLite                                  | 100000      |                                      7.266 ms | 0.1076 ms | 0.1007 ms |      6.43x faster |   0.39x |       400 B | 115,128.160x less |
-| Morpeh                                      | 100000      |                                      4.558 ms | 0.0829 ms | 0.0735 ms |     10.24x faster |   0.63x |       400 B | 115,128.160x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**2.460 ms** | 0.0465 ms | 0.0434 ms | **18.98x faster** |   1.18x |       400 B | 115,128.160x less |
-| TinyEcs                                     | 100000      |                                     18.991 ms | 0.3777 ms | 0.3154 ms |      2.46x faster |   0.15x |   1575160 B |      29.236x less |
-| Xeno                                        | 100000      |                                      3.911 ms | 0.0565 ms | 0.0472 ms |     11.94x faster |   0.72x |       400 B | 115,128.160x less |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   2.024 ms | 0.0268 ms | 0.0209 ms |       400 B |
+| MassiveEcsContext       | 100000      |   2.569 ms | 0.0280 ms | 0.0234 ms |       400 B |
+| DragonECSContext        | 100000      |   3.376 ms | 0.0509 ms | 0.0930 ms |       400 B |
+| DefaultECSContext       | 100000      |   4.326 ms | 0.0207 ms | 0.0184 ms |       112 B |
+| MorpehContext           | 100000      |   4.626 ms | 0.0787 ms | 0.0736 ms |       112 B |
+| XenoContext             | 100000      |   4.642 ms | 0.0919 ms | 0.1226 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   6.865 ms | 0.0786 ms | 0.0656 ms |       400 B |
+| FrifloContext           | 100000      |   7.414 ms | 0.1205 ms | 0.0941 ms |       400 B |
+| LeoEcsContext           | 100000      |  13.718 ms | 0.0946 ms | 0.0885 ms |        64 B |
+| TinyEcsContext          | 100000      |  22.700 ms | 0.3614 ms | 0.3380 ms |   1575280 B |
+| ArchContext             | 100000      |  43.300 ms | 0.7010 ms | 0.6557 ms |  29211080 B |
+| FennecsContext          | 100000      | 158.750 ms | 3.1388 ms | 3.4887 ms | 193600112 B |
+| FlecsNETContext         | 100000      | 179.173 ms | 1.0148 ms | 0.9492 ms |       400 B |
+
+| Context                 | EntityCount |       Mean |     Error |    StdDev |   Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |   2.041 ms | 0.0111 ms | 0.0087 ms |       400 B |
+| MassiveEcsContext       | 100000      |   2.572 ms | 0.0176 ms | 0.0147 ms |       400 B |
+| DragonECSContext        | 100000      |   3.366 ms | 0.0344 ms | 0.0664 ms |       400 B |
+| DefaultECSContext       | 100000      |   4.354 ms | 0.0383 ms | 0.0339 ms |       400 B |
+| MorpehContext           | 100000      |   4.733 ms | 0.0942 ms | 0.1675 ms |       400 B |
+| XenoContext             | 100000      |   4.763 ms | 0.0949 ms | 0.1982 ms |       400 B |
+| FrifloContext           | 100000      |   7.314 ms | 0.0708 ms | 0.0591 ms |       400 B |
+| LeoEcsLiteContext       | 100000      |   7.528 ms | 0.1288 ms | 0.1076 ms |       112 B |
+| LeoEcsContext           | 100000      |  13.778 ms | 0.0841 ms | 0.0746 ms |       400 B |
+| TinyEcsContext          | 100000      |  22.536 ms | 0.3327 ms | 0.2949 ms |   1575280 B |
+| ArchContext             | 100000      |  44.850 ms | 0.8836 ms | 1.4762 ms |  31532144 B |
+| FennecsContext          | 100000      | 159.326 ms | 2.7385 ms | 3.0438 ms | 193600400 B |
+| FlecsNETContext         | 100000      | 179.166 ms | 0.9521 ms | 0.8906 ms |       400 B |
 
 # SystemWith1ComponentMultipleComposition
 
-| Context                                     | EntityCount | Padding |       Mean |    Error |    StdDev |     Median |         Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|---------|-----------:|---------:|----------:|-----------:|--------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      | 0       |   245.4 μs |  3.91 μs |   3.26 μs |   244.3 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 0       | 1,287.2 μs | 25.72 μs |  54.81 μs | 1,266.5 μs |  5.25x slower |   0.23x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 0       |   377.0 μs |  7.48 μs |   6.63 μs |   375.8 μs |  1.54x slower |   0.03x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 0       |   306.7 μs | 13.71 μs |  39.56 μs |   299.8 μs |  1.25x slower |   0.16x |     592 B |  1.24x less |
-| FlecsNET                                    | 100000      | 0       |   849.8 μs | 16.11 μs |  19.79 μs |   841.7 μs |  3.46x slower |   0.09x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 0       |   213.7 μs |  4.21 μs |   6.17 μs |   210.2 μs |  1.15x faster |   0.03x |     520 B |  1.42x less |
-| LeoEcs                                      | 100000      | 0       |   214.0 μs |  4.27 μs |   9.47 μs |   210.5 μs |  1.15x faster |   0.05x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 0       |   285.9 μs |  2.78 μs |   2.17 μs |   285.9 μs |  1.17x slower |   0.02x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 0       |   588.3 μs | 11.65 μs |  25.81 μs |   581.1 μs |  2.40x slower |   0.11x |     400 B |  1.84x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 0       |   180.9 μs |  2.27 μs |   2.53 μs |   180.3 μs |  1.36x faster |   0.03x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 0       |   922.5 μs | 37.02 μs | 107.42 μs |   924.6 μs |  3.76x slower |   0.44x |   13672 B | 18.58x more |
-| Xeno                                        | 100000      | 0       |   274.2 μs |  4.50 μs |   3.99 μs |   273.1 μs |  1.12x slower |   0.02x |     400 B |  1.84x less |
-|                                             |             |         |            |          |           |            |               |         |           |             |
-| Arch                                        | 100000      | 10      |   254.5 μs |  4.55 μs |   7.73 μs |   251.8 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 10      | 3,644.5 μs | 71.57 μs | 121.53 μs | 3,616.1 μs | 14.33x slower |   0.63x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 10      |   418.0 μs |  8.33 μs |  18.97 μs |   410.2 μs |  1.64x slower |   0.09x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 10      |   387.6 μs | 22.00 μs |  63.12 μs |   386.5 μs |  1.52x slower |   0.25x |     880 B |  1.20x more |
-| FlecsNET                                    | 100000      | 10      |   867.6 μs | 17.32 μs |  22.52 μs |   863.4 μs |  3.41x slower |   0.13x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 10      |   214.7 μs |  3.12 μs |   2.77 μs |   214.4 μs |  1.19x faster |   0.04x |     520 B |  1.42x less |
-| LeoEcs                                      | 100000      | 10      |   270.0 μs |  4.64 μs |   3.62 μs |   269.8 μs |  1.06x slower |   0.03x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 10      |   338.8 μs |  7.27 μs |  19.90 μs |   332.3 μs |  1.33x slower |   0.09x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 10      |   601.2 μs | 10.80 μs |  10.10 μs |   602.3 μs |  2.36x slower |   0.08x |     400 B |  1.84x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 10      |   204.2 μs |  3.44 μs |   3.96 μs |   202.7 μs |  1.25x faster |   0.04x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 10      |   980.7 μs | 51.79 μs | 146.06 μs |   962.8 μs |  3.86x slower |   0.58x |   13672 B | 18.58x more |
-| Xeno                                        | 100000      | 10      |   320.4 μs |  3.70 μs |   3.28 μs |   320.4 μs |  1.26x slower |   0.04x |     400 B |  1.84x less |
+| Context                 | EntityCount | Padding |        Mean |     Error |     StdDev |      Median | Allocated |
+|-------------------------|-------------|---------|------------:|----------:|-----------:|------------:|----------:|
+| TinyEcsContext          | 100000      | 0       |    35.54 μs |  6.943 μs |  20.364 μs |    31.60 μs |    2256 B |
+| FrifloContext           | 100000      | 0       |   207.49 μs |  1.365 μs |   1.140 μs |   207.20 μs |     232 B |
+| LeoEcsContext           | 100000      | 0       |   212.45 μs |  2.675 μs |   5.089 μs |   211.70 μs |     400 B |
+| ArchContext             | 100000      | 0       |   216.17 μs |  2.446 μs |   2.288 μs |   216.60 μs |      64 B |
+| 📍 **StaticEcsContext** | 100000      | 0       |   224.82 μs |  2.129 μs |   1.778 μs |   224.20 μs |     112 B |
+| XenoContext             | 100000      | 0       |   225.56 μs |  2.891 μs |   2.257 μs |   225.70 μs |     112 B |
+| MassiveEcsContext       | 100000      | 0       |   234.03 μs |  2.683 μs |   2.240 μs |   234.70 μs |     400 B |
+| LeoEcsLiteContext       | 100000      | 0       |   284.25 μs |  2.111 μs |   1.762 μs |   283.90 μs |     400 B |
+| FennecsContext          | 100000      | 0       |   335.39 μs | 13.785 μs |  39.992 μs |   331.00 μs |     592 B |
+| MorpehContext           | 100000      | 0       |   556.62 μs |  6.412 μs |   5.006 μs |   557.35 μs |     112 B |
+| DragonECSContext        | 100000      | 0       |   752.91 μs |  7.184 μs |   5.999 μs |   753.20 μs |     112 B |
+| FlecsNETContext         | 100000      | 0       |   836.46 μs | 10.185 μs |   9.029 μs |   834.60 μs |     400 B |
+| DefaultECSContext       | 100000      | 0       | 1,834.85 μs | 18.470 μs |  29.825 μs | 1,829.70 μs |     448 B |
+|                         |             |         |             |           |            |             |           |
+| TinyEcsContext          | 100000      | 10      |    21.72 μs |  4.572 μs |  13.045 μs |    17.90 μs |    2096 B |
+| FrifloContext           | 100000      | 10      |   211.78 μs |  2.167 μs |   1.809 μs |   211.00 μs |     520 B |
+| XenoContext             | 100000      | 10      |   219.67 μs |  4.399 μs |   7.469 μs |   215.70 μs |     400 B |
+| 📍 **StaticEcsContext** | 100000      | 10      |   245.96 μs |  2.306 μs |   2.044 μs |   245.35 μs |     112 B |
+| ArchContext             | 100000      | 10      |   254.99 μs |  3.988 μs |   8.056 μs |   253.30 μs |     736 B |
+| LeoEcsContext           | 100000      | 10      |   270.55 μs |  5.362 μs |   5.016 μs |   271.40 μs |     400 B |
+| LeoEcsLiteContext       | 100000      | 10      |   329.54 μs |  5.835 μs |  11.518 μs |   325.15 μs |     400 B |
+| FennecsContext          | 100000      | 10      |   390.59 μs | 40.329 μs | 113.087 μs |   364.30 μs |     592 B |
+| MassiveEcsContext       | 100000      | 10      |   400.27 μs | 34.635 μs | 100.481 μs |   458.70 μs |     400 B |
+| MorpehContext           | 100000      | 10      |   590.98 μs |  8.119 μs |   7.595 μs |   591.45 μs |     400 B |
+| DragonECSContext        | 100000      | 10      |   806.84 μs | 12.604 μs |  10.525 μs |   808.30 μs |     400 B |
+| FlecsNETContext         | 100000      | 10      |   851.76 μs | 15.152 μs |  19.162 μs |   851.20 μs |     400 B |
+| DefaultECSContext       | 100000      | 10      | 4,044.93 μs | 79.241 μs | 136.686 μs | 3,987.15 μs |     736 B |
 
 # SystemWith1Component
 
-| Context                                     | EntityCount | Padding |                                          Mean |    Error |    StdDev |     Median |         Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|---------|----------------------------------------------:|---------:|----------:|-----------:|--------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      | 0       |                                      219.5 μs |  4.02 μs |   8.03 μs |   216.5 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 0       |                                    1,324.2 μs | 44.43 μs | 119.35 μs | 1,277.0 μs |  6.04x slower |   0.58x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 0       |                                      377.4 μs |  6.37 μs |   5.96 μs |   375.4 μs |  1.72x slower |   0.07x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 0       |                                      310.0 μs | 17.42 μs |  50.83 μs |   299.4 μs |  1.41x slower |   0.24x |     880 B |  1.20x more |
-| FlecsNET                                    | 100000      | 0       |                                      871.6 μs | 17.25 μs |  21.82 μs |   862.5 μs |  3.98x slower |   0.17x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 0       |                                      212.8 μs |  4.19 μs |   4.66 μs |   211.0 μs |  1.03x faster |   0.04x |     232 B |  3.17x less |
-| LeoEcs                                      | 100000      | 0       |                                      292.4 μs | 11.66 μs |  33.84 μs |   275.5 μs |  1.33x slower |   0.16x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 0       |                                      288.5 μs |  5.52 μs |   5.43 μs |   287.2 μs |  1.32x slower |   0.05x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 0       |                                      585.2 μs | 11.70 μs |  20.80 μs |   581.5 μs |  2.67x slower |   0.13x |     400 B |  1.84x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 0       | <span style="color: lightgreen;">**180.2 μs** |  1.76 μs |   1.56 μs |   179.7 μs |  1.22x faster |   0.05x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 0       |                                      909.4 μs | 35.35 μs | 100.87 μs |   891.1 μs |  4.15x slower |   0.48x |   13672 B | 18.58x more |
-| Xeno                                        | 100000      | 0       |                                      272.1 μs |  4.17 μs |   3.70 μs |   271.7 μs |  1.24x slower |   0.05x |     400 B |  1.84x less |
-|                                             |             |         |                                               |          |           |            |               |         |           |             |
-| Arch                                        | 100000      | 10      |                                      228.9 μs |  4.42 μs |   8.08 μs |   227.6 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 10      |                                    4,460.1 μs | 88.16 μs | 202.56 μs | 4,412.2 μs | 19.50x slower |   1.09x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 10      |                                      452.6 μs | 12.75 μs |  35.75 μs |   438.5 μs |  1.98x slower |   0.17x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 10      |                                      388.8 μs | 28.06 μs |  79.60 μs |   372.5 μs |  1.70x slower |   0.35x |     880 B |  1.20x more |
-| FlecsNET                                    | 100000      | 10      |                                      884.0 μs | 17.62 μs |  33.51 μs |   880.0 μs |  3.87x slower |   0.19x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 10      |                                      215.3 μs |  3.70 μs |   8.04 μs |   213.3 μs |  1.06x faster |   0.05x |     520 B |  1.42x less |
-| LeoEcs                                      | 100000      | 10      |                                      270.7 μs |  4.64 μs |   4.11 μs |   270.4 μs |  1.18x slower |   0.04x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 10      |                                      400.3 μs | 18.40 μs |  51.60 μs |   379.5 μs |  1.75x slower |   0.23x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 10      |                                      587.4 μs | 19.78 μs |  55.80 μs |   593.9 μs |  2.57x slower |   0.26x |     400 B |  1.84x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 10      | <span style="color: lightgreen;">**203.1 μs** |  3.20 μs |   2.67 μs |   201.7 μs |  1.13x faster |   0.04x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 10      |                                    1,040.9 μs | 55.96 μs | 161.47 μs | 1,021.1 μs |  4.55x slower |   0.72x |   13672 B | 18.58x more |
-| Xeno                                        | 100000      | 10      |                                      278.4 μs |  4.34 μs |   3.85 μs |   277.9 μs |  1.22x slower |   0.04x |     400 B |  1.84x less |
+| Context                 | EntityCount | Padding |        Mean |     Error |     StdDev |      Median | Allocated |
+|-------------------------|-------------|---------|------------:|----------:|-----------:|------------:|----------:|
+| TinyEcsContext          | 100000      | 0       |    29.50 μs |  2.629 μs |   7.628 μs |    29.20 μs |    2480 B |
+| FrifloContext           | 100000      | 0       |   207.63 μs |  2.721 μs |   2.412 μs |   207.30 μs |     232 B |
+| MassiveEcsContext       | 100000      | 0       |   230.89 μs |  2.207 μs |   1.957 μs |   230.50 μs |     400 B |
+| XenoContext             | 100000      | 0       |   236.78 μs |  3.326 μs |   3.111 μs |   236.30 μs |     112 B |
+| 📍 **StaticEcsContext** | 100000      | 0       |   246.73 μs |  1.295 μs |   1.212 μs |   246.80 μs |      64 B |
+| ArchContext             | 100000      | 0       |   250.88 μs |  4.987 μs |   9.367 μs |   249.10 μs |      64 B |
+| LeoEcsContext           | 100000      | 0       |   268.92 μs |  5.012 μs |   4.186 μs |   268.20 μs |     400 B |
+| LeoEcsLiteContext       | 100000      | 0       |   288.33 μs |  3.275 μs |   2.734 μs |   287.90 μs |     112 B |
+| FennecsContext          | 100000      | 0       |   311.18 μs | 15.806 μs |  45.351 μs |   306.00 μs |     880 B |
+| MorpehContext           | 100000      | 0       |   577.17 μs | 11.383 μs |  20.815 μs |   569.25 μs |     400 B |
+| DragonECSContext        | 100000      | 0       |   748.18 μs |  6.889 μs |   5.753 μs |   747.30 μs |     400 B |
+| FlecsNETContext         | 100000      | 0       |   872.12 μs | 17.341 μs |  31.270 μs |   865.20 μs |     400 B |
+| DefaultECSContext       | 100000      | 0       | 1,828.05 μs | 19.467 μs |  31.435 μs | 1,820.40 μs |     736 B |
+|                         |             |         |             |           |            |             |           |
+| TinyEcsContext          | 100000      | 10      |    17.87 μs |  3.070 μs |   8.809 μs |    13.00 μs |    1984 B |
+| ArchContext             | 100000      | 10      |   207.32 μs |  4.140 μs |   9.677 μs |   204.00 μs |     736 B |
+| 📍 **StaticEcsContext** | 100000      | 10      |   224.07 μs |  1.480 μs |   1.312 μs |   223.75 μs |     400 B |
+| MassiveEcsContext       | 100000      | 10      |   227.58 μs |  1.102 μs |   0.920 μs |   227.70 μs |      64 B |
+| FrifloContext           | 100000      | 10      |   229.21 μs |  4.577 μs |  10.237 μs |   230.85 μs |     520 B |
+| XenoContext             | 100000      | 10      |   237.30 μs |  4.099 μs |   7.179 μs |   238.90 μs |     400 B |
+| LeoEcsContext           | 100000      | 10      |   269.36 μs |  4.333 μs |   3.841 μs |   269.10 μs |     400 B |
+| LeoEcsLiteContext       | 100000      | 10      |   398.84 μs | 10.729 μs |  30.085 μs |   392.80 μs |     400 B |
+| FennecsContext          | 100000      | 10      |   489.37 μs | 57.539 μs | 167.843 μs |   435.05 μs |     544 B |
+| MorpehContext           | 100000      | 10      |   593.46 μs | 10.936 μs |   9.695 μs |   591.30 μs |     112 B |
+| DragonECSContext        | 100000      | 10      |   778.82 μs |  7.446 μs |   6.218 μs |   777.70 μs |     400 B |
+| FlecsNETContext         | 100000      | 10      |   876.34 μs | 17.266 μs |  38.619 μs |   865.90 μs |     400 B |
+| DefaultECSContext       | 100000      | 10      | 4,694.72 μs | 47.047 μs |  39.287 μs | 4,689.55 μs |     736 B |
 
 # SystemWith2ComponentsMultipleComposition
 
-| Context                                     | EntityCount | Padding |                                          Mean |     Error |    StdDev |     Median |         Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|---------|----------------------------------------------:|----------:|----------:|-----------:|--------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      | 0       |                                      301.9 μs |  14.33 μs |  42.02 μs |   307.4 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 0       |                                    1,455.6 μs |  26.14 μs |  44.39 μs | 1,434.1 μs |  4.91x slower |   0.69x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 0       |                                      564.2 μs |   6.92 μs |   6.47 μs |   563.6 μs |  1.90x slower |   0.26x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 0       |                                      555.2 μs |  36.21 μs | 103.91 μs |   539.1 μs |  1.87x slower |   0.44x |     912 B |  1.24x more |
-| FlecsNET                                    | 100000      | 0       |                                    1,394.4 μs |  27.89 μs |  49.57 μs | 1,378.9 μs |  4.71x slower |   0.66x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 0       |                                      291.0 μs |   5.77 μs |   5.40 μs |   289.6 μs |  1.04x faster |   0.14x |     520 B |  1.42x less |
-| LeoEcs                                      | 100000      | 0       |                                      394.3 μs |   5.25 μs |   4.10 μs |   393.3 μs |  1.33x slower |   0.18x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 0       |                                      425.0 μs |   4.67 μs |   3.90 μs |   425.2 μs |  1.43x slower |   0.20x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 0       |                                    1,045.0 μs |  20.75 μs |  40.95 μs | 1,034.0 μs |  3.53x slower |   0.50x |     400 B |  1.84x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 0       | <span style="color: lightgreen;">**353.7 μs** |   3.79 μs |   2.96 μs |   354.1 μs |  1.19x slower |   0.16x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 0       |                                      947.1 μs |  55.85 μs | 162.03 μs |   950.4 μs |  3.20x slower |   0.70x |   14952 B | 20.32x more |
-| Xeno                                        | 100000      | 0       |                                      444.7 μs |   8.51 μs |   8.36 μs |   443.6 μs |  1.50x slower |   0.21x |     400 B |  1.84x less |
-|                                             |             |         |                                               |           |           |            |               |         |           |             |
-| Arch                                        | 100000      | 10      |                                      331.1 μs |   6.61 μs |  12.41 μs |   327.9 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 10      |                                    4,759.8 μs |  92.76 μs | 207.47 μs | 4,697.7 μs | 14.40x slower |   0.81x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 10      |                                      731.8 μs |  14.00 μs |  32.16 μs |   728.6 μs |  2.21x slower |   0.13x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 10      |                                      650.5 μs |  54.20 μs | 153.74 μs |   646.9 μs |  1.97x slower |   0.47x |     912 B |  1.24x more |
-| FlecsNET                                    | 100000      | 10      |                                    1,391.2 μs |  27.69 μs |  45.50 μs | 1,378.8 μs |  4.21x slower |   0.20x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 10      |                                      306.2 μs |   6.09 μs |  14.35 μs |   305.1 μs |  1.08x faster |   0.06x |     520 B |  1.42x less |
-| LeoEcs                                      | 100000      | 10      |                                      477.5 μs |  12.83 μs |  35.54 μs |   467.1 μs |  1.44x slower |   0.12x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 10      |                                    2,549.4 μs |  50.65 μs |  74.24 μs | 2,523.5 μs |  7.71x slower |   0.35x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 10      |                                    3,819.7 μs | 113.50 μs | 323.83 μs | 3,780.2 μs | 11.55x slower |   1.06x |     400 B |  1.84x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 10      | <span style="color: lightgreen;">**920.4 μs** |  18.25 μs |  46.78 μs |   905.1 μs |  2.78x slower |   0.17x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 10      |                                    1,126.6 μs |  63.46 μs | 175.84 μs | 1,104.0 μs |  3.41x slower |   0.54x |   14952 B | 20.32x more |
-| Xeno                                        | 100000      | 10      |                                    1,906.2 μs |  52.85 μs | 145.55 μs | 1,874.9 μs |  5.77x slower |   0.48x |     400 B |  1.84x less |
+| Context                 | EntityCount | Padding |        Mean |      Error |     StdDev |      Median | Allocated |
+|-------------------------|-------------|---------|------------:|-----------:|-----------:|------------:|----------:|
+| TinyEcsContext          | 100000      | 0       |    39.49 μs |   5.520 μs |  16.274 μs |    36.75 μs |    2320 B |
+| ArchContext             | 100000      | 0       |   260.57 μs |   5.032 μs |   6.717 μs |   259.10 μs |    1120 B |
+| FrifloContext           | 100000      | 0       |   310.25 μs |   4.721 μs |  10.753 μs |   308.75 μs |     232 B |
+| 📍 **StaticEcsContext** | 100000      | 0       |   357.01 μs |   3.510 μs |   3.112 μs |   356.45 μs |      64 B |
+| LeoEcsContext           | 100000      | 0       |   403.33 μs |   7.660 μs |  20.312 μs |   397.35 μs |     400 B |
+| LeoEcsLiteContext       | 100000      | 0       |   422.69 μs |   3.736 μs |   3.312 μs |   423.15 μs |     400 B |
+| XenoContext             | 100000      | 0       |   439.81 μs |   8.433 μs |   9.712 μs |   442.10 μs |     400 B |
+| MassiveEcsContext       | 100000      | 0       |   487.61 μs |   5.970 μs |   9.295 μs |   486.40 μs |     736 B |
+| FennecsContext          | 100000      | 0       |   549.44 μs |  26.870 μs |  78.380 μs |   548.35 μs |     912 B |
+| MorpehContext           | 100000      | 0       | 1,029.96 μs |  16.249 μs |  19.343 μs | 1,029.70 μs |     112 B |
+| DragonECSContext        | 100000      | 0       | 1,354.71 μs |   8.328 μs |   7.790 μs | 1,352.65 μs |     400 B |
+| FlecsNETContext         | 100000      | 0       | 1,411.36 μs |  27.158 μs |  29.059 μs | 1,403.75 μs |     400 B |
+| DefaultECSContext       | 100000      | 0       | 1,889.04 μs |  37.759 μs |  65.132 μs | 1,874.20 μs |     448 B |
+|                         |             |         |             |            |            |             |           |
+| TinyEcsContext          | 100000      | 10      |    44.48 μs |   5.459 μs |  16.011 μs |    38.00 μs |    2320 B |
+| ArchContext             | 100000      | 10      |   283.42 μs |   7.448 μs |  20.639 μs |   277.20 μs |    1408 B |
+| FrifloContext           | 100000      | 10      |   306.41 μs |   6.134 μs |  12.249 μs |   304.60 μs |     520 B |
+| LeoEcsContext           | 100000      | 10      |   465.04 μs |   9.035 μs |  14.589 μs |   465.70 μs |     400 B |
+| FennecsContext          | 100000      | 10      |   825.20 μs |  80.181 μs | 233.892 μs |   788.80 μs |     912 B |
+| 📍 **StaticEcsContext** | 100000      | 10      |   885.56 μs |  17.581 μs |  28.389 μs |   874.20 μs |     400 B |
+| MassiveEcsContext       | 100000      | 10      | 1,359.40 μs |  26.709 μs |  46.073 μs | 1,348.35 μs |     400 B |
+| FlecsNETContext         | 100000      | 10      | 1,396.11 μs |  25.767 μs |  64.644 μs | 1,380.35 μs |     112 B |
+| DragonECSContext        | 100000      | 10      | 1,500.49 μs |  27.237 μs |  22.744 μs | 1,489.10 μs |     400 B |
+| LeoEcsLiteContext       | 100000      | 10      | 2,478.61 μs |  16.949 μs |  16.646 μs | 2,478.10 μs |     400 B |
+| XenoContext             | 100000      | 10      | 2,883.62 μs | 165.050 μs | 486.653 μs | 2,855.65 μs |      64 B |
+| MorpehContext           | 100000      | 10      | 4,500.94 μs | 177.567 μs | 520.772 μs | 4,432.55 μs |     400 B |
+| DefaultECSContext       | 100000      | 10      | 4,909.98 μs |  97.741 μs | 178.726 μs | 4,855.00 μs |     736 B |
 
 # SystemWith2Components
 
-| Context                                     | EntityCount | Padding |                                          Mean |    Error |    StdDev |     Median |         Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|---------|----------------------------------------------:|---------:|----------:|-----------:|--------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      | 0       |                                      280.9 μs |  5.34 μs |   5.00 μs |   279.8 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 0       |                                    1,448.2 μs | 28.68 μs |  68.16 μs | 1,417.5 μs |  5.16x slower |   0.26x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 0       |                                      567.0 μs |  9.91 μs |   8.79 μs |   566.5 μs |  2.02x slower |   0.05x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 0       |                                      500.6 μs | 28.43 μs |  82.03 μs |   488.2 μs |  1.78x slower |   0.29x |     880 B |  1.20x more |
-| FlecsNET                                    | 100000      | 0       |                                    1,369.4 μs | 26.69 μs |  26.21 μs | 1,363.8 μs |  4.88x slower |   0.12x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 0       |                                      265.7 μs |  8.08 μs |  22.39 μs |   269.0 μs |  1.07x faster |   0.10x |     184 B |  4.00x less |
-| LeoEcs                                      | 100000      | 0       |                                      295.9 μs |  5.18 μs |  10.35 μs |   292.1 μs |  1.05x slower |   0.04x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 0       |                                      424.7 μs |  3.02 μs |   2.35 μs |   425.1 μs |  1.51x slower |   0.03x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 0       |                                      966.6 μs | 19.30 μs |  22.97 μs |   969.0 μs |  3.44x slower |   0.10x |     400 B |  1.84x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 0       | <span style="color: lightgreen;">**351.6 μs** |  3.92 μs |   3.48 μs |   350.2 μs |  1.25x slower |   0.02x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 0       |                                      924.0 μs | 40.45 μs | 112.09 μs |   923.4 μs |  3.29x slower |   0.40x |   14400 B | 19.57x more |
-| Xeno                                        | 100000      | 0       |                                      427.7 μs |  8.34 μs |  10.54 μs |   424.7 μs |  1.52x slower |   0.04x |     112 B |  6.57x less |
-|                                             |             |         |                                               |          |           |            |               |         |           |             |
-| Arch                                        | 100000      | 10      |                                      292.6 μs |  5.44 μs |  11.83 μs |   289.6 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 10      |                                    4,761.7 μs | 90.47 μs | 192.80 μs | 4,679.4 μs | 16.30x slower |   0.90x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 10      |                                      768.4 μs | 17.65 μs |  48.02 μs |   760.8 μs |  2.63x slower |   0.19x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 10      |                                      603.5 μs | 55.94 μs | 156.86 μs |   567.8 μs |  2.07x slower |   0.54x |     880 B |  1.20x more |
-| FlecsNET                                    | 100000      | 10      |                                    1,379.8 μs | 20.48 μs |  17.10 μs | 1,378.1 μs |  4.72x slower |   0.19x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 10      |                                      271.4 μs |  4.97 μs |  10.90 μs |   268.6 μs |  1.08x faster |   0.06x |     520 B |  1.42x less |
-| LeoEcs                                      | 100000      | 10      |                                      464.4 μs |  8.84 μs |  14.78 μs |   460.5 μs |  1.59x slower |   0.08x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 10      |                                    2,508.3 μs | 40.17 μs |  35.61 μs | 2,496.7 μs |  8.59x slower |   0.35x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 10      |                                    1,284.9 μs | 54.34 μs | 149.66 μs | 1,235.4 μs |  4.40x slower |   0.54x |     400 B |  1.84x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 10      | <span style="color: lightgreen;">**872.7 μs** | 17.31 μs |  23.69 μs |   864.8 μs |  2.99x slower |   0.14x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 10      |                                    1,130.2 μs | 62.75 μs | 175.96 μs | 1,086.7 μs |  3.87x slower |   0.62x |   14400 B | 19.57x more |
-| Xeno                                        | 100000      | 10      |                                      728.2 μs | 30.18 μs |  87.08 μs |   694.1 μs |  2.49x slower |   0.31x |     400 B |  1.84x less |
+| Context                 | EntityCount | Padding |        Mean |      Error |     StdDev |      Median | Allocated |
+|-------------------------|-------------|---------|------------:|-----------:|-----------:|------------:|----------:|
+| TinyEcsContext          | 100000      | 0       |    28.52 μs |   2.937 μs |   8.040 μs |    27.50 μs |    2032 B |
+| ArchContext             | 100000      | 0       |   262.32 μs |   5.080 μs |   6.605 μs |   261.20 μs |     448 B |
+| FrifloContext           | 100000      | 0       |   271.66 μs |   5.388 μs |   9.852 μs |   276.60 μs |     184 B |
+| LeoEcsContext           | 100000      | 0       |   292.35 μs |   5.415 μs |   8.270 μs |   290.70 μs |     400 B |
+| 📍 **StaticEcsContext** | 100000      | 0       |   358.34 μs |   6.910 μs |   6.787 μs |   355.55 μs |     112 B |
+| XenoContext             | 100000      | 0       |   415.19 μs |   4.245 μs |   3.545 μs |   414.45 μs |     112 B |
+| LeoEcsLiteContext       | 100000      | 0       |   421.87 μs |   2.670 μs |   2.498 μs |   422.30 μs |     400 B |
+| FennecsContext          | 100000      | 0       |   452.05 μs |  21.586 μs |  61.586 μs |   445.40 μs |     592 B |
+| MassiveEcsContext       | 100000      | 0       |   478.43 μs |   2.494 μs |   2.083 μs |   478.50 μs |     400 B |
+| MorpehContext           | 100000      | 0       |   941.87 μs |  12.943 μs |  11.474 μs |   941.10 μs |     400 B |
+| FlecsNETContext         | 100000      | 0       | 1,363.78 μs |  25.476 μs |  22.584 μs | 1,365.45 μs |     112 B |
+| DragonECSContext        | 100000      | 0       | 1,364.10 μs |   9.759 μs |   8.149 μs | 1,363.60 μs |     112 B |
+| DefaultECSContext       | 100000      | 0       | 1,871.29 μs |  29.630 μs |  50.314 μs | 1,858.90 μs |     736 B |
+|                         |             |         |             |            |            |             |           |
+| TinyEcsContext          | 100000      | 10      |    31.86 μs |   4.350 μs |  12.411 μs |    30.50 μs |    2048 B |
+| FrifloContext           | 100000      | 10      |   215.54 μs |   3.748 μs |   7.741 μs |   213.35 μs |     232 B |
+| ArchContext             | 100000      | 10      |   265.36 μs |   3.292 μs |   2.749 μs |   265.40 μs |     736 B |
+| LeoEcsContext           | 100000      | 10      |   456.87 μs |   8.968 μs |   7.950 μs |   458.05 μs |     400 B |
+| XenoContext             | 100000      | 10      |   712.09 μs |  22.492 μs |  65.254 μs |   698.80 μs |     400 B |
+| FennecsContext          | 100000      | 10      |   731.88 μs |  77.115 μs | 224.949 μs |   706.70 μs |     880 B |
+| 📍 **StaticEcsContext** | 100000      | 10      |   885.12 μs |  17.284 μs |  23.074 μs |   875.50 μs |     400 B |
+| MorpehContext           | 100000      | 10      | 1,229.18 μs |  24.233 μs |  48.953 μs | 1,221.95 μs |     400 B |
+| DragonECSContext        | 100000      | 10      | 1,345.90 μs | 116.717 μs | 342.310 μs | 1,457.50 μs |     112 B |
+| FlecsNETContext         | 100000      | 10      | 1,371.31 μs |  26.882 μs |  30.957 μs | 1,368.55 μs |     112 B |
+| MassiveEcsContext       | 100000      | 10      | 1,671.49 μs |  28.117 μs |  24.925 μs | 1,667.00 μs |     400 B |
+| LeoEcsLiteContext       | 100000      | 10      | 2,492.29 μs |  36.272 μs |  66.325 μs | 2,474.40 μs |     400 B |
+| DefaultECSContext       | 100000      | 10      | 4,975.55 μs |  97.315 μs | 115.847 μs | 4,960.80 μs |     400 B |
 
 # SystemWith3ComponentsMultipleComposition
 
-| Context                                     | EntityCount | Padding |                                            Mean |     Error |      StdDev |     Median |         Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|---------|------------------------------------------------:|----------:|------------:|-----------:|--------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      | 0       |                                        300.0 μs |  16.88 μs |    48.70 μs |   306.1 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 0       |                                      3,886.8 μs | 990.35 μs | 2,920.08 μs | 1,743.7 μs | 13.28x slower |  10.24x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 0       |                                        789.5 μs |  15.73 μs |    24.94 μs |   778.8 μs |  2.70x slower |   0.42x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 0       |                                        553.3 μs |  41.56 μs |   119.24 μs |   546.4 μs |  1.89x slower |   0.50x |     912 B |  1.24x more |
-| FlecsNET                                    | 100000      | 0       |                                      1,862.6 μs |  35.91 μs |    41.35 μs | 1,859.6 μs |  6.36x slower |   0.97x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 0       |                                        438.9 μs |   8.72 μs |     7.73 μs |   436.1 μs |  1.50x slower |   0.23x |     232 B |  3.17x less |
-| LeoEcs                                      | 100000      | 0       |                                        550.8 μs |  10.82 μs |    14.81 μs |   545.8 μs |  1.88x slower |   0.29x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 0       |                                        561.8 μs |   9.54 μs |    10.60 μs |   560.5 μs |  1.92x slower |   0.29x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 0       |                                      1,433.2 μs |  59.57 μs |   172.84 μs | 1,437.4 μs |  4.90x slower |   0.95x |     400 B |  1.84x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 0       |   <span style="color: lightgreen;">**485.3 μs** |   2.60 μs |     2.30 μs |   486.0 μs |  1.66x slower |   0.25x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 0       |                                        997.9 μs |  42.03 μs |   119.24 μs |   991.3 μs |  3.41x slower |   0.66x |   15344 B | 20.85x more |
-| Xeno                                        | 100000      | 0       |                                        526.6 μs |   5.50 μs |     4.59 μs |   526.0 μs |  1.80x slower |   0.27x |     400 B |  1.84x less |
-|                                             |             |         |                                                 |           |             |            |               |         |           |             |
-| Arch                                        | 100000      | 10      |                                        367.8 μs |  11.37 μs |    31.50 μs |   357.4 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 10      |                                      5,125.6 μs | 102.49 μs |   268.20 μs | 5,038.5 μs | 14.03x slower |   1.33x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 10      |                                        989.0 μs |  26.22 μs |    70.87 μs |   972.4 μs |  2.71x slower |   0.29x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 10      |                                        753.1 μs |  58.91 μs |   169.04 μs |   719.7 μs |  2.06x slower |   0.49x |     912 B |  1.24x more |
-| FlecsNET                                    | 100000      | 10      |                                      1,984.7 μs |  72.82 μs |   208.93 μs | 1,876.9 μs |  5.43x slower |   0.72x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 10      |                                        448.2 μs |   8.23 μs |    20.04 μs |   441.9 μs |  1.23x slower |   0.11x |     520 B |  1.42x less |
-| LeoEcs                                      | 100000      | 10      |                                        593.4 μs |  11.88 μs |    30.02 μs |   587.1 μs |  1.62x slower |   0.15x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 10      |                                      2,915.8 μs |  95.57 μs |   275.75 μs | 2,780.1 μs |  7.98x slower |   0.98x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 10      |                                      6,137.6 μs | 289.62 μs |   853.94 μs | 5,826.4 μs | 16.80x slower |   2.69x |     400 B |  1.84x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 10      | <span style="color: lightgreen;">**1,072.5 μs** |  58.83 μs |   171.62 μs | 1,019.9 μs |  2.94x slower |   0.52x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 10      |                                      1,120.7 μs |  52.59 μs |   147.46 μs | 1,097.9 μs |  3.07x slower |   0.47x |   15344 B | 20.85x more |
-| Xeno                                        | 100000      | 10      |                                      1,785.7 μs |  87.53 μs |   241.07 μs | 1,693.1 μs |  4.89x slower |   0.76x |     400 B |  1.84x less |
+| Context                 | EntityCount | Padding |        Mean |      Error |     StdDev |      Median | Allocated |
+|-------------------------|-------------|---------|------------:|-----------:|-----------:|------------:|----------:|
+| TinyEcsContext          | 100000      | 0       |    29.18 μs |   5.876 μs |  17.233 μs |    27.25 μs |    1696 B |
+| ArchContext             | 100000      | 0       |   372.51 μs |   7.364 μs |   8.767 μs |   373.70 μs |    1408 B |
+| FrifloContext           | 100000      | 0       |   432.14 μs |   4.284 μs |   3.798 μs |   432.70 μs |     520 B |
+| 📍 **StaticEcsContext** | 100000      | 0       |   477.15 μs |   3.215 μs |   2.684 μs |   478.20 μs |     400 B |
+| XenoContext             | 100000      | 0       |   529.44 μs |   9.885 μs |   8.254 μs |   530.30 μs |     112 B |
+| LeoEcsLiteContext       | 100000      | 0       |   546.99 μs |   2.922 μs |   2.590 μs |   546.80 μs |     400 B |
+| LeoEcsContext           | 100000      | 0       |   549.91 μs |   8.696 μs |   9.666 μs |   551.80 μs |     400 B |
+| FennecsContext          | 100000      | 0       |   582.85 μs |  39.339 μs | 112.236 μs |   571.25 μs |     912 B |
+| MassiveEcsContext       | 100000      | 0       |   685.16 μs |   5.234 μs |   4.371 μs |   682.80 μs |     400 B |
+| MorpehContext           | 100000      | 0       | 1,506.22 μs |  29.030 μs |  37.748 μs | 1,498.00 μs |     400 B |
+| DragonECSContext        | 100000      | 0       | 1,576.59 μs | 204.921 μs | 604.214 μs | 1,291.40 μs |     112 B |
+| FlecsNETContext         | 100000      | 0       | 1,857.18 μs |  21.340 μs |  42.618 μs | 1,848.80 μs |     400 B |
+| DefaultECSContext       | 100000      | 0       | 7,240.79 μs |  35.797 μs |  31.733 μs | 7,236.00 μs |     736 B |
+|                         |             |         |             |            |            |             |           |
+| TinyEcsContext          | 100000      | 10      |    15.38 μs |   2.227 μs |   6.318 μs |    12.60 μs |    1696 B |
+| ArchContext             | 100000      | 10      |   391.80 μs |   7.262 μs |   6.792 μs |   390.60 μs |    1408 B |
+| FrifloContext           | 100000      | 10      |   440.96 μs |   8.677 μs |  18.678 μs |   432.90 μs |     520 B |
+| LeoEcsContext           | 100000      | 10      |   584.93 μs |  11.288 μs |  23.312 μs |   579.75 μs |     400 B |
+| FennecsContext          | 100000      | 10      |   856.14 μs |  74.096 μs | 216.140 μs |   802.50 μs |     912 B |
+| 📍 **StaticEcsContext** | 100000      | 10      |   975.65 μs |  19.357 μs |  41.667 μs |   969.55 μs |     400 B |
+| MassiveEcsContext       | 100000      | 10      | 1,373.05 μs |  26.408 μs |  22.052 μs | 1,376.10 μs |     400 B |
+| FlecsNETContext         | 100000      | 10      | 2,023.96 μs | 101.657 μs | 296.538 μs | 1,851.80 μs |     400 B |
+| DragonECSContext        | 100000      | 10      | 2,150.13 μs |  40.741 μs |  59.718 μs | 2,128.80 μs |     400 B |
+| XenoContext             | 100000      | 10      | 2,523.87 μs |  50.221 μs | 138.323 μs | 2,495.00 μs |     400 B |
+| LeoEcsLiteContext       | 100000      | 10      | 2,716.03 μs |  35.543 μs |  27.750 μs | 2,703.15 μs |     400 B |
+| DefaultECSContext       | 100000      | 10      | 5,335.89 μs |  84.448 μs |  74.861 μs | 5,310.80 μs |     736 B |
+| MorpehContext           | 100000      | 10      | 5,496.46 μs | 109.370 μs | 230.699 μs | 5,511.95 μs |     400 B |
 
 # SystemWith3Components
 
-| Context                                     | EntityCount | Padding |                                          Mean |    Error |    StdDev |     Median |         Ratio | RatioSD | Allocated | Alloc Ratio |
-|---------------------------------------------|-------------|---------|----------------------------------------------:|---------:|----------:|-----------:|--------------:|--------:|----------:|------------:|
-| Arch                                        | 100000      | 0       |                                      280.7 μs |  5.46 μs |   5.61 μs |   280.6 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 0       |                                    1,683.8 μs | 14.98 μs |  13.28 μs | 1,683.0 μs |  6.00x slower |   0.12x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 0       |                                      770.8 μs | 14.59 μs |  14.33 μs |   768.8 μs |  2.75x slower |   0.07x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 0       |                                      575.6 μs | 35.03 μs | 101.64 μs |   588.6 μs |  2.05x slower |   0.36x |     880 B |  1.20x more |
-| FlecsNET                                    | 100000      | 0       |                                    1,857.0 μs | 22.17 μs |  17.31 μs | 1,859.2 μs |  6.62x slower |   0.14x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 0       |                                      402.8 μs |  6.81 μs |   7.00 μs |   400.0 μs |  1.44x slower |   0.04x |     520 B |  1.42x less |
-| LeoEcs                                      | 100000      | 0       |                                      556.3 μs | 11.02 μs |  12.69 μs |   556.9 μs |  1.98x slower |   0.06x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 0       |                                      551.8 μs |  4.72 μs |   3.68 μs |   551.2 μs |  1.97x slower |   0.04x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 0       |                                    1,359.0 μs | 21.91 μs |  18.30 μs | 1,362.2 μs |  4.84x slower |   0.11x |   12736 B | 17.30x more |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 0       | <span style="color: lightgreen;">**491.3 μs** |  8.55 μs |  10.18 μs |   488.3 μs |  1.75x slower |   0.05x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 0       |                                      913.9 μs | 99.86 μs | 291.30 μs |   902.2 μs |  3.26x slower |   1.04x |   14768 B | 20.07x more |
-| Xeno                                        | 100000      | 0       |                                      516.8 μs |  4.94 μs |   3.86 μs |   516.8 μs |  1.84x slower |   0.04x |     400 B |  1.84x less |
-|                                             |             |         |                                               |          |           |            |               |         |           |             |
-| Arch                                        | 100000      | 10      |                                      292.3 μs |  4.81 μs |  12.60 μs |   288.5 μs |      baseline |         |     736 B |             |
-| DefaultECS                                  | 100000      | 10      |                                    5,080.9 μs | 99.81 μs | 194.68 μs | 5,034.5 μs | 17.41x slower |   0.96x |     736 B |  1.00x more |
-| DragonECS                                   | 100000      | 10      |                                    1,005.9 μs | 28.24 μs |  77.77 μs |   984.4 μs |  3.45x slower |   0.30x |     400 B |  1.84x less |
-| Fennecs                                     | 100000      | 10      |                                      664.4 μs | 53.79 μs | 147.26 μs |   636.3 μs |  2.28x slower |   0.51x |     880 B |  1.20x more |
-| FlecsNET                                    | 100000      | 10      |                                    1,875.4 μs | 36.65 μs |  36.00 μs | 1,867.2 μs |  6.43x slower |   0.28x |     400 B |  1.84x less |
-| Friflo                                      | 100000      | 10      |                                      415.1 μs |  8.16 μs |  17.22 μs |   410.8 μs |  1.42x slower |   0.08x |     520 B |  1.42x less |
-| LeoEcs                                      | 100000      | 10      |                                      619.3 μs | 12.33 μs |  25.46 μs |   616.2 μs |  2.12x slower |   0.12x |     400 B |  1.84x less |
-| LeoEcsLite                                  | 100000      | 10      |                                    3,343.2 μs | 63.95 μs |  80.88 μs | 3,320.5 μs | 11.46x slower |   0.53x |     400 B |  1.84x less |
-| Morpeh                                      | 100000      | 10      |                                    1,571.7 μs | 47.58 μs | 134.99 μs | 1,567.7 μs |  5.39x slower |   0.51x |     400 B |  1.84x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | 10      | <span style="color: lightgreen;">**849.5 μs** | 30.81 μs |  85.37 μs |   820.1 μs |  2.91x slower |   0.31x |     400 B |  1.84x less |
-| TinyEcs                                     | 100000      | 10      |                                    1,166.0 μs | 64.96 μs | 187.44 μs | 1,154.5 μs |  4.00x slower |   0.66x |   14768 B | 20.07x more |
-| Xeno                                        | 100000      | 10      |                                      906.8 μs | 29.00 μs |  83.20 μs |   888.5 μs |  3.11x slower |   0.31x |     400 B |  1.84x less |
+| Context                 | EntityCount | Padding |        Mean |      Error |     StdDev | Allocated |
+|-------------------------|-------------|---------|------------:|-----------:|-----------:|----------:|
+| TinyEcsContext          | 100000      | 0       |    33.09 μs |   6.532 μs |  19.053 μs |    1984 B |
+| ArchContext             | 100000      | 0       |   328.93 μs |   5.730 μs |   4.784 μs |     736 B |
+| FrifloContext           | 100000      | 0       |   400.30 μs |   3.495 μs |   3.098 μs |     520 B |
+| 📍 **StaticEcsContext** | 100000      | 0       |   477.11 μs |   2.781 μs |   2.465 μs |     400 B |
+| XenoContext             | 100000      | 0       |   505.21 μs |   5.754 μs |   4.805 μs |     400 B |
+| LeoEcsLiteContext       | 100000      | 0       |   544.96 μs |   2.469 μs |   2.189 μs |      64 B |
+| LeoEcsContext           | 100000      | 0       |   548.42 μs |   6.095 μs |   4.758 μs |     400 B |
+| FennecsContext          | 100000      | 0       |   587.43 μs |  40.531 μs | 117.587 μs |     880 B |
+| MassiveEcsContext       | 100000      | 0       |   689.05 μs |   6.979 μs |   6.187 μs |     112 B |
+| MorpehContext           | 100000      | 0       | 1,381.92 μs |  27.490 μs |  31.658 μs |     400 B |
+| FlecsNETContext         | 100000      | 0       | 1,824.44 μs |  26.729 μs |  20.868 μs |     400 B |
+| DragonECSContext        | 100000      | 0       | 2,105.13 μs |  31.771 μs |  26.530 μs |     400 B |
+| DefaultECSContext       | 100000      | 0       | 2,202.42 μs |  22.752 μs |  36.740 μs |     736 B |
+|                         |             |         |             |            |            |           |
+| TinyEcsContext          | 100000      | 10      |    25.58 μs |   3.703 μs |  10.683 μs |    1984 B |
+| ArchContext             | 100000      | 10      |   345.04 μs |   4.896 μs |   8.703 μs |     736 B |
+| MassiveEcsContext       | 100000      | 10      |   345.82 μs |   6.843 μs |   5.714 μs |      64 B |
+| FrifloContext           | 100000      | 10      |   407.78 μs |   5.897 μs |   9.852 μs |     520 B |
+| LeoEcsContext           | 100000      | 10      |   589.52 μs |  10.797 μs |  11.087 μs |     400 B |
+| FennecsContext          | 100000      | 10      |   806.91 μs |  82.186 μs | 238.437 μs |     880 B |
+| 📍 **StaticEcsContext** | 100000      | 10      |   822.19 μs |  16.033 μs |  41.098 μs |      64 B |
+| XenoContext             | 100000      | 10      |   863.09 μs |  17.152 μs |  41.424 μs |     400 B |
+| MorpehContext           | 100000      | 10      | 1,599.67 μs |  23.112 μs |  21.619 μs |     400 B |
+| FlecsNETContext         | 100000      | 10      | 1,824.57 μs |  25.359 μs |  23.721 μs |     400 B |
+| DragonECSContext        | 100000      | 10      | 2,280.14 μs |  23.841 μs |  21.134 μs |     400 B |
+| LeoEcsLiteContext       | 100000      | 10      | 3,208.73 μs |  12.265 μs |  10.242 μs |     400 B |
+| DefaultECSContext       | 100000      | 10      | 5,397.52 μs | 101.858 μs | 113.215 μs |     736 B |
 
 # ThreeAddOneComponent
 
-| Context                                     | EntityCount |                                          Mean |       Error |      StdDev |      Median |             Ratio | RatioSD |  Allocated |     Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|------------:|------------:|------------:|------------------:|--------:|-----------:|----------------:|
-| Arch                                        | 100000      |                                   11,980.7 μs |   175.82 μs |   155.86 μs | 11,955.0 μs |          baseline |         |     1072 B |                 |
-| DefaultECS                                  | 100000      |                                    1,389.1 μs |    25.30 μs |    27.07 μs |  1,388.1 μs |      8.63x faster |   0.19x |      400 B |      2.68x less |
-| DragonECS                                   | 100000      |                                      896.0 μs |    20.61 μs |    56.78 μs |    880.4 μs |     13.42x faster |   0.82x |      400 B |      2.68x less |
-| Fennecs                                     | 100000      |                                   64,875.5 μs |   993.29 μs |   880.52 μs | 64,550.0 μs |      5.42x slower |   0.10x | 84000400 B | 78,358.58x more |
-| FlecsNET                                    | 100000      |                                   92,459.6 μs | 1,315.39 μs | 1,166.05 μs | 92,630.3 μs |      7.72x slower |   0.13x |      400 B |      2.68x less |
-| Friflo                                      | 100000      |                                    3,167.5 μs |    24.53 μs |    20.49 μs |  3,165.3 μs |      3.78x faster |   0.05x |      400 B |      2.68x less |
-| LeoEcs                                      | 100000      |                                    3,754.7 μs |    50.63 μs |    42.28 μs |  3,749.5 μs |      3.19x faster |   0.05x |      400 B |      2.68x less |
-| LeoEcsLite                                  | 100000      |                                    1,630.2 μs |    16.13 μs |    13.47 μs |  1,625.1 μs |      7.35x faster |   0.11x |      400 B |      2.68x less |
-| Morpeh                                      | 100000      |                                    3,021.0 μs |    76.64 μs |   218.67 μs |  2,963.2 μs |      3.99x faster |   0.28x |      400 B |      2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**343.1 μs** |     6.48 μs |     7.20 μs |    341.9 μs | **34.94x faster** |   0.84x |      400 B |      2.68x less |
-| TinyEcs                                     | 100000      |                                    3,823.6 μs |    75.46 μs |    66.90 μs |  3,817.3 μs |      3.13x faster |   0.07x |  2400400 B |  2,239.18x more |
-| Xeno                                        | 100000      |                                    2,514.1 μs |    76.90 μs |   203.93 μs |  2,453.1 μs |      4.79x faster |   0.34x |      400 B |      2.68x less |
+| Context                 | EntityCount |        Mean |       Error |      StdDev |      Median |  Allocated |
+|-------------------------|-------------|------------:|------------:|------------:|------------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |    405.6 μs |     8.10 μs |     8.67 μs |    403.0 μs |      400 B |
+| MassiveEcsContext       | 100000      |    676.5 μs |    35.74 μs |    93.52 μs |    718.6 μs |      400 B |
+| DragonECSContext        | 100000      |    900.3 μs |    24.53 μs |    66.73 μs |    896.1 μs |      400 B |
+| DefaultECSContext       | 100000      |  1,430.7 μs |    28.54 μs |    31.72 μs |  1,435.2 μs |      400 B |
+| LeoEcsLiteContext       | 100000      |  1,815.8 μs |    25.25 μs |    22.38 μs |  1,812.9 μs |      400 B |
+| XenoContext             | 100000      |  3,064.9 μs |    54.31 μs |    76.14 μs |  3,047.6 μs |   983696 B |
+| MorpehContext           | 100000      |  3,085.1 μs |   112.88 μs |   318.39 μs |  2,957.7 μs |      400 B |
+| FrifloContext           | 100000      |  3,115.0 μs |    21.64 μs |    19.18 μs |  3,118.4 μs |       64 B |
+| LeoEcsContext           | 100000      |  3,736.3 μs |    61.31 μs |    51.20 μs |  3,723.4 μs |       64 B |
+| TinyEcsContext          | 100000      |  4,258.4 μs |    83.15 μs |    92.42 μs |  4,244.0 μs |  2400400 B |
+| ArchContext             | 100000      | 12,226.3 μs |    78.53 μs |    65.57 μs | 12,211.6 μs |     1744 B |
+| FennecsContext          | 100000      | 64,978.0 μs | 1,299.14 μs | 2,440.10 μs | 64,851.2 μs | 84000400 B |
+| FlecsNETContext         | 100000      | 91,826.1 μs | 1,278.72 μs | 1,133.55 μs | 92,152.9 μs |      400 B |
 
 # ThreeRemoveOneComponent
 
-| Context                                     | EntityCount |                                          Mean |       Error |      StdDev |      Median |             Ratio | RatioSD |  Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|------------:|------------:|------------:|------------------:|--------:|-----------:|-----------------:|
-| Arch                                        | 100000      |                                   38,690.5 μs |   676.50 μs |   599.70 μs | 38,576.3 μs |          baseline |         | 24808464 B |                  |
-| DefaultECS                                  | 100000      |                                    1,078.5 μs |    21.33 μs |    18.91 μs |  1,073.5 μs |     35.89x faster |   0.81x |      400 B | 62,021.160x less |
-| DragonECS                                   | 100000      |                                      978.1 μs |    21.82 μs |    57.48 μs |    965.1 μs |     39.68x faster |   2.17x |      400 B | 62,021.160x less |
-| Fennecs                                     | 100000      |                                   53,195.8 μs | 1,061.02 μs | 2,642.30 μs | 52,743.3 μs |      1.38x slower |   0.07x | 58400400 B |      2.354x more |
-| FlecsNET                                    | 100000      |                                   71,021.4 μs | 1,134.67 μs |   885.87 μs | 70,760.4 μs |      1.84x slower |   0.04x |      400 B | 62,021.160x less |
-| Friflo                                      | 100000      |                                    2,146.9 μs |     9.63 μs |     8.54 μs |  2,146.7 μs |     18.02x faster |   0.28x |      400 B | 62,021.160x less |
-| LeoEcs                                      | 100000      |                                    6,798.6 μs |   130.15 μs |   159.84 μs |  6,793.6 μs |      5.69x faster |   0.16x |      400 B | 62,021.160x less |
-| LeoEcsLite                                  | 100000      |                                    3,002.6 μs |    43.14 μs |    38.24 μs |  2,992.7 μs |     12.89x faster |   0.25x |      400 B | 62,021.160x less |
-| Morpeh                                      | 100000      |                                    3,305.8 μs |   127.34 μs |   354.98 μs |  3,205.7 μs |     11.83x faster |   1.19x |      400 B | 62,021.160x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**460.6 μs** |     9.16 μs |    26.12 μs |    452.4 μs | **84.26x faster** |   4.74x |      400 B | 62,021.160x less |
-| TinyEcs                                     | 100000      |                                      581.1 μs |     8.61 μs |    21.90 μs |    578.6 μs |     66.67x faster |   2.59x |      400 B | 62,021.160x less |
-| Xeno                                        | 100000      |                                    2,587.1 μs |    27.07 μs |    38.83 μs |  2,583.8 μs |     14.96x faster |   0.31x |  1045224 B |     23.735x less |
+| Context                 | EntityCount |        Mean |       Error |      StdDev |      Median |  Allocated |
+|-------------------------|-------------|------------:|------------:|------------:|------------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |    538.5 μs |     4.98 μs |     3.89 μs |    537.6 μs |      400 B |
+| MassiveEcsContext       | 100000      |    678.8 μs |     9.14 μs |    18.87 μs |    676.1 μs |      400 B |
+| TinyEcsContext          | 100000      |    819.4 μs |    26.82 μs |    72.51 μs |    791.6 μs |       64 B |
+| DragonECSContext        | 100000      |  1,021.0 μs |    26.07 μs |    68.68 μs |  1,010.9 μs |      400 B |
+| DefaultECSContext       | 100000      |  1,117.0 μs |    15.57 μs |    13.81 μs |  1,112.5 μs |      400 B |
+| FrifloContext           | 100000      |  2,353.8 μs |    84.25 μs |   245.77 μs |  2,200.2 μs |      400 B |
+| MorpehContext           | 100000      |  2,916.5 μs |    59.15 μs |   172.55 μs |  2,908.8 μs |      400 B |
+| LeoEcsLiteContext       | 100000      |  3,085.6 μs |    32.97 μs |    27.54 μs |  3,086.2 μs |      400 B |
+| XenoContext             | 100000      |  3,222.0 μs |    42.66 μs |    35.62 μs |  3,222.1 μs |   983400 B |
+| LeoEcsContext           | 100000      |  6,949.9 μs |   133.02 μs |   117.92 μs |  6,969.4 μs |      112 B |
+| ArchContext             | 100000      | 37,583.5 μs |   731.31 μs |   570.96 μs | 37,655.1 μs | 24804408 B |
+| FennecsContext          | 100000      | 53,201.7 μs | 1,061.60 μs | 1,941.19 μs | 52,809.9 μs | 58400400 B |
+| FlecsNETContext         | 100000      | 73,114.9 μs |   908.04 μs |   849.38 μs | 73,211.2 μs |      400 B |
 
 # ThreeRemoveTwoComponents
 
-| Context                                     | EntityCount |                                          Mean |       Error |      StdDev |             Ratio | RatioSD |  Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|------------:|------------:|------------------:|--------:|-----------:|-----------------:|
-| Arch                                        | 100000      |                                   34,895.0 μs |   349.00 μs |   309.38 μs |          baseline |         | 24808464 B |                  |
-| DefaultECS                                  | 100000      |                                    2,015.6 μs |    11.43 μs |     9.54 μs |     17.31x faster |   0.17x |      400 B | 62,021.160x less |
-| DragonECS                                   | 100000      |                                    5,003.9 μs |    56.74 μs |    47.38 μs |      6.97x faster |   0.09x |      400 B | 62,021.160x less |
-| Fennecs                                     | 100000      |                                   88,790.2 μs | 1,230.48 μs | 1,150.99 μs |      2.54x slower |   0.04x | 96800400 B |      3.902x more |
-| FlecsNET                                    | 100000      |                                  124,169.3 μs | 1,530.78 μs | 1,431.89 μs |      3.56x slower |   0.05x |      400 B | 62,021.160x less |
-| Friflo                                      | 100000      |                                    3,538.1 μs |    27.30 μs |    24.20 μs |      9.86x faster |   0.11x |      400 B | 62,021.160x less |
-| LeoEcs                                      | 100000      |                                    9,694.6 μs |   102.64 μs |    90.98 μs |      3.60x faster |   0.05x |      400 B | 62,021.160x less |
-| LeoEcsLite                                  | 100000      |                                    5,614.7 μs |    56.05 μs |    52.43 μs |      6.22x faster |   0.08x |      400 B | 62,021.160x less |
-| Morpeh                                      | 100000      |                                    3,294.4 μs |    64.32 μs |   103.87 μs |     10.60x faster |   0.33x |      400 B | 62,021.160x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**951.0 μs** |     9.21 μs |     8.17 μs | **36.69x faster** |   0.44x |      400 B | 62,021.160x less |
-| TinyEcs                                     | 100000      |                                    1,551.7 μs |    26.68 μs |    23.65 μs |     22.49x faster |   0.38x |      400 B | 62,021.160x less |
-| Xeno                                        | 100000      |                                    2,956.1 μs |    19.57 μs |    34.78 μs |     11.81x faster |   0.17x |      400 B | 62,021.160x less |
+| Context                 | EntityCount |       Mean |     Error |    StdDev |     Median |  Allocated |
+|-------------------------|-------------|-----------:|----------:|----------:|-----------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |   1.130 ms | 0.0047 ms | 0.0042 ms |   1.130 ms |      400 B |
+| DragonECSContext        | 100000      |   1.795 ms | 0.0457 ms | 0.1195 ms |   1.760 ms |      400 B |
+| MassiveEcsContext       | 100000      |   2.095 ms | 0.0414 ms | 0.0892 ms |   2.089 ms |       64 B |
+| DefaultECSContext       | 100000      |   2.112 ms | 0.0199 ms | 0.0166 ms |   2.115 ms |      400 B |
+| TinyEcsContext          | 100000      |   2.599 ms | 0.0513 ms | 0.0479 ms |   2.588 ms |      400 B |
+| MorpehContext           | 100000      |   3.265 ms | 0.0635 ms | 0.0756 ms |   3.274 ms |      400 B |
+| XenoContext             | 100000      |   3.610 ms | 0.0611 ms | 0.0970 ms |   3.573 ms |   983352 B |
+| FrifloContext           | 100000      |   3.691 ms | 0.0196 ms | 0.0153 ms |   3.688 ms |      400 B |
+| LeoEcsLiteContext       | 100000      |   5.742 ms | 0.2227 ms | 0.5944 ms |   5.533 ms |       64 B |
+| LeoEcsContext           | 100000      |  10.333 ms | 0.3792 ms | 0.9990 ms |   9.980 ms |      400 B |
+| ArchContext             | 100000      |  38.625 ms | 0.6705 ms | 0.7452 ms |  38.427 ms | 24805616 B |
+| FennecsContext          | 100000      |  80.129 ms | 1.2988 ms | 1.2149 ms |  79.810 ms | 96800400 B |
+| FlecsNETContext         | 100000      | 117.614 ms | 1.2109 ms | 1.1327 ms | 117.936 ms |      400 B |
 
 # TwoAddOneComponent
 
-| Context                                     | EntityCount |                                          Mean |       Error |      StdDev |             Ratio | RatioSD |  Allocated |     Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|------------:|------------:|------------------:|--------:|-----------:|----------------:|
-| Arch                                        | 100000      |                                    9,223.3 μs |   102.57 μs |    95.94 μs |          baseline |         |     1072 B |                 |
-| DefaultECS                                  | 100000      |                                    1,352.8 μs |    26.31 μs |    29.25 μs |      6.82x faster |   0.16x |      400 B |      2.68x less |
-| DragonECS                                   | 100000      |                                      858.7 μs |    17.16 μs |    42.09 μs |     10.77x faster |   0.53x |      400 B |      2.68x less |
-| Fennecs                                     | 100000      |                                   57,904.0 μs | 1,143.04 μs | 1,122.62 μs |      6.28x slower |   0.13x | 71200400 B | 66,418.28x more |
-| FlecsNET                                    | 100000      |                                   88,785.1 μs | 1,646.35 μs | 1,459.44 μs |      9.63x slower |   0.18x |      400 B |      2.68x less |
-| Friflo                                      | 100000      |                                    2,659.5 μs |    23.04 μs |    20.42 μs |      3.47x faster |   0.04x |      400 B |      2.68x less |
-| LeoEcs                                      | 100000      |                                    3,283.2 μs |    29.12 μs |    22.74 μs |      2.81x faster |   0.03x |      400 B |      2.68x less |
-| LeoEcsLite                                  | 100000      |                                    1,531.3 μs |    27.32 μs |    22.82 μs |      6.02x faster |   0.10x |      400 B |      2.68x less |
-| Morpeh                                      | 100000      |                                    3,179.1 μs |    75.37 μs |   216.26 μs |      2.91x faster |   0.19x |      400 B |      2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**330.0 μs** |     4.70 μs |     8.24 μs | **27.97x faster** |   0.74x |      400 B |      2.68x less |
-| TinyEcs                                     | 100000      |                                    3,671.5 μs |    56.84 μs |    47.47 μs |      2.51x faster |   0.04x |  2400400 B |  2,239.18x more |
-| Xeno                                        | 100000      |                                    2,542.5 μs |    59.03 μs |   159.59 μs |      3.64x faster |   0.22x |  1045232 B |    975.03x more |
+| Context                 | EntityCount |        Mean |     Error |      StdDev |      Median |  Allocated |
+|-------------------------|-------------|------------:|----------:|------------:|------------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |    402.9 μs |   8.02 μs |    17.59 μs |    394.4 μs |      400 B |
+| DragonECSContext        | 100000      |    894.2 μs |  19.43 μs |    54.17 μs |    886.2 μs |      400 B |
+| MassiveEcsContext       | 100000      |  1,012.1 μs |   6.93 μs |     5.41 μs |  1,010.0 μs |      400 B |
+| DefaultECSContext       | 100000      |  1,383.7 μs |  16.00 μs |    13.36 μs |  1,381.8 μs |      400 B |
+| LeoEcsLiteContext       | 100000      |  1,705.3 μs |  31.96 μs |    24.95 μs |  1,700.8 μs |      400 B |
+| FrifloContext           | 100000      |  2,380.5 μs |  67.02 μs |   183.46 μs |  2,293.5 μs |      400 B |
+| XenoContext             | 100000      |  3,067.0 μs |  60.14 μs |   109.97 μs |  3,036.8 μs |   983696 B |
+| MorpehContext           | 100000      |  3,088.2 μs |  78.04 μs |   225.16 μs |  3,046.2 μs |      400 B |
+| LeoEcsContext           | 100000      |  3,593.4 μs |  37.17 μs |    32.95 μs |  3,596.6 μs |      400 B |
+| TinyEcsContext          | 100000      |  4,004.2 μs |  79.75 μs |   176.72 μs |  3,982.3 μs |  2400400 B |
+| ArchContext             | 100000      | 10,612.9 μs | 132.48 μs |   110.63 μs | 10,620.7 μs |     1744 B |
+| FennecsContext          | 100000      | 52,825.4 μs | 986.53 μs | 1,382.98 μs | 52,124.7 μs | 71200400 B |
+| FlecsNETContext         | 100000      | 88,251.8 μs | 534.28 μs |   473.62 μs | 88,186.1 μs |      400 B |
 
 # TwoAddTwoComponents
 
-| Context                                     | EntityCount |                                          Mean |     Error |    StdDev |             Ratio | RatioSD |   Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|----------:|----------:|------------------:|--------:|------------:|-----------------:|
-| Arch                                        | 100000      |                                   10,473.2 μs |  74.68 μs |  58.30 μs |          baseline |         |      1072 B |                  |
-| DefaultECS                                  | 100000      |                                    2,612.2 μs |  24.66 μs |  20.59 μs |      4.01x faster |   0.04x |       400 B |       2.68x less |
-| DragonECS                                   | 100000      |                                    1,312.5 μs |  25.67 μs |  44.96 μs |      7.99x faster |   0.26x |       400 B |       2.68x less |
-| Fennecs                                     | 100000      |                                  117,630.6 μs | 560.49 μs | 468.04 μs |     11.23x slower |   0.07x | 155200400 B | 144,776.49x more |
-| FlecsNET                                    | 100000      |                                  164,428.1 μs | 605.00 μs | 536.32 μs |     15.70x slower |   0.10x |       400 B |       2.68x less |
-| Friflo                                      | 100000      |                                    5,220.3 μs |  26.95 μs |  25.21 μs |      2.01x faster |   0.01x |       400 B |       2.68x less |
-| LeoEcs                                      | 100000      |                                    6,824.6 μs |  75.31 μs |  70.45 μs |      1.53x faster |   0.02x |       400 B |       2.68x less |
-| LeoEcsLite                                  | 100000      |                                    3,809.0 μs |  25.71 μs |  20.07 μs |      2.75x faster |   0.02x |       400 B |       2.68x less |
-| Morpeh                                      | 100000      |                                    3,491.7 μs |  69.78 μs |  93.15 μs |      3.00x faster |   0.08x |       400 B |       2.68x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**681.9 μs** |   7.44 μs |   6.21 μs | **15.36x faster** |   0.16x |       400 B |       2.68x less |
-| TinyEcs                                     | 100000      |                                    6,940.3 μs | 137.10 μs | 152.39 μs |      1.51x faster |   0.03x |   4800400 B |   4,477.99x more |
-| Xeno                                        | 100000      |                                    3,059.7 μs |  55.24 μs |  89.20 μs |      3.43x faster |   0.10x |   1045232 B |     975.03x more |
+| Context                 | EntityCount |         Mean |       Error |      StdDev |   Allocated |
+|-------------------------|-------------|-------------:|------------:|------------:|------------:|
+| 📍 **StaticEcsContext** | 100000      |     726.1 μs |    12.05 μs |    10.68 μs |       400 B |
+| DragonECSContext        | 100000      |   1,431.1 μs |    28.56 μs |    53.65 μs |       400 B |
+| MassiveEcsContext       | 100000      |   1,440.5 μs |    19.21 μs |    17.03 μs |       400 B |
+| DefaultECSContext       | 100000      |   2,688.3 μs |    46.57 μs |    41.28 μs |       400 B |
+| MorpehContext           | 100000      |   3,560.7 μs |    75.94 μs |   215.42 μs |       400 B |
+| XenoContext             | 100000      |   3,631.1 μs |    59.08 μs |    49.33 μs |    983696 B |
+| LeoEcsLiteContext       | 100000      |   3,819.6 μs |    69.14 μs |    79.62 μs |       400 B |
+| FrifloContext           | 100000      |   4,734.9 μs |    10.79 μs |     8.42 μs |       400 B |
+| LeoEcsContext           | 100000      |   6,282.3 μs |    56.24 μs |    43.91 μs |       112 B |
+| TinyEcsContext          | 100000      |   7,101.2 μs |   203.52 μs |   528.98 μs |   4800400 B |
+| ArchContext             | 100000      |  12,446.9 μs |   162.16 μs |   135.41 μs |      1456 B |
+| FennecsContext          | 100000      | 116,758.2 μs | 2,299.30 μs | 3,777.82 μs | 155200400 B |
+| FlecsNETContext         | 100000      | 190,912.0 μs | 1,986.51 μs | 1,858.18 μs |       400 B |
 
 # TwoRemoveOneComponent
 
-| Context                                     | EntityCount |                                          Mean |       Error |    StdDev |      Median |             Ratio | RatioSD |  Allocated |      Alloc Ratio |
-|---------------------------------------------|-------------|----------------------------------------------:|------------:|----------:|------------:|------------------:|--------:|-----------:|-----------------:|
-| Arch                                        | 100000      |                                   32,465.9 μs |   447.77 μs | 396.94 μs | 32,413.9 μs |          baseline |         | 24001688 B |                  |
-| DefaultECS                                  | 100000      |                                    1,054.7 μs |    20.12 μs |  23.95 μs |  1,047.2 μs |     30.80x faster |   0.76x |      400 B | 60,004.220x less |
-| DragonECS                                   | 100000      |                                    1,007.8 μs |    71.64 μs | 186.21 μs |    949.2 μs |     32.91x faster |   3.92x |      400 B | 60,004.220x less |
-| Fennecs                                     | 100000      |                                   39,575.8 μs |   279.18 μs | 247.49 μs | 39,537.5 μs |      1.22x slower |   0.02x | 44000400 B |      1.833x more |
-| FlecsNET                                    | 100000      |                                   72,528.5 μs | 1,057.88 μs | 989.54 μs | 72,315.8 μs |      2.23x slower |   0.04x |      400 B | 60,004.220x less |
-| Friflo                                      | 100000      |                                    1,734.4 μs |    32.85 μs |  35.15 μs |  1,724.7 μs |     18.73x faster |   0.42x |      400 B | 60,004.220x less |
-| LeoEcs                                      | 100000      |                                    6,314.1 μs |   125.93 μs | 154.66 μs |  6,294.5 μs |      5.14x faster |   0.14x |      400 B | 60,004.220x less |
-| LeoEcsLite                                  | 100000      |                                    2,508.1 μs |    42.71 μs |  37.86 μs |  2,498.8 μs |     12.95x faster |   0.24x |      400 B | 60,004.220x less |
-| Morpeh                                      | 100000      |                                    2,925.0 μs |    58.42 μs | 157.93 μs |  2,875.1 μs |     11.13x faster |   0.59x |      400 B | 60,004.220x less |
-| <span style="color: white;">**[StaticEcs]** | **100000**  | <span style="color: lightgreen;">**459.4 μs** |     5.43 μs |   4.24 μs |    458.8 μs | **70.68x faster** |   1.04x |      400 B | 60,004.220x less |
-| TinyEcs                                     | 100000      |                                      720.3 μs |    13.99 μs |  13.74 μs |    715.2 μs |     45.09x faster |   0.97x |      400 B | 60,004.220x less |
-| Xeno                                        | 100000      |                                    2,462.2 μs |    48.77 μs |  78.75 μs |  2,444.6 μs |     13.20x faster |   0.41x |      400 B | 60,004.220x less |
+| Context                 | EntityCount |        Mean |     Error |      StdDev |      Median |  Allocated |
+|-------------------------|-------------|------------:|----------:|------------:|------------:|-----------:|
+| 📍 **StaticEcsContext** | 100000      |    532.8 μs |   3.96 μs |     3.51 μs |    532.1 μs |      400 B |
+| MassiveEcsContext       | 100000      |    674.5 μs |  12.43 μs |    26.22 μs |    667.4 μs |      400 B |
+| TinyEcsContext          | 100000      |    892.8 μs |  17.52 μs |    15.53 μs |    896.6 μs |      400 B |
+| DragonECSContext        | 100000      |    986.3 μs |  19.68 μs |    43.61 μs |    972.6 μs |      400 B |
+| DefaultECSContext       | 100000      |  1,130.0 μs |  18.00 μs |    15.95 μs |  1,127.7 μs |      400 B |
+| FrifloContext           | 100000      |  1,911.4 μs |  27.74 μs |    29.69 μs |  1,903.2 μs |      400 B |
+| LeoEcsLiteContext       | 100000      |  2,295.9 μs |  29.10 μs |    24.30 μs |  2,295.2 μs |      400 B |
+| MorpehContext           | 100000      |  2,994.8 μs |  77.69 μs |   215.28 μs |  2,920.9 μs |       64 B |
+| XenoContext             | 100000      |  3,126.4 μs |  46.45 μs |    75.00 μs |  3,107.5 μs |   983352 B |
+| LeoEcsContext           | 100000      |  6,011.2 μs | 114.84 μs |   136.71 μs |  5,983.1 μs |      400 B |
+| ArchContext             | 100000      | 32,056.2 μs | 473.44 μs |   395.34 μs | 32,075.3 μs | 24005248 B |
+| FennecsContext          | 100000      | 36,663.9 μs | 726.65 μs | 1,152.54 μs | 36,240.5 μs | 44000400 B |
+| FlecsNETContext         | 100000      | 67,200.7 μs | 639.96 μs |   598.62 μs | 67,264.7 μs |      400 B |
 

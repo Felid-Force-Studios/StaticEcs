@@ -38,14 +38,17 @@ namespace FFS.Libraries.StaticEcs {
                 _poolsWithAutoInit = new IStandardComponentsWrapper[componentsCapacity];
                 _poolsWithAutoReset = new IStandardComponentsWrapper[componentsCapacity];
                 _poolIdxByType = new Dictionary<Type, int>();
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                _debugEventListeners ??= new List<IStandardComponentsDebugEventListener>();
+                #endif
             }
 
             [MethodImpl(AggressiveInlining)]
             internal void Initialize() { }
 
             [MethodImpl(AggressiveInlining)]
-            internal StandardComponentDynId RegisterComponentType<T>() where T : struct, IStandardComponent {
-                if (StandardComponentInfo<T>.IsRegistered()) {
+            internal StandardComponentDynId RegisterComponentType<T>(AutoInitHandler<T> autoInit = null, AutoResetHandler<T> autoReset = null, AutoCopyHandler<T> autoCopy = null) where T : struct, IStandardComponent {
+                if (StandardComponents<T>.Value.IsRegistered()) {
                     return StandardComponents<T>.Value.DynamicId();
                 }
 
@@ -58,9 +61,36 @@ namespace FFS.Libraries.StaticEcs {
                 _pools[_poolsCount] = new StandardComponentsWrapper<T>();
                 _poolIdxByType[typeof(T)] = _poolsCount;
                 StandardComponents<T>.Value.Create(_poolsCount);
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                StandardComponents<T>.Value.debugEventListeners = _debugEventListeners;
+                #endif
+                SetAutoInit(autoInit);
+                SetAutoReset(autoReset);
+                SetAutoCopy(autoCopy);
                 _poolsCount++;
                 
                 return StandardComponents<T>.Value.DynamicId();
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public void SetAutoInit<T>(AutoInitHandler<T> handler) where T : struct, IStandardComponent {
+                if (handler != null && StandardComponents<T>.Value.SetAutoInit(handler)) {
+                    AddAutoInitPool(StandardComponents<T>.Value.id);
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void SetAutoReset<T>(AutoResetHandler<T> handler) where T : struct, IStandardComponent {
+                if (handler != null && StandardComponents<T>.Value.SetAutoReset(handler)) {
+                    AddAutoResetPool(StandardComponents<T>.Value.id);
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void SetAutoCopy<T>(AutoCopyHandler<T> handler) where T : struct, IStandardComponent {
+                if (handler != null && StandardComponents<T>.Value.SetAutoCopy(handler)) {
+                    
+                }
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -85,7 +115,7 @@ namespace FFS.Libraries.StaticEcs {
             internal StandardComponentsWrapper<T> GetPool<T>() where T : struct, IStandardComponent {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"World<{typeof(WorldType)}>, Method: GetPool<{typeof(T)}>, World not initialized");
-                if (!StandardComponentInfo<T>.IsRegistered()) throw new Exception($"World<{typeof(WorldType)}>, Method: GetPool<{typeof(T)}>, Component type not registered");
+                if (!StandardComponents<T>.Value.IsRegistered()) throw new Exception($"World<{typeof(WorldType)}>, Method: GetPool<{typeof(T)}>, Component type not registered");
                 #endif
                 return default;
             }
@@ -124,7 +154,7 @@ namespace FFS.Libraries.StaticEcs {
                 if (!World.IsInitialized()) throw new Exception($"World<{typeof(WorldType)}>, Method: GetPool<{typeof(T)}>, World not initialized");
                 #endif
                 pool = default;
-                return StandardComponentInfo<T>.IsRegistered();
+                return StandardComponents<T>.Value.IsRegistered();
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -180,7 +210,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            internal void Resize(int size) {
+            internal void Resize(uint size) {
                 for (int i = 0, iMax = _poolsCount; i < iMax; i++) {
                     _pools[i].Resize(size);
                 }
@@ -219,22 +249,6 @@ namespace FFS.Libraries.StaticEcs {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 _debugEventListeners = null;
                 #endif
-            }
-
-            #if ENABLE_IL2CPP
-            [Il2CppEagerStaticClassConstruction]
-            #endif
-            public struct StandardComponentInfo<T> where T : struct, IStandardComponent {
-                private static bool Registered;
-
-                [MethodImpl(AggressiveInlining)]
-                internal static void Register() => Registered = true;
-
-                [MethodImpl(AggressiveInlining)]
-                internal static void Reset() => Registered = false;
-
-                [MethodImpl(AggressiveInlining)]
-                public static bool IsRegistered() => Registered;
             }
         }
         

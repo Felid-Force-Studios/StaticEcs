@@ -93,10 +93,10 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     public readonly struct WithAddsNothing : IQueryMethod {
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType { }
+        public void SetData<WorldType>(ref uint minComponentsCount, ref uint[] minEntities) where WorldType : struct, IWorldType { }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return true;
         }
 
@@ -117,12 +117,12 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minComponentsCount, ref uint[] minEntities) where WorldType : struct, IWorldType {
             _qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return _qm1.CheckEntity(entityId);
         }
 
@@ -148,13 +148,13 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minComponentsCount, ref uint[] minEntities) where WorldType : struct, IWorldType {
             qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId);
         }
 
@@ -184,14 +184,14 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minComponentsCount, ref uint[] minEntities) where WorldType : struct, IWorldType {
             qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId);
         }
 
@@ -225,7 +225,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minComponentsCount, ref uint[] minEntities) where WorldType : struct, IWorldType {
             qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
@@ -233,7 +233,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId) && qm4.CheckEntity(entityId);
         }
 
@@ -271,7 +271,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minComponentsCount, ref uint[] minEntities) where WorldType : struct, IWorldType {
             qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
@@ -280,7 +280,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId) && qm4.CheckEntity(entityId) && qm5.CheckEntity(entityId);
         }
 
@@ -322,7 +322,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minComponentsCount, ref uint[] minEntities) where WorldType : struct, IWorldType {
             qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
@@ -332,7 +332,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId) && qm4.CheckEntity(entityId) && qm5.CheckEntity(entityId) && qm6.CheckEntity(entityId);
         }
 
@@ -378,7 +378,7 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minComponentsCount, ref uint[] minEntities) where WorldType : struct, IWorldType {
             qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
@@ -389,7 +389,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId) && qm4.CheckEntity(entityId) && qm5.CheckEntity(entityId) && qm6.CheckEntity(entityId) && qm7.CheckEntity(entityId);
         }
 
@@ -440,7 +440,7 @@ namespace FFS.Libraries.StaticEcs {
 
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref int minComponentsCount, ref int[] minEntities) where WorldType : struct, IWorldType {
+        public void SetData<WorldType>(ref uint minComponentsCount, ref uint[] minEntities) where WorldType : struct, IWorldType {
             qm1.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm2.SetData<WorldType>(ref minComponentsCount, ref minEntities);
             qm3.SetData<WorldType>(ref minComponentsCount, ref minEntities);
@@ -452,7 +452,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(int entityId) {
+        public bool CheckEntity(uint entityId) {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId) && qm4.CheckEntity(entityId) && qm5.CheckEntity(entityId) && qm6.CheckEntity(entityId) && qm7.CheckEntity(entityId) && qm8.CheckEntity(entityId);
         }
 

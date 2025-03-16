@@ -20,7 +20,7 @@ namespace FFS.Libraries.StaticEcs {
         #endif
         public abstract partial class Systems<SysType> where SysType : struct, ISystemsType {
             internal static ISystemsBatch[] _batchSystems;
-            internal static (ISystem system, short order)[] _allSystems;
+            internal static (ISystem system, short order, int index)[] _allSystems;
             internal static int _allSystemsCount;
             internal static int _batchSystemsCount;
 
@@ -30,25 +30,31 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static void Create(uint baseSize = 64) {
                 _batchSystems = new ISystemsBatch[baseSize];
-                _allSystems = new (ISystem, short)[baseSize];
+                _allSystems = new (ISystem, short, int)[baseSize];
             }
 
             [MethodImpl(AggressiveInlining)]
             public static void AddCallOnce<S>(S system, short order = 0) where S : ICallOnceSystem {
                 EnsureSize();
-                _allSystems[_allSystemsCount++] = (system, order);
+                _allSystems[_allSystemsCount] = (system, order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
             public static void AddUpdate<S01>(S01 s01, short order = 0) where S01 : IUpdateSystem {
                 EnsureSize();
                 _updateSystemsCount += 1;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<S01>(s01), order);
+                _allSystems[_allSystemsCount] = (new SystemsBatch<S01>(s01), order, _allSystemsCount);
+                _allSystemsCount++;
             }
 
             [MethodImpl(AggressiveInlining)]
             public static void Initialize() {
-                Array.Sort(_allSystems, 0, _allSystemsCount, Comparer<(ISystem, short order)>.Create((a, b) => a.order.CompareTo(b.order)));
+                Array.Sort(_allSystems, 0, _allSystemsCount, Comparer<(ISystem, short order, int index)>.Create(
+                    (a, b) => a.order != b.order 
+                        ? a.order.CompareTo(b.order) 
+                        : a.index.CompareTo(b.index)
+                ));
                 
                 for (var i = 0; i < _allSystemsCount; i++) {
                     var system = _allSystems[i].system;
@@ -126,7 +132,8 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 2;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<S01, S02>(s01, s02), order);
+                _allSystems[_allSystemsCount] = (new SystemsBatch<S01, S02>(s01, s02), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -139,7 +146,8 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 3;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<S01, S02, S03>(s01, s02, s03), order);
+                _allSystems[_allSystemsCount] = (new SystemsBatch<S01, S02, S03>(s01, s02, s03), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -152,7 +160,8 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 4;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<S01, S02, S03, S04>(s01, s02, s03, s04), order);
+                _allSystems[_allSystemsCount] = (new SystemsBatch<S01, S02, S03, S04>(s01, s02, s03, s04), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -165,7 +174,8 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 5;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<S01, S02, S03, S04, S05>(s01, s02, s03, s04, s05), order);
+                _allSystems[_allSystemsCount] = (new SystemsBatch<S01, S02, S03, S04, S05>(s01, s02, s03, s04, s05), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -178,7 +188,8 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 6;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<S01, S02, S03, S04, S05, S06>(s01, s02, s03, s04, s05, s06), order);
+                _allSystems[_allSystemsCount] = (new SystemsBatch<S01, S02, S03, S04, S05, S06>(s01, s02, s03, s04, s05, s06), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -191,7 +202,8 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 7;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<S01, S02, S03, S04, S05, S06, S07>(s01, s02, s03, s04, s05, s06, s07), order);
+                _allSystems[_allSystemsCount] = (new SystemsBatch<S01, S02, S03, S04, S05, S06, S07>(s01, s02, s03, s04, s05, s06, s07), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -204,7 +216,8 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 8;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<S01, S02, S03, S04, S05, S06, S07, S08>(s01, s02, s03, s04, s05, s06, s07, s08), order);
+                _allSystems[_allSystemsCount] = (new SystemsBatch<S01, S02, S03, S04, S05, S06, S07, S08>(s01, s02, s03, s04, s05, s06, s07, s08), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -220,11 +233,12 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 9;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<
+                _allSystems[_allSystemsCount] = (new SystemsBatch<
                                                        S01, S02, S03, S04, S05, S06, S07, S08,
                                                        S09
                                                    >(s01, s02, s03, s04, s05, s06, s07, s08,
-                                                     s09), order);
+                                                     s09), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -240,11 +254,12 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 10;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<
+                _allSystems[_allSystemsCount] = (new SystemsBatch<
                                                        S01, S02, S03, S04, S05, S06, S07, S08,
                                                        S09, S10
                                                    >(s01, s02, s03, s04, s05, s06, s07, s08,
-                                                     s09, s10), order);
+                                                     s09, s10), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -260,11 +275,12 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 11;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<
+                _allSystems[_allSystemsCount] = (new SystemsBatch<
                                                        S01, S02, S03, S04, S05, S06, S07, S08,
                                                        S09, S10, S11
                                                    >(s01, s02, s03, s04, s05, s06, s07, s08,
-                                                     s09, s10, s11), order);
+                                                     s09, s10, s11), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -280,11 +296,12 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 12;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<
+                _allSystems[_allSystemsCount] = (new SystemsBatch<
                                                        S01, S02, S03, S04, S05, S06, S07, S08,
                                                        S09, S10, S11, S12
                                                    >(s01, s02, s03, s04, s05, s06, s07, s08,
-                                                     s09, s10, s11, s12), order);
+                                                     s09, s10, s11, s12), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -300,11 +317,12 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 13;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<
+                _allSystems[_allSystemsCount] = (new SystemsBatch<
                                                        S01, S02, S03, S04, S05, S06, S07, S08,
                                                        S09, S10, S11, S12, S13
                                                    >(s01, s02, s03, s04, s05, s06, s07, s08,
-                                                     s09, s10, s11, s12, s13), order);
+                                                     s09, s10, s11, s12, s13), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -320,11 +338,12 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 14;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<
+                _allSystems[_allSystemsCount] = (new SystemsBatch<
                                                        S01, S02, S03, S04, S05, S06, S07, S08,
                                                        S09, S10, S11, S12, S13, S14
                                                    >(s01, s02, s03, s04, s05, s06, s07, s08,
-                                                     s09, s10, s11, s12, s13, s14), order);
+                                                     s09, s10, s11, s12, s13, s14), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -340,11 +359,12 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 15;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<
+                _allSystems[_allSystemsCount] = (new SystemsBatch<
                                                        S01, S02, S03, S04, S05, S06, S07, S08,
                                                        S09, S10, S11, S12, S13, S14, S15
                                                    >(s01, s02, s03, s04, s05, s06, s07, s08,
-                                                     s09, s10, s11, s12, s13, s14, s15), order);
+                                                     s09, s10, s11, s12, s13, s14, s15), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -360,11 +380,12 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 16;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<
+                _allSystems[_allSystemsCount] = (new SystemsBatch<
                                                        S01, S02, S03, S04, S05, S06, S07, S08,
                                                        S09, S10, S11, S12, S13, S14, S15, S16
                                                    >(s01, s02, s03, s04, s05, s06, s07, s08,
-                                                     s09, s10, s11, s12, s13, s14, s15, s16), order);
+                                                     s09, s10, s11, s12, s13, s14, s15, s16), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -383,13 +404,14 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 24;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<
+                _allSystems[_allSystemsCount] = (new SystemsBatch<
                                                        S01, S02, S03, S04, S05, S06, S07, S08,
                                                        S09, S10, S11, S12, S13, S14, S15, S16,
                                                        S17, S18, S19, S20, S21, S22, S23, S24
                                                    >(s01, s02, s03, s04, s05, s06, s07, s08,
                                                      s09, s10, s11, s12, s13, s14, s15, s16,
-                                                     s17, s18, s19, s20, s21, s22, s23, s24), order);
+                                                     s17, s18, s19, s20, s21, s22, s23, s24), order, _allSystemsCount);
+                _allSystemsCount++;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -411,7 +433,7 @@ namespace FFS.Libraries.StaticEcs {
             {
                 EnsureSize();
                 _updateSystemsCount += 32;
-                _allSystems[_allSystemsCount++] = (new SystemsBatch<
+                _allSystems[_allSystemsCount] = (new SystemsBatch<
                                                        S01, S02, S03, S04, S05, S06, S07, S08,
                                                        S09, S10, S11, S12, S13, S14, S15, S16,
                                                        S17, S18, S19, S20, S21, S22, S23, S24,
@@ -419,7 +441,8 @@ namespace FFS.Libraries.StaticEcs {
                                                    >(s01, s02, s03, s04, s05, s06, s07, s08,
                                                      s09, s10, s11, s12, s13, s14, s15, s16,
                                                      s17, s18, s19, s20, s21, s22, s23, s24,
-                                                     s25, s26, s27, s28, s29, s30, s31, s32), order);
+                                                     s25, s26, s27, s28, s29, s30, s31, s32), order, _allSystemsCount);
+                _allSystemsCount++;
             }
         }
     }

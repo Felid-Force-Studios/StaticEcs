@@ -16,18 +16,18 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
         public readonly partial struct Entity : IEquatable<Entity>, IEntity {
-            internal readonly int _id;
-            internal Entity(int id) {
+            internal readonly uint _id;
+            internal Entity(uint id) {
                 _id = id;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static Entity FromIdx(int idx) => new(idx);
+            public static Entity FromIdx(uint idx) => new(idx);
 
             [MethodImpl(AggressiveInlining)]
             public short Version() => StandardComponents<EntityVersion>.Value.RefMutInternal(this).Value;
             
-            int IEntity.GetId() => _id;
+            uint IEntity.GetId() => _id;
 
             [MethodImpl(AggressiveInlining)]
             Type IEntity.WorldTypeType() => typeof(WorldType);
@@ -47,7 +47,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public void MoveTo(Entity dstEntity) {
                 World.CopyEntityData(this, dstEntity);
-                this.Destroy();
+                Destroy();
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -68,7 +68,7 @@ namespace FFS.Libraries.StaticEcs {
 
             #region NEW_BY_TYPE_SINGLE
 
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_EMPTY_ENTITY
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG || !FFS_ECS_LIFECYCLE_ENTITY
             [MethodImpl(AggressiveInlining)]
             public static Entity New() {
                 return World.CreateEntityInternal();
@@ -231,7 +231,7 @@ namespace FFS.Libraries.StaticEcs {
 
             #region NEW_BY_TYPE_BATCH
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1>(int count, Action<Entity> onCreate = null) where C1 : struct, IComponent {
+            public static void NewOnes<C1>(uint count, Action<Entity> onCreate = null) where C1 : struct, IComponent {
                 Components<C1>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
@@ -241,7 +241,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2>(int count, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2>(uint count, Action<Entity> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
                 Components<C1>.Value.EnsureSize(count);
@@ -254,7 +254,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3>(int count, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3>(uint count, Action<Entity> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent {
@@ -269,7 +269,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3, C4>(int count, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3, C4>(uint count, Action<Entity> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -286,7 +286,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3, C4, C5>(int count, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3, C4, C5>(uint count, Action<Entity> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -305,7 +305,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1>(int count, C1 c1, Action<Entity> onCreate = null) where C1 : struct, IComponent {
+            public static void NewOnes<C1>(uint count, C1 c1, Action<Entity> onCreate = null) where C1 : struct, IComponent {
                 Components<C1>.Value.EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
@@ -315,7 +315,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2>(int count, C1 c1, C2 c2, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2>(uint count, C1 c1, C2 c2, Action<Entity> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
                 Components<C1>.Value.EnsureSize(count);
@@ -328,7 +328,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3>(int count, C1 c1, C2 c2, C3 c3, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3>(uint count, C1 c1, C2 c2, C3 c3, Action<Entity> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent {
@@ -343,7 +343,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3, C4>(int count, C1 c1, C2 c2, C3 c3, C4 c4, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3, C4>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, Action<Entity> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -360,7 +360,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3, C4, C5>(int count, C1 c1, C2 c2, C3 c3, C4 c4, C5 c5, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3, C4, C5>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, C5 c5, Action<Entity> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -381,7 +381,7 @@ namespace FFS.Libraries.StaticEcs {
             
             #region NEW_BY_DYN_ID_BATCH
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes(int count, ComponentDynId component, Action<Entity> onCreate = null) {
+            public static void NewOnes(uint count, ComponentDynId component, Action<Entity> onCreate = null) {
                 ModuleComponents.Value.GetPool(component).EnsureSize(count);
                 World.CreateEntitiesInternal(
                     count,
@@ -391,7 +391,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes(int count, ComponentDynId comp1, ComponentDynId comp2, Action<Entity> onCreate = null) {
+            public static void NewOnes(uint count, ComponentDynId comp1, ComponentDynId comp2, Action<Entity> onCreate = null) {
                 ModuleComponents.Value.GetPool(comp1).EnsureSize(count);
                 ModuleComponents.Value.GetPool(comp2).EnsureSize(count);
                 World.CreateEntitiesInternal(
@@ -402,7 +402,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes(int count, ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3, Action<Entity> onCreate = null) {
+            public static void NewOnes(uint count, ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3, Action<Entity> onCreate = null) {
                 ModuleComponents.Value.GetPool(comp1).EnsureSize(count);
                 ModuleComponents.Value.GetPool(comp2).EnsureSize(count);
                 ModuleComponents.Value.GetPool(comp3).EnsureSize(count);
@@ -414,7 +414,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes(int count, ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3, ComponentDynId comp4, Action<Entity> onCreate = null) {
+            public static void NewOnes(uint count, ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3, ComponentDynId comp4, Action<Entity> onCreate = null) {
                 ModuleComponents.Value.GetPool(comp1).EnsureSize(count);
                 ModuleComponents.Value.GetPool(comp2).EnsureSize(count);
                 ModuleComponents.Value.GetPool(comp3).EnsureSize(count);
@@ -427,7 +427,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes(int count, ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3, ComponentDynId comp4, ComponentDynId comp5, Action<Entity> onCreate = null) {
+            public static void NewOnes(uint count, ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3, ComponentDynId comp4, ComponentDynId comp5, Action<Entity> onCreate = null) {
                 ModuleComponents.Value.GetPool(comp1).EnsureSize(count);
                 ModuleComponents.Value.GetPool(comp2).EnsureSize(count);
                 ModuleComponents.Value.GetPool(comp3).EnsureSize(count);
@@ -448,7 +448,7 @@ namespace FFS.Libraries.StaticEcs {
             public override bool Equals(object obj) => throw new Exception("Entity` Equals object` not allowed!");
 
             [MethodImpl(AggressiveInlining)]
-            public override int GetHashCode() => _id;
+            public override int GetHashCode() => (int) _id;
 
             [MethodImpl(AggressiveInlining)]
             public string ToPrettyString() => World.ToPrettyStringEntity(this);
@@ -459,7 +459,7 @@ namespace FFS.Libraries.StaticEcs {
 
     public partial interface IEntity {
         
-        internal int GetId();
+        internal uint GetId();
         
         internal Type WorldTypeType();
 
@@ -476,7 +476,7 @@ namespace FFS.Libraries.StaticEcs {
     }
     
     public struct PackedEntity : IEquatable<PackedEntity> {
-        internal int _entity;
+        internal uint _entity;
         internal short _version;
 
         [MethodImpl(AggressiveInlining)]

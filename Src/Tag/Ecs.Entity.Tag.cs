@@ -117,57 +117,106 @@ namespace FFS.Libraries.StaticEcs {
 
             #region DELETE
             [MethodImpl(AggressiveInlining)]
-            public bool DeleteTag<C>() where C : struct, ITag {
-                return Tags<C>.Value.Delete(this);
+            public void DeleteTag<C>() where C : struct, ITag {
+                Tags<C>.Value.Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool DeleteTag<C1, C2>()
+            public void DeleteTag<C1, C2>()
                 where C1 : struct, ITag
                 where C2 : struct, ITag {
-                var delC1 = Tags<C1>.Value.Delete(this);
-                var delC2 = Tags<C2>.Value.Delete(this);
-                return delC1 && delC2;
+                Tags<C1>.Value.Delete(this);
+                Tags<C2>.Value.Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool DeleteTag<C1, C2, C3>()
+            public void DeleteTag<C1, C2, C3>()
                 where C1 : struct, ITag
                 where C2 : struct, ITag
                 where C3 : struct, ITag {
-                var delC1 = Tags<C1>.Value.Delete(this);
-                var delC2 = Tags<C2>.Value.Delete(this);
-                var delC3 = Tags<C3>.Value.Delete(this);
-
-                return delC1 && delC2 && delC3;
+                Tags<C1>.Value.Delete(this);
+                Tags<C2>.Value.Delete(this);
+                Tags<C3>.Value.Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool DeleteTag<C1, C2, C3, C4>()
+            public void DeleteTag<C1, C2, C3, C4>()
                 where C1 : struct, ITag
                 where C2 : struct, ITag
                 where C3 : struct, ITag
                 where C4 : struct, ITag {
-                var delC1 = Tags<C1>.Value.Delete(this);
-                var delC2 = Tags<C2>.Value.Delete(this);
-                var delC3 = Tags<C3>.Value.Delete(this);
-                var delC4 = Tags<C4>.Value.Delete(this);
-
-                return delC1 && delC2 && delC3 && delC4;
+                Tags<C1>.Value.Delete(this);
+                Tags<C2>.Value.Delete(this);
+                Tags<C3>.Value.Delete(this);
+                Tags<C4>.Value.Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool DeleteTag<C1, C2, C3, C4, C5>()
+            public void DeleteTag<C1, C2, C3, C4, C5>()
                 where C1 : struct, ITag
                 where C2 : struct, ITag
                 where C3 : struct, ITag
                 where C4 : struct, ITag
                 where C5 : struct, ITag {
-                var delC1 = Tags<C1>.Value.Delete(this);
-                var delC2 = Tags<C2>.Value.Delete(this);
-                var delC3 = Tags<C3>.Value.Delete(this);
-                var delC4 = Tags<C4>.Value.Delete(this);
-                var delC5 = Tags<C5>.Value.Delete(this);
+                Tags<C1>.Value.Delete(this);
+                Tags<C2>.Value.Delete(this);
+                Tags<C3>.Value.Delete(this);
+                Tags<C4>.Value.Delete(this);
+                Tags<C5>.Value.Delete(this);
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDeleteTag<C>() where C : struct, ITag {
+                return Tags<C>.Value.TryDelete(this);
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDeleteTag<C1, C2>()
+                where C1 : struct, ITag
+                where C2 : struct, ITag {
+                var delC1 = Tags<C1>.Value.TryDelete(this);
+                var delC2 = Tags<C2>.Value.TryDelete(this);
+                return delC1 && delC2;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDeleteTag<C1, C2, C3>()
+                where C1 : struct, ITag
+                where C2 : struct, ITag
+                where C3 : struct, ITag {
+                var delC1 = Tags<C1>.Value.TryDelete(this);
+                var delC2 = Tags<C2>.Value.TryDelete(this);
+                var delC3 = Tags<C3>.Value.TryDelete(this);
+
+                return delC1 && delC2 && delC3;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDeleteTag<C1, C2, C3, C4>()
+                where C1 : struct, ITag
+                where C2 : struct, ITag
+                where C3 : struct, ITag
+                where C4 : struct, ITag {
+                var delC1 = Tags<C1>.Value.TryDelete(this);
+                var delC2 = Tags<C2>.Value.TryDelete(this);
+                var delC3 = Tags<C3>.Value.TryDelete(this);
+                var delC4 = Tags<C4>.Value.TryDelete(this);
+
+                return delC1 && delC2 && delC3 && delC4;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDeleteTag<C1, C2, C3, C4, C5>()
+                where C1 : struct, ITag
+                where C2 : struct, ITag
+                where C3 : struct, ITag
+                where C4 : struct, ITag
+                where C5 : struct, ITag {
+                var delC1 = Tags<C1>.Value.TryDelete(this);
+                var delC2 = Tags<C2>.Value.TryDelete(this);
+                var delC3 = Tags<C3>.Value.TryDelete(this);
+                var delC4 = Tags<C4>.Value.TryDelete(this);
+                var delC5 = Tags<C5>.Value.TryDelete(this);
 
                 return delC1 && delC2 && delC3 && delC4 && delC5;
             }
@@ -293,44 +342,79 @@ namespace FFS.Libraries.StaticEcs {
             
             #region DELETE
             [MethodImpl(AggressiveInlining)]
-            public bool DeleteTag(TagDynId c) {
-                return ModuleTags.Value.GetPool(c).Del(this);
+            public void DeleteTag(TagDynId c) {
+                ModuleTags.Value.GetPool(c).Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool DeleteTag(TagDynId c1, TagDynId c2) {
-                var delC1 = ModuleTags.Value.GetPool(c1).Del(this);
-                var delC2 = ModuleTags.Value.GetPool(c2).Del(this);
+            public void DeleteTag(TagDynId c1, TagDynId c2) {
+                ModuleTags.Value.GetPool(c1).Delete(this);
+                ModuleTags.Value.GetPool(c2).Delete(this);
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void DeleteTag(TagDynId c1, TagDynId c2, TagDynId c3) {
+                ModuleTags.Value.GetPool(c1).Delete(this);
+                ModuleTags.Value.GetPool(c2).Delete(this);
+                ModuleTags.Value.GetPool(c3).Delete(this);
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void DeleteTag(TagDynId c1, TagDynId c2, TagDynId c3, TagDynId c4) {
+                ModuleTags.Value.GetPool(c1).Delete(this);
+                ModuleTags.Value.GetPool(c2).Delete(this);
+                ModuleTags.Value.GetPool(c3).Delete(this);
+                ModuleTags.Value.GetPool(c4).Delete(this);
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void DeleteTag(TagDynId c1, TagDynId c2, TagDynId c3, TagDynId c4, TagDynId c5) {
+                ModuleTags.Value.GetPool(c1).Delete(this);
+                ModuleTags.Value.GetPool(c2).Delete(this);
+                ModuleTags.Value.GetPool(c3).Delete(this);
+                ModuleTags.Value.GetPool(c4).Delete(this);
+                ModuleTags.Value.GetPool(c5).Delete(this);
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDeleteTag(TagDynId c) {
+                return ModuleTags.Value.GetPool(c).TryDelete(this);
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool TryDeleteTag(TagDynId c1, TagDynId c2) {
+                var delC1 = ModuleTags.Value.GetPool(c1).TryDelete(this);
+                var delC2 = ModuleTags.Value.GetPool(c2).TryDelete(this);
 
                 return delC1 && delC2;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool DeleteTag(TagDynId c1, TagDynId c2, TagDynId c3) {
-                var delC1 = ModuleTags.Value.GetPool(c1).Del(this);
-                var delC2 = ModuleTags.Value.GetPool(c2).Del(this);
-                var delC3 = ModuleTags.Value.GetPool(c3).Del(this);
+            public bool TryDeleteTag(TagDynId c1, TagDynId c2, TagDynId c3) {
+                var delC1 = ModuleTags.Value.GetPool(c1).TryDelete(this);
+                var delC2 = ModuleTags.Value.GetPool(c2).TryDelete(this);
+                var delC3 = ModuleTags.Value.GetPool(c3).TryDelete(this);
 
                 return delC1 && delC2 && delC3;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool DeleteTag(TagDynId c1, TagDynId c2, TagDynId c3, TagDynId c4) {
-                var delC1 = ModuleTags.Value.GetPool(c1).Del(this);
-                var delC2 = ModuleTags.Value.GetPool(c2).Del(this);
-                var delC3 = ModuleTags.Value.GetPool(c3).Del(this);
-                var delC4 = ModuleTags.Value.GetPool(c4).Del(this);
+            public bool TryDeleteTag(TagDynId c1, TagDynId c2, TagDynId c3, TagDynId c4) {
+                var delC1 = ModuleTags.Value.GetPool(c1).TryDelete(this);
+                var delC2 = ModuleTags.Value.GetPool(c2).TryDelete(this);
+                var delC3 = ModuleTags.Value.GetPool(c3).TryDelete(this);
+                var delC4 = ModuleTags.Value.GetPool(c4).TryDelete(this);
 
                 return delC1 && delC2 && delC3 && delC4;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool DeleteTag(TagDynId c1, TagDynId c2, TagDynId c3, TagDynId c4, TagDynId c5) {
-                var delC1 = ModuleTags.Value.GetPool(c1).Del(this);
-                var delC2 = ModuleTags.Value.GetPool(c2).Del(this);
-                var delC3 = ModuleTags.Value.GetPool(c3).Del(this);
-                var delC4 = ModuleTags.Value.GetPool(c4).Del(this);
-                var delC5 = ModuleTags.Value.GetPool(c5).Del(this);
+            public bool TryDeleteTag(TagDynId c1, TagDynId c2, TagDynId c3, TagDynId c4, TagDynId c5) {
+                var delC1 = ModuleTags.Value.GetPool(c1).TryDelete(this);
+                var delC2 = ModuleTags.Value.GetPool(c2).TryDelete(this);
+                var delC3 = ModuleTags.Value.GetPool(c3).TryDelete(this);
+                var delC4 = ModuleTags.Value.GetPool(c4).TryDelete(this);
+                var delC5 = ModuleTags.Value.GetPool(c5).TryDelete(this);
 
                 return delC1 && delC2 && delC3 && delC4 && delC5;
             }
@@ -386,8 +470,13 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public bool DeleteTag(Type tagType) {
-                return ModuleTags.Value.GetPool(tagType).Del(this);
+            public bool TryDeleteTag(Type tagType) {
+                return ModuleTags.Value.GetPool(tagType).TryDelete(this);
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public void DeleteTag(Type tagType) {
+                ModuleTags.Value.GetPool(tagType).Delete(this);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -407,13 +496,25 @@ namespace FFS.Libraries.StaticEcs {
 
         public void SetTag<C>() where C : struct, ITag;
 
-        public bool DeleteTag<C>() where C : struct, ITag;
+        public bool TryDeleteTag<C>() where C : struct, ITag;
+
+        public void DeleteTag<C>() where C : struct, ITag;
+        
+        public bool HasAllOfTags(TagDynId c);
+        
+        public void SetTag(TagDynId c);
+
+        public bool TryDeleteTag(TagDynId c);
+
+        public void DeleteTag(TagDynId c);
 
         public bool HasAllOfTags(Type tagType);
 
         public void SetTag(Type tagType);
 
-        public bool DeleteTag(Type tagType);
+        public bool TryDeleteTag(Type tagType);
+
+        public void DeleteTag(Type tagType);
 
     }
 }

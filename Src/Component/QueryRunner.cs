@@ -220,7 +220,7 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             var count = Ecs<WorldType>.Components<C1>.Value.Count();
             var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
             with.SetData<WorldType>(ref count, ref entities);
 
             var di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
@@ -234,7 +234,7 @@ namespace FFS.Libraries.StaticEcs {
                 var entity = entities[count];
                 var i1 = di1[entity];
                 var i2 = di2[entity];
-                if (i1 >= 0 && i2 >= 0 && with.CheckEntity(entity)) {
+                if (i1 != Utils.EmptyComponent && i2 != Utils.EmptyComponent && with.CheckEntity(entity)) {
                     runner.Run(new Ecs<WorldType>.Entity(entity),
                                ref data1[i1],
                                ref data2[i2]
@@ -257,7 +257,7 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             var count = Ecs<WorldType>.Components<C1>.Value.Count();
             var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
             with.SetData<WorldType>(ref count, ref entities);
 
             var di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
@@ -271,7 +271,7 @@ namespace FFS.Libraries.StaticEcs {
                 var entity = entities[count];
                 var i1 = di1[entity];
                 var i2 = di2[entity];
-                if (i1 >= 0 && i2 >= 0 && with.CheckEntity(entity)) {
+                if (i1 != Utils.EmptyComponent && i2 != Utils.EmptyComponent && with.CheckEntity(entity)) {
                     runner(new Ecs<WorldType>.Entity(entity),
                                ref data1[i1],
                                ref data2[i2]
@@ -306,8 +306,8 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             var count = Ecs<WorldType>.Components<C1>.Value.Count();
             var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
+            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
             with.SetData<WorldType>(ref count, ref entities);
 
             var di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
@@ -324,7 +324,7 @@ namespace FFS.Libraries.StaticEcs {
                 var i1 = di1[entity];
                 var i2 = di2[entity];
                 var i3 = di3[entity];
-                if (i1 >= 0 && i2 >= 0 && i3 >= 0 && with.CheckEntity(entity)) {
+                if (i1 != Utils.EmptyComponent && i2 != Utils.EmptyComponent && i3 != Utils.EmptyComponent && with.CheckEntity(entity)) {
                     runner.Run(new Ecs<WorldType>.Entity(entity),
                                ref data1[i1],
                                ref data2[i2],
@@ -350,8 +350,8 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             var count = Ecs<WorldType>.Components<C1>.Value.Count();
             var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
+            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
             with.SetData<WorldType>(ref count, ref entities);
 
             var di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
@@ -368,7 +368,7 @@ namespace FFS.Libraries.StaticEcs {
                 var i1 = di1[entity];
                 var i2 = di2[entity];
                 var i3 = di3[entity];
-                if (i1 >= 0 && i2 >= 0 && i3 >= 0 && with.CheckEntity(entity)) {
+                if (i1 != Utils.EmptyComponent && i2 != Utils.EmptyComponent && i3 != Utils.EmptyComponent && with.CheckEntity(entity)) {
                     runner(new Ecs<WorldType>.Entity(entity),
                                ref data1[i1],
                                ref data2[i2],
@@ -407,9 +407,9 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             var count = Ecs<WorldType>.Components<C1>.Value.Count();
             var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
+            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
+            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
             with.SetData<WorldType>(ref count, ref entities);
 
             var di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
@@ -429,7 +429,7 @@ namespace FFS.Libraries.StaticEcs {
                 var i2 = di2[entity];
                 var i3 = di3[entity];
                 var i4 = di4[entity];
-                if (i1 >= 0 && i2 >= 0 && i3 >= 0 && i4 >= 0 && with.CheckEntity(entity)) {
+                if (i1 != Utils.EmptyComponent && i2 != Utils.EmptyComponent && i3 != Utils.EmptyComponent && i4 != Utils.EmptyComponent && with.CheckEntity(entity)) {
                     runner.Run(new Ecs<WorldType>.Entity(entity),
                                ref data1[i1],
                                ref data2[i2],
@@ -458,9 +458,9 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             var count = Ecs<WorldType>.Components<C1>.Value.Count();
             var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
+            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
+            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
             with.SetData<WorldType>(ref count, ref entities);
 
             var di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
@@ -480,7 +480,7 @@ namespace FFS.Libraries.StaticEcs {
                 var i2 = di2[entity];
                 var i3 = di3[entity];
                 var i4 = di4[entity];
-                if (i1 >= 0 && i2 >= 0 && i3 >= 0 && i4 >= 0 && with.CheckEntity(entity)) {
+                if (i1 != Utils.EmptyComponent && i2 != Utils.EmptyComponent && i3 != Utils.EmptyComponent && i4 != Utils.EmptyComponent && with.CheckEntity(entity)) {
                     runner(new Ecs<WorldType>.Entity(entity),
                                ref data1[i1],
                                ref data2[i2],

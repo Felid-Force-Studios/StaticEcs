@@ -3,9 +3,9 @@
 namespace FFS.Libraries.StaticEcs {
     
     public interface IQueryMethod {
-        public void SetData<WorldType>(ref int minCount, ref int[] entities) where WorldType : struct, IWorldType;
+        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType;
         
-        public bool CheckEntity(int entityId);
+        public bool CheckEntity(uint entityId);
 
         public void Dispose<WorldType>() where WorldType : struct, IWorldType;
     }
@@ -14,8 +14,8 @@ namespace FFS.Libraries.StaticEcs {
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool CheckOne<WorldType>(this IQueryMethod method, Ecs<WorldType>.Entity entity) where WorldType : struct, IWorldType {
-            var count = int.MaxValue;
-            int[] entities = null;
+            var count = uint.MaxValue;
+            uint[] entities = null;
             method.SetData<WorldType>(ref count, ref entities);
             var checkEntity = method.CheckEntity(entity._id);
             method.Dispose<WorldType>();

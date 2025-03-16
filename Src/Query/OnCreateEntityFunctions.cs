@@ -366,7 +366,7 @@ namespace FFS.Libraries.StaticEcs {
             Ecs<WorldType>.ModuleComponents.Value.GetPool(t2).Add(entity);
             Ecs<WorldType>.ModuleComponents.Value.GetPool(t3).Add(entity);
             Ecs<WorldType>.ModuleComponents.Value.GetPool(t4).Add(entity);
-            Ecs<WorldType>.ModuleComponents.Value.GetPool(t4).Add(entity);
+            Ecs<WorldType>.ModuleComponents.Value.GetPool(t5).Add(entity);
         }
     }
 }

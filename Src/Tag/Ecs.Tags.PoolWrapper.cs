@@ -20,7 +20,9 @@ namespace FFS.Libraries.StaticEcs {
 
             public bool Has(Entity entity);
 
-            public bool Del(Entity entity);
+            public bool TryDelete(Entity entity);
+
+            public void Delete(Entity entity);
 
             public void Copy(Entity srcEntity, Entity dstEntity);
             
@@ -32,13 +34,13 @@ namespace FFS.Libraries.StaticEcs {
 
             public bool TryCast<C>(out TagsWrapper<C> wrapper) where C : struct, ITag;
 
-            internal int[] EntitiesData();
+            internal uint[] EntitiesData();
 
-            internal void SetDataIfCountLess(ref int count, ref int[] entities);
+            internal void SetDataIfCountLess(ref uint count, ref uint[] entities);
 
-            internal void SetDataIfCountMore(ref int count, ref int[] entities);
+            internal void SetDataIfCountMore(ref uint count, ref uint[] entities);
 
-            internal void Resize(int cap);
+            internal void Resize(uint cap);
 
             internal void Destroy();
 
@@ -67,7 +69,10 @@ namespace FFS.Libraries.StaticEcs {
             public bool Has(Entity entity) => Tags<T>.Value.Has(entity);
 
             [MethodImpl(AggressiveInlining)]
-            public bool Del(Entity entity) => Tags<T>.Value.Delete(entity);
+            public bool TryDelete(Entity entity) => Tags<T>.Value.TryDelete(entity);
+
+            [MethodImpl(AggressiveInlining)]
+            public void Delete(Entity entity) => Tags<T>.Value.Delete(entity);
 
             [MethodImpl(AggressiveInlining)]
             public void Copy(Entity srcEntity, Entity dstEntity) => Tags<T>.Value.Copy(srcEntity, dstEntity);
@@ -76,7 +81,7 @@ namespace FFS.Libraries.StaticEcs {
             public void Move(Entity srcEntity, Entity dstEntity) => Tags<T>.Value.Move(srcEntity, dstEntity);
 
             [MethodImpl(AggressiveInlining)]
-            public int Count() => Tags<T>.Value.Count();
+            public uint Count() => Tags<T>.Value.Count();
 
             [MethodImpl(AggressiveInlining)]
             public string ToStringComponent(Entity entity) => Tags<T>.Value.ToStringComponent(entity);
@@ -92,44 +97,43 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            object IStandardRawPool.GetRaw(int entity) => default(T);
+            object IStandardRawPool.GetRaw(uint entity) => default(T);
 
             [MethodImpl(AggressiveInlining)]
-            void IStandardRawPool.PutRaw(int entity, object value) => Tags<T>.Value.Set(new Entity(entity));
+            void IStandardRawPool.PutRaw(uint entity, object value) => Tags<T>.Value.Set(new Entity(entity));
 
             [MethodImpl(AggressiveInlining)]
-            bool IRawPool.Has(int entity) => Tags<T>.Value.Has(new Entity(entity));
+            bool IRawPool.Has(uint entity) => Tags<T>.Value.Has(new Entity(entity));
 
             [MethodImpl(AggressiveInlining)]
-            void IRawPool.Add(int entity) => Tags<T>.Value.Set(new Entity(entity));
+            void IRawPool.Add(uint entity) => Tags<T>.Value.Set(new Entity(entity));
 
             [MethodImpl(AggressiveInlining)]
-            bool IRawPool.Delete(int entity) => Tags<T>.Value.Delete(new Entity(entity));
+            bool IRawPool.TryDelete(uint entity) => Tags<T>.Value.TryDelete(new Entity(entity));
 
             [MethodImpl(AggressiveInlining)]
-            void IStandardRawPool.Copy(int srcEntity, int dstEntity) => Tags<T>.Value.Copy(new Entity(srcEntity), new Entity(dstEntity));
+            void IRawPool.Delete(uint entity) => Tags<T>.Value.Delete(new Entity(entity));
 
             [MethodImpl(AggressiveInlining)]
-            void IRawPool.Move(int entity, int target) => Tags<T>.Value.Move(new Entity(entity), new Entity(target));
+            void IStandardRawPool.Copy(uint srcEntity, uint dstEntity) => Tags<T>.Value.Copy(new Entity(srcEntity), new Entity(dstEntity));
 
             [MethodImpl(AggressiveInlining)]
-            int IStandardRawPool.Capacity() => Tags<T>.Value.EntitiesData().Length;
+            void IRawPool.Move(uint entity, uint target) => Tags<T>.Value.Move(new Entity(entity), new Entity(target));
 
             [MethodImpl(AggressiveInlining)]
-            int[] ITagsWrapper.EntitiesData() => Tags<T>.Value.EntitiesData();
+            uint IStandardRawPool.Capacity() => (uint) Tags<T>.Value.EntitiesData().Length;
 
             [MethodImpl(AggressiveInlining)]
-            void ITagsWrapper.SetDataIfCountLess(ref int count, ref int[] entities) {
-                Tags<T>.Value.SetDataIfCountLess(ref count, ref entities);
-            }
+            uint[] ITagsWrapper.EntitiesData() => Tags<T>.Value.EntitiesData();
 
             [MethodImpl(AggressiveInlining)]
-            void ITagsWrapper.SetDataIfCountMore(ref int count, ref int[] entities) {
-                Tags<T>.Value.SetDataIfCountMore(ref count, ref entities);
-            }
+            void ITagsWrapper.SetDataIfCountLess(ref uint count, ref uint[] entities) => Tags<T>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
 
             [MethodImpl(AggressiveInlining)]
-            void ITagsWrapper.Resize(int cap) => Tags<T>.Value.Resize(cap);
+            void ITagsWrapper.SetDataIfCountMore(ref uint count, ref uint[] entities) => Tags<T>.Value.SetDataIfCountMore(ref count, ref entities, out var _);
+
+            [MethodImpl(AggressiveInlining)]
+            void ITagsWrapper.Resize(uint cap) => Tags<T>.Value.Resize(cap);
 
             [MethodImpl(AggressiveInlining)]
             void ITagsWrapper.Destroy() => Tags<T>.Value.Destroy();
