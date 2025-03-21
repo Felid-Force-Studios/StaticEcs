@@ -163,12 +163,14 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             with.SetData<WorldType>(ref count, ref entities);
 
+            var di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
             var dataC1 = Ecs<WorldType>.Components<C1>.Value.Data();
             while (count > 0) {
                 count--;
                 var entity = entities[count];
-                if (with.CheckEntity(entity)) {
-                    runner.Run(new Ecs<WorldType>.Entity(entity), ref dataC1[count]);
+                var i1 = di1[entity];
+                if (i1 != Utils.EmptyComponent && with.CheckEntity(entity)) {
+                    runner.Run(new Ecs<WorldType>.Entity(entity), ref dataC1[i1]);
                 }
             }
 
@@ -186,13 +188,15 @@ namespace FFS.Libraries.StaticEcs {
             Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
             #endif
             with.SetData<WorldType>(ref count, ref entities);
-
+            
+            var di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
             var dataC1 = Ecs<WorldType>.Components<C1>.Value.Data();
             while (count > 0) {
                 count--;
                 var entity = entities[count];
-                if (with.CheckEntity(entity)) {
-                    runner(new Ecs<WorldType>.Entity(entity), ref dataC1[count]);
+                var i1 = di1[entity];
+                if (i1 != Utils.EmptyComponent && with.CheckEntity(entity)) {
+                    runner(new Ecs<WorldType>.Entity(entity), ref dataC1[i1]);
                 }
             }
 

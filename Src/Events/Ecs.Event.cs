@@ -43,6 +43,22 @@ namespace FFS.Libraries.StaticEcs {
                 Events.Pool<E>.Value.Del((ushort) _idx, true);
                 _idx = -1;
             }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool IsLastReading() {
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                if (_idx < 0) throw new Exception($"[ Ecs<{typeof(World)}>.Event<{typeof(E)}>.IsLastReading ] event is deleted");
+                #endif
+                return Events.Pool<E>.Value._dataReceiverUnreadCount[_idx] == 1;
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public int UnreadCount() {
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                if (_idx < 0) throw new Exception($"[ Ecs<{typeof(World)}>.Event<{typeof(E)}>.UnreadCount ] event is deleted");
+                #endif
+                return Events.Pool<E>.Value._dataReceiverUnreadCount[_idx] - 1;
+            }
         }
     }
 }

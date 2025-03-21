@@ -18,7 +18,7 @@
         <RootNamespace>FFS.Libraries.StaticEcs</RootNamespace>
         
         <Title>StaticECS</Title>
-        <Version>0.9.31</Version>
+        <Version>0.9.40</Version>
         <Authors>Felid-Force-Studios</Authors>
         <Description>C# Entity Component System Framework</Description>
         <Copyright>Felid-Force-Studios</Copyright>

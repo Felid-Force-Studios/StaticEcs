@@ -17,7 +17,7 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         [Il2CppEagerStaticClassConstruction]
         #endif
-        internal struct ModuleComponents {
+        internal partial struct ModuleComponents {
             public static ModuleComponents Value;
             
             #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
@@ -45,7 +45,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal ComponentDynId RegisterComponentType<T>(uint capacity, AutoInitHandler<T> autoInit = null, AutoResetHandler<T> autoReset = null, AutoCopyHandler<T> autoCopy = null) where T : struct, IComponent {
+            internal ComponentDynId RegisterComponentType<T>(uint capacity, AutoInitHandler<T> autoInit = null, AutoResetHandler<T> autoReset = null, AutoCopyHandler<T> autoCopy = null, AutoInitHandler<T> autoPutInit = null) where T : struct, IComponent {
                 if (Components<T>.Value.IsRegistered()) {
                     return Components<T>.Value.DynamicId();
                 }
@@ -56,7 +56,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 _pools[_poolsCount] = new ComponentsWrapper<T>();
                 _poolIdxByType[typeof(T)] = _poolsCount;
-                Components<T>.Value.Create(_poolsCount, BitMask, World.EntitiesCapacity(), autoInit, autoReset, autoCopy, capacity);
+                Components<T>.Value.Create(_poolsCount, BitMask, World.EntitiesCapacity(), autoInit, autoReset, autoCopy, autoPutInit, capacity);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 Components<T>.Value.debugEventListeners = _debugEventListeners;
                 #endif

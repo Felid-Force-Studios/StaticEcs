@@ -17,23 +17,49 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         [Il2CppEagerStaticClassConstruction]
         #endif
-        public readonly struct Context : IContext {
-            public static Context Value = default;
+        public struct Context : IContext {
+            public static Context Value;
+
+            internal Dictionary<Type, Action> contextClearMethods;
+            
+            [MethodImpl(AggressiveInlining)]
+            internal void AddClearMethod<T>() {
+                contextClearMethods ??= new Dictionary<Type, Action>();
+                contextClearMethods[typeof(T)] = () => {
+                    Context<T>._value = default;
+                    Context<T>._has = false;
+                };
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal void RemoveClearMethod<T>() {
+                contextClearMethods?.Remove(typeof(T));
+            }
 
             [MethodImpl(AggressiveInlining)]
-            public bool Has<T>() => Context<T>.Has();
+            internal void Clear() {
+                if (contextClearMethods != null) {
+                    foreach (var action in contextClearMethods.Values) {
+                        action();
+                    }
+                    contextClearMethods.Clear();
+                }
+            }
 
             [MethodImpl(AggressiveInlining)]
-            public ref T Get<T>() => ref Context<T>._value;
+            public readonly bool Has<T>() => Context<T>.Has();
 
             [MethodImpl(AggressiveInlining)]
-            public void Set<T>(T value) => Context<T>.Set(value);
+            public readonly ref T Get<T>() => ref Context<T>._value;
 
             [MethodImpl(AggressiveInlining)]
-            public void Replace<T>(T value) => Context<T>.Replace(value);
+            public readonly void Set<T>(T value, bool clearOnDestroy = true) => Context<T>.Set(value, clearOnDestroy);
 
             [MethodImpl(AggressiveInlining)]
-            public void Remove<T>() => Context<T>.Remove();
+            public readonly void Replace<T>(T value) => Context<T>.Replace(value);
+
+            [MethodImpl(AggressiveInlining)]
+            public readonly void Remove<T>() => Context<T>.Remove();
         }
 
         #if ENABLE_IL2CPP
@@ -46,7 +72,7 @@ namespace FFS.Libraries.StaticEcs {
             internal static bool _has;
 
             [MethodImpl(AggressiveInlining)]
-            public static void Set(T value) {
+            public static void Set(T value, bool clearOnDestroy = true) {
                 if (value == null) {
                     throw new Exception($"{typeof(T).Name} is null, Context<{typeof(WorldType)}>");
                 }
@@ -57,6 +83,9 @@ namespace FFS.Libraries.StaticEcs {
 
                 _has = true;
                 _value = value;
+                if (clearOnDestroy) {
+                    Context.Value.AddClearMethod<T>();
+                }
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -83,6 +112,7 @@ namespace FFS.Libraries.StaticEcs {
             public static void Remove() {
                 _has = false;
                 _value = default;
+                Context.Value.RemoveClearMethod<T>();
             }
         }
 
@@ -92,10 +122,16 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppEagerStaticClassConstruction]
         #endif
         public struct NamedContext {
-            private static Dictionary<string, object> _values;
+            private static readonly Dictionary<string, object> _values = new();
+            private static readonly HashSet<string> _clearKeys = new();
 
-            public static void Create() {
-                _values = new Dictionary<string, object>();
+            [MethodImpl(AggressiveInlining)]
+            public static void Clear() {
+                foreach (var clearKey in _clearKeys) {
+                    _values.Remove(clearKey);
+                }
+
+                _clearKeys.Clear();
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -105,7 +141,7 @@ namespace FFS.Libraries.StaticEcs {
             public static T Get<T>(string key) => (T) _values[key];
 
             [MethodImpl(AggressiveInlining)]
-            public static void Set<T>(string key, T value) {
+            public static void Set<T>(string key, T value, bool clearOnDestroy = true) {
                 if (value == null) {
                     throw new Exception($"{typeof(T).Name} is null, NamedContext<{typeof(WorldType)}>");
                 }
@@ -115,6 +151,9 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 _values[key] = value;
+                if (clearOnDestroy) {
+                    _clearKeys.Add(key);
+                }
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -127,7 +166,10 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void Remove(string key) => _values.Remove(key);
+            public static void Remove(string key) {
+                _values.Remove(key);
+                _clearKeys.Remove(key);
+            }
         }
     }
 
@@ -136,7 +178,7 @@ namespace FFS.Libraries.StaticEcs {
 
         public ref T Get<T>();
 
-        public void Set<T>(T value);
+        public void Set<T>(T value, bool clearOnDestroy);
 
         public void Replace<T>(T value);
 

@@ -106,6 +106,14 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 return ModuleComponents.Value.RegisterComponentType(basePoolCapacity, autoInit, autoReset, autoCopy);
             }
+
+            [MethodImpl(AggressiveInlining)]
+            public static ComponentDynId RegisterMultiComponentType<T, V>(ushort defaultComponentCapacity, uint basePoolCapacity = 128) where T : struct, IMultiComponent<V> where V : struct {
+                if (Status != WorldStatus.Created) {
+                    throw new Exception($"World<{typeof(WorldType)}>, Method: RegisterMultiComponentType<{typeof(T)}, {typeof(V)}>, World not created");
+                }
+                return ModuleComponents.Value.RegisterMultiComponentType<T, V>(defaultComponentCapacity, basePoolCapacity);
+            }
             
             [MethodImpl(AggressiveInlining)]
             public static ComponentDynId GetComponentDynId<T>() where T : struct, IComponent {

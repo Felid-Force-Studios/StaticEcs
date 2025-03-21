@@ -76,12 +76,15 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public bool MoveNext() => Events.Pool<T>.Value.ShiftReceiverOffset(_id, _current._idx, out _current._idx);
             
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
             [MethodImpl(AggressiveInlining)]
             public void Dispose() {
+                if (_current._idx >= 0) {
+                    Events.Pool<T>.Value.MarkAsRead(_current._idx);
+                }
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 Events.Pool<T>.Value.AddBlocker(-1);
+                #endif
             }
-            #endif
         }
     }
 }

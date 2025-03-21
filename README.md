@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-0.9.31-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-0.9.40-blue.svg?style=for-the-badge)
 
 ### LANGUAGE
 [RU](./README_RU.md)
@@ -33,6 +33,7 @@ ___
     * [PackedEntity](#packedentity)
     * [Component](#component)
     * [StandardComponent](#standardComponent)
+    * [MultiComponent](#multiComponent)
     * [Tag](#tag)
     * [Mask](#mask)
     * [WorldType](#WorldType)
@@ -141,7 +142,7 @@ public class Program {
 Entity - serves to identify an object in the game world and access attached components
  - Represented as a 4 byte structure
 
-**ВАЖНО** ❗️  
+**IMPORTANT** ❗️  
 By default an entity can be created and exist without components, also when the last component is deleted it is not deleted  
 If you want to override this behavior, you must specify the compiler directive `FFS_ECS_LIFECYCLE_ENTITY`  
 More info: [Compiler directives](#compiler-directives)
@@ -419,6 +420,155 @@ ref readonly var readOnlyEnitiyType = ref entity.RefStandard<EnitiyType>();
 var entity2 = MyEcs.Entity.New<SomeComponent>();
 // Copy the specified standard components to another entity (overload methods from 1-5 components)
 entity.CopyStandardComponentsTo<EnitiyType>(entity2);
+```
+</details>
+
+### MultiComponent
+Multi-components - allow to give an entity many identical properties (components)
+- Represent optimized component-lists containing N values
+- All elements, of all multicomponents with the same type for all entities in the world are stored in a single repository, this provides:
+  - optimized memory usage
+  - allows storing up to 32768 values in one component
+  - quick and easy access to data
+  - quick creation, addition and extension
+  - no need to create reference types of arrays or lists inside the component and keep track of them being cleared or returned to the pool, etc.
+- Is the implementation [Component](#component), all the basic rules and methods of work are similar
+- Presented as:
+  - standard structure `Multi<T>`, where T is the element type
+  - or as a custom structure with the `IMultiComponent<T>` interface
+- Based on multicomponents, [Relations](#relations) of entities are implemented, for example, the `Children` component is a multicomponent
+
+**IMPORTANT** ❗️  
+Requires registration in the world between creation and initialization
+
+Example:  
+There are two ways to define a multicomponent:
+1. Use the default `Multi<T>`
+```c#
+// Define the type of the multicomponent value
+public struct Item {
+    public string Value;
+}
+
+MyEcs.Create(EcsConfig.Default());
+//...
+// where defaultComponentCapacity is the minimum capacity of the multicomponent, with a power of two, in the range of 4 to 32768 (4, 8, 16, 32 ...)
+MyEcs.World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
+//...
+MyEcs.Initialize();
+```
+
+2. Use a custom implementation `IMultiComponent<T>`
+```c#
+// Define the type of the multicomponent value 
+public struct Item {
+    public string Value;
+}
+
+// Define the type of component
+public struct Inventory : IMultiComponent<Item> {
+    // Define the values of the multicomponent
+    public Multi<Item> Items;
+    
+    // Add any custom data if needed, just like in a simple component
+    public int SomeUserData;
+    
+    // Implement the IMultiComponent<Item> interface method, for access and automatic value management
+    // it is necessary to specify access to values via access.For(ref Values)
+    public void Access<A>(A access) where A : struct, AccessMulti<Item> => access.For(ref Items);
+}
+
+MyEcs.Create(EcsConfig.Default());
+//...
+// instead of Multi<Item> specify custom Inventory component
+// where defaultComponentCapacity is the minimum capacity of the multicomponent, with a power of two, in the range of 4 to 32768 (4, 8, 16, 32 ...)
+MyEcs.World.RegisterMultiComponentType<Inventory, Item>(defaultComponentCapacity: 4); 
+//...
+MyEcs.Initialize();
+```
+
+<details><summary><u><b>Usage 👇</b></u></summary>
+
+- Basic operations:
+```c#
+MyEcs.World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
+
+// When adding a multi-component, the defaultComponentCapacity will be defaultComponentCapacity, as elements are added, it will expand as the elements are added 
+// Adding a multicomponent like a simple component
+// in case of default implementaion
+ref var items = ref entity.Add<Multi<Item>>();
+// n case of custom implementaion
+ref var inventory = ref entity.Add<Inventory>();
+ref var items = ref inventory.Items;
+
+// All other methods for working with components are available
+entity.TryAdd<Multi<Item>>();
+entity.HasAllOf<Multi<Item>>();
+// ...
+
+// When deleting a multicomponent - the list of items will be automatically cleared
+entity.Delete<Multi<Item>>();
+entity.TryDelete<Multi<Item>>();
+
+// When copying and moving a multicomponent - all elements will be automatically copied
+entity.CopyComponentsTo<Multi<Item>>(entity2);
+entity.Clone();
+
+entity.MoveComponentsTo<Multi<Item>>(entity2);
+entity.MoveTo(entity2);
+
+// A multicomponent behaves like a dynamic array (list)
+// The available operations are as follows:
+// Info:
+ushort capacity = items.Capacity;                                      // Current capacity
+ushort count = items.Count;                                            // Number of items
+bool empty = items.IsEmpty();                                          // True if there are no elements
+bool notEmpty = items.IsNotEmpty();                                    // True if there are elements
+bool full = items.IsFull();                                            // True if the current capacity is full
+
+// Access:
+ref Item element = ref items[1];                                       // Indexer
+ref Item first = ref items.First();                                    // Link to the first element
+ref Item last = ref items.Last();                                      // Link to the last element
+foreach (ref var item in items) {                                      // Foreach
+    //..
+}
+
+for (ushort i = 0; i < items.Count; i++) {                             // For loop
+    ref var item = ref items[i];
+}
+
+// Addition and extension:
+items.Add(new Item());                                                 // Add element
+items.Add(new Item("a"), new Item("b"), new Item("c"), new Item("d")); // Add elements (1 - 4)
+items.Add(new[] { new Item("f"), new Item("g") });                     // Add elements from an array
+items.Add(new[] { new Item("f"), new Item("g") }, 1, 1);               // Add elements from an array with the start and number specified
+items.Add(ref entity2.RefMut<Multi<Item>>());                          // Add elements from another component
+items.Add(ref entity2.RefMut<Multi<Item>>(), 1, 1);                    // Add elements from another component specifying start and quantity
+items.InsertAt(idx: 1, new Item("e"));                                 // Insert an element in the specified index, the other elements will be shifted
+items.EnsureSize(10);                                                  // Ensure capacity for N more elements if required
+items.Resize(16);                                                      // Extend capacity to N if required
+
+// Removal and cleaning
+items.DeleteFirst();                                                   // Delete the first element and shift the subsequent elements (if element order is important)
+items.DeleteFirstSwap();                                               // Delete the first element and replace with the last element (if element order is NOT important) (Faster)
+items.DeleteLast();                                                    // Delete the last element and reset to default
+items.DeleteLastFast();                                                // Delete the last element and WITHOUT resetting the value to default (if resetting the value is NOT important) (Faster)
+items.DeleteAt(idx: 1);                                                // Delete element by index and shift subsequent elements (if element order is important) (Faster)
+items.DeleteAtSwap(idx: 1);                                            // Delete element by index and replace with the last element (if element order is NOT important) (Faster)
+items.Clear();                                                         // Clear items and reset to default
+items.ResetCount();                                                    // Reset quantity without clearing
+
+// Search
+short idx = items.IndexOf(new Item("a"));                              // Get item index or -1
+bool contains = items.Contains(new Item("a"));                         // Check if an element exists with default IEqualityComparer
+bool contains = items.Contains(new Item("a"), comparer);               // Check for an element with a custom IEqualityComparer
+
+// Extra
+var array = new Item[items.Capacity];                                  
+items.CopyTo(array);                                                   // Copy elements to the specified array
+items.Sort();                                                          // Sort elements with default Comparer
+items.Sort(comparer);                                                  // Sort elements with passed Comparer
 ```
 </details>
 
@@ -788,7 +938,7 @@ public class UserService2 { }
 // Adding necessary objects to the context, it is not necessary to add objects to the context before initialization, new data can also be added in the process of systems operation
 // It is important to remember that if the context is used in Init systems, the data should be passed there before Ecs.Initialize() or before the call in the call chain of a particular Init system. 
 // Important! The context can store strictly 1 object of 1 type - an error will occur if the Set method is set repeatedly of the same type.
-MyEcs.Context<UserService1>.Set(new UserService1());
+MyEcs.Context<UserService1>.Set(new UserService1(), clearOnDestroy: true);
 MyEcs.Context<UserService2>.Set(new UserService2());
 
 // If Replace is called, the specified type will be set or replaced without error
@@ -800,7 +950,7 @@ bool has = MyEcs.Context<UserService2>.Has();
 // Remove the value from the context
 MyEcs.Context<UserService2>.Remove();
 
-// Important! The user himself takes care of clearing the context if it is no longer needed or when the world is already deleted, e.g. in the Destroy method in systems
+// Important! context will be cleared when MyEcs.Destroy() is called; if clearOnDestroy true was specified when set to
 ```
 </details>
 
@@ -912,10 +1062,10 @@ foreach (var entity in MyWorld.QueryEntities.For(all3, allAndNone3, none3)) {
 
 
 // Also, all filtering methods can be grouped into a With type
-// which can be applied to the World.QueryEntities.With() method, for example:
+// which can be applied to the World.QueryEntities.For() method, for example:
 
 // Method 1 via generic
-foreach (var entity in MyWorld.QueryEntities.With<With<
+foreach (var entity in MyWorld.QueryEntities.For<With<
              All<Position, Velocity, Name>,
              AllAndNoneTypes<Types<Position, Direction, Velocity>, Types<Name>>,
              None<Name>,
@@ -931,7 +1081,7 @@ With<
     None<Name>,
     Any<Position, Direction, Velocity>
 > with = default;
-foreach (var entity in MyWorld.QueryEntities.With(with)) {
+foreach (var entity in MyWorld.QueryEntities.For(with)) {
     entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
@@ -942,7 +1092,7 @@ var with2 = With.Create(
     default(None<Name>),
     default(Any<Position, Direction, Velocity>)
 );
-foreach (var entity in MyWorld.QueryEntities.With(with2)) {
+foreach (var entity in MyWorld.QueryEntities.For(with2)) {
     entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
@@ -953,7 +1103,7 @@ var with3 = With.Create(
     Types<Name>.None(),
     Types<Position, Direction, Velocity>.Any()
 );
-foreach (var entity in MyWorld.QueryEntities.With(with3)) {
+foreach (var entity in MyWorld.QueryEntities.For(with3)) {
     entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 ```
@@ -1111,7 +1261,7 @@ var with = With.Create(
     new Tag2(playerTagId, unitTagId).Any(),
     new Mask1(frozenMaskId).AllAndNone(new Mask1(flammableMaskId))
 );
-foreach (var entity in MyWorld.QueryEntities.With(with)) {
+foreach (var entity in MyWorld.QueryEntities.For(with)) {
     //..
 }
 
@@ -1196,6 +1346,14 @@ MyEcs.Events.SendDefault(weatherChangedDynId);
 // Receiving events
 foreach (var weatherEvent in weatherChangedEventReceiver) {
     Console.WriteLine("Weather is " + weatherEvent.Value.WeatherType);
+}
+
+
+foreach (var weatherEvent in weatherChangedEventReceiver) {
+    // True if this listener is the last listener to read this event (means that the event will be deleted after reading).
+    bool last = weatherEvent.IsLastReading();
+    // Returns the number of unread listeners other than the given listener at the moment
+    int unreadCount = weatherEvent.UnreadCount();
 }
 
 foreach (var weatherEvent in weatherChangedEventReceiver) {
@@ -1302,8 +1460,13 @@ public static class $COMPONENT$Extension {
     }
     
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static bool Delete$COMPONENT$(this $ECS$.Entity entity) {
-        return $ECS$.Components<$COMPONENT$>.Value.Del(entity);
+    public static void Delete$COMPONENT$(this $ECS$.Entity entity) {
+        $ECS$.Components<$COMPONENT$>.Value.Delete(entity);
+    }
+    
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static bool TryDelete$COMPONENT$(this $ECS$.Entity entity) {
+        return $ECS$.Components<$COMPONENT$>.Value.TryDelete(entity);
     }
 }
 ```
@@ -1344,8 +1507,13 @@ public static class $TAG$Extension {
     }
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public static bool Delete$TAG$(this $Ecs$.Entity entity) {
-        return $Ecs$.Tags<$TAG$>.Value.Del(entity);
+    public static void Delete$TAG$(this $Ecs$.Entity entity) {
+        $Ecs$.Tags<$TAG$>.Value.Delete(entity);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static bool TryDelete$TAG$(this $Ecs$.Entity entity) {
+        return $Ecs$.Tags<$TAG$>.Value.TryDelete(entity);
     }
 }
 ```
@@ -1365,7 +1533,12 @@ public static class $MASK$Extension {
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public static void Delete$MASK$(this $Ecs$.Entity entity) {
-        $Ecs$.Masks<$MASK$>.Value.Del(entity);
+        $Ecs$.Masks<$MASK$>.Value.Delete(entity);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    public static bool TryDelete$MASK$(this $Ecs$.Entity entity) {
+        return $Ecs$.Masks<$MASK$>.Value.TryDelete(entity);
     }
 }
 ```

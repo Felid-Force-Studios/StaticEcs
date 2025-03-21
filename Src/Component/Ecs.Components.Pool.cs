@@ -21,6 +21,7 @@ namespace FFS.Libraries.StaticEcs {
             public static Components<T> Value;
             
             private AutoInitHandler<T> AutoInitHandler;
+            private AutoInitHandler<T> AutoPutInitHandler;
             private AutoResetHandler<T> AutoResetHandler;
             private AutoCopyHandler<T> AutoCopyHandler;
             
@@ -142,6 +143,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 _bitMask.Set(eid, id);
 
+                AutoPutInitHandler?.Invoke(ref component);
                 _data[_componentsCount] = component;
                 _componentsCount++;
                 
@@ -299,7 +301,7 @@ namespace FFS.Libraries.StaticEcs {
                 return ref _data[_dataIdxByEntityId[entity._id]];
             }
             
-            internal void Create(ushort componentId, BitMask bitMask, uint entitiesCapacity, AutoInitHandler<T> autoInit = null, AutoResetHandler<T> autoReset = null, AutoCopyHandler<T> autoCopy = null, uint baseCapacity = 128) {
+            internal void Create(ushort componentId, BitMask bitMask, uint entitiesCapacity, AutoInitHandler<T> autoInit = null, AutoResetHandler<T> autoReset = null, AutoCopyHandler<T> autoCopy = null, AutoInitHandler<T> autoPutInit = null, uint baseCapacity = 128) {
                 _bitMask = bitMask;
                 id = componentId;
                 _entities = new uint[baseCapacity];
@@ -312,6 +314,7 @@ namespace FFS.Libraries.StaticEcs {
                 AutoInitHandler = autoInit;
                 AutoResetHandler = autoReset;
                 AutoCopyHandler = autoCopy;
+                AutoPutInitHandler = autoPutInit;
                 _registered = true;
             }
 
@@ -400,6 +403,7 @@ namespace FFS.Libraries.StaticEcs {
                 AutoInitHandler = null;
                 AutoResetHandler = null;
                 AutoCopyHandler = null;
+                AutoPutInitHandler = null;
                 _entities = null;
                 _data = null;
                 _dataIdxByEntityId = null;

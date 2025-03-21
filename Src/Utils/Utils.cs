@@ -47,6 +47,30 @@ namespace FFS.Libraries.StaticEcs {
 
             return u;
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static void LoopFallbackCopy<T>(T[] src, uint srcIdx, T[] dst, uint dstIdx, uint len) {
+            if (len > 4) {
+                Array.Copy(src, srcIdx, dst, dstIdx, len);
+                return;
+            }
+            
+            for (var i = (int) (len - 1); i >= 0; i--) {
+                dst[dstIdx + i] = src[srcIdx + i];
+            }
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static void LoopFallbackClear<T>(T[] array, int idx, int len) {
+            if (len > 4) {
+                Array.Clear(array, idx, len);
+                return;
+            }
+            
+            for (uint i = 0; i < len; i++) {
+                array[idx + i] = default;
+            }
+        }
 
         internal static string GetGenericName(this Type type) {
             if (!type.IsGenericType) {

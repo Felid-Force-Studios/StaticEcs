@@ -22,12 +22,6 @@ namespace FFS.Libraries.StaticEcs {
                 With = with;
             }
 
-            [MethodImpl(AggressiveInlining)]
-            public QueryComponentsIterator<WorldType, C, W> For<C>()
-                where C : struct, IComponent {
-                return new QueryComponentsIterator<WorldType, C, W>(With);
-            }
-
             #region BY_STRUCT
             [MethodImpl(AggressiveInlining)]
             public void For<C1, R>(R runner = default)

@@ -300,7 +300,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                private bool MarkAsRead(int offset) {
+                internal bool MarkAsRead(int offset) {
                     ref var unreadCount = ref _dataReceiverUnreadCount[offset];
                     if (unreadCount != 0 && --unreadCount == 0) {
                         if (Del(offset, false)) {

@@ -32,6 +32,8 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             World.Destroy();
             cfg = default;
+            Context.Value.Clear();
+            NamedContext.Clear();
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
             FileLogger?.Disable();
             FileLogger = default;
