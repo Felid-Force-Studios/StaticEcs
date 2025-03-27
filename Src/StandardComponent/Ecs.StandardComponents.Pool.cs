@@ -103,6 +103,11 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
+            internal ref T RefMutInternal(uint entityId) {
+                return ref _data[entityId];
+            }
+            
+            [MethodImpl(AggressiveInlining)]
             internal void AutoInit(Entity entity) {
                 AutoInitHandler(ref _data[entity._id]);
             }

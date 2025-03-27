@@ -241,6 +241,15 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
             }
             #endregion
+
+            public static List<IEventPoolWrapper> GetAllRawsPools() {
+                var pools = new List<IEventPoolWrapper>();
+                for (int i = 0; i < _poolsCount; i++) {
+                    pools.Add(_pools[i]);
+                }
+
+                return pools;
+            }
         }
 
         #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS

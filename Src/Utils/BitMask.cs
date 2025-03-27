@@ -19,6 +19,7 @@ namespace FFS.Libraries.StaticEcs {
         };
         
         private ulong[] _bitMap;
+        private ulong[] _bitMapDisabled;
         private ushort _maskLen;
         
         private ulong[] _tempBuffer;
@@ -27,10 +28,13 @@ namespace FFS.Libraries.StaticEcs {
         private byte _tempBufferCount;
 
         [MethodImpl(AggressiveInlining)]
-        internal void Create(uint worldCapacity, byte tempBuffersCount, ushort maskLen) {
+        internal void Create(uint worldCapacity, byte tempBuffersCount, ushort maskLen, bool bitMaskDisabled) {
             _maskLen = maskLen;
             _tempBufferCount = tempBuffersCount;
             _bitMap = new ulong[worldCapacity * _maskLen];
+            if (bitMaskDisabled) {
+                _bitMapDisabled = new ulong[worldCapacity * _maskLen];
+            }
             _tempBuffer = new ulong[_tempBufferCount * _maskLen];
             _tempBufferFreeCount = _tempBufferCount;
             _tempBufferBorrowed = 0;
@@ -39,6 +43,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         internal void ResizeBitMap(uint size) {
             Array.Resize(ref _bitMap, (int) (size * _maskLen));
+            if (_bitMapDisabled != null) {
+                Array.Resize(ref _bitMapDisabled, (int) (size * _maskLen));
+            }
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -168,6 +175,33 @@ namespace FFS.Libraries.StaticEcs {
             var index = bitMapIdx * _maskLen + div;
             _bitMap[index] &= ~(1UL << rem);
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DelWithDisabled(uint bitMapIdx, ushort bitPos) {
+            var div = (ushort) (bitPos >> 6);
+            var rem = (ushort) (bitPos & 63);
+            var index = bitMapIdx * _maskLen + div;
+            _bitMap[index] &= ~(1UL << rem);
+            _bitMapDisabled[index] &= ~(1UL << rem);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void MoveToDisabled(uint bitMapIdx, ushort bitPos) {
+            var div = (ushort) (bitPos >> 6);
+            var rem = (ushort) (bitPos & 63);
+            var index = bitMapIdx * _maskLen + div;
+            _bitMap[index] &= ~(1UL << rem);
+            _bitMapDisabled[index] |= 1UL << rem;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void MoveToEnabled(uint bitMapIdx, ushort bitPos) {
+            var div = (ushort) (bitPos >> 6);
+            var rem = (ushort) (bitPos & 63);
+            var index = bitMapIdx * _maskLen + div;
+            _bitMapDisabled[index] &= ~(1UL << rem);
+            _bitMap[index] |= 1UL << rem;
+        }
 
         [MethodImpl(AggressiveInlining)]
         public void DelInBuffer(byte bufId, ushort bitPos) {
@@ -205,6 +239,19 @@ namespace FFS.Libraries.StaticEcs {
 
             return true;
         }
+
+        [MethodImpl(AggressiveInlining)]
+        public bool IsEmptyWithDisabled(uint bitMapIdx) {
+            var offset = bitMapIdx * _maskLen;
+            var endOffset = offset + _maskLen;
+            for (; offset < endOffset; offset++) {
+                if ((_bitMap[offset] | _bitMapDisabled[offset]) != 0UL) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
         
         [MethodImpl(AggressiveInlining)]
         public bool IsEmptyBuffer(byte bitMapIdx) {
@@ -233,6 +280,21 @@ namespace FFS.Libraries.StaticEcs {
 
             return count;
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public ushort LenWithDisabled(uint bitMapIdx) {
+            ushort count = 0;
+            var offset = bitMapIdx * _maskLen;
+            var endOffset = offset + _maskLen;
+            for (; offset < endOffset; offset++) {
+                var v = _bitMap[offset] | _bitMapDisabled[offset];
+                v -= (v >> 1) & 0x5555555555555555;
+                v = (v & 0x3333333333333333) + ((v >> 2) & 0x3333333333333333);
+                count += (ushort) ((((v + (v >> 4)) & 0xF0F0F0F0F0F0F0F) * 0x101010101010101) >> 56);
+            }
+
+            return count;
+        }
 
         [MethodImpl(AggressiveInlining)]
         public ushort LenBuffer(byte bufId) {
@@ -254,6 +316,21 @@ namespace FFS.Libraries.StaticEcs {
             var offset = bitMapIdx * _maskLen;
             for (var i = 0; i < _maskLen; i++, offset++) {
                 var v = _bitMap[offset];
+                if (v != 0UL) {
+                    idx = (i << 6) + BitsLut[((ulong) ((long) v & -(long) v) * 0x37E84A99DAE458F) >> 58];
+                    return true;
+                }
+            }
+
+            idx = -1;
+            return false;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool GetMinIndexWithDisabled(uint bitMapIdx, out int idx) {
+            var offset = bitMapIdx * _maskLen;
+            for (var i = 0; i < _maskLen; i++, offset++) {
+                var v = _bitMap[offset] | _bitMapDisabled[offset];
                 if (v != 0UL) {
                     idx = (i << 6) + BitsLut[((ulong) ((long) v & -(long) v) * 0x37E84A99DAE458F) >> 58];
                     return true;
@@ -320,6 +397,54 @@ namespace FFS.Libraries.StaticEcs {
 
             return true;
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool HasAllOnlyDisabled(uint bitMapIdx, byte bufId) {
+            if (_maskLen < 2) {
+                var rhs = _tempBuffer[bufId];
+                return (_bitMapDisabled[bitMapIdx] & rhs) == rhs;
+            }
+
+            return HasAllArrayOnlyDisabled(bitMapIdx, bufId);
+        }
+        
+        private bool HasAllArrayOnlyDisabled(uint bitMapIdx, byte bufId) {
+            var srcOffset = bitMapIdx * _maskLen;
+            var srcOffsetEnd = srcOffset + _maskLen;
+            var bufOffset = (uint) (bufId * _maskLen);
+            for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
+                var rhs = _tempBuffer[bufOffset];
+                if ((_bitMapDisabled[srcOffset] & rhs) != rhs) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool HasAllWithDisabled(uint bitMapIdx, byte bufId) {
+            if (_maskLen < 2) {
+                var rhs = _tempBuffer[bufId];
+                return ((_bitMap[bitMapIdx] | _bitMapDisabled[bitMapIdx]) & rhs) == rhs;
+            }
+
+            return HasAllArrayWithDisabled(bitMapIdx, bufId);
+        }
+        
+        private bool HasAllArrayWithDisabled(uint bitMapIdx, byte bufId) {
+            var srcOffset = bitMapIdx * _maskLen;
+            var srcOffsetEnd = srcOffset + _maskLen;
+            var bufOffset = (uint) (bufId * _maskLen);
+            for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
+                var rhs = _tempBuffer[bufOffset];
+                if (((_bitMap[srcOffset] | _bitMapDisabled[srcOffset]) & rhs) != rhs) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         [MethodImpl(AggressiveInlining)]
         public bool HasAny(uint bitMapIdx, byte bufId) {
@@ -336,6 +461,50 @@ namespace FFS.Libraries.StaticEcs {
             var bufOffset = bufId * _maskLen;
             for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
                 if ((_bitMap[srcOffset] & _tempBuffer[bufOffset]) != 0UL) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool HasAnyOnlyDisabled(uint bitMapIdx, byte bufId) {
+            if (_maskLen < 2) {
+                return (_bitMapDisabled[bitMapIdx] & _tempBuffer[bufId]) != 0UL;
+            }
+
+            return HasAnyArrayOnlyDisabled(bitMapIdx, bufId);
+        }
+
+        private bool HasAnyArrayOnlyDisabled(uint bitMapIdx, byte bufId) {
+            var srcOffset = bitMapIdx * _maskLen;
+            var srcOffsetEnd = srcOffset + _maskLen;
+            var bufOffset = bufId * _maskLen;
+            for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
+                if ((_bitMapDisabled[srcOffset] & _tempBuffer[bufOffset]) != 0UL) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool HasAnyWithDisabled(uint bitMapIdx, byte bufId) {
+            if (_maskLen < 2) {
+                return ((_bitMapDisabled[bitMapIdx] | _bitMap[bitMapIdx]) & _tempBuffer[bufId]) != 0UL;
+            }
+
+            return HasAnyArrayWithDisabled(bitMapIdx, bufId);
+        }
+
+        private bool HasAnyArrayWithDisabled(uint bitMapIdx, byte bufId) {
+            var srcOffset = bitMapIdx * _maskLen;
+            var srcOffsetEnd = srcOffset + _maskLen;
+            var bufOffset = bufId * _maskLen;
+            for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
+                if (((_bitMapDisabled[bitMapIdx] | _bitMap[bitMapIdx]) & _tempBuffer[bufOffset]) != 0UL) {
                     return true;
                 }
             }
@@ -369,6 +538,60 @@ namespace FFS.Libraries.StaticEcs {
 
             return true;
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool HasAllAndExcOnlyDisabled(uint bitMapIdx, byte bufIdAll, byte bufIdExc) {
+            if (_maskLen < 2) {
+                var lhs = _bitMapDisabled[bitMapIdx];
+                var rhs = _tempBuffer[bufIdAll];
+                return (lhs & rhs) == rhs && (lhs & _tempBuffer[bufIdExc]) == 0UL;
+            }
+
+            return HasAllAndExcArrayOnlyDisabled(bitMapIdx, bufIdAll, bufIdExc);
+        }
+        
+        private bool HasAllAndExcArrayOnlyDisabled(uint bitMapIdx, byte bufIdAll, byte bufIdExc) {
+            var srcOffset = bitMapIdx * _maskLen;
+            var srcOffsetEnd = srcOffset + _maskLen;
+            var bufIdAllOffset = bufIdAll * _maskLen;
+            var bufIdExcOffset = bufIdExc * _maskLen;
+            for (; srcOffset < srcOffsetEnd; srcOffset++, bufIdAllOffset++, bufIdExcOffset++) {
+                var lhs = _bitMapDisabled[srcOffset];
+                var rhs = _tempBuffer[bufIdAllOffset];
+                if ((lhs & rhs) != rhs || (lhs & _tempBuffer[bufIdExcOffset]) != 0UL) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool HasAllAndExcWithDisabled(uint bitMapIdx, byte bufIdAll, byte bufIdExc) {
+            if (_maskLen < 2) {
+                var lhs = _bitMapDisabled[bitMapIdx] | _bitMap[bitMapIdx];
+                var rhs = _tempBuffer[bufIdAll];
+                return (lhs & rhs) == rhs && (lhs & _tempBuffer[bufIdExc]) == 0UL;
+            }
+
+            return HasAllAndExcArrayWithDisabled(bitMapIdx, bufIdAll, bufIdExc);
+        }
+        
+        private bool HasAllAndExcArrayWithDisabled(uint bitMapIdx, byte bufIdAll, byte bufIdExc) {
+            var srcOffset = bitMapIdx * _maskLen;
+            var srcOffsetEnd = srcOffset + _maskLen;
+            var bufIdAllOffset = bufIdAll * _maskLen;
+            var bufIdExcOffset = bufIdExc * _maskLen;
+            for (; srcOffset < srcOffsetEnd; srcOffset++, bufIdAllOffset++, bufIdExcOffset++) {
+                var lhs = _bitMapDisabled[srcOffset] | _bitMap[srcOffset];
+                var rhs = _tempBuffer[bufIdAllOffset];
+                if ((lhs & rhs) != rhs || (lhs & _tempBuffer[bufIdExcOffset]) != 0UL) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         [MethodImpl(AggressiveInlining)]
         public bool NotHasAny(uint bitMapIdx, byte bufId) {
@@ -391,15 +614,79 @@ namespace FFS.Libraries.StaticEcs {
 
             return true;
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool NotHasAnyOnlyDisabled(uint bitMapIdx, byte bufId) {
+            if (_maskLen < 2) {
+                return (_bitMapDisabled[bitMapIdx] & _tempBuffer[bufId]) == 0UL;
+            }
+
+            return NotHasAnyArrayOnlyDisabled(bitMapIdx, bufId);
+        }
+        
+        private bool NotHasAnyArrayOnlyDisabled(uint bitMapIdx, byte bufId) {
+            var srcOffset = bitMapIdx * _maskLen;
+            var srcOffsetEnd = srcOffset + _maskLen;
+            var bufOffset = bufId * _maskLen;
+            for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
+                if ((_bitMapDisabled[srcOffset] & _tempBuffer[bufOffset]) != 0UL) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool NotHasAnyWithDisabled(uint bitMapIdx, byte bufId) {
+            if (_maskLen < 2) {
+                return ((_bitMapDisabled[bitMapIdx] | _bitMap[bitMapIdx]) & _tempBuffer[bufId]) == 0UL;
+            }
+
+            return NotHasAnyArrayWithDisabled(bitMapIdx, bufId);
+        }
+        
+        private bool NotHasAnyArrayWithDisabled(uint bitMapIdx, byte bufId) {
+            var srcOffset = bitMapIdx * _maskLen;
+            var srcOffsetEnd = srcOffset + _maskLen;
+            var bufOffset = bufId * _maskLen;
+            for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
+                if (((_bitMapDisabled[bitMapIdx] | _bitMap[bitMapIdx]) & _tempBuffer[bufOffset]) != 0UL) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         [MethodImpl(AggressiveInlining)]
         public void CopyToBuffer(uint bitMapIdx, byte bufId) {
-            Array.Copy(_bitMap, bitMapIdx * _maskLen, _tempBuffer, bufId * _maskLen, _maskLen);
+            var srcOffset = bitMapIdx * _maskLen;
+            var srcOffsetEnd = srcOffset + _maskLen;
+            var bufOffset = bufId * _maskLen;
+            for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
+                _tempBuffer[bufOffset] = _bitMap[srcOffset];
+            }
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public void CopyWithDisabledToBuffer(uint bitMapIdx, byte bufId) {
+            var srcOffset = bitMapIdx * _maskLen;
+            var srcOffsetEnd = srcOffset + _maskLen;
+            var bufOffset = bufId * _maskLen;
+            for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
+                _tempBuffer[bufOffset] = _bitMap[srcOffset] | _bitMapDisabled[srcOffset];
+            }
         }
 
         [MethodImpl(AggressiveInlining)]
         public void Copy(uint bitMapIdx1, uint bitMapIdx2) {
-            Array.Copy(_bitMap, bitMapIdx1 * _maskLen, _bitMap, bitMapIdx2 * _maskLen, _maskLen);
+            var srcOffset1 = bitMapIdx1 * _maskLen;
+            var srcOffset2 = bitMapIdx2 * _maskLen;
+            var srcOffsetEnd1 = srcOffset1 + _maskLen;
+            for (; srcOffset1 < srcOffsetEnd1; srcOffset1++, srcOffset2++) {
+                _bitMap[srcOffset2] = _bitMap[srcOffset1];
+            }
         }
 
         [MethodImpl(AggressiveInlining)]

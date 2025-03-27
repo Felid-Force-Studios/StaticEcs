@@ -1,4 +1,5 @@
 ﻿#if !FFS_ECS_DISABLE_MASKS
+using System;
 using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
@@ -78,6 +79,9 @@ namespace FFS.Libraries.StaticEcs {
             public bool TryCast<C>(out MasksWrapper<C> wrapper) where C : struct, IMask {
                 return Masks<C>.Value.id == Masks<T>.Value.id;
             }
+
+            [MethodImpl(AggressiveInlining)]
+            Type IStandardRawPool.GetElementType() => typeof(T);
 
             [MethodImpl(AggressiveInlining)]
             object IStandardRawPool.GetRaw(uint entity) => default(T);

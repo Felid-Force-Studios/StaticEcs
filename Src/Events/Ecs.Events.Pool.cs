@@ -9,6 +9,8 @@ using Unity.IL2CPP.CompilerServices;
 namespace FFS.Libraries.StaticEcs {
     
     public interface IEventPoolWrapper {
+        internal Type GetEventType();
+        
         internal IEvent GetRaw(int idx);
 
         internal void Del(int idx);
@@ -46,6 +48,9 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public bool Add(T value) => Ecs<WorldType>.Events.Pool<T>.Value.Add(value);
+
+        [MethodImpl(AggressiveInlining)]
+        Type IEventPoolWrapper.GetEventType() => typeof(T);
 
         [MethodImpl(AggressiveInlining)]
         IEvent IEventPoolWrapper.GetRaw(int idx) => Ecs<WorldType>.Events.Pool<T>.Value.Get(idx);

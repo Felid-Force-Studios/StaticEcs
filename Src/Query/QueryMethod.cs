@@ -26,4 +26,10 @@ namespace FFS.Libraries.StaticEcs {
     public interface IPrimaryQueryMethod : IQueryMethod { }
     
     public interface ISealedQueryMethod : IQueryMethod { }
+
+    public enum EntityStatusType : byte {
+        Enabled = 0,
+        Disabled = 1,
+        Any = 2,
+    }
 }

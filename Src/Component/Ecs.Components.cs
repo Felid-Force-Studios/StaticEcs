@@ -41,7 +41,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal void Initialize() {
-                BitMask.Create(World.EntitiesCapacity(), 32, Utils.CalculateMaskLen(_poolsCount));
+                BitMask.Create(World.EntitiesCapacity(), 32, Utils.CalculateMaskLen(_poolsCount), true);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -63,6 +63,18 @@ namespace FFS.Libraries.StaticEcs {
                 _poolsCount++;
                 
                 return Components<T>.Value.DynamicId();
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal List<IRawPool> GetAllRawsPools() {
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                if (!World.IsInitialized()) throw new Exception($"World<{typeof(WorldType)}>, Method: GetAllRawsPools, World not initialized");
+                #endif
+                var pools = new List<IRawPool>();
+                for (int i = 0; i < _poolsCount; i++) {
+                    pools.Add(_pools[i]);
+                }
+                return pools;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -130,21 +142,25 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal ushort ComponentsCount(Entity entity) {
+            internal ushort ComponentsCount(Entity entity, bool withDisabled) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"World<{typeof(WorldType)}>, Method: ComponentsCount, World not initialized");
                 #endif
-                return BitMask.Len(entity._id);
+                return withDisabled ? BitMask.LenWithDisabled(entity._id) : BitMask.Len(entity._id);
             }
             
             [MethodImpl(AggressiveInlining)]
-            internal string ToPrettyStringEntity(Entity entity) {
+            internal string ToPrettyStringEntity(Entity entity, bool withDisabled) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"World<{typeof(WorldType)}>, Method: ToPrettyStringEntity, World not initialized");
                 #endif
                 var str = "Components:\n";
                 var bufId = BitMask.BorrowBuf();
-                BitMask.CopyToBuffer(entity._id, bufId);
+                if (withDisabled) {
+                    BitMask.CopyWithDisabledToBuffer(entity._id, bufId);
+                } else {
+                    BitMask.CopyToBuffer(entity._id, bufId);
+                }
                 while (BitMask.GetMinIndexBuffer(bufId, out var id)) {
                     str += _pools[id].ToStringComponent(entity);
                     BitMask.DelInBuffer(bufId, (ushort) id);
@@ -154,13 +170,17 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            internal void GetAllComponents(Entity entity, List<IComponent> result) {
+            internal void GetAllComponents(Entity entity, List<IComponent> result, bool withDisabled) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"World<{typeof(WorldType)}>, Method: GetComponents, World not initialized");
                 #endif
                 result.Clear();
                 var bufId = BitMask.BorrowBuf();
-                BitMask.CopyToBuffer(entity._id, bufId);
+                if (withDisabled) {
+                    BitMask.CopyWithDisabledToBuffer(entity._id, bufId);
+                } else {
+                    BitMask.CopyToBuffer(entity._id, bufId);
+                }
                 while (BitMask.GetMinIndexBuffer(bufId, out var id)) {
                     result.Add(_pools[id].GetRaw(entity));
                     BitMask.DelInBuffer(bufId, (ushort) id);
@@ -170,15 +190,19 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             internal void DestroyEntity(Entity entity) {
-                while (BitMask.GetMinIndex(entity._id, out var id)) {
+                while (BitMask.GetMinIndexWithDisabled(entity._id, out var id)) {
                     _pools[id].DeleteInternal(entity);
                 }
             }
             
             [MethodImpl(AggressiveInlining)]
-            internal void CopyEntity(Entity srcEntity, Entity dstEntity) {
+            internal void CopyEntity(Entity srcEntity, Entity dstEntity, bool withDisabled) {
                 var bufId = BitMask.BorrowBuf();
-                BitMask.CopyToBuffer(srcEntity._id, bufId);
+                if (withDisabled) {
+                    BitMask.CopyWithDisabledToBuffer(srcEntity._id, bufId);
+                } else {
+                    BitMask.CopyToBuffer(srcEntity._id, bufId);
+                }
                 while (BitMask.GetMinIndexBuffer(bufId, out var id)) {
                     _pools[id].Copy(srcEntity, dstEntity);
                     BitMask.DelInBuffer(bufId, (ushort) id);

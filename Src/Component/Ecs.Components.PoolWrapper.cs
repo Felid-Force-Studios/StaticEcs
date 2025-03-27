@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -19,13 +20,24 @@ namespace FFS.Libraries.StaticEcs {
         internal void Move(uint entity, uint target);
     }
     
+    public interface IRawComponentPool : IRawPool {
+            
+        internal bool HasDisabled(uint entity);
+
+        internal bool HasEnabled(uint entity);
+
+        internal void Enable(uint entity);
+
+        internal void Disable(uint entity);
+    }
+    
     
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
     public abstract partial class Ecs<WorldType> {
-        public interface IComponentsWrapper: IRawPool {
+        public interface IComponentsWrapper: IRawComponentPool {
             public ComponentDynId DynamicId();
             
             public IComponent GetRaw(Entity entity);
@@ -33,6 +45,14 @@ namespace FFS.Libraries.StaticEcs {
             public void PutRaw(Entity entity, IComponent component);
             
             public bool Has(Entity entity);
+
+            public bool HasDisabled(Entity entity);
+
+            public bool HasEnabled(Entity entity);
+
+            public void Enable(Entity entity);
+
+            public void Disable(Entity entity);
 
             public void Add(Entity entity);
 
@@ -45,8 +65,12 @@ namespace FFS.Libraries.StaticEcs {
             public void Delete(Entity entity);
 
             public void Copy(Entity srcEntity, Entity dstEntity);
+
+            public bool TryCopy(Entity srcEntity, Entity dstEntity);
             
             public void Move(Entity entity, Entity target);
+            
+            public bool TryMove(Entity entity, Entity target);
             
             public bool Is<C>() where C : struct, IComponent;
 
@@ -113,6 +137,18 @@ namespace FFS.Libraries.StaticEcs {
             public bool Has(Entity entity) => Components<T>.Value.Has(entity);
 
             [MethodImpl(AggressiveInlining)]
+            public bool HasEnabled(Entity entity) => Components<T>.Value.HasEnabled(entity);
+
+            [MethodImpl(AggressiveInlining)]
+            public bool HasDisabled(Entity entity) => Components<T>.Value.HasDisabled(entity);
+
+            [MethodImpl(AggressiveInlining)]
+            public void Enable(Entity entity) => Components<T>.Value.Enable(entity);
+
+            [MethodImpl(AggressiveInlining)]
+            public void Disable(Entity entity) => Components<T>.Value.Disable(entity);
+
+            [MethodImpl(AggressiveInlining)]
             public bool TryDelete(Entity entity) => Components<T>.Value.TryDelete(entity);
 
             [MethodImpl(AggressiveInlining)]
@@ -123,9 +159,18 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public void Copy(Entity srcEntity, Entity dstEntity) => Components<T>.Value.Copy(srcEntity, dstEntity);
+
+            [MethodImpl(AggressiveInlining)]
+            public bool TryCopy(Entity srcEntity, Entity dstEntity) => Components<T>.Value.TryCopy(srcEntity, dstEntity);
             
             [MethodImpl(AggressiveInlining)]
             public void Move(Entity srcEntity, Entity dstEntity) => Components<T>.Value.Move(srcEntity, dstEntity);
+            
+            [MethodImpl(AggressiveInlining)]
+            public bool TryMove(Entity srcEntity, Entity dstEntity) => Components<T>.Value.TryMove(srcEntity, dstEntity);
+
+            [MethodImpl(AggressiveInlining)]
+            Type IStandardRawPool.GetElementType() => typeof(T);
 
             [MethodImpl(AggressiveInlining)]
             object IStandardRawPool.GetRaw(uint entity) => Components<T>.Value.RefMutInternal(new Entity(entity));
@@ -194,6 +239,18 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             void IComponentsWrapper.AddBlocker(int val) => Components<T>.Value.AddBlocker(val);
             #endif
+            
+            [MethodImpl(AggressiveInlining)]
+            bool IRawComponentPool.HasDisabled(uint entity) => Components<T>.Value.HasDisabled(new Entity(entity));
+
+            [MethodImpl(AggressiveInlining)]
+            bool IRawComponentPool.HasEnabled(uint entity) => Components<T>.Value.HasEnabled(new Entity(entity));
+
+            [MethodImpl(AggressiveInlining)]
+            void IRawComponentPool.Enable(uint entity) => Components<T>.Value.Enable(new Entity(entity));
+
+            [MethodImpl(AggressiveInlining)]
+            void IRawComponentPool.Disable(uint entity) => Components<T>.Value.Disable(new Entity(entity));
         }
     }
 }

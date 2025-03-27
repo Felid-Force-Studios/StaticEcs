@@ -1,4 +1,5 @@
 ﻿#if !FFS_ECS_DISABLE_TAGS
+using System;
 using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
@@ -95,6 +96,9 @@ namespace FFS.Libraries.StaticEcs {
             public bool TryCast<C>(out TagsWrapper<C> wrapper) where C : struct, ITag {
                 return Tags<C>.Value.id == Tags<T>.Value.id;
             }
+
+            [MethodImpl(AggressiveInlining)]
+            Type IStandardRawPool.GetElementType() => typeof(T);
 
             [MethodImpl(AggressiveInlining)]
             object IStandardRawPool.GetRaw(uint entity) => default(T);

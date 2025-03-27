@@ -48,7 +48,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 var eid = entity._id;
                 ref var idx = ref _dataIdxByEntityId[entity._id];
-                if (idx != Utils.EmptyComponent) {
+                if (idx != Const.EmptyComponentMask) {
                     return;
                 }
                 
@@ -75,7 +75,7 @@ namespace FFS.Libraries.StaticEcs {
                 if (!_registered) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Has, Tag type not registered");
                 if (!entity.IsActual()) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Has, cannot access ID - {id} from deleted entity");
                 #endif
-                return _dataIdxByEntityId[entity._id] != Utils.EmptyComponent;
+                return _dataIdxByEntityId[entity._id] != Const.EmptyComponentMask;
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -100,7 +100,7 @@ namespace FFS.Libraries.StaticEcs {
                 var lastEntity = _entities[_tagCount];
                 _entities[idx] = lastEntity;
                 _dataIdxByEntityId[lastEntity] = idx;
-                idx = Utils.EmptyComponent;
+                idx = Const.EmptyComponentMask;
                 _bitMask.Del(entity._id, id);
             }
             
@@ -157,7 +157,7 @@ namespace FFS.Libraries.StaticEcs {
                 _tagCount = 0;
                 _dataIdxByEntityId = new uint[World.EntitiesCapacity()];
                 for (uint i = 0; i < _dataIdxByEntityId.Length; i++) {
-                    _dataIdxByEntityId[i] = Utils.EmptyComponent;
+                    _dataIdxByEntityId[i] = Const.EmptyComponentMask;
                 }
 
                 _registered = true;
@@ -191,7 +191,7 @@ namespace FFS.Libraries.StaticEcs {
                 var lastLength = (uint) _dataIdxByEntityId.Length;
                 Array.Resize(ref _dataIdxByEntityId, (int) cap);
                 for (var i = lastLength; i < cap; i++) {
-                    _dataIdxByEntityId[i] = Utils.EmptyComponent;
+                    _dataIdxByEntityId[i] = Const.EmptyComponentMask;
                 }
             }
 
@@ -230,7 +230,7 @@ namespace FFS.Libraries.StaticEcs {
             internal void Clear() {
                 Array.Clear(_entities, 0, _entities.Length);
                 for (var i = 0; i < _dataIdxByEntityId.Length; i++) {
-                    _dataIdxByEntityId[i] = Utils.EmptyComponent;
+                    _dataIdxByEntityId[i] = Const.EmptyComponentMask;
                 }
                 _tagCount = 0;
             }

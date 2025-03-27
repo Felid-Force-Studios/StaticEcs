@@ -1,4 +1,11 @@
-## Benchmark - [source code](https://github.com/blackbone/other-ecs-benchmarks/pull/9/commits/cb081bd943c71598921084e6098813932b986768)
+---
+title: Benchmark
+parent: Main page
+nav_order: 2000
+---
+
+## Benchmark
+### [source code](https://github.com/blackbone/other-ecs-benchmarks/pull/9/commits/cb081bd943c71598921084e6098813932b986768)
 
 BenchmarkDotNet v0.14.0, Windows 10 (10.0.19045.5608/22H2/2022Update)
 AMD Ryzen 7 4800H with Radeon Graphics, 1 CPU, 16 logical and 8 physical cores

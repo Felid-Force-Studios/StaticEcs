@@ -39,14 +39,14 @@ namespace FFS.Libraries.StaticEcs {
             public bool IsActual() => StandardComponents<EntityVersion>.Value.RefMutInternal(this).Value > 0;
 
             [MethodImpl(AggressiveInlining)]
-            public Entity Clone() => World.CloneEntity(this);
+            public Entity Clone(bool withDisabled = true) => World.CloneEntity(this, withDisabled);
 
             [MethodImpl(AggressiveInlining)]
-            public void CopyTo(Entity dstEntity) => World.CopyEntityData(this, dstEntity);
+            public void CopyTo(Entity dstEntity, bool withDisabled = true) => World.CopyEntityData(this, dstEntity, withDisabled);
 
             [MethodImpl(AggressiveInlining)]
-            public void MoveTo(Entity dstEntity) {
-                World.CopyEntityData(this, dstEntity);
+            public void MoveTo(Entity dstEntity, bool withDisabled = true) {
+                World.CopyEntityData(this, dstEntity, withDisabled);
                 Destroy();
             }
 
@@ -451,7 +451,7 @@ namespace FFS.Libraries.StaticEcs {
             public override int GetHashCode() => (int) _id;
 
             [MethodImpl(AggressiveInlining)]
-            public string ToPrettyString() => World.ToPrettyStringEntity(this);
+            public string ToPrettyString(bool withDisabled = true) => World.ToPrettyStringEntity(this, withDisabled);
 
             public override string ToString() => $"Entity ID: {_id}";
         }

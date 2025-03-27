@@ -25,10 +25,12 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             
             private IStandardComponentsWrapper[] _pools;
+            private IStandardComponentsWrapper[] _publicPools;
             private IStandardComponentsWrapper[] _poolsWithAutoInit;
             private IStandardComponentsWrapper[] _poolsWithAutoReset;
             private Dictionary<Type, int> _poolIdxByType;
             private ushort _poolsCount;
+            private ushort _publicPoolsCount;
             private ushort _poolsWithAutoInitCount;
             private ushort _poolsWithAutoResetCount;
 
@@ -37,6 +39,7 @@ namespace FFS.Libraries.StaticEcs {
                 _pools = new IStandardComponentsWrapper[componentsCapacity];
                 _poolsWithAutoInit = new IStandardComponentsWrapper[componentsCapacity];
                 _poolsWithAutoReset = new IStandardComponentsWrapper[componentsCapacity];
+                _publicPools = new IStandardComponentsWrapper[componentsCapacity];
                 _poolIdxByType = new Dictionary<Type, int>();
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 _debugEventListeners ??= new List<IStandardComponentsDebugEventListener>();
@@ -47,15 +50,13 @@ namespace FFS.Libraries.StaticEcs {
             internal void Initialize() { }
 
             [MethodImpl(AggressiveInlining)]
-            internal StandardComponentDynId RegisterComponentType<T>(AutoInitHandler<T> autoInit = null, AutoResetHandler<T> autoReset = null, AutoCopyHandler<T> autoCopy = null) where T : struct, IStandardComponent {
+            internal StandardComponentDynId RegisterComponentType<T>(bool publicPool, AutoInitHandler<T> autoInit = null, AutoResetHandler<T> autoReset = null, AutoCopyHandler<T> autoCopy = null) where T : struct, IStandardComponent {
                 if (StandardComponents<T>.Value.IsRegistered()) {
                     return StandardComponents<T>.Value.DynamicId();
                 }
 
                 if (_poolsCount == _pools.Length) {
                     Array.Resize(ref _pools, _poolsCount << 1);
-                    Array.Resize(ref _poolsWithAutoInit, _poolsCount << 1);
-                    Array.Resize(ref _poolsWithAutoReset, _poolsCount << 1);
                 }
 
                 _pools[_poolsCount] = new StandardComponentsWrapper<T>();
@@ -67,8 +68,15 @@ namespace FFS.Libraries.StaticEcs {
                 SetAutoInit(autoInit);
                 SetAutoReset(autoReset);
                 SetAutoCopy(autoCopy);
+
+                if (publicPool) {
+                    if (_publicPoolsCount == _publicPools.Length) {
+                        Array.Resize(ref _publicPools, _publicPoolsCount << 1);
+                    }
+                    _publicPools[_publicPoolsCount++] = _pools[_poolsCount];
+                }
                 _poolsCount++;
-                
+
                 return StandardComponents<T>.Value.DynamicId();
             }
             
@@ -91,6 +99,18 @@ namespace FFS.Libraries.StaticEcs {
                 if (handler != null && StandardComponents<T>.Value.SetAutoCopy(handler)) {
                     
                 }
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal List<IStandardRawPool> GetAllRawsPools() {
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                if (!World.IsInitialized()) throw new Exception($"World<{typeof(WorldType)}>, Method: GetAllRawsPools, World not initialized");
+                #endif
+                var pools = new List<IStandardRawPool>();
+                for (int i = 0; i < _poolsCount; i++) {
+                    pools.Add(_pools[i]);
+                }
+                return pools;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -170,7 +190,7 @@ namespace FFS.Libraries.StaticEcs {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"World<{typeof(WorldType)}>, Method: ToPrettyStringEntity, World not initialized");
                 #endif
-                var str = "Components:\n";
+                var str = "Standard components:\n";
                 for (var i = 0; i < _poolsCount; i++) {
                     str += _pools[i].ToStringComponent(entity);
                 }
@@ -204,8 +224,8 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             internal void CopyEntity(Entity srcEntity, Entity dstEntity) {
-                for (var i = 0; i < _poolsCount; i++) {
-                    _pools[i].Copy(srcEntity, dstEntity);
+                for (var i = 0; i < _publicPoolsCount; i++) {
+                    _publicPools[i].Copy(srcEntity, dstEntity);
                 }
             }
             
@@ -218,18 +238,24 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal void Clear() {
-                for (var i = 0; i < _poolsCount; i++) {
-                    _pools[i].Clear();
+                for (var i = 0; i < _publicPoolsCount; i++) {
+                    _publicPools[i].Clear();
                 }
             }
             
             [MethodImpl(AggressiveInlining)]
             internal void AddAutoInitPool(int poolId) {
+                if (_poolsWithAutoInitCount == _poolsWithAutoInit.Length) {
+                    Array.Resize(ref _poolsWithAutoInit, _poolsWithAutoInitCount << 1);
+                }
                 _poolsWithAutoInit[_poolsWithAutoInitCount++] = _pools[poolId];
             }
                 
             [MethodImpl(AggressiveInlining)]
             internal void AddAutoResetPool(int poolId) {
+                if (_poolsWithAutoResetCount == _poolsWithAutoReset.Length) {
+                    Array.Resize(ref _poolsWithAutoReset, _poolsWithAutoResetCount << 1);
+                }
                 _poolsWithAutoReset[_poolsWithAutoResetCount++] = _pools[poolId];
             }
 
@@ -241,6 +267,8 @@ namespace FFS.Libraries.StaticEcs {
 
                 _pools = default;
                 _poolsWithAutoInit = default;
+                _publicPools = default;
+                _publicPoolsCount = default;
                 _poolsWithAutoReset = default;
                 _poolsWithAutoInitCount = default;
                 _poolsWithAutoResetCount = default;

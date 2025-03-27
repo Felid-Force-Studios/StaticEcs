@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -7,6 +8,8 @@ using Unity.IL2CPP.CompilerServices;
 namespace FFS.Libraries.StaticEcs {
     
     public interface IStandardRawPool {
+        internal Type GetElementType();
+
         internal object GetRaw(uint entity);
             
         internal void PutRaw(uint entity, object value);
@@ -77,6 +80,9 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public void Copy(Entity srcEntity, Entity dstEntity) => StandardComponents<T>.Value.Copy(srcEntity, dstEntity);
+
+            [MethodImpl(AggressiveInlining)]
+            Type IStandardRawPool.GetElementType() => typeof(T);
 
             [MethodImpl(AggressiveInlining)]
             object IStandardRawPool.GetRaw(uint entity) => StandardComponents<T>.Value.RefMutInternal(new Entity(entity));

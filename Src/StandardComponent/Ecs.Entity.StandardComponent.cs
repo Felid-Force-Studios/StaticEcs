@@ -23,6 +23,18 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public void GetAllStandardComponents(List<IStandardComponent> result) => ModuleStandardComponents.Value.GetAllComponents(this, result);
+            
+            [MethodImpl(AggressiveInlining)]
+            public bool IsDisabled() => StandardComponents<EntityStatus>.Value.RefMutInternal(this).Value == EntityStatusType.Disabled;
+            
+            [MethodImpl(AggressiveInlining)]
+            public bool IsEnabled() => StandardComponents<EntityStatus>.Value.RefMutInternal(this).Value == EntityStatusType.Enabled;
+            
+            [MethodImpl(AggressiveInlining)]
+            public void Disable() => StandardComponents<EntityStatus>.Value.RefMutInternal(this).Value = EntityStatusType.Disabled;
+            
+            [MethodImpl(AggressiveInlining)]
+            public void Enable() => StandardComponents<EntityStatus>.Value.RefMutInternal(this).Value = EntityStatusType.Enabled;
 
             #region BY_TYPE
             #region REF

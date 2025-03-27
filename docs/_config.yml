@@ -1,0 +1,30 @@
+remote_theme: just-the-docs/just-the-docs
+color_scheme: dark
+callouts:
+  important:
+    title: Important
+    color: yellow
+  note:
+    title: Note
+    color: blue
+  warning:
+    title: Warning
+    color: red
+  importantru:
+    title: Важно
+    color: yellow
+  noteru:
+    title: Примечание
+    color: blue
+  warningru:
+    title: Внимание
+    color: red
+nav_external_links:
+  - title: Static ECS - GitHub
+    url: https://github.com/Felid-Force-Studios/StaticEcs
+    hide_icon: false
+    opens_in_new_tab: false
+  - title: Static ECS Unity - GitHub
+    url: https://github.com/Felid-Force-Studios/StaticEcs-Unity
+    hide_icon: false
+    opens_in_new_tab: false

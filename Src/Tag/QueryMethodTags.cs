@@ -65,7 +65,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return m1[entityId] != Utils.EmptyComponent;
+            return m1[entityId] != Const.EmptyComponentMask;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -100,7 +100,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return m1[entityId] != Utils.EmptyComponent && m2[entityId] != Utils.EmptyComponent;
+            return m1[entityId] != Const.EmptyComponentMask && m2[entityId] != Const.EmptyComponentMask;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -141,7 +141,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return m1[entityId] != Utils.EmptyComponent && m2[entityId] != Utils.EmptyComponent && m3[entityId] != Utils.EmptyComponent;
+            return m1[entityId] != Const.EmptyComponentMask && m2[entityId] != Const.EmptyComponentMask && m3[entityId] != Const.EmptyComponentMask;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -188,7 +188,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return m1[entityId] != Utils.EmptyComponent && m2[entityId] != Utils.EmptyComponent && m3[entityId] != Utils.EmptyComponent && m4[entityId] != Utils.EmptyComponent;
+            return m1[entityId] != Const.EmptyComponentMask && m2[entityId] != Const.EmptyComponentMask && m3[entityId] != Const.EmptyComponentMask && m4[entityId] != Const.EmptyComponentMask;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -460,7 +460,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return m1[entityId] == Utils.EmptyComponent;
+            return m1[entityId] == Const.EmptyComponentMask;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -494,7 +494,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return m1[entityId] == Utils.EmptyComponent && m2[entityId] == Utils.EmptyComponent;
+            return m1[entityId] == Const.EmptyComponentMask && m2[entityId] == Const.EmptyComponentMask;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -782,7 +782,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return m1[entityId] != Utils.EmptyComponent || m2[entityId] != Utils.EmptyComponent;
+            return m1[entityId] != Const.EmptyComponentMask || m2[entityId] != Const.EmptyComponentMask;
         }
 
         [MethodImpl(AggressiveInlining)]

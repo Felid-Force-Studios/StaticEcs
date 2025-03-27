@@ -43,7 +43,8 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             internal static void Initialize() {
-                ModuleStandardComponents.Value.RegisterComponentType<EntityVersion>();
+                ModuleStandardComponents.Value.RegisterComponentType<EntityVersion>(false);
+                ModuleStandardComponents.Value.RegisterComponentType<EntityStatus>(false);
                 
                 ModuleComponents.Value.Initialize();
                 ModuleStandardComponents.Value.Initialize();
@@ -155,7 +156,7 @@ namespace FFS.Libraries.StaticEcs {
                 if (Status != WorldStatus.Created) {
                     throw new Exception($"World<{typeof(WorldType)}>, Method: RegisterStandardComponentType<{typeof(T)}>, World not created");
                 }
-                return ModuleStandardComponents.Value.RegisterComponentType(autoInit, autoReset, autoCopy);
+                return ModuleStandardComponents.Value.RegisterComponentType(true, autoInit, autoReset, autoCopy);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -430,6 +431,7 @@ namespace FFS.Libraries.StaticEcs {
                 ModuleComponents.Value.DestroyEntity(entity);
                 ModuleStandardComponents.Value.DestroyEntity(entity);
                 version = version == short.MaxValue ? (short) -1 : (short) -(version + 1);
+                StandardComponents<EntityStatus>.Value.RefMutInternal(entity).Value = EntityStatusType.Enabled;
                 if (_deletedEntitiesCount == _deletedEntities.Length) {
                     Array.Resize(ref _deletedEntities, (int) (_deletedEntitiesCount << 1));
                 }
@@ -445,12 +447,12 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void CopyEntityData(Entity srcEntity, Entity dstEntity) {
+            public static void CopyEntityData(Entity srcEntity, Entity dstEntity, bool withDisabled) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if(!IsInitialized()) throw new Exception($"World<{typeof(WorldType)}>, Method: CopyEntityData, World not initialized");
                 #endif
                 
-                ModuleComponents.Value.CopyEntity(srcEntity, dstEntity);
+                ModuleComponents.Value.CopyEntity(srcEntity, dstEntity, withDisabled);
                 ModuleStandardComponents.Value.CopyEntity(srcEntity, dstEntity);
                 #if !FFS_ECS_DISABLE_TAGS
                 ModuleTags.Value.CopyEntity(srcEntity, dstEntity);
@@ -461,22 +463,22 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static Entity CloneEntity(Entity srcEntity) {
+            public static Entity CloneEntity(Entity srcEntity, bool withDisabled) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if(!IsInitialized()) throw new Exception($"World<{typeof(WorldType)}>, Method: CloneEntity, World not initialized");
                 #endif
                 
                 var dstEntity = CreateEntityInternal();
-                CopyEntityData(srcEntity, dstEntity);
+                CopyEntityData(srcEntity, dstEntity, withDisabled);
 
                 return dstEntity;
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static string ToPrettyStringEntity(Entity entity) {
+            public static string ToPrettyStringEntity(Entity entity, bool withDisabled) {
                 var result = $"Entity ID: {entity._id}\n";
                 result += ModuleStandardComponents.Value.ToPrettyStringEntity(entity);
-                result += ModuleComponents.Value.ToPrettyStringEntity(entity);
+                result += ModuleComponents.Value.ToPrettyStringEntity(entity, withDisabled);
                 #if !FFS_ECS_DISABLE_TAGS
                 result += ModuleTags.Value.ToPrettyStringEntity(entity);
                 #endif
@@ -647,18 +649,28 @@ namespace FFS.Libraries.StaticEcs {
         
         #if !FFS_ECS_DISABLE_EVENTS
         public IEvents Events();
+        public List<IEventPoolWrapper> GetAllEventPools();
         #endif
 
         internal bool TryGetStandardComponentsRawPool(Type type, out IStandardRawPool pool);
         
-        internal bool TryGetComponentsRawPool(Type type, out IRawPool pool);
+        internal List<IStandardRawPool> GetAllStandardComponentsRawPools();
+        
+        internal bool TryGetComponentsRawPool(Type type, out IRawComponentPool pool);
+        
+        internal List<IRawPool> GetAllComponentsRawPools();
+
         
         #if !FFS_ECS_DISABLE_TAGS
         internal bool TryGetTagsRawPool(Type type, out IRawPool pool);
+        
+        internal List<IRawPool> GetAllTagsRawPools();
         #endif
         
         #if !FFS_ECS_DISABLE_MASKS
         internal bool TryGetMasksRawPool(Type type, out IRawPool pool);
+        
+        internal List<IRawPool> GetAllMasksRawPools();
         #endif
         
     }
@@ -699,6 +711,10 @@ namespace FFS.Libraries.StaticEcs {
         #if !FFS_ECS_DISABLE_EVENTS
         [MethodImpl(AggressiveInlining)]
         public IEvents Events() => new EventsWrapper<WorldType>();
+
+        public List<IEventPoolWrapper> GetAllEventPools() {
+            return Ecs<WorldType>.Events.GetAllRawsPools();
+        }
         #endif
         
         bool IWorld.TryGetStandardComponentsRawPool(Type type, out IStandardRawPool pool) {
@@ -711,7 +727,11 @@ namespace FFS.Libraries.StaticEcs {
             return false;
         }
 
-        bool IWorld.TryGetComponentsRawPool(Type type, out IRawPool pool) {
+        List<IStandardRawPool> IWorld.GetAllStandardComponentsRawPools() {
+            return Ecs<WorldType>.ModuleStandardComponents.Value.GetAllRawsPools();
+        }
+
+        bool IWorld.TryGetComponentsRawPool(Type type, out IRawComponentPool pool) {
             if (Ecs<WorldType>.World.TryGetComponentsPool(type, out var p)) {
                 pool = p;
                 return true;
@@ -719,6 +739,10 @@ namespace FFS.Libraries.StaticEcs {
             
             pool = default;
             return false;
+        }
+
+        List<IRawPool> IWorld.GetAllComponentsRawPools() {
+            return Ecs<WorldType>.ModuleComponents.Value.GetAllRawsPools();
         }
 
         #if !FFS_ECS_DISABLE_TAGS
@@ -731,6 +755,10 @@ namespace FFS.Libraries.StaticEcs {
             pool = default;
             return false;
         }
+
+        List<IRawPool> IWorld.GetAllTagsRawPools() {
+            return Ecs<WorldType>.ModuleTags.Value.GetAllRawsPools();
+        }
         #endif
 
         #if !FFS_ECS_DISABLE_MASKS
@@ -742,6 +770,10 @@ namespace FFS.Libraries.StaticEcs {
             
             pool = default;
             return false;
+        }
+
+        List<IRawPool> IWorld.GetAllMasksRawPools() {
+            return Ecs<WorldType>.ModuleMasks.Value.GetAllRawsPools();
         }
         #endif
     }
