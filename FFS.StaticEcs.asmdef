@@ -3,7 +3,7 @@
     "rootNamespace": "FFS.Libraries.StaticEcs",
     "includePlatforms": [],
     "excludePlatforms": [],
-    "allowUnsafeCode": false,
+    "allowUnsafeCode": true,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,

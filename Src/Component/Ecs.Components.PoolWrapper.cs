@@ -38,7 +38,7 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     public abstract partial class Ecs<WorldType> {
         public interface IComponentsWrapper: IRawComponentPool {
-            public ComponentDynId DynamicId();
+            public ushort DynamicId();
             
             public IComponent GetRaw(Entity entity);
             
@@ -85,8 +85,6 @@ namespace FFS.Libraries.StaticEcs {
             internal void Destroy();
 
             internal void SetDataIfCountLess(ref uint count, ref uint[] entities);
-            
-            internal void SetDataIfCountMore(ref uint count, ref uint[] entities);
 
             internal string ToStringComponent(Entity entity);
 
@@ -107,7 +105,7 @@ namespace FFS.Libraries.StaticEcs {
             where T : struct, IComponent {
             
             [MethodImpl(AggressiveInlining)]
-            public ComponentDynId DynamicId() => Components<T>.Value.DynamicId();
+            public ushort DynamicId() => Components<T>.Value.DynamicId();
             
             [MethodImpl(AggressiveInlining)]
             internal ref T RefMut(Entity entity) => ref Components<T>.Value.RefMut(entity);
@@ -215,10 +213,7 @@ namespace FFS.Libraries.StaticEcs {
             string IComponentsWrapper.ToStringComponent(Entity entity) => Components<T>.Value.ToStringComponent(entity);
 
             [MethodImpl(AggressiveInlining)]
-            void IComponentsWrapper.SetDataIfCountLess(ref uint count, ref uint[] entities) => Components<T>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
-
-            [MethodImpl(AggressiveInlining)]
-            void IComponentsWrapper.SetDataIfCountMore(ref uint count, ref uint[] entities) => Components<T>.Value.SetDataIfCountMore(ref count, ref entities, out var _);
+            void IComponentsWrapper.SetDataIfCountLess(ref uint count, ref uint[] entities) => Components<T>.Value.SetDataIfCountLess(ref count, ref entities);
 
             [MethodImpl(AggressiveInlining)]
             void IComponentsWrapper.Resize(uint cap) => Components<T>.Value.Resize(cap);

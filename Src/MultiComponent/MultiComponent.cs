@@ -326,6 +326,19 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
+        public void EnsureCount(ushort size) {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (size + count > short.MaxValue + 1) throw new Exception($"[ Multi<{typeof(T)}>.EnsureCount ] size + count > 32768");
+            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.EnsureCount ] data is blocked by iterator");
+            #endif
+            if (count + size >= capacity) {
+                data.Resize(ref this, Utils.CalculateSize((uint) (count + size)));
+            }
+
+            count += size;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
         public void CopyTo(T[] dst) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
             if (dst == null) throw new Exception($"[ Multi<{typeof(T)}>.CopyTo ] items is null");

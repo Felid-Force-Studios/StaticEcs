@@ -349,12 +349,12 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal ComponentDynId DynamicId() {
+            internal ushort DynamicId() {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (World.Status < WorldStatus.Created) throw new Exception($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: DynamicId, World not created");
                 if (!_registered) throw new Exception($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: DynamicId, Component type not registered");
                 #endif
-                return new ComponentDynId(id);
+                return id;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -399,23 +399,11 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal void SetDataIfCountLess(ref uint count, ref uint[] entities, out ushort poolId) {
+            internal void SetDataIfCountLess(ref uint count, ref uint[] entities) {
                 if (_componentsCount < count) {
                     count = _componentsCount;
                     entities = _entities;
                 }
-
-                poolId = id;
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            internal void SetDataIfCountMore(ref uint count, ref uint[] entities, out ushort poolId) {
-                if (_componentsCount > count) {
-                    count = _componentsCount;
-                    entities = _entities;
-                }
-
-                poolId = id;
             }
             
             [MethodImpl(AggressiveInlining)]

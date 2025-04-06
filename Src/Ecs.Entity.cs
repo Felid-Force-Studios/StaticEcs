@@ -191,43 +191,6 @@ namespace FFS.Libraries.StaticEcs {
                 return entity;
             }
             #endregion
-            
-            #region NEW_BY_DYN_ID_SINGLE
-            [MethodImpl(AggressiveInlining)]
-            public static Entity New(ComponentDynId component) {
-                var entity = World.CreateEntityInternal();
-                entity.Add(component);
-                return entity;
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public static Entity New(ComponentDynId comp1, ComponentDynId comp2) {
-                var entity = World.CreateEntityInternal();
-                entity.Add(comp1, comp2);
-                return entity;
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public static Entity New(ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3) {
-                var entity = World.CreateEntityInternal();
-                entity.Add(comp1, comp2, comp3);
-                return entity;
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public static Entity New(ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3, ComponentDynId comp4) {
-                var entity = World.CreateEntityInternal();
-                entity.Add(comp1, comp2, comp3, comp4);
-                return entity;
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public static Entity New(ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3, ComponentDynId comp4, ComponentDynId comp5) {
-                var entity = World.CreateEntityInternal();
-                entity.Add(comp1, comp2, comp3, comp4, comp5);
-                return entity;
-            }
-            #endregion
 
             #region NEW_BY_TYPE_BATCH
             [MethodImpl(AggressiveInlining)]
@@ -374,68 +337,6 @@ namespace FFS.Libraries.StaticEcs {
                 World.CreateEntitiesInternal(
                     count,
                     new PutComponentFunction<WorldType, C1, C2, C3, C4, C5>(c1, c2, c3, c4, c5),
-                    onCreate
-                );
-            }
-            #endregion
-            
-            #region NEW_BY_DYN_ID_BATCH
-            [MethodImpl(AggressiveInlining)]
-            public static void NewOnes(uint count, ComponentDynId component, Action<Entity> onCreate = null) {
-                ModuleComponents.Value.GetPool(component).EnsureSize(count);
-                World.CreateEntitiesInternal(
-                    count,
-                    new AddComponentOnCreateEntity1<WorldType>(component),
-                    onCreate
-                );
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public static void NewOnes(uint count, ComponentDynId comp1, ComponentDynId comp2, Action<Entity> onCreate = null) {
-                ModuleComponents.Value.GetPool(comp1).EnsureSize(count);
-                ModuleComponents.Value.GetPool(comp2).EnsureSize(count);
-                World.CreateEntitiesInternal(
-                    count,
-                    new AddComponentOnCreateEntity2<WorldType>(comp1, comp2),
-                    onCreate
-                );
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public static void NewOnes(uint count, ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3, Action<Entity> onCreate = null) {
-                ModuleComponents.Value.GetPool(comp1).EnsureSize(count);
-                ModuleComponents.Value.GetPool(comp2).EnsureSize(count);
-                ModuleComponents.Value.GetPool(comp3).EnsureSize(count);
-                World.CreateEntitiesInternal(
-                    count,
-                    new AddComponentOnCreateEntity3<WorldType>(comp1, comp2, comp3),
-                    onCreate
-                );
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public static void NewOnes(uint count, ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3, ComponentDynId comp4, Action<Entity> onCreate = null) {
-                ModuleComponents.Value.GetPool(comp1).EnsureSize(count);
-                ModuleComponents.Value.GetPool(comp2).EnsureSize(count);
-                ModuleComponents.Value.GetPool(comp3).EnsureSize(count);
-                ModuleComponents.Value.GetPool(comp4).EnsureSize(count);
-                World.CreateEntitiesInternal(
-                    count,
-                    new AddComponentOnCreateEntity4<WorldType>(comp1, comp2, comp3, comp4),
-                    onCreate
-                );
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public static void NewOnes(uint count, ComponentDynId comp1, ComponentDynId comp2, ComponentDynId comp3, ComponentDynId comp4, ComponentDynId comp5, Action<Entity> onCreate = null) {
-                ModuleComponents.Value.GetPool(comp1).EnsureSize(count);
-                ModuleComponents.Value.GetPool(comp2).EnsureSize(count);
-                ModuleComponents.Value.GetPool(comp3).EnsureSize(count);
-                ModuleComponents.Value.GetPool(comp4).EnsureSize(count);
-                ModuleComponents.Value.GetPool(comp5).EnsureSize(count);
-                World.CreateEntitiesInternal(
-                    count,
-                    new AddComponentOnCreateEntity5<WorldType>(comp1, comp2, comp3, comp4, comp5),
                     onCreate
                 );
             }

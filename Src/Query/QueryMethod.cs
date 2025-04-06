@@ -7,7 +7,9 @@ namespace FFS.Libraries.StaticEcs {
         
         public bool CheckEntity(uint entityId);
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         public void Dispose<WorldType>() where WorldType : struct, IWorldType;
+        #endif
     }
     
     public static class Extension {
@@ -18,7 +20,9 @@ namespace FFS.Libraries.StaticEcs {
             uint[] entities = null;
             method.SetData<WorldType>(ref count, ref entities);
             var checkEntity = method.CheckEntity(entity._id);
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
             method.Dispose<WorldType>();
+            #endif
             return checkEntity;
         }
     }

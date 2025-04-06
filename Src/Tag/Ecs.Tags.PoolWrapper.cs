@@ -13,7 +13,7 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     public abstract partial class Ecs<WorldType> {
         public interface ITagsWrapper: IRawPool {
-            public TagDynId DynamicId();
+            public ushort DynamicId();
             
             public ITag GetRaw();
 
@@ -39,8 +39,6 @@ namespace FFS.Libraries.StaticEcs {
 
             internal void SetDataIfCountLess(ref uint count, ref uint[] entities);
 
-            internal void SetDataIfCountMore(ref uint count, ref uint[] entities);
-
             internal void Resize(uint cap);
 
             internal void Destroy();
@@ -58,7 +56,7 @@ namespace FFS.Libraries.StaticEcs {
         #endif
         public readonly struct TagsWrapper<T> : ITagsWrapper, Stateless where T : struct, ITag {
             [MethodImpl(AggressiveInlining)]
-            public TagDynId DynamicId() => Tags<T>.Value.DynamicId();
+            public ushort DynamicId() => Tags<T>.Value.DynamicId();
 
             [MethodImpl(AggressiveInlining)]
             public ITag GetRaw() => new T();
@@ -131,10 +129,7 @@ namespace FFS.Libraries.StaticEcs {
             uint[] ITagsWrapper.EntitiesData() => Tags<T>.Value.EntitiesData();
 
             [MethodImpl(AggressiveInlining)]
-            void ITagsWrapper.SetDataIfCountLess(ref uint count, ref uint[] entities) => Tags<T>.Value.SetDataIfCountLess(ref count, ref entities, out var _);
-
-            [MethodImpl(AggressiveInlining)]
-            void ITagsWrapper.SetDataIfCountMore(ref uint count, ref uint[] entities) => Tags<T>.Value.SetDataIfCountMore(ref count, ref entities, out var _);
+            void ITagsWrapper.SetDataIfCountLess(ref uint count, ref uint[] entities) => Tags<T>.Value.SetDataIfCountLess(ref count, ref entities);
 
             [MethodImpl(AggressiveInlining)]
             void ITagsWrapper.Resize(uint cap) => Tags<T>.Value.Resize(cap);

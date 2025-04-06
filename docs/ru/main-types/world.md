@@ -23,8 +23,7 @@ ___
 #### Основные операции:
 ```c#
 // При регистрации компонента возможно указать базовой размер массива даных компонентов этого типа
-// Также возвращается динамическй идентификатор типа компонента (раздел дополнительные возможности)
-var positionComponentId = MyWorld.RegisterComponentType<Position>(256);
+MyWorld.RegisterComponentType<Position>(256);
 
 // аналогично RegisterComponentType, но для тегов
 var unitTagId = MyWorld.RegisterTagType<Unit>(256);

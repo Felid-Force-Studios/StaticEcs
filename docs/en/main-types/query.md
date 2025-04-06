@@ -20,9 +20,6 @@ AllTypes<Types<Position, Direction, Velocity>> _all = default;
 // or
 All<Position, Direction, Velocity> _all2 = default;
 
-// AllAndNone - filters entities for the presence of all specified components in the first group and the absence of all components in the second group (overload from 1 to 8).
-AllAndNoneTypes<Types<Position, Direction, Velocity>, Types<Name>> _allAndNone = default;
-
 // None - filters entities for the absence of all specified components (can be used only as part of other methods) (overloading from 1 to 8)
 NoneTypes<Types<Name>> _none = default;
 // or
@@ -39,9 +36,6 @@ TagAllTypes<Tag<Unit, Player>> _all = default;
 // or
 TagAll<Unit, Player> _all2 = default;
 
-// AllAndNone - filters entities for the presence of all specified tags in the first group and the absence of all tags in the second group (overloading from 1 to 8).
-TagAllAndNoneTypes<Tag<Unit>, Tag<Player>> _allAndNone = default;
-
 // None - filters entities for the absence of all specified tags (can only be used as part of other methods) (overloading from 1 to 8).
 TagNoneTypes<Tag<Unit>> _none = default;
 // or
@@ -57,9 +51,6 @@ TagAny<Unit, Player> _any2 = default;
 MaskAllTypes<Mask<Flammable, Frozen, Visible>> _all = default;
 // or
 MaskAll<Flammable, Frozen, Visible> _all2 = default;
-
-// AllAndNone - filters entities for the presence of all specified tags in the first group and the absence of all tags in the second group (can only be used as part of other methods).
-MaskAllAndNoneTypes<Mask<Flammable, Frozen>, Mask<Visible>> _allAndNone = default;
 
 // None - filters entities for the absence of all specified tags (can only be used as part of other methods) (overloading from 1 to 8).
 MaskNoneTypes<Mask<Frozen>> _none = default;
@@ -86,27 +77,24 @@ foreach (var entity in MyWorld.QueryEntities.For(all)) {
     entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
-// Option with 3 methods via generic
+// Option with 2 methods via generic
 foreach (var entity in MyWorld.QueryEntities.For<
              All<Position, Velocity, Name>,
-             AllAndNoneTypes<Types<Position, Direction, Velocity>, Types<Name>>,
              None<Name>>()) {
     entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
-// Variant with 3 methods via value
+// Variant with 2 methods via value
 All<Position, Direction, Velocity> all2 = default;
-AllAndNoneTypes<Types<Position, Direction, Velocity>, Types<Name>> allAndNone2 = default;
 None<Name> none2 = default;
-foreach (var entity in MyWorld.QueryEntities.For(all2, allAndNone2, none2)) {
+foreach (var entity in MyWorld.QueryEntities.For(all2, none2)) {
     entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
-// Alternative with 3 methods via value
+// Alternative with 2 methods via value
 var all3 = Types<Position, Direction, Velocity>.All();
-var allAndNone3 = Types<Position, Direction, Velocity>.AllAndNone(default(Types<Name>));
 var none3 = Types<Name>.None();
-foreach (var entity in MyWorld.QueryEntities.For(all3, allAndNone3, none3)) {
+foreach (var entity in MyWorld.QueryEntities.For(all3, none3)) {
     entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
@@ -117,7 +105,6 @@ foreach (var entity in MyWorld.QueryEntities.For(all3, allAndNone3, none3)) {
 // Method 1 via generic
 foreach (var entity in MyWorld.QueryEntities.For<With<
              All<Position, Velocity, Name>,
-             AllAndNoneTypes<Types<Position, Direction, Velocity>, Types<Name>>,
              None<Name>,
              Any<Position, Direction, Velocity>
          >>()) {
@@ -127,7 +114,6 @@ foreach (var entity in MyWorld.QueryEntities.For<With<
 // Method 2 through values
 With<
     All<Position, Velocity, Name>,
-    AllAndNoneTypes<Types<Position, Direction, Velocity>, Types<Name>>,
     None<Name>,
     Any<Position, Direction, Velocity>
 > with = default;
@@ -138,7 +124,6 @@ foreach (var entity in MyWorld.QueryEntities.For(with)) {
 // Method 3 through values alternative
 var with2 = With.Create(
     default(All<Position, Velocity, Name>),
-    default(AllAndNoneTypes<Types<Position, Direction, Velocity>, Types<Name>>),
     default(None<Name>),
     default(Any<Position, Direction, Velocity>)
 );
@@ -149,7 +134,6 @@ foreach (var entity in MyWorld.QueryEntities.For(with2)) {
 // Method 4 through values alternative
 var with3 = With.Create(
     Types<Position, Velocity, Name>.All(),
-    Types<Position, Direction, Velocity>.AllAndNone(default(Types<Name>)),
     Types<Name>.None(),
     Types<Position, Direction, Velocity>.Any()
 );

@@ -115,12 +115,12 @@ namespace FFS.Libraries.StaticEcs {
             
 
             [MethodImpl(AggressiveInlining)]
-            internal MaskDynId DynamicId() {
+            internal ushort DynamicId() {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (World.Status < WorldStatus.Created) throw new Exception($"Ecs<{typeof(WorldType)}>.Masks<{typeof(T)}> Method: DynamicId, World not created");
                 if (!_registered) throw new Exception($"Ecs<{typeof(WorldType)}>.Masks<{typeof(T)}>, Method: DynamicId, Mask type not registered");
                 #endif
-                return new MaskDynId(id);
+                return id;
             }
 
             [MethodImpl(AggressiveInlining)]

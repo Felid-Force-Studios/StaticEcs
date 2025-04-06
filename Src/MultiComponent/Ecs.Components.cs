@@ -13,11 +13,10 @@ namespace FFS.Libraries.StaticEcs {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-        [Il2CppEagerStaticClassConstruction]
         #endif
         internal partial struct ModuleComponents {
             [MethodImpl(AggressiveInlining)]
-            internal ComponentDynId RegisterMultiComponentType<T, V>(ushort defaultComponentCapacity, uint capacity) where T : struct, IMultiComponent<V> where V : struct {
+            internal ushort RegisterMultiComponentType<T, V>(ushort defaultComponentCapacity, uint capacity, AutoInitHandler<T> autoInit = null) where T : struct, IMultiComponent<V> where V : struct {
                 if (Components<T>.Value.IsRegistered()) {
                     return Components<T>.Value.DynamicId();
                 }
@@ -26,9 +25,19 @@ namespace FFS.Libraries.StaticEcs {
                     Context<MultiComponents<V>>.Set(new MultiComponents<V>(defaultComponentCapacity, capacity));
                 }
 
+                AutoInitHandler<T> initHandler;
+                if (autoInit != null) {
+                    initHandler = (ref T component) => {
+                        component.Access<AutoInit<V>>(default);
+                        autoInit(ref component);
+                    };
+                } else {
+                    initHandler = static (ref T component) => component.Access<AutoInit<V>>(default);
+                }
+
                 return RegisterComponentType(
                     capacity: capacity,
-                    autoInit: static (ref T component) => component.Access<AutoInit<V>>(default),
+                    autoInit: initHandler,
                     autoPutInit: static (ref T component) => component.Access<AutoInit<V>>(default),
                     autoReset: static (ref T component) => component.Access<AutoReset<V>>(default),
                     autoCopy: static (ref T src, ref T dst) => {

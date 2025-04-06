@@ -23,8 +23,7 @@ ___
 #### Basic operations:
 ```c#
 // When registering a component, it is possible to specify the base size of the data array of components of this type
-// The dynamic identifier of the component type is also returned (section Additional Features)
-var positionComponentId = MyWorld.RegisterComponentType<Position>(256);
+MyWorld.RegisterComponentType<Position>(256);
 
 // similar to RegisterComponentType, but for tags
 var unitTagId = MyWorld.RegisterTagType<Unit>(256);

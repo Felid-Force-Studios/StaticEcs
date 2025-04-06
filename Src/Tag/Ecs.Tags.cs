@@ -46,7 +46,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal TagDynId RegisterTagType<C>(uint capacity) where C : struct, ITag {
+            internal ushort RegisterTagType<C>(uint capacity) where C : struct, ITag {
                 if (Tags<C>.Value.IsRegistered()) {
                     return Tags<C>.Value.DynamicId();
                 }
@@ -81,12 +81,12 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal ITagsWrapper GetPool(TagDynId id) {
+            internal ITagsWrapper GetPool(ushort id) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleTags, Method: GetPool, World not initialized");
-                if (id.Value >= _poolsCount) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleTags, Method: GetPool, Tag type for dyn id {id.Value} not registered");
+                if (id >= _poolsCount) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleTags, Method: GetPool, Tag type for dyn id {id} not registered");
                 #endif
-                return _pools[id.Value];
+                return _pools[id];
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -108,16 +108,16 @@ namespace FFS.Libraries.StaticEcs {
             }
                         
             [MethodImpl(AggressiveInlining)]
-            internal bool TryGetPool(TagDynId id, out ITagsWrapper pool) {
+            internal bool TryGetPool(ushort id, out ITagsWrapper pool) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!World.IsInitialized()) throw new Exception($"Ecs<{typeof(WorldType)}>.ModuleTags, Method: GetPool, World not initialized");
                 #endif
-                if (id.Value >= _poolsCount) {
+                if (id >= _poolsCount) {
                     pool = default;
                     return false;
                 }
                 
-                pool = _pools[id.Value];
+                pool = _pools[id];
                 return true;
             }
             
@@ -229,6 +229,51 @@ namespace FFS.Libraries.StaticEcs {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 _debugEventListeners = default;
                 #endif
+            }
+            
+            #if ENABLE_IL2CPP
+            [Il2CppSetOption(Option.NullChecks, false)]
+            [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+            #endif
+            internal struct MaskCache<M> where M : struct, IComponentMasks {
+                internal static MaskCache<M> Cache;
+            
+                internal uint BufId;
+                private ushort Version;
+                internal byte Count;
+
+                [MethodImpl(AggressiveInlining)]
+                public void This(out uint bufId, out ushort count) {
+                    if (Version != runtimeVersion) {
+                        SetMask();
+                    }
+
+                    count = Count;
+                    bufId = BufId;
+                }
+                
+                [MethodImpl(AggressiveInlining)]
+                public void This(M types, out uint bufId, out ushort count) {
+                    if (Version != runtimeVersion) {
+                        SetMask(types);
+                    }
+
+                    count = Count;
+                    bufId = BufId;
+                }
+
+                private void SetMask(M types = default) {
+                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                    if (World.Status != WorldStatus.Initialized) throw new Exception($"Ecs<{typeof(WorldType)}>>, World not initialized");
+                    #endif
+                    var buf = Value.BitMask.BorrowBuf();
+                    types.SetBitMask<WorldType>(buf);
+                    var buffer = Value.BitMask.AddIndexedBuffer(buf);
+                    Value.BitMask.DropBuf();
+                    BufId = buffer.index;
+                    Count = buffer.count;
+                    Version = runtimeVersion;
+                }
             }
         }
         

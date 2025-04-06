@@ -4,6 +4,7 @@ using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
+
 #pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
 
 namespace FFS.Libraries.StaticEcs {
@@ -12,34 +13,36 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct MaskAllTypes<TMasks> : ISealedQueryMethod where TMasks : struct, IComponentMasks {
+    internal struct MaskAllTypes<TMasks> : ISealedQueryMethod where TMasks : struct, IComponentMasks {
         private BitMask _bitMask;
-        private TMasks _all;
-        private byte _incBufId;
+        private byte _bufId;
+        public TMasks _all;
 
         [MethodImpl(AggressiveInlining)]
         public MaskAllTypes(TMasks all) {
             _all = all;
-            _incBufId = default;
             _bitMask = null;
+            _bufId = 0;
         }
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _all.SetMask<WorldType>(_incBufId);
+            _bufId = _bitMask.BorrowBuf();
+            _all.SetBitMask<WorldType>(_bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAll(entityId, _incBufId);
+            return _bitMask.HasAll(entityId, _bufId);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -62,8 +65,10 @@ namespace FFS.Libraries.StaticEcs {
             return _bitMask.Has(entityId, _id);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -89,8 +94,10 @@ namespace FFS.Libraries.StaticEcs {
             return _bitMask.Has(entityId, _id1) && _bitMask.Has(entityId, _id2);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -119,8 +126,10 @@ namespace FFS.Libraries.StaticEcs {
             return _bitMask.Has(entityId, _id1) && _bitMask.Has(entityId, _id2) && _bitMask.Has(entityId, _id3);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -133,25 +142,24 @@ namespace FFS.Libraries.StaticEcs {
         where C3 : struct, IMask
         where C4 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAll(entityId, _incBufId);
+            return _bitMask.HasAllIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -165,25 +173,24 @@ namespace FFS.Libraries.StaticEcs {
         where C4 : struct, IMask
         where C5 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAll(entityId, _incBufId);
+            return _bitMask.HasAllIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -198,25 +205,24 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IMask
         where C6 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5, C6> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAll(entityId, _incBufId);
+            return _bitMask.HasAllIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -232,25 +238,24 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IMask
         where C7 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5, C6, C7> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAll(entityId, _incBufId);
+            return _bitMask.HasAllIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -267,110 +272,63 @@ namespace FFS.Libraries.StaticEcs {
         where C7 : struct, IMask
         where C8 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5, C6, C7, C8> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAll(entityId, _incBufId);
+            return _bitMask.HasAllIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
     #endregion
-
-
-    #region ALL_AND_NONE
-    #if ENABLE_IL2CPP
-    [Il2CppSetOption(Option.NullChecks, false)]
-    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-    #endif
-    public struct MaskAllAndNoneTypes<TMasksIncluded, TMasksExcluded> : ISealedQueryMethod
-        where TMasksIncluded : struct, IComponentMasks
-        where TMasksExcluded : struct, IComponentMasks {
-        private BitMask _bitMask;
-        private TMasksIncluded _all;
-        private TMasksExcluded _exc;
-        private byte _incBufId;
-        private byte _excBufId;
-
-        [MethodImpl(AggressiveInlining)]
-        public MaskAllAndNoneTypes(TMasksIncluded all, TMasksExcluded exc) {
-            _all = all;
-            _exc = exc;
-            _incBufId = default;
-            _excBufId = default;
-            _bitMask = null;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _excBufId = _bitMask.BorrowBuf();
-
-            _all.SetMask<WorldType>(_incBufId);
-            _exc.SetMask<WorldType>(_excBufId);
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllAndExc(entityId, _incBufId, _excBufId);
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-            _bitMask.DropBuf();
-        }
-    }
-    #endregion
-
 
     #region NONE
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct MaskNoneTypes<TMasks> : ISealedQueryMethod
+    internal struct MaskNoneTypes<TMasks> : ISealedQueryMethod
         where TMasks : struct, IComponentMasks {
         private BitMask _bitMask;
-        private TMasks _exc;
-        private byte _excBufId;
+        private byte _bufId;
+        public TMasks _all;
 
         [MethodImpl(AggressiveInlining)]
-        public MaskNoneTypes(TMasks exc) {
-            _exc = exc;
-            _excBufId = default;
+        public MaskNoneTypes(TMasks all) {
+            _all = all;
             _bitMask = null;
+            _bufId = 0;
         }
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _excBufId = _bitMask.BorrowBuf();
-            _exc.SetMask<WorldType>(_excBufId);
+            _bufId = _bitMask.BorrowBuf();
+            _all.SetBitMask<WorldType>(_bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAny(entityId, _excBufId);
+            return _bitMask.NotHasAny(entityId, _bufId);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -393,8 +351,10 @@ namespace FFS.Libraries.StaticEcs {
             return !_bitMask.Has(entityId, _id);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -420,8 +380,10 @@ namespace FFS.Libraries.StaticEcs {
             return !_bitMask.Has(entityId, _id1) && !_bitMask.Has(entityId, _id2);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -450,8 +412,10 @@ namespace FFS.Libraries.StaticEcs {
             return !_bitMask.Has(entityId, _id1) && !_bitMask.Has(entityId, _id2) && !_bitMask.Has(entityId, _id3);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -464,25 +428,24 @@ namespace FFS.Libraries.StaticEcs {
         where C3 : struct, IMask
         where C4 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAny(entityId, _incBufId);
+            return _bitMask.NotHasAnyIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -496,25 +459,24 @@ namespace FFS.Libraries.StaticEcs {
         where C4 : struct, IMask
         where C5 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAny(entityId, _incBufId);
+            return _bitMask.NotHasAnyIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -529,25 +491,24 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IMask
         where C6 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5, C6> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAny(entityId, _incBufId);
+            return _bitMask.NotHasAnyIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -563,25 +524,24 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IMask
         where C7 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5, C6, C7> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAny(entityId, _incBufId);
+            return _bitMask.NotHasAnyIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -598,62 +558,62 @@ namespace FFS.Libraries.StaticEcs {
         where C7 : struct, IMask
         where C8 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5, C6, C7, C8> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAny(entityId, _incBufId);
+            return _bitMask.NotHasAnyIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
     #endregion
-
 
     #region ANY
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct MaskAnyTypes<TMasks> : ISealedQueryMethod where TMasks : struct, IComponentMasks {
+    internal struct MaskAnyTypes<TMasks> : ISealedQueryMethod where TMasks : struct, IComponentMasks {
         private BitMask _bitMask;
-        private TMasks _any;
-        private byte _anyBufId;
+        private byte _bufId;
+        public TMasks _all;
 
         [MethodImpl(AggressiveInlining)]
-        public MaskAnyTypes(TMasks any) {
-            _any = any;
-            _anyBufId = default;
+        public MaskAnyTypes(TMasks all) {
+            _all = all;
             _bitMask = null;
+            _bufId = 0;
         }
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _anyBufId = _bitMask.BorrowBuf();
-            _any.SetMask<WorldType>(_anyBufId);
+            _bufId = _bitMask.BorrowBuf();
+            _all.SetBitMask<WorldType>(_bufId);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAny(entityId, _anyBufId);
+            return _bitMask.HasAny(entityId, _bufId);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _bitMask.DropBuf();
         }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -679,8 +639,10 @@ namespace FFS.Libraries.StaticEcs {
             return _bitMask.Has(entityId, _id1) || _bitMask.Has(entityId, _id2);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -709,8 +671,10 @@ namespace FFS.Libraries.StaticEcs {
             return _bitMask.Has(entityId, _id1) || _bitMask.Has(entityId, _id2) || _bitMask.Has(entityId, _id3);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -723,25 +687,24 @@ namespace FFS.Libraries.StaticEcs {
         where C3 : struct, IMask
         where C4 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAny(entityId, _incBufId);
+            return _bitMask.HasAnyIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -755,25 +718,24 @@ namespace FFS.Libraries.StaticEcs {
         where C4 : struct, IMask
         where C5 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAny(entityId, _incBufId);
+            return _bitMask.HasAnyIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -788,25 +750,24 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IMask
         where C6 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5, C6> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAny(entityId, _incBufId);
+            return _bitMask.HasAnyIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -822,25 +783,24 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IMask
         where C7 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5, C6, C7> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAny(entityId, _incBufId);
+            return _bitMask.HasAnyIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -857,25 +817,24 @@ namespace FFS.Libraries.StaticEcs {
         where C7 : struct, IMask
         where C8 : struct, IMask {
         private BitMask _bitMask;
-        private Mask<C1, C2, C3, C4, C5, C6, C7, C8> _types;
-        private byte _incBufId;
+        private uint _bufId;
+        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
             _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _types.SetMask<WorldType>(_incBufId);
+            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAny(entityId, _incBufId);
+            return _bitMask.HasAnyIndexed(entityId, _bufId, _count);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _bitMask.DropBuf();
-        }
+        public void Dispose<WorldType>() where WorldType : struct, IWorldType { }
+        #endif
     }
     #endregion
 }

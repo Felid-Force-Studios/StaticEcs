@@ -4,7 +4,7 @@ has_toc: false
 parent: Main page
 ---
 
-![Version](https://img.shields.io/badge/version-0.9.62-blue.svg?style=for-the-badge)  
+![Version](https://img.shields.io/badge/version-0.9.73-blue.svg?style=for-the-badge)  
 
 ___
 
@@ -16,7 +16,7 @@ ___
 - Performance
 - No allocations
 - No dependencies
-- No Unsafe
+- No Unsafe in core
 - Based on statics and structures
 - Type-safe
 - Free abstractions
@@ -48,7 +48,6 @@ ___
     * [Context](main-types/context.md)
     * [Query](main-types/query.md)
 * [Additional features](additionalfeatures.md)
-    * [Component identifiers](additional-features/componentidentifiers.md)
     * [Auto handlers](additional-features/autohandlers.md)
     * [Events](additional-features/events.md)
     * [Relations](additional-features/relations.md)
@@ -73,7 +72,6 @@ ___
 > - The main idea of this implementation is static, all data about the world and components are in static classes, which makes it possible to avoid expensive virtual calls and have a convenient API
 > - This framework is focused on maximum ease of use, speed and comfort of code writing without loss of performance
 > - Multi-world creation, strict typing, ~zero-cost abstractions
-> - Reduced monomorphization of generic types and methods is available to reduce code sources through the component identifier mechanism (additional features section)
 > - Based on a sparse-set architecture, the core is inspired by a series of libraries from Leopotam
 > - The framework was created for the needs of a private project and put out in open-source.
 

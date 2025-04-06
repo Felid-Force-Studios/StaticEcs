@@ -130,10 +130,12 @@ namespace FFS.Libraries.StaticEcs {
             return _qm1.CheckEntity(entityId);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             _qm1.Dispose<WorldType>();
         }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -162,11 +164,13 @@ namespace FFS.Libraries.StaticEcs {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             qm1.Dispose<WorldType>();
             qm2.Dispose<WorldType>();
         }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -199,12 +203,14 @@ namespace FFS.Libraries.StaticEcs {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             qm1.Dispose<WorldType>();
             qm2.Dispose<WorldType>();
             qm3.Dispose<WorldType>();
         }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -241,6 +247,7 @@ namespace FFS.Libraries.StaticEcs {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId) && qm4.CheckEntity(entityId);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             qm1.Dispose<WorldType>();
@@ -248,6 +255,7 @@ namespace FFS.Libraries.StaticEcs {
             qm3.Dispose<WorldType>();
             qm4.Dispose<WorldType>();
         }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -288,6 +296,7 @@ namespace FFS.Libraries.StaticEcs {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId) && qm4.CheckEntity(entityId) && qm5.CheckEntity(entityId);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             qm1.Dispose<WorldType>();
@@ -296,6 +305,7 @@ namespace FFS.Libraries.StaticEcs {
             qm4.Dispose<WorldType>();
             qm5.Dispose<WorldType>();
         }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -340,6 +350,7 @@ namespace FFS.Libraries.StaticEcs {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId) && qm4.CheckEntity(entityId) && qm5.CheckEntity(entityId) && qm6.CheckEntity(entityId);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             qm1.Dispose<WorldType>();
@@ -349,6 +360,7 @@ namespace FFS.Libraries.StaticEcs {
             qm5.Dispose<WorldType>();
             qm6.Dispose<WorldType>();
         }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -397,6 +409,7 @@ namespace FFS.Libraries.StaticEcs {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId) && qm4.CheckEntity(entityId) && qm5.CheckEntity(entityId) && qm6.CheckEntity(entityId) && qm7.CheckEntity(entityId);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             qm1.Dispose<WorldType>();
@@ -407,6 +420,7 @@ namespace FFS.Libraries.StaticEcs {
             qm6.Dispose<WorldType>();
             qm7.Dispose<WorldType>();
         }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -460,6 +474,7 @@ namespace FFS.Libraries.StaticEcs {
             return qm1.CheckEntity(entityId) && qm2.CheckEntity(entityId) && qm3.CheckEntity(entityId) && qm4.CheckEntity(entityId) && qm5.CheckEntity(entityId) && qm6.CheckEntity(entityId) && qm7.CheckEntity(entityId) && qm8.CheckEntity(entityId);
         }
 
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType {
             qm1.Dispose<WorldType>();
@@ -471,5 +486,6 @@ namespace FFS.Libraries.StaticEcs {
             qm7.Dispose<WorldType>();
             qm8.Dispose<WorldType>();
         }
+        #endif
     }
 }

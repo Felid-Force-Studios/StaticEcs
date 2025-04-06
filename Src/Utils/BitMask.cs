@@ -17,6 +17,11 @@ namespace FFS.Libraries.StaticEcs {
             63, 16, 49, 56, 46, 21, 28, 32, 14, 26, 24, 40, 53, 37, 42, 7,
             62, 55, 45, 31, 13, 39, 36, 6, 61, 44, 12, 35, 60, 11, 10, 9,
         };
+
+        struct IndexedMask {
+            public ulong Mask;
+            public byte Index;
+        }
         
         private ulong[] _bitMap;
         private ulong[] _bitMapDisabled;
@@ -26,6 +31,9 @@ namespace FFS.Libraries.StaticEcs {
         private byte _tempBufferFreeCount;
         private byte _tempBufferBorrowed;
         private byte _tempBufferCount;
+        
+        private IndexedMask[] _indexedBuffer;
+        private byte _indexedBufferCount;
 
         [MethodImpl(AggressiveInlining)]
         internal void Create(uint worldCapacity, byte tempBuffersCount, ushort maskLen, bool bitMaskDisabled) {
@@ -38,6 +46,8 @@ namespace FFS.Libraries.StaticEcs {
             _tempBuffer = new ulong[_tempBufferCount * _maskLen];
             _tempBufferFreeCount = _tempBufferCount;
             _tempBufferBorrowed = 0;
+            _indexedBufferCount = 0;
+            _indexedBuffer = new IndexedMask[32 * _maskLen];
         }
         
         [MethodImpl(AggressiveInlining)]
@@ -76,10 +86,13 @@ namespace FFS.Libraries.StaticEcs {
         internal void Destroy() {
             _tempBuffer = null;
             _bitMap = null;
+            _indexedBuffer = null;
+            _bitMapDisabled = null;
             _maskLen = 0;
             _tempBufferCount = 0;
             _tempBufferBorrowed = 0;
             _tempBufferFreeCount = 0;
+            _indexedBufferCount = 0;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -399,6 +412,20 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
+        public bool HasAllIndexed(uint bitMapIdx, uint bufId, ushort count) {
+            var end = bufId + count;
+            var srcOffset = bitMapIdx * _maskLen;
+            for (; bufId < end; bufId++) {
+                var rhs = _indexedBuffer[bufId];
+                if ((_bitMap[srcOffset + rhs.Index] & rhs.Mask) != rhs.Mask) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
         public bool HasAllOnlyDisabled(uint bitMapIdx, byte bufId) {
             if (_maskLen < 2) {
                 var rhs = _tempBuffer[bufId];
@@ -415,6 +442,20 @@ namespace FFS.Libraries.StaticEcs {
             for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
                 var rhs = _tempBuffer[bufOffset];
                 if ((_bitMapDisabled[srcOffset] & rhs) != rhs) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool HasAllOnlyDisabledIndexed(uint bitMapIdx, uint bufId, ushort count) {
+            var end = bufId + count;
+            var srcOffset = bitMapIdx * _maskLen;
+            for (; bufId < end; bufId++) {
+                var rhs = _indexedBuffer[bufId];
+                if ((_bitMapDisabled[srcOffset + rhs.Index] & rhs.Mask) != rhs.Mask) {
                     return false;
                 }
             }
@@ -445,6 +486,20 @@ namespace FFS.Libraries.StaticEcs {
 
             return true;
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool HasAllWithDisabledIndexed(uint bitMapIdx, uint bufId, ushort count) {
+            var end = bufId + count;
+            var srcOffset = bitMapIdx * _maskLen;
+            for (; bufId < end; bufId++) {
+                var rhs = _indexedBuffer[bufId];
+                if (((_bitMap[srcOffset + rhs.Index] | _bitMapDisabled[srcOffset + rhs.Index]) & rhs.Mask) != rhs.Mask) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         [MethodImpl(AggressiveInlining)]
         public bool HasAny(uint bitMapIdx, byte bufId) {
@@ -461,6 +516,20 @@ namespace FFS.Libraries.StaticEcs {
             var bufOffset = bufId * _maskLen;
             for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
                 if ((_bitMap[srcOffset] & _tempBuffer[bufOffset]) != 0UL) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool HasAnyIndexed(uint bitMapIdx, uint bufId, ushort count) {
+            var end = bufId + count;
+            var srcOffset = bitMapIdx * _maskLen;
+            for (; bufId < end; bufId++) {
+                var rhs = _indexedBuffer[bufId];
+                if ((_bitMap[srcOffset + rhs.Index] & rhs.Mask) != 0UL) {
                     return true;
                 }
             }
@@ -491,6 +560,20 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
+        public bool HasAnyOnlyDisabledIndexed(uint bitMapIdx, uint bufId, ushort count) {
+            var end = bufId + count;
+            var srcOffset = bitMapIdx * _maskLen;
+            for (; bufId < end; bufId++) {
+                var rhs = _indexedBuffer[bufId];
+                if ((_bitMapDisabled[srcOffset + rhs.Index] & rhs.Mask) != 0UL) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
         public bool HasAnyWithDisabled(uint bitMapIdx, byte bufId) {
             if (_maskLen < 2) {
                 return ((_bitMapDisabled[bitMapIdx] | _bitMap[bitMapIdx]) & _tempBuffer[bufId]) != 0UL;
@@ -505,6 +588,20 @@ namespace FFS.Libraries.StaticEcs {
             var bufOffset = bufId * _maskLen;
             for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
                 if (((_bitMapDisabled[bitMapIdx] | _bitMap[bitMapIdx]) & _tempBuffer[bufOffset]) != 0UL) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool HasAnyWithDisabledIndexed(uint bitMapIdx, uint bufId, ushort count) {
+            var end = bufId + count;
+            var srcOffset = bitMapIdx * _maskLen;
+            for (; bufId < end; bufId++) {
+                var rhs = _indexedBuffer[bufId];
+                if (((_bitMap[srcOffset + rhs.Index] | _bitMapDisabled[srcOffset + rhs.Index]) & rhs.Mask) != 0UL) {
                     return true;
                 }
             }
@@ -616,6 +713,20 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
+        public bool NotHasAnyIndexed(uint bitMapIdx, uint bufId, ushort count) {
+            var end = bufId + count;
+            var srcOffset = bitMapIdx * _maskLen;
+            for (; bufId < end; bufId++) {
+                var rhs = _indexedBuffer[bufId];
+                if ((_bitMap[srcOffset + rhs.Index] & rhs.Mask) != 0UL) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
         public bool NotHasAnyOnlyDisabled(uint bitMapIdx, byte bufId) {
             if (_maskLen < 2) {
                 return (_bitMapDisabled[bitMapIdx] & _tempBuffer[bufId]) == 0UL;
@@ -638,6 +749,20 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
+        public bool NotHasAnyOnlyDisabledIndexed(uint bitMapIdx, uint bufId, ushort count) {
+            var end = bufId + count;
+            var srcOffset = bitMapIdx * _maskLen;
+            for (; bufId < end; bufId++) {
+                var rhs = _indexedBuffer[bufId];
+                if ((_bitMapDisabled[srcOffset + rhs.Index] & rhs.Mask) != 0UL) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
         public bool NotHasAnyWithDisabled(uint bitMapIdx, byte bufId) {
             if (_maskLen < 2) {
                 return ((_bitMapDisabled[bitMapIdx] | _bitMap[bitMapIdx]) & _tempBuffer[bufId]) == 0UL;
@@ -652,6 +777,20 @@ namespace FFS.Libraries.StaticEcs {
             var bufOffset = bufId * _maskLen;
             for (; srcOffset < srcOffsetEnd; srcOffset++, bufOffset++) {
                 if (((_bitMapDisabled[bitMapIdx] | _bitMap[bitMapIdx]) & _tempBuffer[bufOffset]) != 0UL) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool NotHasAnyWithDisabledIndexed(uint bitMapIdx, uint bufId, ushort count) {
+            var end = bufId + count;
+            var srcOffset = bitMapIdx * _maskLen;
+            for (; bufId < end; bufId++) {
+                var rhs = _indexedBuffer[bufId];
+                if (((_bitMap[srcOffset + rhs.Index] | _bitMapDisabled[srcOffset + rhs.Index]) & rhs.Mask) != 0UL) {
                     return false;
                 }
             }
@@ -692,6 +831,30 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Clear() {
             Array.Clear(_bitMap, 0, _bitMap.Length);
+            Array.Clear(_bitMapDisabled, 0, _bitMap.Length);
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public (uint index, byte count) AddIndexedBuffer(byte bufId) {
+            if (_indexedBufferCount * _maskLen == _indexedBuffer.Length) {
+                Array.Resize(ref _indexedBuffer, _indexedBuffer.Length << 1);
+            }
+
+            var idx = (uint) (_indexedBufferCount * _maskLen);
+            _indexedBufferCount++;
+            byte cnt = 0;
+            for (var i = 0; i < _maskLen; i++) {
+                var val = _tempBuffer[bufId * _maskLen + i];
+                if (val != 0) {
+                    _indexedBuffer[idx + cnt] = new IndexedMask {
+                        Index = (byte) i,
+                        Mask = val
+                    };
+                    cnt++;
+                }
+            }
+
+            return (idx, cnt);
         }
     }
 }

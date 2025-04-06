@@ -165,22 +165,20 @@ namespace FFS.Libraries.StaticEcs {
             
             
             [MethodImpl(AggressiveInlining)]
-            public TagDynId DynamicId() {
+            public ushort DynamicId() {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (World.Status < WorldStatus.Created) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: DynamicId, World not created");
                 if (!_registered) throw new Exception($"Ecs<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: DynamicId, Tag type not registered");
                 #endif
-                return new TagDynId(id);
+                return id;
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal void SetDataIfCountLess(ref uint count, ref uint[] entities, out ushort poolId) {
+            internal void SetDataIfCountLess(ref uint count, ref uint[] entities) {
                 if (_tagCount < count) {
                     count = _tagCount;
                     entities = _entities;
                 }
-
-                poolId = id;
             }
 
             [MethodImpl(AggressiveInlining)]

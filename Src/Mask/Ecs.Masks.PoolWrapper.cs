@@ -13,7 +13,7 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     public abstract partial class Ecs<WorldType> {
         public interface IMasksWrapper: IRawPool {
-            public MaskDynId DynamicId();
+            public ushort DynamicId();
             
             public IMask GetRaw();
 
@@ -44,7 +44,7 @@ namespace FFS.Libraries.StaticEcs {
         #endif
         public readonly struct MasksWrapper<T> : IMasksWrapper, Stateless where T : struct, IMask {
             [MethodImpl(AggressiveInlining)]
-            public MaskDynId DynamicId() => Masks<T>.Value.DynamicId();
+            public ushort DynamicId() => Masks<T>.Value.DynamicId();
 
             [MethodImpl(AggressiveInlining)]
             public IMask GetRaw() => new T();

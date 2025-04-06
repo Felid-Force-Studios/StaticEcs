@@ -14,11 +14,11 @@
         <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
         <LangVersion>9</LangVersion>
         <FileAlignment>512</FileAlignment>
-        <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RootNamespace>FFS.Libraries.StaticEcs</RootNamespace>
         
         <Title>StaticECS</Title>
-        <Version>0.9.62</Version>
+        <Version>0.9.73</Version>
         <Authors>Felid-Force-Studios</Authors>
         <Description>C# Entity Component System Framework</Description>
         <Copyright>Felid-Force-Studios</Copyright>
@@ -54,7 +54,6 @@
         <Compile Include="Src/**/*.cs" />
     </ItemGroup>
     <ItemGroup>
-      <Content Include="Benchmark.md" />
       <Content Include="README.md" />
       <Content Include="README_RU.md" />
     </ItemGroup>

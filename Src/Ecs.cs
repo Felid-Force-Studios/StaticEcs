@@ -11,6 +11,7 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     public abstract partial class Ecs<WorldType> where WorldType : struct, IWorldType {
         internal static EcsConfig cfg;
+        internal static ushort runtimeVersion;
 
         [MethodImpl(AggressiveInlining)]
         public static void Create(EcsConfig config) {
@@ -19,6 +20,11 @@ namespace FFS.Libraries.StaticEcs {
             #if !FFS_ECS_DISABLE_EVENTS
             Events.Create();
             #endif
+            if (runtimeVersion == ushort.MaxValue) {
+                runtimeVersion = 1;
+            } else {
+                runtimeVersion++;
+            }
         }
         
         public static void Initialize() {
