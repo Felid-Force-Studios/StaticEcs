@@ -21,11 +21,11 @@ ___
 Требуется регистрация в мире между созданием и инициализацией
 
 ```c#
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
-MyEcs.World.RegisterTagType<Unit>();
+World.RegisterTagType<Unit>();
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 
 ___

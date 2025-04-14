@@ -36,12 +36,12 @@ public struct Item {
     public string Value;
 }
 
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
 // где defaultComponentCapacity - минимальная вместительность мультикомпонента, со степенью двойки, в диапазоне от 4 до 32768  (4, 8, 16, 32 ...)
-MyEcs.World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
+World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 
 Второй - Использовать кастомную реализация `IMultiComponent<T>`
@@ -65,19 +65,19 @@ public struct Inventory : IMultiComponent<Item> {
     public void Access<A>(A access) where A : struct, AccessMulti<Item> => access.For(ref Items);
 }
 
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
 // вместо Multi<Item> указываем кастомный компонент Inventory
 // где defaultComponentCapacity - минимальная вместительность мультикомпонента, со степенью двойки, в диапазоне от 4 до 32768  (4, 8, 16, 32 ...)
-MyEcs.World.RegisterMultiComponentType<Inventory, Item>(defaultComponentCapacity: 4); 
+World.RegisterMultiComponentType<Inventory, Item>(defaultComponentCapacity: 4); 
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 ___
 
 #### Основные операции:
 ```c#
-MyEcs.World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
+World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
 
 // При добавлениие мультикомпонента по умолчанию вместимость будет defaultComponentCapacity, по мере добавления элементов будет расширяться 
 // Добавление мультикомпонента как и обычного компонента
@@ -120,7 +120,7 @@ foreach (ref var item in items) {                                      // Цик
     //..
 }
 
-for (ushort i = 0; i < items.Count; i++) {                             // Цикл for по элементам
+for (int i = 0; i < items.Count; i++) {                             // Цикл for по элементам
     ref var item = ref items[i];
 }
 
@@ -129,24 +129,24 @@ items.Add(new Item());                                                 // Доб
 items.Add(new Item("a"), new Item("b"), new Item("c"), new Item("d")); // Добавить элементы (1 - 4)
 items.Add(new[] { new Item("f"), new Item("g") });                     // Добавить элементы из массива
 items.Add(new[] { new Item("f"), new Item("g") }, 1, 1);               // Добавить элементы из массива c указанием старта и количества
-items.Add(ref entity2.RefMut<Multi<Item>>());                          // Добавить элементы из другого компонента
-items.Add(ref entity2.RefMut<Multi<Item>>(), 1, 1);                    // Добавить элементы из другого компонента c указанием старта и количества
+items.Add(ref entity2.Ref<Multi<Item>>());                             // Добавить элементы из другого компонента
+items.Add(ref entity2.Ref<Multi<Item>>(), 1, 1);                       // Добавить элементы из другого компонента c указанием старта и количества
 items.InsertAt(idx: 1, new Item("e"));                                 // Вставить элемент в указанный индекс, остальные элементы будут сдвинуты
 items.EnsureSize(10);                                                  // Обеспечить вместимость еще на N элементов если требуется
 items.Resize(16);                                                      // Расширить вместимость до N если требуется
 
 // Удаление и очистка
-items.DeleteFirst();                                                   // Удалить первый элемент и сдвинуть последующие (если важен порядок эелментов)
-items.DeleteFirstSwap();                                               // Удалить первый элемент и заменить последним (если НЕ важен порядок эелментов) (Быстрее)
-items.DeleteLast();                                                    // Удалить последний элемент и сбросить значение в default
-items.DeleteLastFast();                                                // Удалить последний элемент и БЕЗ сброса значения в default (если НЕ важен сброс значения) (Быстрее)
-items.DeleteAt(idx: 1);                                                // Удалить элемент по индексу и сдвинуть последующие (если важен порядок эелментов)
-items.DeleteAtSwap(idx: 1);                                            // Удалить элемент по индексу и заменить последним (если НЕ важен порядок эелментов) (Быстрее)
+items.RemoveFirst();                                                   // Удалить первый элемент и сдвинуть последующие (если важен порядок эелментов)
+items.RemoveFirstSwap();                                               // Удалить первый элемент и заменить последним (если НЕ важен порядок эелментов) (Быстрее)
+items.RemoveLast();                                                    // Удалить последний элемент и сбросить значение в default
+items.RemoveLastFast();                                                // Удалить последний элемент и БЕЗ сброса значения в default (если НЕ важен сброс значения) (Быстрее)
+items.RemoveAt(idx: 1);                                                // Удалить элемент по индексу и сдвинуть последующие (если важен порядок эелментов)
+items.RemoveAtSwap(idx: 1);                                            // Удалить элемент по индексу и заменить последним (если НЕ важен порядок эелментов) (Быстрее)
 items.Clear();                                                         // Очистить элементы и сбросить в default
 items.ResetCount();                                                    // Сброс количества без очистки
 
 // Поиск
-short idx = items.IndexOf(new Item("a"));                              // Получить индекс элемента или -1
+int idx = items.IndexOf(new Item("a"));                              // Получить индекс элемента или -1
 bool contains = items.Contains(new Item("a"));                         // Проверить наличие элемента с дефолтным IEqualityComparer
 bool contains = items.Contains(new Item("a"), comparer);               // Проверить наличие элемента с кастомным IEqualityComparer
 

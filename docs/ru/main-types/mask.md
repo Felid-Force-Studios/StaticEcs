@@ -19,11 +19,11 @@ ___
 Требуется регистрация в мире между созданием и инициализацией
 
 ```c#
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
-MyEcs.World.RegisterMaskType<Visible>();
+World.RegisterMaskType<Visible>();
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 ___
 

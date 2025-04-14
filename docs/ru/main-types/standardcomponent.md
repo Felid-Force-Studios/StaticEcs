@@ -22,7 +22,7 @@ nav_order: 4
 
 #### Пример:
 ```c#
-public struct EnitiyType : IStandardComponent {
+public struct EntityType : IStandardComponent {
     public int Val;
 }
 ```
@@ -32,11 +32,11 @@ ___
 Требуется регистрация в мире между созданием и инициализацией
 
 ```c#
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
-MyEcs.World.RegisterStandardComponentType<EnitiyType>();
+World.RegisterStandardComponentType<EntityType>();
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 ___
 
@@ -46,7 +46,7 @@ ___
 
 #### Example:
 ```c#
-public struct EnitiyType : IStandardComponent {
+public struct EntityType : IStandardComponent {
     public int Val;
     
     public void Init() {
@@ -57,21 +57,21 @@ public struct EnitiyType : IStandardComponent {
         Val = -1;
     }
     
-    public void CopyTo(ref EnitiyType dst) {
+    public void CopyTo(ref EntityType dst) {
         dst.Val = Val;
     }
 }
 
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
 
-MyEcs.World.RegisterStandardComponentType<EnitiyType>(
-                autoInit: static (ref EnitiyType component) => component.Init(), // При создании сущности будет вызвана данная функция 
-                autoReset: static (ref EnitiyType component) => component.Reset(), // При уничтожении сущности будет вызвана данная функция  
-                autoCopy: static (ref EnitiyType src, ref EnitiyType dst) => src.CopyTo(ref dst), // При копировании стандартных компонентов будет вызвана данная сущности вместо простого копирования
+World.RegisterStandardComponentType<EntityType>(
+                onAdd: static (ref EntityType component) => component.Init(), // При создании сущности будет вызвана данная функция 
+                onDelete: static (ref EntityType component) => component.Reset(), // При уничтожении сущности будет вызвана данная функция  
+                onCopy: static (ref EntityType src, ref EntityType dst) => src.CopyTo(ref dst), // При копировании стандартных компонентов будет вызвана данная сущности вместо простого копирования
             );
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 ___
 
@@ -81,14 +81,10 @@ ___
 int standardComponentsCount = entity.StandardComponentsCount();
 
 // Получить ref ссылку на стандартный компонент на чтение\запись
-ref var enitiyType = ref entity.RefMutStandard<EnitiyType>();
-enitiyType.Val = 123;
+ref var entityType = ref entity.RefStandard<EntityType>();
+entityType.Val = 123;
 
-// Получить ref ссылку на стандартный компонент только на чтение
-ref readonly var readOnlyEnitiyType = ref entity.RefStandard<EnitiyType>();
-//readOnlyEnitiyType.Val = 123;  -   ERROR
-
-var entity2 = MyEcs.Entity.New<SomeComponent>();
+var entity2 = World.Entity.New<SomeComponent>();
 // Скопировать указанные стандартные компоненты на другую сущность (методы перегрузки от 1-5 компонентов)
-entity.CopyStandardComponentsTo<EnitiyType>(entity2);
+entity.CopyStandardComponentsTo<EntityType>(entity2);
 ```

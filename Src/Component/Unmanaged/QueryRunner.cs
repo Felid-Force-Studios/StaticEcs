@@ -17,27 +17,29 @@ namespace FFS.Libraries.StaticEcs {
         internal static UQueryFunctionRunner<WorldType, C1, P> Value;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, Ecs<WorldType>.IQueryFunction<C1> {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
+        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, World<WorldType>.IQueryFunction<C1> {
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
-        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, Ecs<WorldType>.IQueryFunction<C1> {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
+        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, World<WorldType>.IQueryFunction<C1> {
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -46,7 +48,7 @@ namespace FFS.Libraries.StaticEcs {
                     if ((entitiesParam == EntityStatusType.Any || entitiesParam == status[entity].Value)
                         && (i1 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner.Run(new Ecs<WorldType>.Entity(entity),
+                        runner.Run(new World<WorldType>.Entity(entity),
                                    ref data1[i1 & Const.DisabledComponentMaskInv]
                         );
                     }
@@ -56,27 +58,29 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void Run(DelegateQueryFunction<WorldType, C1> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
         private unsafe void Run(DelegateQueryFunction<WorldType, C1> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -85,7 +89,7 @@ namespace FFS.Libraries.StaticEcs {
                     if ((entitiesParam == EntityStatusType.Any || entitiesParam == status[entity].Value)
                         && (i1 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner(new Ecs<WorldType>.Entity(entity),
+                        runner(new World<WorldType>.Entity(entity),
                                ref data1[i1 & Const.DisabledComponentMaskInv]
                         );
                     }
@@ -106,33 +110,35 @@ namespace FFS.Libraries.StaticEcs {
         internal static UQueryFunctionRunner<WorldType, C1, C2, P> Value;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2> {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, World<WorldType>.IQueryFunction<C1, C2> {
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
-        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2> {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
+        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, World<WorldType>.IQueryFunction<C1, C2> {
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -142,7 +148,7 @@ namespace FFS.Libraries.StaticEcs {
                     if ((entitiesParam == EntityStatusType.Any || entitiesParam == status[entity].Value)
                         && (i1 & maskLeft) == maskRight && (i2 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner.Run(new Ecs<WorldType>.Entity(entity),
+                        runner.Run(new World<WorldType>.Entity(entity),
                                    ref data1[i1 & Const.DisabledComponentMaskInv],
                                    ref data2[i2 & Const.DisabledComponentMaskInv]
                         );
@@ -153,32 +159,34 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void Run(DelegateQueryFunction<WorldType, C1, C2> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
         private unsafe void Run(DelegateQueryFunction<WorldType, C1, C2> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -188,7 +196,7 @@ namespace FFS.Libraries.StaticEcs {
                     if ((entitiesParam == EntityStatusType.Any || entitiesParam == status[entity].Value)
                         && (i1 & maskLeft) == maskRight && (i2 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner(new Ecs<WorldType>.Entity(entity),
+                        runner(new World<WorldType>.Entity(entity),
                                ref data1[i1 & Const.DisabledComponentMaskInv],
                                ref data2[i2 & Const.DisabledComponentMaskInv]
                         );
@@ -211,38 +219,40 @@ namespace FFS.Libraries.StaticEcs {
         internal static UQueryFunctionRunner<WorldType, C1, C2, C3, P> Value;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3> {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3> {
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
-        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3> {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
+        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3> {
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -254,7 +264,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i1 & maskLeft) == maskRight && (i2 & maskLeft) == maskRight
                         && (i3 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner.Run(new Ecs<WorldType>.Entity(entity),
+                        runner.Run(new World<WorldType>.Entity(entity),
                                    ref data1[i1 & Const.DisabledComponentMaskInv],
                                    ref data2[i2 & Const.DisabledComponentMaskInv],
                                    ref data3[i3 & Const.DisabledComponentMaskInv]
@@ -266,37 +276,39 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void Run(DelegateQueryFunction<WorldType, C1, C2, C3> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
         private unsafe void Run(DelegateQueryFunction<WorldType, C1, C2, C3> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -308,7 +320,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i1 & maskLeft) == maskRight && (i2 & maskLeft) == maskRight
                         && (i3 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner(new Ecs<WorldType>.Entity(entity),
+                        runner(new World<WorldType>.Entity(entity),
                                ref data1[i1 & Const.DisabledComponentMaskInv],
                                ref data2[i2 & Const.DisabledComponentMaskInv],
                                ref data3[i3 & Const.DisabledComponentMaskInv]
@@ -333,43 +345,45 @@ namespace FFS.Libraries.StaticEcs {
         internal static UQueryFunctionRunner<WorldType, C1, C2, C3, C4, P> Value;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3, C4> {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3, C4> {
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
-        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3, C4> {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (uint* di4 = Ecs<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
-            fixed (C4* data4 = Ecs<WorldType>.Components<C4>.Value.Data())
+        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3, C4> {
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (uint* di4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
+            fixed (C4* data4 = World<WorldType>.Components<C4>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -382,7 +396,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i1 & maskLeft) == maskRight && (i2 & maskLeft) == maskRight
                         && (i3 & maskLeft) == maskRight && (i4 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner.Run(new Ecs<WorldType>.Entity(entity),
+                        runner.Run(new World<WorldType>.Entity(entity),
                                    ref data1[i1 & Const.DisabledComponentMaskInv],
                                    ref data2[i2 & Const.DisabledComponentMaskInv],
                                    ref data3[i3 & Const.DisabledComponentMaskInv],
@@ -395,42 +409,44 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void Run(DelegateQueryFunction<WorldType, C1, C2, C3, C4> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
         private unsafe void Run(DelegateQueryFunction<WorldType, C1, C2, C3, C4> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (uint* di4 = Ecs<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
-            fixed (C4* data4 = Ecs<WorldType>.Components<C4>.Value.Data())
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (uint* di4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
+            fixed (C4* data4 = World<WorldType>.Components<C4>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -443,7 +459,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i1 & maskLeft) == maskRight && (i2 & maskLeft) == maskRight
                         && (i3 & maskLeft) == maskRight && (i4 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner(new Ecs<WorldType>.Entity(entity),
+                        runner(new World<WorldType>.Entity(entity),
                                ref data1[i1 & Const.DisabledComponentMaskInv],
                                ref data2[i2 & Const.DisabledComponentMaskInv],
                                ref data3[i3 & Const.DisabledComponentMaskInv],
@@ -470,48 +486,50 @@ namespace FFS.Libraries.StaticEcs {
         internal static UQueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, P> Value;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3, C4, C5> {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
+        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3, C4, C5> {
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
-        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3, C4, C5> {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (uint* di4 = Ecs<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
-            fixed (uint* di5 = Ecs<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
-            fixed (C4* data4 = Ecs<WorldType>.Components<C4>.Value.Data())
-            fixed (C5* data5 = Ecs<WorldType>.Components<C5>.Value.Data())
+        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3, C4, C5> {
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (uint* di4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
+            fixed (uint* di5 = World<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
+            fixed (C4* data4 = World<WorldType>.Components<C4>.Value.Data())
+            fixed (C5* data5 = World<WorldType>.Components<C5>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -525,7 +543,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i1 & maskLeft) == maskRight && (i2 & maskLeft) == maskRight
                         && (i3 & maskLeft) == maskRight && (i4 & maskLeft) == maskRight && (i5 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner.Run(new Ecs<WorldType>.Entity(entity),
+                        runner.Run(new World<WorldType>.Entity(entity),
                                    ref data1[i1 & Const.DisabledComponentMaskInv],
                                    ref data2[i2 & Const.DisabledComponentMaskInv],
                                    ref data3[i3 & Const.DisabledComponentMaskInv],
@@ -539,47 +557,49 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void Run(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
         private unsafe void Run(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (uint* di4 = Ecs<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
-            fixed (uint* di5 = Ecs<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
-            fixed (C4* data4 = Ecs<WorldType>.Components<C4>.Value.Data())
-            fixed (C5* data5 = Ecs<WorldType>.Components<C5>.Value.Data())
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (uint* di4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
+            fixed (uint* di5 = World<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
+            fixed (C4* data4 = World<WorldType>.Components<C4>.Value.Data())
+            fixed (C5* data5 = World<WorldType>.Components<C5>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -593,7 +613,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i1 & maskLeft) == maskRight && (i2 & maskLeft) == maskRight
                         && (i3 & maskLeft) == maskRight && (i4 & maskLeft) == maskRight && (i5 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner(new Ecs<WorldType>.Entity(entity),
+                        runner(new World<WorldType>.Entity(entity),
                                ref data1[i1 & Const.DisabledComponentMaskInv],
                                ref data2[i2 & Const.DisabledComponentMaskInv],
                                ref data3[i3 & Const.DisabledComponentMaskInv],
@@ -622,53 +642,55 @@ namespace FFS.Libraries.StaticEcs {
         internal static UQueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, P> Value;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6> {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
+        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6> {
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
-        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6> {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (uint* di4 = Ecs<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
-            fixed (uint* di5 = Ecs<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
-            fixed (uint* di6 = Ecs<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
-            fixed (C4* data4 = Ecs<WorldType>.Components<C4>.Value.Data())
-            fixed (C5* data5 = Ecs<WorldType>.Components<C5>.Value.Data())
-            fixed (C6* data6 = Ecs<WorldType>.Components<C6>.Value.Data())
+        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6> {
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (uint* di4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
+            fixed (uint* di5 = World<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
+            fixed (uint* di6 = World<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
+            fixed (C4* data4 = World<WorldType>.Components<C4>.Value.Data())
+            fixed (C5* data5 = World<WorldType>.Components<C5>.Value.Data())
+            fixed (C6* data6 = World<WorldType>.Components<C6>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -684,7 +706,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i3 & maskLeft) == maskRight && (i4 & maskLeft) == maskRight && (i5 & maskLeft) == maskRight
                         && (i6 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner.Run(new Ecs<WorldType>.Entity(entity),
+                        runner.Run(new World<WorldType>.Entity(entity),
                                    ref data1[i1 & Const.DisabledComponentMaskInv],
                                    ref data2[i2 & Const.DisabledComponentMaskInv],
                                    ref data3[i3 & Const.DisabledComponentMaskInv],
@@ -699,52 +721,54 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void Run(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
         private unsafe void Run(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (uint* di4 = Ecs<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
-            fixed (uint* di5 = Ecs<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
-            fixed (uint* di6 = Ecs<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
-            fixed (C4* data4 = Ecs<WorldType>.Components<C4>.Value.Data())
-            fixed (C5* data5 = Ecs<WorldType>.Components<C5>.Value.Data())
-            fixed (C6* data6 = Ecs<WorldType>.Components<C6>.Value.Data())
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (uint* di4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
+            fixed (uint* di5 = World<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
+            fixed (uint* di6 = World<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
+            fixed (C4* data4 = World<WorldType>.Components<C4>.Value.Data())
+            fixed (C5* data5 = World<WorldType>.Components<C5>.Value.Data())
+            fixed (C6* data6 = World<WorldType>.Components<C6>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -760,7 +784,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i3 & maskLeft) == maskRight && (i4 & maskLeft) == maskRight && (i5 & maskLeft) == maskRight
                         && (i6 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner(new Ecs<WorldType>.Entity(entity),
+                        runner(new World<WorldType>.Entity(entity),
                                ref data1[i1 & Const.DisabledComponentMaskInv],
                                ref data2[i2 & Const.DisabledComponentMaskInv],
                                ref data3[i3 & Const.DisabledComponentMaskInv],
@@ -792,58 +816,60 @@ namespace FFS.Libraries.StaticEcs {
         internal static UQueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, P> Value;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6, C7> {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C7>.Value.SetDataIfCountLess(ref count, ref entities);
+        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6, C7> {
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C7>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C7>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(1);
+                World<WorldType>.Components<C7>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C7>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C7>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
-        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6, C7> {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (uint* di4 = Ecs<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
-            fixed (uint* di5 = Ecs<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
-            fixed (uint* di6 = Ecs<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
-            fixed (uint* di7 = Ecs<WorldType>.Components<C7>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
-            fixed (C4* data4 = Ecs<WorldType>.Components<C4>.Value.Data())
-            fixed (C5* data5 = Ecs<WorldType>.Components<C5>.Value.Data())
-            fixed (C6* data6 = Ecs<WorldType>.Components<C6>.Value.Data())
-            fixed (C7* data7 = Ecs<WorldType>.Components<C7>.Value.Data())
+        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6, C7> {
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (uint* di4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
+            fixed (uint* di5 = World<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
+            fixed (uint* di6 = World<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
+            fixed (uint* di7 = World<WorldType>.Components<C7>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
+            fixed (C4* data4 = World<WorldType>.Components<C4>.Value.Data())
+            fixed (C5* data5 = World<WorldType>.Components<C5>.Value.Data())
+            fixed (C6* data6 = World<WorldType>.Components<C6>.Value.Data())
+            fixed (C7* data7 = World<WorldType>.Components<C7>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -860,7 +886,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i3 & maskLeft) == maskRight && (i4 & maskLeft) == maskRight && (i5 & maskLeft) == maskRight
                         && (i6 & maskLeft) == maskRight && (i7 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner.Run(new Ecs<WorldType>.Entity(entity),
+                        runner.Run(new World<WorldType>.Entity(entity),
                                    ref data1[i1 & Const.DisabledComponentMaskInv],
                                    ref data2[i2 & Const.DisabledComponentMaskInv],
                                    ref data3[i3 & Const.DisabledComponentMaskInv],
@@ -876,57 +902,59 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void Run(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6, C7> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C7>.Value.SetDataIfCountLess(ref count, ref entities);
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C7>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C7>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(1);
+                World<WorldType>.Components<C7>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C7>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C7>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
         private unsafe void Run(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6, C7> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (uint* di4 = Ecs<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
-            fixed (uint* di5 = Ecs<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
-            fixed (uint* di6 = Ecs<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
-            fixed (uint* di7 = Ecs<WorldType>.Components<C7>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
-            fixed (C4* data4 = Ecs<WorldType>.Components<C4>.Value.Data())
-            fixed (C5* data5 = Ecs<WorldType>.Components<C5>.Value.Data())
-            fixed (C6* data6 = Ecs<WorldType>.Components<C6>.Value.Data())
-            fixed (C7* data7 = Ecs<WorldType>.Components<C7>.Value.Data())
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (uint* di4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
+            fixed (uint* di5 = World<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
+            fixed (uint* di6 = World<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
+            fixed (uint* di7 = World<WorldType>.Components<C7>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
+            fixed (C4* data4 = World<WorldType>.Components<C4>.Value.Data())
+            fixed (C5* data5 = World<WorldType>.Components<C5>.Value.Data())
+            fixed (C6* data6 = World<WorldType>.Components<C6>.Value.Data())
+            fixed (C7* data7 = World<WorldType>.Components<C7>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -943,7 +971,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i3 & maskLeft) == maskRight && (i4 & maskLeft) == maskRight && (i5 & maskLeft) == maskRight
                         && (i6 & maskLeft) == maskRight && (i7 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner(new Ecs<WorldType>.Entity(entity),
+                        runner(new World<WorldType>.Entity(entity),
                                ref data1[i1 & Const.DisabledComponentMaskInv],
                                ref data2[i2 & Const.DisabledComponentMaskInv],
                                ref data3[i3 & Const.DisabledComponentMaskInv],
@@ -976,63 +1004,65 @@ namespace FFS.Libraries.StaticEcs {
         internal static UQueryFunctionRunner<WorldType, C1, C2, C3, C4, C5, C6, C7, C8, P> Value;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6, C7, C8> {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C7>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C8>.Value.SetDataIfCountLess(ref count, ref entities);
+        public void Run<R>(ref R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6, C7, C8> {
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C7>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C8>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C7>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C8>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(1);
+                World<WorldType>.Components<C7>.Value.AddBlocker(1);
+                World<WorldType>.Components<C8>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C7>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C8>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C7>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C8>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
-        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, Ecs<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6, C7, C8> {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (uint* di4 = Ecs<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
-            fixed (uint* di5 = Ecs<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
-            fixed (uint* di6 = Ecs<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
-            fixed (uint* di7 = Ecs<WorldType>.Components<C7>.Value.GetDataIdxByEntityId())
-            fixed (uint* di8 = Ecs<WorldType>.Components<C8>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
-            fixed (C4* data4 = Ecs<WorldType>.Components<C4>.Value.Data())
-            fixed (C5* data5 = Ecs<WorldType>.Components<C5>.Value.Data())
-            fixed (C6* data6 = Ecs<WorldType>.Components<C6>.Value.Data())
-            fixed (C7* data7 = Ecs<WorldType>.Components<C7>.Value.Data())
-            fixed (C8* data8 = Ecs<WorldType>.Components<C8>.Value.Data())
+        private unsafe void Run<R>(R runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) where R : struct, World<WorldType>.IQueryFunction<C1, C2, C3, C4, C5, C6, C7, C8> {
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (uint* di4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
+            fixed (uint* di5 = World<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
+            fixed (uint* di6 = World<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
+            fixed (uint* di7 = World<WorldType>.Components<C7>.Value.GetDataIdxByEntityId())
+            fixed (uint* di8 = World<WorldType>.Components<C8>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
+            fixed (C4* data4 = World<WorldType>.Components<C4>.Value.Data())
+            fixed (C5* data5 = World<WorldType>.Components<C5>.Value.Data())
+            fixed (C6* data6 = World<WorldType>.Components<C6>.Value.Data())
+            fixed (C7* data7 = World<WorldType>.Components<C7>.Value.Data())
+            fixed (C8* data8 = World<WorldType>.Components<C8>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -1050,7 +1080,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i3 & maskLeft) == maskRight && (i4 & maskLeft) == maskRight && (i5 & maskLeft) == maskRight
                         && (i6 & maskLeft) == maskRight && (i7 & maskLeft) == maskRight && (i8 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner.Run(new Ecs<WorldType>.Entity(entity),
+                        runner.Run(new World<WorldType>.Entity(entity),
                                    ref data1[i1 & Const.DisabledComponentMaskInv],
                                    ref data2[i2 & Const.DisabledComponentMaskInv],
                                    ref data3[i3 & Const.DisabledComponentMaskInv],
@@ -1067,62 +1097,64 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void Run(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6, C7, C8> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight) {
-            var count = Ecs<WorldType>.Components<C1>.Value.Count();
-            var entities = Ecs<WorldType>.Components<C1>.Value.EntitiesData();
-            Ecs<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C7>.Value.SetDataIfCountLess(ref count, ref entities);
-            Ecs<WorldType>.Components<C8>.Value.SetDataIfCountLess(ref count, ref entities);
+            var count = World<WorldType>.Components<C1>.Value.Count();
+            var entities = World<WorldType>.Components<C1>.Value.EntitiesData();
+            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C5>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C6>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C7>.Value.SetDataIfCountLess(ref count, ref entities);
+            World<WorldType>.Components<C8>.Value.SetDataIfCountLess(ref count, ref entities);
             with.SetData<WorldType>(ref count, ref entities);
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C7>.Value.AddBlocker(1);
-                Ecs<WorldType>.Components<C8>.Value.AddBlocker(1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(1);
+                World<WorldType>.Components<C7>.Value.AddBlocker(1);
+                World<WorldType>.Components<C8>.Value.AddBlocker(1);
                 #endif
                 Run(runner, with, entitiesParam, maskLeft, maskRight, entities, count);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                with.Dispose<WorldType>();
-                Ecs<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C5>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C6>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C7>.Value.AddBlocker(-1);
-                Ecs<WorldType>.Components<C8>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C6>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C7>.Value.AddBlocker(-1);
+                World<WorldType>.Components<C8>.Value.AddBlocker(-1);
                 #endif
             }
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            with.Dispose<WorldType>();
+            #endif
         }
 
         private unsafe void Run(DelegateQueryFunction<WorldType, C1, C2, C3, C4, C5, C6, C7, C8> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint[] entities, uint count) {
-            fixed (uint* di1 = Ecs<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
-            fixed (uint* di2 = Ecs<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
-            fixed (uint* di3 = Ecs<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
-            fixed (uint* di4 = Ecs<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
-            fixed (uint* di5 = Ecs<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
-            fixed (uint* di6 = Ecs<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
-            fixed (uint* di7 = Ecs<WorldType>.Components<C7>.Value.GetDataIdxByEntityId())
-            fixed (uint* di8 = Ecs<WorldType>.Components<C8>.Value.GetDataIdxByEntityId())
-            fixed (C1* data1 = Ecs<WorldType>.Components<C1>.Value.Data())
-            fixed (C2* data2 = Ecs<WorldType>.Components<C2>.Value.Data())
-            fixed (C3* data3 = Ecs<WorldType>.Components<C3>.Value.Data())
-            fixed (C4* data4 = Ecs<WorldType>.Components<C4>.Value.Data())
-            fixed (C5* data5 = Ecs<WorldType>.Components<C5>.Value.Data())
-            fixed (C6* data6 = Ecs<WorldType>.Components<C6>.Value.Data())
-            fixed (C7* data7 = Ecs<WorldType>.Components<C7>.Value.Data())
-            fixed (C8* data8 = Ecs<WorldType>.Components<C8>.Value.Data())
+            fixed (uint* di1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId())
+            fixed (uint* di2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId())
+            fixed (uint* di3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId())
+            fixed (uint* di4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId())
+            fixed (uint* di5 = World<WorldType>.Components<C5>.Value.GetDataIdxByEntityId())
+            fixed (uint* di6 = World<WorldType>.Components<C6>.Value.GetDataIdxByEntityId())
+            fixed (uint* di7 = World<WorldType>.Components<C7>.Value.GetDataIdxByEntityId())
+            fixed (uint* di8 = World<WorldType>.Components<C8>.Value.GetDataIdxByEntityId())
+            fixed (C1* data1 = World<WorldType>.Components<C1>.Value.Data())
+            fixed (C2* data2 = World<WorldType>.Components<C2>.Value.Data())
+            fixed (C3* data3 = World<WorldType>.Components<C3>.Value.Data())
+            fixed (C4* data4 = World<WorldType>.Components<C4>.Value.Data())
+            fixed (C5* data5 = World<WorldType>.Components<C5>.Value.Data())
+            fixed (C6* data6 = World<WorldType>.Components<C6>.Value.Data())
+            fixed (C7* data7 = World<WorldType>.Components<C7>.Value.Data())
+            fixed (C8* data8 = World<WorldType>.Components<C8>.Value.Data())
             fixed (uint* en = entities)
-            fixed (EntityStatus* status = Ecs<WorldType>.StandardComponents<EntityStatus>.Value.Data())
+            fixed (EntityStatus* status = World<WorldType>.StandardComponents<EntityStatus>.Value.Data())
             {
                 while (count > 0) {
                     count--;
@@ -1140,7 +1172,7 @@ namespace FFS.Libraries.StaticEcs {
                         && (i3 & maskLeft) == maskRight && (i4 & maskLeft) == maskRight && (i5 & maskLeft) == maskRight
                         && (i6 & maskLeft) == maskRight && (i7 & maskLeft) == maskRight && (i8 & maskLeft) == maskRight
                         && with.CheckEntity(entity)) {
-                        runner(new Ecs<WorldType>.Entity(entity),
+                        runner(new World<WorldType>.Entity(entity),
                                ref data1[i1 & Const.DisabledComponentMaskInv],
                                ref data2[i2 & Const.DisabledComponentMaskInv],
                                ref data3[i3 & Const.DisabledComponentMaskInv],

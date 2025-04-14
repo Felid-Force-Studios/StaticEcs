@@ -22,22 +22,22 @@ ___
 Requires registration in the world between creation and initialization
 
 ```c#
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
-MyEcs.World.RegisterComponentType<Position>();
+World.RegisterComponentType<Position>();
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 ___
 
 #### Creation:
 ```c#
 // Method 1 - when creating an entity (similar to the Add() method)
-var entity = MyEcs.Entity.New<Position>();
+var entity = World.Entity.New<Position>();
 
 // Or via a value (similar to the Put() method)
 // Be careful with AutoInit and AutoReset (see additional features)
-var entity = MyEcs.Entity.New(new Position(x: 1, y: 1, z: 2));
+var entity = World.Entity.New(new Position(x: 1, y: 1, z: 2));
 
 // Adding a component to an entity and returning a ref value to the component (in DEBUG mode there will be an error if it already exists on the entity).
 ref var position = ref entity.Add<Position>();
@@ -61,7 +61,7 @@ ___
 
 #### Basic operations:
 ```c#
-var entity = MyEcs.Entity.New(
+var entity = World.Entity.New(
             new Name { Val = "Player" },
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
@@ -70,12 +70,8 @@ var entity = MyEcs.Entity.New(
 int componentsCount = entity.ComponentsCount();
 
 // Get ref reference to read/write component
-ref var velocity = ref entity.RefMut<Velocity>();
+ref var velocity = ref entity.Ref<Velocity>();
 velocity.Val++;
-
-// Get ref reference to a read-only component
-ref readonly var readOnlyVelocity = ref entity.Ref<Velocity>();
-//readOnlyVelocity.Value++;  -   ERROR
 
 // Check for the presence of ALL specified components (overload methods from 1-3 components)
 entity.HasAllOf<Position>();
@@ -94,7 +90,7 @@ entity.Delete<Position, Velocity, Name>();
 bool deleted = entity.Delete<Position>();  // deleted = true if the component has been deleted, false if the component was not there originally
 bool deleted = entity.Delete<Position, Velocity, Name>();  // deleted = true if ALL components have been deleted, false if at least 1 component was not there originally
 
-var entity2 = MyEcs.Entity.New<Name>();
+var entity2 = World.Entity.New<Name>();
 // Copy the specified components to another entity (overload methods from 1-5 components)
 entity.CopyComponentsTo<Position, Velocity>(entity2);
 ```

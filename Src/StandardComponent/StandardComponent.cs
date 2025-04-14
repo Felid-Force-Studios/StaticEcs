@@ -45,6 +45,11 @@ namespace FFS.Libraries.StaticEcs {
         internal short Value;
 
         [MethodImpl(AggressiveInlining)]
+        internal void SetInactive() {
+            Value = Value == short.MaxValue ? (short) -1 : (short) -(Value + 1);
+        }
+
+        [MethodImpl(AggressiveInlining)]
         public override string ToString() {
             return $"{Value}";
         }

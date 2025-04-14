@@ -68,34 +68,34 @@ MaskAny<Flammable, Frozen, Visible> _any2 = default;
 // Different sets of filtering methods can be applied to the World.QueryEntities.For() method for example:
 // Option 1 method through generic
 foreach (var entity in MyWorld.QueryEntities.For<All<Position, Direction, Velocity>>()) {
-    entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
+    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
 // Variant with 1 method via value
 var all = default(All<Position, Direction, Velocity>);
 foreach (var entity in MyWorld.QueryEntities.For(all)) {
-    entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
+    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
 // Option with 2 methods via generic
 foreach (var entity in MyWorld.QueryEntities.For<
              All<Position, Velocity, Name>,
              None<Name>>()) {
-    entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
+    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
 // Variant with 2 methods via value
 All<Position, Direction, Velocity> all2 = default;
 None<Name> none2 = default;
 foreach (var entity in MyWorld.QueryEntities.For(all2, none2)) {
-    entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
+    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
 // Alternative with 2 methods via value
 var all3 = Types<Position, Direction, Velocity>.All();
 var none3 = Types<Name>.None();
 foreach (var entity in MyWorld.QueryEntities.For(all3, none3)) {
-    entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
+    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
 
@@ -108,7 +108,7 @@ foreach (var entity in MyWorld.QueryEntities.For<With<
              None<Name>,
              Any<Position, Direction, Velocity>
          >>()) {
-    entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
+    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
 // Method 2 through values
@@ -118,7 +118,7 @@ With<
     Any<Position, Direction, Velocity>
 > with = default;
 foreach (var entity in MyWorld.QueryEntities.For(with)) {
-    entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
+    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
 // Method 3 through values alternative
@@ -128,7 +128,7 @@ var with2 = With.Create(
     default(Any<Position, Direction, Velocity>)
 );
 foreach (var entity in MyWorld.QueryEntities.For(with2)) {
-    entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
+    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
 // Method 4 through values alternative
@@ -138,7 +138,7 @@ var with3 = With.Create(
     Types<Position, Direction, Velocity>.Any()
 );
 foreach (var entity in MyWorld.QueryEntities.For(with3)) {
-    entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
+    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 ```
   
@@ -147,18 +147,18 @@ foreach (var entity in MyWorld.QueryEntities.For(with3)) {
 // World.QueryComponents.For()\With() returns an iterator of entities matching the condition immediately with components 
 
 // Option 1 with specifying a delegate and getting the required components at once, from 1 to 8 component types can be specified
-MyWorld.QueryComponents.For<Position, Velocity, Name>((Ecs.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+MyWorld.QueryComponents.For<Position, Velocity, Name>((World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
     position.Val *= velocity.Val;
 });
 
 // you can remove generics, since they are derived from the passed function type
-MyWorld.QueryComponents.For((Ecs.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+MyWorld.QueryComponents.For((World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
     position.Val *= velocity.Val;
 });
 
 // you can add a static constraint to the delegate to ensure that this delegate will not be allocated every time.
-// in combination with Ecs.Context allows for convenient and productive code without creating closures in the delegate
-MyWorld.QueryComponents.For(static (Ecs.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+// in combination with World.Context allows for convenient and productive code without creating closures in the delegate
+MyWorld.QueryComponents.For(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
     position.Val *= velocity.Val;
 });
 
@@ -171,7 +171,7 @@ WithAdds<
     Any<Position, Direction, Velocity>
 > with = default;
 
-MyWorld.QueryComponents.With(with).For(static (Ecs.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+MyWorld.QueryComponents.With(with).For(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
     position.Val *= velocity.Val;
 });
 
@@ -179,7 +179,41 @@ MyWorld.QueryComponents.With(with).For(static (Ecs.Entity entity, ref Position p
 MyWorld.QueryComponents.With<WithAdds<
     None<Direction>,
     Any<Position, Direction, Velocity>
->>().For(static (Ecs.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+>>().For(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+    position.Val *= velocity.Val;
+});
+
+
+Also similarly, there are variants for searching by disabled or together with disabled components:
+It is important that the filter is applied only to components specified in the function, not to With components 
+If you need to set a filter for disabled components in With, use the constructs AllOnlyDisabled, AllWithDisabled, etc.
+
+MyWorld.QueryComponents.With(with).ForOnlyDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+    position.Val *= velocity.Val;
+});
+
+MyWorld.QueryComponents.With(with).ForWithDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+    position.Val *= velocity.Val;
+});
+
+
+// There is also a possibility of multithreaded processing:
+// Important! A special entity type is introduced which prohibits all operations except Ref, Has etc.
+// You cannot create, delete entities or components in multithreaded processing, only read and modify existing ones.
+
+MyWorld.QueryComponents.Parallel.For(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
+    position.Val *= velocity.Val;
+});
+
+MyWorld.QueryComponents.Parallel.With(with).For(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
+    position.Val *= velocity.Val;
+});
+
+MyWorld.QueryComponents.Parallel.ForOnlyDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
+    position.Val *= velocity.Val;
+});
+
+MyWorld.QueryComponents.Parallel.ForWithDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 ```
@@ -191,8 +225,8 @@ MyWorld.QueryComponents.With<WithAdds<
 
 // Let's define a structure-function that we can replace the delegate with.
 // It must implement the IQueryFunction interface, specifying from 1-8 components.
-readonly struct StructFunction : Ecs.IQueryFunction<Position, Velocity, Name> {
-    public void Run(Ecs.Entity entity, ref Position position, ref Velocity velocity, ref Name name) {
+readonly struct StructFunction : World.IQueryFunction<Position, Velocity, Name> {
+    public void Run(World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) {
         position.Val *= velocity.Val;
     }
 }
@@ -218,7 +252,7 @@ MyWorld.QueryComponents.With(with).For<Position, Velocity, Name, StructFunction>
 
 // It is also possible to combine system and IQueryFunction, for example:
 // this can improve code readability and increase perfomance + it allows accessing non-static members of the system
-public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, Ecs.IQueryFunction<Position, Velocity, Name> {
+public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, World.IQueryFunction<Position, Velocity, Name> {
     private UserService1 _userService1;
     
     WithAdds<
@@ -227,7 +261,7 @@ public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, Ecs.IQueryFunctio
     > with;
     
     public void Init() {
-        _userService1 = Ecs.Context<UserService1>.Get();
+        _userService1 = World.Context<UserService1>.Get();
     }
     
    public void Update() {
@@ -236,7 +270,7 @@ public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, Ecs.IQueryFunctio
             .For<Position, Velocity, Name, SomeFunctionSystem>(ref this);
    }
     
-    public void Run(Ecs.Entity entity, ref Position position, ref Velocity velocity, ref Name name) {
+    public void Run(World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) {
         position.Val *= velocity.Val;
         _userService1.CallSomeMethod(name.Val);
     }

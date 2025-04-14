@@ -12,15 +12,15 @@ ___
 
 #### Пример:
 ```csharp
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
-MyEcs.World.RegisterComponentType<Position>(
-                autoInit: static (ref Position position) => position.Val = Vector3.One, // заменяет поведение при создании компонента через метод Add
-                autoReset: static (ref Position position) => position.Val = Vector3.One, // заменяет поведение при удалении компонента через метод Delete
-                autoCopy: static (ref Position src, ref Position dst) => dst.Val = src.Val, // заменяет поведение при копировании компонента
+World.RegisterComponentType<Position>(
+                onAdd: static (ref Position position) => position.Val = Vector3.One, // заменяет поведение при создании компонента через метод Add
+                onDelete: static (ref Position position) => position.Val = Vector3.One, // заменяет поведение при удалении компонента через метод Delete
+                onCopy: static (ref Position src, ref Position dst) => dst.Val = src.Val, // заменяет поведение при копировании компонента
             );
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 
 {: .importantru }

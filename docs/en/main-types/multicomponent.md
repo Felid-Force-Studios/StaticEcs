@@ -35,12 +35,12 @@ public struct Item {
     public string Value;
 }
 
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
 // where defaultComponentCapacity is the minimum capacity of the multicomponent, with a power of two, in the range of 4 to 32768 (4, 8, 16, 32 ...)
-MyEcs.World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
+World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 
 Second - Use a custom implementation `IMultiComponent<T>`
@@ -64,19 +64,19 @@ public struct Inventory : IMultiComponent<Item> {
     public void Access<A>(A access) where A : struct, AccessMulti<Item> => access.For(ref Items);
 }
 
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
 // instead of Multi<Item> specify custom Inventory component
 // where defaultComponentCapacity is the minimum capacity of the multicomponent, with a power of two, in the range of 4 to 32768 (4, 8, 16, 32 ...)
-MyEcs.World.RegisterMultiComponentType<Inventory, Item>(defaultComponentCapacity: 4); 
+World.RegisterMultiComponentType<Inventory, Item>(defaultComponentCapacity: 4); 
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 ___
 
 #### Basic operations:
 ```c#
-MyEcs.World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
+World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
 
 // When adding a multi-component, the defaultComponentCapacity will be defaultComponentCapacity, as elements are added, it will expand as the elements are added 
 // Adding a multicomponent like a simple component
@@ -119,7 +119,7 @@ foreach (ref var item in items) {                                      // Foreac
     //..
 }
 
-for (ushort i = 0; i < items.Count; i++) {                             // For loop
+for (int i = 0; i < items.Count; i++) {                             // For loop
     ref var item = ref items[i];
 }
 
@@ -128,24 +128,24 @@ items.Add(new Item());                                                 // Add el
 items.Add(new Item("a"), new Item("b"), new Item("c"), new Item("d")); // Add elements (1 - 4)
 items.Add(new[] { new Item("f"), new Item("g") });                     // Add elements from an array
 items.Add(new[] { new Item("f"), new Item("g") }, 1, 1);               // Add elements from an array with the start and number specified
-items.Add(ref entity2.RefMut<Multi<Item>>());                          // Add elements from another component
-items.Add(ref entity2.RefMut<Multi<Item>>(), 1, 1);                    // Add elements from another component specifying start and quantity
+items.Add(ref entity2.Ref<Multi<Item>>());                             // Add elements from another component
+items.Add(ref entity2.Ref<Multi<Item>>(), 1, 1);                       // Add elements from another component specifying start and quantity
 items.InsertAt(idx: 1, new Item("e"));                                 // Insert an element in the specified index, the other elements will be shifted
 items.EnsureSize(10);                                                  // Ensure capacity for N more elements if required
 items.Resize(16);                                                      // Extend capacity to N if required
 
 // Removal and cleaning
-items.DeleteFirst();                                                   // Delete the first element and shift the subsequent elements (if element order is important)
-items.DeleteFirstSwap();                                               // Delete the first element and replace with the last element (if element order is NOT important) (Faster)
-items.DeleteLast();                                                    // Delete the last element and reset to default
-items.DeleteLastFast();                                                // Delete the last element and WITHOUT resetting the value to default (if resetting the value is NOT important) (Faster)
-items.DeleteAt(idx: 1);                                                // Delete element by index and shift subsequent elements (if element order is important) (Faster)
-items.DeleteAtSwap(idx: 1);                                            // Delete element by index and replace with the last element (if element order is NOT important) (Faster)
+items.RemoveFirst();                                                   // Delete the first element and shift the subsequent elements (if element order is important)
+items.RemoveFirstSwap();                                               // Delete the first element and replace with the last element (if element order is NOT important) (Faster)
+items.RemoveLast();                                                    // Delete the last element and reset to default
+items.RemoveLastFast();                                                // Delete the last element and WITHOUT resetting the value to default (if resetting the value is NOT important) (Faster)
+items.RemoveAt(idx: 1);                                                // Delete element by index and shift subsequent elements (if element order is important) (Faster)
+items.RemoveAtSwap(idx: 1);                                            // Delete element by index and replace with the last element (if element order is NOT important) (Faster)
 items.Clear();                                                         // Clear items and reset to default
 items.ResetCount();                                                    // Reset quantity without clearing
 
 // Search
-short idx = items.IndexOf(new Item("a"));                              // Get item index or -1
+int idx = items.IndexOf(new Item("a"));                              // Get item index or -1
 bool contains = items.Contains(new Item("a"));                         // Check if an element exists with default IEqualityComparer
 bool contains = items.Contains(new Item("a"), comparer);               // Check for an element with a custom IEqualityComparer
 

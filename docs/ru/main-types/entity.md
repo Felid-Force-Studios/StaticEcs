@@ -22,15 +22,15 @@ ___
 // Создание одной сущности
 
 // Способ 1 - создание "пустой" сущности
-var entity = MyEcs.Entity.New();
+var entity = World.Entity.New();
 
 // Способ 2 - с указанием типа компонента (методы перегрузки от 1-5 компонентов)
-var entity = MyEcs.Entity.New<Position>();
-var entity = MyEcs.Entity.New<Position, Velocity, Name>();
+var entity = World.Entity.New<Position>();
+var entity = World.Entity.New<Position, Velocity, Name>();
 
 // Способ 3 - с указанием значения компонента (методы перегрузки от 1-5 компонентов)
-var entity = MyEcs.Entity.New(new Position(x: 1, y: 1, z: 2));
-var entity = MyEcs.Entity.New(
+var entity = World.Entity.New(new Position(x: 1, y: 1, z: 2));
+var entity = World.Entity.New(
             new Name { Val = "SomeName" },
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
@@ -39,21 +39,21 @@ var entity = MyEcs.Entity.New(
 // Создание множества сущностей
 // Способ 1 - с указанием типа компонента (методы перегрузки от 1-5 компонентов)
 int count = 100;
-MyEcs.Entity.NewOnes<Position>(count);
+World.Entity.NewOnes<Position>(count);
 
 // Способ 2 - с указанием типа компонента (методы перегрузки от 1-5 компонентов) + делегата инициализации каждой сущности
 int count = 100;
-MyEcs.Entity.NewOnes<Position>(count, static entity => {
+World.Entity.NewOnes<Position>(count, static entity => {
     // some init logic for each entity
 });
 
 // Способ 3 - с указанием значения компонента (методы перегрузки от 1-5 компонентов)
 int count = 100;
-MyEcs.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2));
+World.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2));
 
 // Способ 4 - с указанием значения компонента (методы перегрузки от 1-5 компонентов) + делегата инициализации каждой сущности
 int count = 100;
-MyEcs.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2), static entity => {
+World.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2), static entity => {
     // some init logic for each entity
 });
 ```
@@ -61,7 +61,7 @@ ___
 
 #### Основные операции:
 ```csharp
-var entity = MyEcs.Entity.New(
+var entity = World.Entity.New(
             new Name { Val = "SomeName" },
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
@@ -78,10 +78,10 @@ short version = entity.Version();        // Получить версию сущ
 var clone = entity.Clone();              // Клонировать сущность и все компоненты, теги, маски
 entity.Destroy();                        // Удалить сущность и все компоненты, теги, маски
 
-var entity2 = MyEcs.Entity.New<Name>();
+var entity2 = World.Entity.New<Name>();
 clone.CopyTo(entity2);                   // Копировать все компоненты, теги, маски в указанную сущность
 
-var entity3 = MyEcs.Entity.New<Name>();
+var entity3 = World.Entity.New<Name>();
 entity2.MoveTo(entity3);                 // Перенести все компоненты в указанную сущность и удалить текущую
 
 PackedEntity packed = entity3.Pack();    // Упаковать сущность с мета информацией о версии для передачи

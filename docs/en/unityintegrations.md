@@ -17,12 +17,11 @@ using FFS.Libraries.StaticEcs;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
-public struct MyWorldType : IWorldType { }
-public struct MySystemsType : ISystemsType { }
+public struct WT : IWorldType { }
+public struct SystemsType : ISystemsType { }
 
-public abstract class MyEcs : Ecs<MyWorldType> { }
-public abstract class MyWorld : MyEcs.World { }
-public abstract class MySystems : MyEcs.Systems<MySystemsType> { }
+public abstract class W : World<WT> { }
+public abstract class MySystems : W.Systems<SystemsType> { }
 
 public struct Position : IComponent {
     public Transform Value;
@@ -44,11 +43,11 @@ public struct SceneData {
 public struct CreateRandomEntities : IInitSystem {
     public void Init() {
         for (var i = 0; i < 100; i++) {
-            var gameObject = Object.Instantiate(MyEcs.Context<SceneData>.Get().EntityPrefab);
-            gameObject.transform.position = new Vector3(Random.Range(0, 50), 0, Random.Range(0, 50));
-            MyEcs.Entity.New(
+            var go = Object.Instantiate(W.Context<SceneData>.Get().EntityPrefab);
+            go.transform.position = new Vector3(Random.Range(0, 50), 0, Random.Range(0, 50));
+            W.Entity.New(
                 new Position { Value = gameObject.transform },
-                new Direction { Value = new Vector3(Random.Range(-1, 1), 0, Random.Range(-1, 1)) },
+                new Direction { Value = new Vector3(Random.Range(-1f, 1f), 0, Random.Range(-1f, 1f)) },
                 new Velocity { Value = 2f });
         }
     }
@@ -56,7 +55,7 @@ public struct CreateRandomEntities : IInitSystem {
 
 public struct UpdatePositions : IUpdateSystem {
     public void Update() {
-        MyWorld.QueryComponents.For((MyEcs.Entity entity, ref Position position, ref Velocity velocity, ref Direction direction) => {
+        W.QueryComponents.For((W.Entity entity, ref Position position, ref Velocity velocity, ref Direction direction) => {
             position.Value.position += direction.Value * (Time.deltaTime * velocity.Value);
         });
     }
@@ -66,15 +65,15 @@ public class Main : MonoBehaviour {
     public SceneData sceneData;
     
     void Start() {
-        MyEcs.Create(EcsConfig.Default());
+        W.Create(WorldConfig.Default());
                 
-        MyWorld.RegisterComponentType<Position>();
-        MyWorld.RegisterComponentType<Direction>();
-        MyWorld.RegisterComponentType<Velocity>();
+        W.RegisterComponentType<Position>();
+        W.RegisterComponentType<Direction>();
+        W.RegisterComponentType<Velocity>();
         
-        MyEcs.Initialize();
+        W.Initialize();
         
-        MyEcs.Context<SceneData>.Set(sceneData);
+        W.Context<SceneData>.Set(sceneData);
         
         MySystems.Create();
         
@@ -90,7 +89,7 @@ public class Main : MonoBehaviour {
 
     private void OnDestroy() {
         MySystems.Destroy();
-        MyEcs.Destroy();
+        W.Destroy();
     }
 }
 ```

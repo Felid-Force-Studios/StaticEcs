@@ -23,28 +23,28 @@ ___
 Requires registration in the world between creation and initialization
 
 ```c#
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
-MyEcs.Events.RegisterEventType<WeatherChanged>()
+World.Events.RegisterEventType<WeatherChanged>()
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 
 ___
 
 #### Creation and basic operations:
 ```c#
-// The event system will be created when MyEcs.Create is called and destroyed when MyEcs.Destroy is called
-MyEcs.Create(EcsConfig.Default());
-MyEcs.Initialize();
+// The event system will be created when World.Create is called and destroyed when World.Destroy is called
+World.Create(WorldConfig.Default());
+World.Initialize();
 //...
 
 // Before sending an event, the receiver of the event must be registered, otherwise the event will not be sent.
-// Receiver can be registered after calling Ecs.Create (e.g. in the Init method of the system).
-var weatherChangedEventReceiver = MyEcs.Events.RegisterEventReceiver<WeatherChanged>();
+// Receiver can be registered after calling World.Create (e.g. in the Init method of the system).
+var weatherChangedEventReceiver = World.Events.RegisterEventReceiver<WeatherChanged>();
 
 // Deleting an event receiver
-MyEcs.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
+World.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
 
 // Important! The lifecycle of an event: the event will be deleted in two cases:
 // 1) when it's been read by all registered receivers.
@@ -52,15 +52,15 @@ MyEcs.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
 // So it is important that all registered listeners read the events or the event is suppressed by any listener so that there is no accumulation of them
 
 // Sending an event
-MyEcs.Events.Send(new WeatherChanged { WeatherType = WeatherType.Sunny });
+World.Events.Send(new WeatherChanged { WeatherType = WeatherType.Sunny });
 
 // Sending default event value
-MyEcs.Events.Send<WeatherChanged>();
+World.Events.Send<WeatherChanged>();
 
 // Get a dynamic identifier of event type (see “Component Identifiers”)
-var weatherChangedDynId = MyEcs.Events.DynamicId<WeatherChanged>();
+var weatherChangedDynId = World.Events.DynamicId<WeatherChanged>();
 // Send default event value (Suitable for marker events without data)
-MyEcs.Events.SendDefault(weatherChangedDynId);
+World.Events.SendDefault(weatherChangedDynId);
 
 // Receiving events
 foreach (var weatherEvent in weatherChangedEventReceiver) {

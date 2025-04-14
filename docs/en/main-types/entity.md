@@ -22,15 +22,15 @@ ___
 // Creating a single entity
 
 // Method 1 - creating an “empty” entity
-var entity = MyEcs.Entity.New();
+var entity = World.Entity.New();
 
 // Method 2 - with component type (overload methods from 1-5 components)
-var entity = MyEcs.Entity.New<Position>();
-var entity = MyEcs.Entity.New<Position, Velocity, Name>();
+var entity = World.Entity.New<Position>();
+var entity = World.Entity.New<Position, Velocity, Name>();
 
 // Method 3 - with component value (overload methods from 1-5 components)
-var entity = MyEcs.Entity.New(new Position(x: 1, y: 1, z: 2));
-var entity = MyEcs.Entity.New(
+var entity = World.Entity.New(new Position(x: 1, y: 1, z: 2));
+var entity = World.Entity.New(
             new Name { Val = "SomeName" },
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
@@ -39,21 +39,21 @@ var entity = MyEcs.Entity.New(
 // Creating multiple entities
 // Method 1 - with component type (overload methods from 1-5 components)
 int count = 100;
-MyEcs.Entity.NewOnes<Position>(count);
+World.Entity.NewOnes<Position>(count);
 
 // Method 2 - specifying component type (overload methods from 1-5 components) + delegate initialization of each entity
 int count = 100;
-Ecs.Entity.NewOnes<Position>(count, static entity => {
+World.Entity.NewOnes<Position>(count, static entity => {
     // some init logic for each entity
 });
 
 // Method 3 - with component value (overload methods from 1-5 components)
 int count = 100;
-MyEcs.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2));
+World.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2));
 
 // Method 4 - with component value (overload methods from 1-5 components) + initialization delegate of each entity
 int count = 100;
-MyEcs.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2), static entity => {
+World.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2), static entity => {
     // some init logic for each entity
 });
 
@@ -62,7 +62,7 @@ ___
 
 #### Basic operations:
 ```csharp
-var entity = MyEcs.Entity.New(
+var entity = World.Entity.New(
             new Name { Val = "SomeName" },
             new Velocity { Val = 1f },
             new Position { Val = Vector3.One }
@@ -79,10 +79,10 @@ short version = entity.Version();        // Get entity version
 var clone = entity.Clone();              // Clone the entity and all components, tags, masks
 entity.Destroy();                        // Delete the entity and all components, tags, masks
 
-var entity2 = MyEcs.Entity.New<Name>();
+var entity2 = World.Entity.New<Name>();
 clone.CopyTo(entity2);                   // Copy all components, tags, masks to the specified entity
 
-var entity3 = MyEcs.Entity.New<Name>();
+var entity3 = World.Entity.New<Name>();
 entity2.MoveTo(entity3);                 // Move all components to the specified entity and delete the current entity
 
 PackedEntity packed = entity3.Pack();  // Pack an entity with meta information about the version to be transmitted

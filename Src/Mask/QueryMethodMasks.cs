@@ -27,7 +27,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _all.SetBitMask<WorldType>(_bufId);
         }
@@ -56,8 +56,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _id = Ecs<WorldType>.Masks<C1>.Value.id;
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            _id = World<WorldType>.Masks<C1>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -84,9 +84,9 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = World<WorldType>.Masks<C1>.Value.id;
+            _id2 = World<WorldType>.Masks<C2>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -115,10 +115,10 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
-            _id3 = Ecs<WorldType>.Masks<C3>.Value.id;
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = World<WorldType>.Masks<C1>.Value.id;
+            _id2 = World<WorldType>.Masks<C2>.Value.id;
+            _id3 = World<WorldType>.Masks<C3>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -147,8 +147,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -178,8 +178,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -210,8 +210,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -243,8 +243,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -277,8 +277,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -313,7 +313,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _all.SetBitMask<WorldType>(_bufId);
         }
@@ -342,8 +342,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _id = Ecs<WorldType>.Masks<C1>.Value.id;
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            _id = World<WorldType>.Masks<C1>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -370,9 +370,9 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = World<WorldType>.Masks<C1>.Value.id;
+            _id2 = World<WorldType>.Masks<C2>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -401,10 +401,10 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
-            _id3 = Ecs<WorldType>.Masks<C3>.Value.id;
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = World<WorldType>.Masks<C1>.Value.id;
+            _id2 = World<WorldType>.Masks<C2>.Value.id;
+            _id3 = World<WorldType>.Masks<C3>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -433,8 +433,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -464,8 +464,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -496,8 +496,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -529,8 +529,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -563,8 +563,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -598,7 +598,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
             _bufId = _bitMask.BorrowBuf();
             _all.SetBitMask<WorldType>(_bufId);
         }
@@ -629,9 +629,9 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = World<WorldType>.Masks<C1>.Value.id;
+            _id2 = World<WorldType>.Masks<C2>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -660,10 +660,10 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            _id1 = Ecs<WorldType>.Masks<C1>.Value.id;
-            _id2 = Ecs<WorldType>.Masks<C2>.Value.id;
-            _id3 = Ecs<WorldType>.Masks<C3>.Value.id;
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            _id1 = World<WorldType>.Masks<C1>.Value.id;
+            _id2 = World<WorldType>.Masks<C2>.Value.id;
+            _id3 = World<WorldType>.Masks<C3>.Value.id;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -692,8 +692,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -723,8 +723,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -755,8 +755,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -788,8 +788,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -822,8 +822,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = Ecs<WorldType>.ModuleMasks.Value.BitMask;
-            Ecs<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
+            _bitMask = World<WorldType>.ModuleMasks.Value.BitMask;
+            World<WorldType>.ModuleMasks.MaskCache<Mask<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
         }
 
         [MethodImpl(AggressiveInlining)]

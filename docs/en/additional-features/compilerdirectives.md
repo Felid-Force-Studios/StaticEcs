@@ -19,7 +19,7 @@ nav_order: 5
 
 > `FFS_ECS_LIFECYCLE_ENTITY`
 > Changes the entity lifecycle management logic to automatic by making the following changes:
-> - Entity cannot be created without component - MyEcs.Entity.New() method is not available, empty entities are excluded
+> - Entity cannot be created without component - World.Entity.New() method is not available, empty entities are excluded
 > - When the last component of type `IComponent` is deleted, the entity is automatically deleted
 >   - The standard component is not taken into account
 >   - The tags is not taken into account

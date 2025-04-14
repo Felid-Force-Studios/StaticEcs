@@ -62,24 +62,24 @@ ___
 #### Создание и операции:
 ```c#
 // Определяем идентификатор систем
-public struct MySystemsType : ISystemsType { }
+public struct SystemsType : ISystemsType { }
 
 // Определяем тип-алиас для удобного доступа к системам
-public abstract class MySystems : MyEcs.Systems<MySystemsType> { }
+public abstract class Systems : World.Systems<SystemsType> { }
 
 // Здесь будет созданны структуры для систем
-MySystems.Create();
+Systems.Create();
 
 // Добавление системы НЕ реализующей IUpdateSystem, то есть Init и\или Destroy системы
-MySystems.AddCallOnce(new SomeInitSystem());
-MySystems.AddCallOnce(new SomeDestroySystem>());
-MySystems.AddCallOnce(new SomeInitDestroySystem>());
+Systems.AddCallOnce(new SomeInitSystem());
+Systems.AddCallOnce(new SomeDestroySystem>());
+Systems.AddCallOnce(new SomeInitDestroySystem>());
 
 // Добавление системы реализующей IUpdateSystem, с наличием любых имплементаций таких как Init или Destroy
-MySystems.AddUpdate(new SomeComboSystem());
+Systems.AddUpdate(new SomeComboSystem());
 
 // Важно! Системы запускаются в порядке перeданным вторым аргументом (по умолчанию order 0)
-MySystems.AddUpdate(new SomeComboSystem(), order: 3);
+Systems.AddUpdate(new SomeComboSystem(), order: 3);
 
 // это значит что сначала будут запущены все Init системы в том порядке в котором добавлены
 // затем в игровом цикле будут выполняться по порядку все Update системы
@@ -90,7 +90,7 @@ MySystems.AddUpdate(new SomeComboSystem(), order: 3);
 
 // Есть возможность подключать системы батчами что может существенно увеличить производительность
 // Добавление батча систем, каждая система может реализовывать любые типы систем но обязана иметь реализацию IUpdateSystem
-MySystems.AddUpdate(
+Systems.AddUpdate(
     new SomeUpdateSystem1(),
     new SomeComboSystem1(),
     new SomeComboSystem2(),
@@ -101,11 +101,11 @@ MySystems.AddUpdate(
 );
 
 // Здесь будут вызваны все Init системы
-MySystems.Initialize();
+Systems.Initialize();
 
 // Здесь будут вызваны все Update системы
-MySystems.Update();
+Systems.Update();
 
 // Здесь будут вызваны все Destroy системы
-MySystems.Destroy();
+Systems.Destroy();
 ```

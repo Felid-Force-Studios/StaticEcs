@@ -22,7 +22,7 @@ Default Component - standard entity properties, present on every entity created 
 
 #### Example:
 ```c#
-public struct EnitiyType : IStandardComponent {
+public struct EntityType : IStandardComponent {
     public int Val;
 }
 ```
@@ -32,11 +32,11 @@ ___
 Requires registration in the world between creation and initialization
 
 ```c#
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
-MyEcs.World.RegisterStandardComponentType<EnitiyType>();
+World.RegisterStandardComponentType<EntityType>();
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 ___
 
@@ -46,7 +46,7 @@ handlers must be explicitly registered
 
 #### Example:
 ```c#
-public struct EnitiyType : IStandardComponent {
+public struct EntityType : IStandardComponent {
     public int Val;
     
     public void Init() {
@@ -57,21 +57,21 @@ public struct EnitiyType : IStandardComponent {
         Val = -1;
     }
     
-    public void CopyTo(ref EnitiyType dst) {
+    public void CopyTo(ref EntityType dst) {
         dst.Val = Val;
     }
 }
 
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
 
-MyEcs.World.RegisterStandardComponentType<EnitiyType>(
-                autoInit: static (ref EnitiyType component) => component.Init(), // This function will be called when the entity is created  
-                autoReset: static (ref EnitiyType component) => component.Reset(), // This function will be called when the entity is destroyed  
-                autoCopy: static (ref EnitiyType src, ref EnitiyType dst) => src.CopyTo(ref dst), // When copying standard components, this entity will be called instead of just copying it
+World.RegisterStandardComponentType<EntityType>(
+                onAdd: static (ref EntityType component) => component.Init(), // This function will be called when the entity is created  
+                onDelete: static (ref EntityType component) => component.Reset(), // This function will be called when the entity is destroyed  
+                onCopy: static (ref EntityType src, ref EntityType dst) => src.CopyTo(ref dst), // When copying standard components, this entity will be called instead of just copying it
             );
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 ___
 
@@ -81,14 +81,10 @@ ___
 int standardComponentsCount = entity.StandardComponentsCount();
 
 // Get ref reference to a standard read/write component
-ref var enitiyType = ref entity.RefMutStandard<EnitiyType>();
-enitiyType.Val = 123;
+ref var entityType = ref entity.RefStandard<EntityType>();
+entityType.Val = 123;
 
-// Get ref reference to a standard read-only component
-ref readonly var readOnlyEnitiyType = ref entity.RefStandard<EnitiyType>();
-//readOnlyEnitiyType.Val = 123;  -   ERROR
-
-var entity2 = MyEcs.Entity.New<SomeComponent>();
+var entity2 = World.Entity.New<SomeComponent>();
 // Copy the specified standard components to another entity (overload methods from 1-5 components)
-entity.CopyStandardComponentsTo<EnitiyType>(entity2);
+entity.CopyStandardComponentsTo<EntityType>(entity2);
 ```

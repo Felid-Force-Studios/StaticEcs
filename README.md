@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-0.9.73-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-0.9.81-blue.svg?style=for-the-badge)
 
 ### LANGUAGE
 [RU](./README_RU.md)
@@ -40,7 +40,8 @@ ___
 * ### As source code
   From the release page or as an archive from the branch. In the `master` branch there is a stable tested version
 * ### Installation for Unity
-  git module `https://github.com/Felid-Force-Studios/StaticEcs.git` in Unity PackageManager or adding it to `Packages/manifest.json`
+  git module `https://github.com/Felid-Force-Studios/StaticEcs.git` in Unity PackageManager  
+  or adding it to `Packages/manifest.json` `"com.felid-force-studios.static-ecs": "https://github.com/Felid-Force-Studios/StaticEcs.git"`
 
 # Concept
 > - The main idea of this implementation is static, all data about the world and components are in static classes, which makes it possible to avoid expensive virtual calls and have a convenient API
@@ -52,28 +53,27 @@ ___
 # Quick start
 ```csharp
 using FFS.Libraries.StaticEcs;
-// Define components
-public struct Position : IComponent { public Vector3 Val; }
-public struct Velocity : IComponent { public float Val; }
 
 // Define the world type
-public struct MyWorldType : IWorldType { }
+public struct WT : IWorldType { }
 
-// Define type-aliases for easy access to library types
-public abstract class MyEcs : Ecs<MyWorldType> { }
-public abstract class MyWorld : MyEcs.World { }
+public abstract class W : World<WT> { }
 
 // Define the systems type
-public struct MySystemsType : ISystemsType { }
+public struct SystemsType : ISystemsType { }
 
 // Define type-alias for easy access to systems
-public abstract class MySystems : MyEcs.Systems<MySystemsType> { }
+public abstract class Systems : W.Systems<SystemsType> { }
+
+// Define components
+public struct Position : IComponent { public Vector3 Value; }
+public struct Velocity : IComponent { public float Value; }
 
 // Define systems
 public readonly struct VelocitySystem : IUpdateSystem {
     public void Update() {
-        foreach (var entity in MyWorld.QueryEntities.For<All<Position, Velocity>>()) {
-            entity.RefMut<Position>().Val *= entity.Ref<Velocity>().Val;
+        foreach (var entity in W.QueryEntities.For<All<Position, Velocity>>()) {
+            entity.Ref<Position>().Value *= entity.Ref<Velocity>().Value;
         }
     }
 }
@@ -81,33 +81,33 @@ public readonly struct VelocitySystem : IUpdateSystem {
 public class Program {
     public static void Main() {
         // Creating world data
-        MyEcs.Create(EcsConfig.Default());
+        W.Create(WorldConfig.Default());
         
         // Registering components
-        MyWorld.RegisterComponentType<Position>();
-        MyWorld.RegisterComponentType<Velocity>();
+        W.RegisterComponentType<Position>();
+        W.RegisterComponentType<Velocity>();
         
         // Initializing the world
-        MyEcs.Initialize();
+        W.Initialize();
         
         // Creating systems
-        MySystems.Create();
-        MySystems.AddUpdate(new VelocitySystem());
+        Systems.Create();
+        Systems.AddUpdate(new VelocitySystem());
 
         // Initializing systems
-        MySystems.Initialize();
+        Systems.Initialize();
 
         // Creating entity
-        var entity = MyEcs.Entity.New(
-            new Velocity { Val = 1f },
-            new Position { Val = Vector3.One }
+        var entity = W.Entity.New(
+            new Velocity { Value = 1f },
+            new Position { Value = Vector3.One }
         );
         // Update all systems - called in every frame
-        MySystems.Update();
+        Systems.Update();
         // Destroying systems
-        MySystems.Destroy();
+        Systems.Destroy();
         // Destroying the world and deleting all data
-        MyEcs.Destroy();
+        W.Destroy();
     }
 }
 ```

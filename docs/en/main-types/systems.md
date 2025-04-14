@@ -65,7 +65,7 @@ ___
 public struct MySystemsType : ISystemsType { }
 
 // Define type-alias for easy access to systems
-public abstract class MySystems : MyEcs.Systems<MySystemsType> { }
+public abstract class MySystems : World.Systems<MySystemsType> { }
 
 // The structures for the systems will be created here
 MySystems.Create();

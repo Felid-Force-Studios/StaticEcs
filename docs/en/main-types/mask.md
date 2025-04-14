@@ -19,11 +19,11 @@ ___
 Requires registration in the world between creation and initialization
 
 ```c#
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
-MyEcs.World.RegisterMaskType<Visible>();
+World.RegisterMaskType<Visible>();
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 ___
 

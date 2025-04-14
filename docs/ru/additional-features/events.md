@@ -23,28 +23,28 @@ ___
 Требуется регистрация в мире между созданием и инициализацией
 
 ```c#
-MyEcs.Create(EcsConfig.Default());
+World.Create(WorldConfig.Default());
 //...
-MyEcs.Events.RegisterEventType<WeatherChanged>()
+World.Events.RegisterEventType<WeatherChanged>()
 //...
-MyEcs.Initialize();
+World.Initialize();
 ```
 
 ___
 
 #### Создание и базовые операции:
 ```c#
-// Система событий будет создана при вызове MyEcs.Create и уничтожена при MyEcs.Destroy
-MyEcs.Create(EcsConfig.Default());
-MyEcs.Initialize();
+// Система событий будет создана при вызове World.Create и уничтожена при World.Destroy
+World.Create(WorldConfig.Default());
+World.Initialize();
 //...
 
 // Прежде чем отправлять событие следует зарегестрировать слушателя данного события, иначе событие не будет отправлено
-// Слушатель может быть зарегестрирован после выозова Ecs.Create (например в Init методе системы)
-var weatherChangedEventReceiver = MyEcs.Events.RegisterEventReceiver<WeatherChanged>();
+// Слушатель может быть зарегестрирован после выозова World.Create (например в Init методе системы)
+var weatherChangedEventReceiver = World.Events.RegisterEventReceiver<WeatherChanged>();
 
 // Удаление слушателя событий
-MyEcs.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
+World.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
 
 // Важно! Жизненый цикл события: событие будет удалено в двух случаях:
 // 1) когда оно будет прочитано всеми зарегестрированными слушателями
@@ -52,15 +52,15 @@ MyEcs.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
 // Таким образом важно чтобы все зарегестрированные слушатели читали события или событие подавлялось каким либо слушателем, чтобы не было их накопления
 
 // Отправка события
-MyEcs.Events.Send(new WeatherChanged { WeatherType = WeatherType.Sunny });
+World.Events.Send(new WeatherChanged { WeatherType = WeatherType.Sunny });
 
 // Отправка дефолтного значения события
-MyEcs.Events.Send<WeatherChanged>();
+World.Events.Send<WeatherChanged>();
 
 // Получение динамического идентификатора типа события (смотри "Идентификаторы компонентов")
-var weatherChangedDynId = MyEcs.Events.DynamicId<WeatherChanged>();
+var weatherChangedDynId = World.Events.DynamicId<WeatherChanged>();
 // Отправка дефолтного значения события (Подходит для маркерных событий без данных)
-MyEcs.Events.SendDefault(weatherChangedDynId);
+World.Events.SendDefault(weatherChangedDynId);
 
 // Получение событий
 foreach (var weatherEvent in weatherChangedEventReceiver) {
