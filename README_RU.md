@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-0.9.81-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-0.9.82-blue.svg?style=for-the-badge)
 
 ### ЯЗЫК
 [RU](./README_RU.md)

@@ -4,7 +4,7 @@ has_toc: false
 parent: Main page
 ---
 
-![Version](https://img.shields.io/badge/version-0.9.81-blue.svg?style=for-the-badge)  
+![Version](https://img.shields.io/badge/version-0.9.82-blue.svg?style=for-the-badge)  
 
 ___
 

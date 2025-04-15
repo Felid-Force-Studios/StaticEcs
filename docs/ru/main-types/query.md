@@ -197,22 +197,25 @@ MyWorld.QueryComponents.With(with).ForWithDiabled(static (World.Entity entity, r
 
 
 // Также существует возможноть многопоточной обработки:
-// Важно! Вовзращается специальный тип сущности который запрещает все операции кроме Ref, Has
-// Нельзя в мнопоточной обработке создавать, удалять сущности или компоненты, только читать и изменять существующие
+// Важно! Возвращается специальный тип сущности который запрещает все операции кроме Ref, Has и тд
+// Нельзя в многопоточной обработке создавать, удалять сущности или компоненты, только читать и изменять существующие
+// По умолчанию сервис многопоточной обработки отключен, чтобы включить необходимо при создании мира указать в конфиге ParallelQueryType как MaxThreadsCount 
+// или (CustomThreadsCount и указать максимальное количество потоков) - полезно когда хочется задать разное количество для разных миров
 
-MyWorld.QueryComponents.Parallel.For(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
+
+MyWorld.QueryComponents.Parallel.For(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 
-MyWorld.QueryComponents.Parallel.With(with).For(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
+MyWorld.QueryComponents.Parallel.With(with).For(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 
-MyWorld.QueryComponents.Parallel.ForOnlyDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
+MyWorld.QueryComponents.Parallel.ForOnlyDiabled(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 
-MyWorld.QueryComponents.Parallel.ForWithDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
+MyWorld.QueryComponents.Parallel.ForWithDiabled(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 ```

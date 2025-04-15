@@ -197,23 +197,26 @@ MyWorld.QueryComponents.With(with).ForWithDiabled(static (World.Entity entity, r
 });
 
 
-// There is also a possibility of multithreaded processing:
-// Important! A special entity type is introduced which prohibits all operations except Ref, Has etc.
-// You cannot create, delete entities or components in multithreaded processing, only read and modify existing ones.
+// Multithreaded processing is also possible:
+// Important! A special entity type is returned which blocks all operations except Ref, Has, etc.
+// Cannot create, delete entities or components in multithreaded processing, only read and modify existing ones
+// By default multithreading service is disabled, to enable it you need to specify ParallelQueryType as MaxThreadsCount in the config when creating a world 
+// or (CustomThreadsCount and specify the maximum number of threads) - useful when you want to specify different numbers for different worlds
 
-MyWorld.QueryComponents.Parallel.For(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
+
+MyWorld.QueryComponents.Parallel.For(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 
-MyWorld.QueryComponents.Parallel.With(with).For(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
+MyWorld.QueryComponents.Parallel.With(with).For(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 
-MyWorld.QueryComponents.Parallel.ForOnlyDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
+MyWorld.QueryComponents.Parallel.ForOnlyDiabled(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 
-MyWorld.QueryComponents.Parallel.ForWithDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity) => {
+MyWorld.QueryComponents.Parallel.ForWithDiabled(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 ```

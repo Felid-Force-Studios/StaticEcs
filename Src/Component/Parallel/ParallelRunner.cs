@@ -11,10 +11,10 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppEagerStaticClassConstruction]
     #endif
     internal static class ParallelRunner<WorldType> where WorldType : struct, IWorldType {
-        private static ThreadInfo[] _workers;
+        private static Worker[] _workers;
         private static AbstractParallelTask _task;
         private static int _threadsCount;
-        private static bool _disposing;
+        private static volatile bool _disposing;
 
         internal static void Create(WorldConfig cfg) {
             if (cfg.ParallelQueryType == ParallelQueryType.Disabled) {
@@ -31,19 +31,23 @@ namespace FFS.Libraries.StaticEcs {
             }
             #endif
             _disposing = false;
-            _workers = new ThreadInfo[_threadsCount - 1];
+            _workers = new Worker[_threadsCount - 1];
             for (var i = 0; i < _workers.Length; i++) {
-                _workers[i] = new ThreadInfo(new Thread(ThreadFunction) { IsBackground = true });
-                _workers[i].Thread.Start(i);
+                _workers[i] = new Worker(new Thread(ThreadFunction) { IsBackground = true }).Start(i);
             }
         }
-        
+
         internal static void Destroy() {
             if (_threadsCount > 0) {
                 _disposing = true;
                 for (var i = 0; i < _workers.Length; i++) {
-                    _workers[i].HasWork.Set();
+                    ref var worker = ref _workers[i];
+                    worker.HasWork.Set();
+                    worker.WorkDone.Dispose();
+                    worker.HasWork.Dispose();
+                    worker.Thread.Join(10000);
                 }
+
                 _workers = null;
                 _threadsCount = -1;
                 _task = default;
@@ -55,6 +59,7 @@ namespace FFS.Libraries.StaticEcs {
             if (_task != null) {
                 throw new Exception("The current task is not completed, multiple calls are not supported");
             }
+
             World<WorldType>.MultiThreadActive = true;
             #endif
             if (count == 0 || chunkSize <= 0) {
@@ -103,7 +108,7 @@ namespace FFS.Libraries.StaticEcs {
         static void ThreadFunction(object raw) {
             try {
                 ref var worker = ref _workers[(int) raw];
-                while (Thread.CurrentThread.IsAlive && !_disposing) {
+                while (!_disposing) {
                     worker.HasWork.WaitOne();
                     if (_disposing) {
                         break;
@@ -122,19 +127,24 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        struct ThreadInfo {
+        struct Worker {
             public readonly Thread Thread;
             public readonly ManualResetEvent HasWork;
             public readonly ManualResetEvent WorkDone;
             public uint FromIndex;
             public uint BeforeIndex;
 
-            public ThreadInfo(Thread thread) {
+            public Worker(Thread thread) {
                 Thread = thread;
                 HasWork = new ManualResetEvent(false);
                 WorkDone = new ManualResetEvent(true);
                 FromIndex = 0;
                 BeforeIndex = 0;
+            }
+
+            public Worker Start(int workerId) {
+                Thread.Start(workerId);
+                return this;
             }
         }
     }
