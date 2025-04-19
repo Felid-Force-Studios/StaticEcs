@@ -38,21 +38,21 @@ var entity = World.Entity.New(
 
 // Создание множества сущностей
 // Способ 1 - с указанием типа компонента (методы перегрузки от 1-5 компонентов)
-int count = 100;
+uint count = 100;
 World.Entity.NewOnes<Position>(count);
 
 // Способ 2 - с указанием типа компонента (методы перегрузки от 1-5 компонентов) + делегата инициализации каждой сущности
-int count = 100;
+uint count = 100;
 World.Entity.NewOnes<Position>(count, static entity => {
     // some init logic for each entity
 });
 
 // Способ 3 - с указанием значения компонента (методы перегрузки от 1-5 компонентов)
-int count = 100;
+uint count = 100;
 World.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2));
 
 // Способ 4 - с указанием значения компонента (методы перегрузки от 1-5 компонентов) + делегата инициализации каждой сущности
-int count = 100;
+uint count = 100;
 World.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2), static entity => {
     // some init logic for each entity
 });
@@ -84,7 +84,7 @@ clone.CopyTo(entity2);                   // Копировать все комп
 var entity3 = World.Entity.New<Name>();
 entity2.MoveTo(entity3);                 // Перенести все компоненты в указанную сущность и удалить текущую
 
-PackedEntity packed = entity3.Pack();    // Упаковать сущность с мета информацией о версии для передачи
+EntityGID gid = entity3.Gid();           // Получить глобальный идентификатор сущности
 
-var str = entity3.ToPrettyString();      // Получить строку со всей информацией о сущности
+var str = entity3.ToPrettyString;        // Получить строку со всей информацией о сущности
 ```

@@ -88,7 +88,7 @@ namespace FFS.Libraries.StaticEcs {
                         08 => s09.SetActive(active), 09 => s10.SetActive(active), 10 => s11.SetActive(active), 11 => s12.SetActive(active), 12 => s13.SetActive(active), 13 => s14.SetActive(active), 14 => s15.SetActive(active), 15 => s16.SetActive(active),
                         16 => s17.SetActive(active), 17 => s18.SetActive(active), 18 => s19.SetActive(active), 19 => s20.SetActive(active), 20 => s21.SetActive(active), 21 => s22.SetActive(active), 22 => s23.SetActive(active), 23 => s24.SetActive(active),
                         24 => s25.SetActive(active), 25 => s26.SetActive(active), 26 => s27.SetActive(active), 27 => s28.SetActive(active), 28 => s29.SetActive(active), 29 => s30.SetActive(active), 30 => s31.SetActive(active), 31 => s32.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
 
@@ -153,7 +153,7 @@ namespace FFS.Libraries.StaticEcs {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active), 06 => s07.SetActive(active), 07 => s08.SetActive(active),
                         08 => s09.SetActive(active), 09 => s10.SetActive(active), 10 => s11.SetActive(active), 11 => s12.SetActive(active), 12 => s13.SetActive(active), 13 => s14.SetActive(active), 14 => s15.SetActive(active), 15 => s16.SetActive(active),
                         16 => s17.SetActive(active), 17 => s18.SetActive(active), 18 => s19.SetActive(active), 19 => s20.SetActive(active), 20 => s21.SetActive(active), 21 => s22.SetActive(active), 22 => s23.SetActive(active), 23 => s24.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -207,7 +207,7 @@ namespace FFS.Libraries.StaticEcs {
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active), 06 => s07.SetActive(active), 07 => s08.SetActive(active),
                         08 => s09.SetActive(active), 09 => s10.SetActive(active), 10 => s11.SetActive(active), 11 => s12.SetActive(active), 12 => s13.SetActive(active), 13 => s14.SetActive(active), 14 => s15.SetActive(active), 15 => s16.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -261,7 +261,7 @@ namespace FFS.Libraries.StaticEcs {
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active), 06 => s07.SetActive(active), 07 => s08.SetActive(active),
                         08 => s09.SetActive(active), 09 => s10.SetActive(active), 10 => s11.SetActive(active), 11 => s12.SetActive(active), 12 => s13.SetActive(active), 13 => s14.SetActive(active), 14 => s15.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -315,7 +315,7 @@ namespace FFS.Libraries.StaticEcs {
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active), 06 => s07.SetActive(active), 07 => s08.SetActive(active),
                         08 => s09.SetActive(active), 09 => s10.SetActive(active), 10 => s11.SetActive(active), 11 => s12.SetActive(active), 12 => s13.SetActive(active), 13 => s14.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -369,7 +369,7 @@ namespace FFS.Libraries.StaticEcs {
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active), 06 => s07.SetActive(active), 07 => s08.SetActive(active),
                         08 => s09.SetActive(active), 09 => s10.SetActive(active), 10 => s11.SetActive(active), 11 => s12.SetActive(active), 12 => s13.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -423,7 +423,7 @@ namespace FFS.Libraries.StaticEcs {
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active), 06 => s07.SetActive(active), 07 => s08.SetActive(active),
                         08 => s09.SetActive(active), 09 => s10.SetActive(active), 10 => s11.SetActive(active), 11 => s12.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -477,7 +477,7 @@ namespace FFS.Libraries.StaticEcs {
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active), 06 => s07.SetActive(active), 07 => s08.SetActive(active),
                         08 => s09.SetActive(active), 09 => s10.SetActive(active), 10 => s11.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -531,7 +531,7 @@ namespace FFS.Libraries.StaticEcs {
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active), 06 => s07.SetActive(active), 07 => s08.SetActive(active),
                         08 => s09.SetActive(active), 09 => s10.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -585,7 +585,7 @@ namespace FFS.Libraries.StaticEcs {
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active), 06 => s07.SetActive(active), 07 => s08.SetActive(active),
                         08 => s09.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -627,7 +627,7 @@ namespace FFS.Libraries.StaticEcs {
                 bool ISystemsBatch.SetActive(int sysIdx, bool active) =>
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active), 06 => s07.SetActive(active), 07 => s08.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -669,7 +669,7 @@ namespace FFS.Libraries.StaticEcs {
                 bool ISystemsBatch.SetActive(int sysIdx, bool active) =>
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active), 06 => s07.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -711,7 +711,7 @@ namespace FFS.Libraries.StaticEcs {
                 bool ISystemsBatch.SetActive(int sysIdx, bool active) =>
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active), 05 => s06.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -753,7 +753,7 @@ namespace FFS.Libraries.StaticEcs {
                 bool ISystemsBatch.SetActive(int sysIdx, bool active) =>
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active), 04 => s05.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -795,7 +795,7 @@ namespace FFS.Libraries.StaticEcs {
                 bool ISystemsBatch.SetActive(int sysIdx, bool active) =>
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active), 03 => s04.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -837,7 +837,7 @@ namespace FFS.Libraries.StaticEcs {
                 bool ISystemsBatch.SetActive(int sysIdx, bool active) =>
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active), 02 => s03.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -879,7 +879,7 @@ namespace FFS.Libraries.StaticEcs {
                 bool ISystemsBatch.SetActive(int sysIdx, bool active) =>
                     sysIdx switch {
                         00 => s01.SetActive(active), 01 => s02.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }
@@ -921,7 +921,7 @@ namespace FFS.Libraries.StaticEcs {
                 bool ISystemsBatch.SetActive(int sysIdx, bool active) =>
                     sysIdx switch {
                         00 => s01.SetActive(active),
-                        var _ => throw new Exception()
+                        var _ => throw new StaticEcsException()
                     };
                 #endif
             }

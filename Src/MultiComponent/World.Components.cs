@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -10,96 +11,153 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
     public abstract partial class World<WorldType> {
+
+        [MethodImpl(AggressiveInlining)]
+        public static void RegisterMultiComponentType<T, V>(ushort defaultComponentCapacity, IComponentConfig<T, WorldType> config = null, uint basePoolCapacity = 128)
+            where T : struct, IMultiComponent<T, V> where V : struct {
+            if (Status != WorldStatus.Created) {
+                throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: RegisterMultiComponentType<{typeof(T)}, {typeof(V)}>, World not created");
+            }
+            config ??= DefaultComponentConfig<T, WorldType>.Default;
+            ModuleComponents.Value.RegisterMultiComponentType<T, V>(defaultComponentCapacity, basePoolCapacity, config);
+        }
+        
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
         internal partial struct ModuleComponents {
             [MethodImpl(AggressiveInlining)]
-            internal ushort RegisterMultiComponentType<T, V>(ushort defaultComponentCapacity, uint capacity, OnAddHandler<T> onAdd = null) where T : struct, IMultiComponent<V> where V : struct {
-                if (Components<T>.Value.IsRegistered()) {
-                    return Components<T>.Value.DynamicId();
-                }
+            internal void RegisterMultiComponentType<T, V>(
+                ushort defaultComponentCapacity,
+                uint capacity, 
+                IComponentConfig<T, WorldType> config
+            ) where T : struct, IMultiComponent<T, V> where V : struct {
+                if (Components<T>.Value.IsRegistered()) throw new StaticEcsException($"Component {typeof(T)} already registered");
 
-                if (!Context<MultiComponents<V>>.Has()) {
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                    Context<MultiComponents<V>>.Set(new MultiComponents<V>(defaultComponentCapacity, capacity, MTStatus));
-                    #else
-                    Context<MultiComponents<V>>.Set(new MultiComponents<V>(defaultComponentCapacity, capacity));
-                    #endif
-                }
+                RegisterMultiComponentsData<V>(defaultComponentCapacity, capacity);
 
-                OnAddHandler<T> initHandler;
+                var actualConfig = new ValueComponentConfig<T, WorldType>(config);
+
+                var onAdd = config.OnAdd();
                 if (onAdd != null) {
-                    initHandler = (ref T component) => {
-                        component.Access<AutoInit<V>>(default);
-                        onAdd(ref component);
+                    actualConfig.OnAddHandler = (Entity e, ref T component) => {
+                        OnAddMultiComponent<T, V>(e, ref component);
+                        onAdd(e, ref component);
                     };
                 } else {
-                    initHandler = static (ref T component) => component.Access<AutoInit<V>>(default);
+                    actualConfig.OnAddHandler = OnAddMultiComponent<T, V>;
                 }
 
-                return RegisterComponentType(
+                var onAddWithValue = config.OnAddWithValue();
+                if (onAddWithValue != null) {
+                    actualConfig.OnAddWithValueHandler = (Entity e, ref T component) => {
+                        OnAddMultiComponent<T, V>(e, ref component);
+                        onAddWithValue(e, ref component);
+                    };
+                } else {
+                    actualConfig.OnAddWithValueHandler = OnAddMultiComponent<T, V>;
+                }
+
+                var onDelete = config.OnDelete();
+                if (onDelete != null) {
+                    actualConfig.OnDeleteHandler = (Entity e, ref T component) => {
+                        onDelete(e, ref component);
+                        Context<MultiComponents<V>>.Get().Delete(ref component.RefValue(ref component));
+                    };
+                } else {
+                    actualConfig.OnDeleteHandler = static (Entity _, ref T component) => Context<MultiComponents<V>>.Get().Delete(ref component.RefValue(ref component));
+                }
+
+                var onCopy = config.OnCopy();
+                if (onCopy != null) {
+                    actualConfig.OnCopyHandler = (Entity srcEntity, Entity dstEntity, ref T src, ref T dst) => {
+                        onCopy(srcEntity, dstEntity, ref src, ref dst);
+                        CopyMultiComponent<T, V>(srcEntity, dstEntity, ref src, ref dst);
+                    };
+                } else {
+                    actualConfig.OnCopyHandler = CopyMultiComponent<T, V>;
+                }
+
+                RegisterComponentType(
                     capacity: capacity,
-                    onAdd: initHandler,
-                    onPut: static (ref T component) => component.Access<AutoInit<V>>(default),
-                    onDelete: static (ref T component) => component.Access<AutoReset<V>>(default),
-                    onCopy: static (ref T src, ref T dst) => {
-                        var copy = default(CopyToAccess<T, V>);
-                        copy.Copy(ref src, ref dst);
-                    }
+                    config : actualConfig,
+                    putNotAllowed: true
                 );
             }
-        }
-
-        #if ENABLE_IL2CPP
-        [Il2CppSetOption(Option.NullChecks, false)]
-        [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-        #endif
-        public struct AutoInit<V> : AccessMulti<V> where V : struct {
-            [MethodImpl(AggressiveInlining)]
-            public void For(ref Multi<V> multi) => Context<MultiComponents<V>>.Get().Add(ref multi);
-        }
-
-        #if ENABLE_IL2CPP
-        [Il2CppSetOption(Option.NullChecks, false)]
-        [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-        #endif
-        public struct AutoReset<V> : AccessMulti<V> where V : struct {
-            [MethodImpl(AggressiveInlining)]
-            public void For(ref Multi<V> multi) => Context<MultiComponents<V>>.Get().Delete(ref multi);
-        }
-
-        #if ENABLE_IL2CPP
-        [Il2CppSetOption(Option.NullChecks, false)]
-        [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-        #endif
-        public struct CopyFromAccess<V> : AccessMulti<V> where V : struct {
-            internal uint offset;
-            internal ushort count;
+            
+            private static void RegisterMultiComponentsData<T>(ushort defaultComponentCapacity, uint capacity) where T : struct {
+                if (!Context<MultiComponents<T>>.Has()) {
+                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                    Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity, capacity, MTStatus));
+                    #else
+                    Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity, capacity));
+                    #endif
+                }
+            }
+            
+            private static void OnAddMultiComponent<T, V>(Entity e, ref T component) where T : struct, IMultiComponent<T, V> where V : struct {
+                Context<MultiComponents<V>>.Get().Add(ref component.RefValue(ref component));
+            }
 
             [MethodImpl(AggressiveInlining)]
-            public void For(ref Multi<V> multi) {
-                offset = multi.offset;
-                count = multi.count;
+            internal static void CopyMultiComponent<T, V>(Entity srcEntity, Entity dstEntity, ref T src, ref T dst) where T : struct, IMultiComponent<T, V> where V : struct {
+                ref var srsItems = ref src.RefValue(ref src);
+                var dstItemsTemp = dst.RefValue(ref dst);
+                dst = src;
+                ref var dstItems = ref dst.RefValue(ref dst);
+                dstItems = dstItemsTemp;
+                dstItems.Clear();
+                dstItems.Add(ref srsItems);
             }
         }
+    }
 
-        #if ENABLE_IL2CPP
-        [Il2CppSetOption(Option.NullChecks, false)]
-        [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-        #endif
-        public struct CopyToAccess<T, V> : AccessMulti<V> where V : struct where T : struct, IMultiComponent<V> {
-            internal CopyFromAccess<V> copyFrom;
-
-            [MethodImpl(AggressiveInlining)]
-            public void For(ref Multi<V> multi) => Context<MultiComponents<V>>.Get().Copy(copyFrom.count, copyFrom.offset, ref multi);
-
-            [MethodImpl(AggressiveInlining)]
-            public void Copy(ref T src, ref T dst) {
-                src.Access(copyFrom);
-                dst.Access(this);
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, false)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
+    public static class MultiComponentExtensions {
+        
+        [MethodImpl(AggressiveInlining)]
+        public static Multi<T> ReadMulti<WorldType, T>(this ref BinaryPackReader reader) where T : struct where WorldType : struct, IWorldType {
+            var value = new Multi<T>();
+            var count = reader.ReadUshort();
+            if (count > 0) {
+                World<WorldType>.Context<MultiComponents<T>>.Get().Add(ref value, count);
+                for (var i = 0; i < count; i++) {
+                    value.Add(reader.Read<T>());
+                }
+            } else {
+                World<WorldType>.Context<MultiComponents<T>>.Get().Add(ref value);
             }
+
+            return value;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static void WriteMulti<T>(this ref BinaryPackWriter writer, in Multi<T> value) where T : struct {
+            var count = value.count;
+            writer.WriteUshort(count);
+            if (count > 0) {
+                var values = value.data.values;
+                var offset = value.offset;
+                for (var i = 0; i < count; i++) {
+                    writer.Write(in values[i + offset]);
+                }
+            }
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static ROMulti<T> ReadROMulti<WorldType, T>(this ref BinaryPackReader reader) where T : struct where WorldType : struct, IWorldType {
+            return new ROMulti<T> {
+                multi = reader.ReadMulti<WorldType, T>(),
+            };
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static void WriteROMulti<T>(this ref BinaryPackWriter writer, in ROMulti<T> value) where T : struct {
+            writer.WriteMulti(in value.multi);
         }
     }
 }

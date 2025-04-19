@@ -50,7 +50,14 @@ namespace FFS.Libraries.StaticEcs {
             public readonly bool Has<T>() => Context<T>.Has();
 
             [MethodImpl(AggressiveInlining)]
-            public readonly ref T Get<T>() => ref Context<T>._value;
+            public readonly ref T Get<T>() {
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                if (!Context<T>._has) {
+                    throw new StaticEcsException($"Context<{typeof(WorldType)}> for {typeof(T)} undefined");
+                }
+                #endif
+                return ref Context<T>._value;
+            }
 
             [MethodImpl(AggressiveInlining)]
             public readonly ref T GetOrCreate<T>() where T : new() {
@@ -82,11 +89,11 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static void Set(T value, bool clearOnDestroy = true) {
                 if (value == null) {
-                    throw new Exception($"{typeof(T).Name} is null, Context<{typeof(WorldType)}>");
+                    throw new StaticEcsException($"{typeof(T).Name} is null, Context<{typeof(WorldType)}>");
                 }
 
                 if (_has) {
-                    throw new Exception($"{typeof(T).Name} already exist in container Context<{typeof(WorldType)}>");
+                    throw new StaticEcsException($"{typeof(T).Name} already exist in container Context<{typeof(WorldType)}>");
                 }
 
                 _has = true;
@@ -99,7 +106,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static void Replace(T value) {
                 if (value == null) {
-                    throw new Exception($"{typeof(T).Name} is null, Context<{typeof(WorldType)}>");
+                    throw new StaticEcsException($"{typeof(T).Name} is null, Context<{typeof(WorldType)}>");
                 }
 
                 _has = true;
@@ -151,11 +158,11 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static void Set<T>(string key, T value, bool clearOnDestroy = true) {
                 if (value == null) {
-                    throw new Exception($"{typeof(T).Name} is null, NamedContext<{typeof(WorldType)}>");
+                    throw new StaticEcsException($"{typeof(T).Name} is null, NamedContext<{typeof(WorldType)}>");
                 }
 
                 if (_values.ContainsKey(key)) {
-                    throw new Exception($"{typeof(T).Name} already exist in container NamedContext<{typeof(WorldType)}>");
+                    throw new StaticEcsException($"{typeof(T).Name} already exist in container NamedContext<{typeof(WorldType)}>");
                 }
 
                 _values[key] = value;
@@ -167,7 +174,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static void Replace<T>(string key, T value) {
                 if (value == null) {
-                    throw new Exception($"{typeof(T).Name} is null, NamedContext<{typeof(WorldType)}>");
+                    throw new StaticEcsException($"{typeof(T).Name} is null, NamedContext<{typeof(WorldType)}>");
                 }
                 
                 _values[key] = value;

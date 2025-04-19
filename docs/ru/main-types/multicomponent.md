@@ -53,16 +53,15 @@ public struct Item {
 }
 
 // Определим тип компонента 
-public struct Inventory : IMultiComponent<Item> {
+public struct Inventory : IMultiComponent<Inventory, Item> {
     // Определим значения мультикомпонента
     public Multi<Item> Items;
-    
+  
     // Добавляем любые пользовательские данные если нужно, как и в обычный компонент
     public int SomeUserData;
-    
+  
     // Реализуем метод интерфейса IMultiComponent<Item>, для доступа и автоматического менеджемента значений
-    // необходимо указать доступ к значениям через access.For(ref Values)
-    public void Access<A>(A access) where A : struct, AccessMulti<Item> => access.For(ref Items);
+    public ref Multi<Item> RefValue(ref Inventory component) => ref component.Items;
 }
 
 World.Create(WorldConfig.Default());

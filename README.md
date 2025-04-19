@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-0.9.82-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg?style=for-the-badge)
 
 ### LANGUAGE
 [RU](./README_RU.md)
@@ -12,7 +12,6 @@ ___
 - Lightweight
 - Performance
 - No allocations
-- No dependencies
 - No Unsafe in core
 - Based on statics and structures
 - Type-safe
@@ -37,16 +36,23 @@ ___
 * [Telegram](https://t.me/felid_force_studios)
 
 # Installation
+  The library has a dependency on [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) for binary serialization, StaticPack must also be installed
 * ### As source code
   From the release page or as an archive from the branch. In the `master` branch there is a stable tested version
 * ### Installation for Unity
-  git module `https://github.com/Felid-Force-Studios/StaticEcs.git` in Unity PackageManager  
-  or adding it to `Packages/manifest.json` `"com.felid-force-studios.static-ecs": "https://github.com/Felid-Force-Studios/StaticEcs.git"`
+  - How to git module in Unity PackageManager     
+    `https://github.com/Felid-Force-Studios/StaticEcs.git`  
+    `https://github.com/Felid-Force-Studios/StaticPack.git`
+  - Or adding to the manifest `Packages/manifest.json`  
+    `"com.felid-force-studios.static-ecs": "https://github.com/Felid-Force-Studios/StaticEcs.git"`  
+    `"com.felid-force-studios.static-pack": "https://github.com/Felid-Force-Studios/StaticPack.git"`
 
 # Concept
 > - The main idea of this implementation is static, all data about the world and components are in static classes, which makes it possible to avoid expensive virtual calls and have a convenient API
 > - This framework is focused on maximum ease of use, speed and comfort of code writing without loss of performance
 > - Multi-world creation, strict typing, ~zero-cost abstractions
+> - Serialization system
+> - System of entity relations
 > - Based on a sparse-set architecture, the core is inspired by a series of libraries from Leopotam
 > - The framework was created for the needs of a private project and put out in open-source.
 

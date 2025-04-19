@@ -1,0 +1,154 @@
+﻿using System;
+using System.Runtime.CompilerServices;
+using static System.Runtime.CompilerServices.MethodImplOptions;
+#if ENABLE_IL2CPP
+using Unity.IL2CPP.CompilerServices;
+#endif
+
+namespace FFS.Libraries.StaticEcs {
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, false)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
+    public abstract partial class World<WorldType> {
+        #if ENABLE_IL2CPP
+        [Il2CppSetOption(Option.NullChecks, false)]
+        [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+        #endif
+        internal partial struct ModuleComponents {
+            [MethodImpl(AggressiveInlining)]
+            internal void RegisterOneToOneRelationType<L, R>(
+                uint capacity,
+                IComponentConfig<L, WorldType> leftConfig,
+                IComponentConfig<R, WorldType> rightConfig,
+                BiDirectionalDeleteStrategy leftDeleteStrategy = BiDirectionalDeleteStrategy.Default,
+                BiDirectionalDeleteStrategy rightDeleteStrategy = BiDirectionalDeleteStrategy.Default,
+                CopyStrategy leftCopyStrategy = CopyStrategy.Default,
+                CopyStrategy rightCopyStrategy = CopyStrategy.Default,
+                bool disableRelationsCheckLeftDebug = false, bool disableRelationsCheckRightDebug = false
+            )
+                where L : struct, IEntityLinkComponent<L>
+                where R : struct, IEntityLinkComponent<R> {
+                ValidateComponentRegistration<L>();
+                ValidateComponentRegistration<R>();
+                
+                #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                CyclicCheck<L>.Value = !disableRelationsCheckLeftDebug && typeof(L) != typeof(R);
+                #endif
+                
+                var actualConfigLeft = new ValueComponentConfig<L, WorldType>(leftConfig) {
+                    OnAddWithValueHandler = OnAddHandler<L, R>(leftConfig.OnAdd(), disableRelationsCheckLeftDebug),
+                    OnDeleteHandler = OnDeleteHandler<L, R>(leftDeleteStrategy, leftConfig.OnDelete()),
+                    OnCopyHandler = OnCopyOneHandler(leftCopyStrategy, leftConfig.OnCopy()),
+                    OnAddHandler = UseAddLinkMethodException,
+                    Copyable = leftCopyStrategy != CopyStrategy.NotCopy
+                };
+
+                RegisterComponentType(
+                    capacity: capacity,
+                    actualConfigLeft,
+                    putNotAllowed: true
+                );
+
+                if (Components<R>.Value.IsRegistered()) {
+                    // Same types
+                    return;
+                }
+                
+                #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                CyclicCheck<R>.Value = !disableRelationsCheckRightDebug;
+                #endif
+                
+                var actualConfigRight = new ValueComponentConfig<R, WorldType>(rightConfig) {
+                    OnAddWithValueHandler = OnAddHandler<R, L>(rightConfig.OnAdd(), disableRelationsCheckRightDebug),
+                    OnDeleteHandler = OnDeleteHandler<R, L>(rightDeleteStrategy, rightConfig.OnDelete()),
+                    OnCopyHandler = OnCopyOneHandler(rightCopyStrategy, rightConfig.OnCopy()),
+                    OnAddHandler = UseAddLinkMethodException,
+                    Copyable = rightCopyStrategy != CopyStrategy.NotCopy
+                };
+
+                RegisterComponentType(
+                    capacity: capacity,
+                    actualConfigRight,
+                    putNotAllowed: true
+                );
+                return;
+
+                static OnComponentHandler<A> OnAddHandler<A, B>(OnComponentHandler<A> handler, bool disableRelationsCheck)
+                    where A : struct, IEntityLinkComponent<A>
+                    where B : struct, IEntityLinkComponent<B> {
+
+                    if (handler != null) {
+                        return (Entity entity, ref A component) => {
+                            handler(entity, ref component);
+                            SetAnotherLink(entity, ref component);
+                        };
+                    }
+
+                    return SetAnotherLink;
+
+                    [MethodImpl(AggressiveInlining)]
+                    static void SetAnotherLink(Entity e, ref A component) {
+                        #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                        if (CyclicCheck<A>.Value) {
+                            CheckOneRelation(e, ref component);
+                        }
+                        #endif
+                        var unpacked = component.RefValue(ref component).Unpack<WorldType>();
+                        if (!Components<B>.Value.Has(unpacked)) {
+                            var value = default(B);
+                            value.RefValue(ref value) = e.Gid();
+                            Components<B>.Value.Add(unpacked, value);
+                        }
+                        #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                        else {
+                            var oldLink = Components<B>.Value.Ref(unpacked).Link();
+                            var newLink = e.Gid();
+                            if (oldLink != e.Gid()) {
+                                throw new StaticEcsException($"{unpacked} contains a {typeof(B)} with another link ({oldLink}) than the added ({newLink}), delete the previous link before adding a new one");
+                            }
+                        }
+                        #endif
+                    }
+                }
+
+                static OnComponentHandler<A> OnDeleteHandler<A, B>(BiDirectionalDeleteStrategy strategy, OnComponentHandler<A> handler)
+                    where A : struct, IEntityLinkComponent<A>
+                    where B : struct, IEntityLinkComponent<B> {
+                    if (strategy == BiDirectionalDeleteStrategy.Default) {
+                        return handler;
+                    }
+
+                    if (strategy == BiDirectionalDeleteStrategy.DestroyLinkedEntity) {
+                        return DestroyLinkedEntityHandler(handler);
+                    }
+
+                    if (strategy == BiDirectionalDeleteStrategy.DeleteAnotherLink) {
+                        if (handler != null) {
+                            return (Entity entity, ref A component) => {
+                                handler(entity, ref component);
+                                DeleteAnotherLink(entity, ref component);
+                            };
+                        }
+
+                        return DeleteAnotherLink;
+                    }
+
+                    throw new StaticEcsException("Unsupported onDelete strategy");
+
+                    static void DeleteAnotherLink(Entity e, ref A component) {
+                        if (component.RefValue(ref component).TryUnpack<WorldType>(out var ent) && ent.HasAllOf<B>()) {
+                            #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                            var link = ent.Ref<B>().Link();
+                            if (link != e.Gid()) {
+                                throw new StaticEcsException($"When another link of type {typeof(B)} is deleted, the link refers to another entity {link}, not {e}");
+                            }
+                            #endif
+                            Components<B>.Value.Delete(ent);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

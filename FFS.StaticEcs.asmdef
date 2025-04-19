@@ -1,6 +1,9 @@
 {
     "name": "FFS.StaticEcs",
     "rootNamespace": "FFS.Libraries.StaticEcs",
+    "references": [
+        "FFS.StaticPack"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": true,
