@@ -11,12 +11,6 @@ namespace FFS.Libraries.StaticEcs {
     public interface IEvents {
         public void Send<E>(E value = default) where E : struct, IEvent;
 
-        public void SendDefault(EventDynId value);
-
-        public EventDynId DynamicId<E>() where E : struct, IEvent;
-
-        public bool TryGetPool(EventDynId id, out IEventPoolWrapper pool);
-
         public bool TryGetPool(Type eventType, out IEventPoolWrapper pool);
     }
 
@@ -28,21 +22,6 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Send<E>(E value = default) where E : struct, IEvent {
             World<WorldType>.Events.Send(value);
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public void SendDefault(EventDynId value) {
-            World<WorldType>.Events.SendDefault(value);
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public EventDynId DynamicId<E>() where E : struct, IEvent {
-            return World<WorldType>.Events.DynamicId<E>();
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool TryGetPool(EventDynId id, out IEventPoolWrapper pool) {
-            return World<WorldType>.Events.TryGetPool(id, out pool);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -74,24 +53,16 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static bool Send<E>(E value = default) where E : struct, IEvent {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new Exception($"[ Ecs<{typeof(WorldType)}>.Events.Send<{typeof(E)}> ] Ecs not initialized");
+                if (!IsWorldInitialized()) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.Events.Send<{typeof(E)}> ] Ecs not initialized");
                 #endif
                 return Pool<E>.Value.Initialized && Pool<E>.Value.Add(value);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static bool SendDefault(EventDynId value) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new Exception($"[ Ecs<{typeof(WorldType)}>.Events.Send ] Ecs not initialized");
-                #endif
-                return value.Value < _poolsCount && _pools[value.Value].Add();
-            }
-
-            [MethodImpl(AggressiveInlining)]
             public static EventReceiver<WorldType, E> RegisterEventReceiver<E>() where E : struct, IEvent {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new Exception($"[ Ecs<{typeof(WorldType)}>.Events.RegisterEventReceiver<{typeof(E)}> ] Ecs not initialized");
-                if (!Pool<E>.Value.Initialized) throw new Exception($"[ Ecs<{typeof(WorldType)}>.Events.RegisterEventReceiver<{typeof(E)}> ] Event type {typeof(E)} not registered");
+                if (!IsWorldInitialized()) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.Events.RegisterEventReceiver<{typeof(E)}> ] Ecs not initialized");
+                if (!Pool<E>.Value.Initialized) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.Events.RegisterEventReceiver<{typeof(E)}> ] Event type {typeof(E)} not registered");
                 #endif
                 return Pool<E>.Value.CreateReceiver();
             }
@@ -99,23 +70,11 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static void DeleteEventReceiver<E>(ref EventReceiver<WorldType, E> receiver) where E : struct, IEvent {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new Exception($"[ Ecs<{typeof(WorldType)}>.Events.DeleteEventReceiver<{typeof(E)}> ] Ecs not initialized");
+                if (!IsWorldInitialized()) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.Events.DeleteEventReceiver<{typeof(E)}> ] Ecs not initialized");
                 #endif
                 if (Pool<E>.Value.Initialized) {
                     Pool<E>.Value.DeleteReceiver(ref receiver);
                 }
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public static EventDynId DynamicId<E>() where E : struct, IEvent {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new Exception($"[ Ecs<{typeof(WorldType)}>.Events.Send<{typeof(E)}> ] Ecs not initialized");
-                #endif
-                if (Pool<E>.Value.Initialized) {
-                    return new EventDynId(Pool<E>.Value.Id);
-                }
-
-                throw new Exception($"[ Ecs<{typeof(WorldType)}>.Events.DynamicId<{typeof(E)}> ] Pool not initialized");
             }
 
             #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
@@ -132,19 +91,10 @@ namespace FFS.Libraries.StaticEcs {
             #endif
 
             [MethodImpl(AggressiveInlining)]
-            public static IEventPoolWrapper GetPool(EventDynId id) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new Exception($"Events<{typeof(WorldType)}>, Method: GetPool, World not initialized");
-                if (id.Value >= _poolsCount) throw new Exception($"Events<{typeof(WorldType)}>, Method: GetPool, Event type for dyn id {id.Value} not registered");
-                #endif
-                return _pools[id.Value];
-            }
-
-            [MethodImpl(AggressiveInlining)]
             public static IEventPoolWrapper GetPool(Type eventType) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new Exception($"Events<{typeof(WorldType)}>, Method: GetPool, World not initialized");
-                if (!_poolIdxByType.ContainsKey(eventType)) throw new Exception($"Events<{typeof(WorldType)}>, Method: GetPool, Event type {eventType} not registered");
+                if (!IsWorldInitialized()) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool, World not initialized");
+                if (!_poolIdxByType.ContainsKey(eventType)) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool, Event type {eventType} not registered");
                 #endif
                 return _pools[_poolIdxByType[eventType]];
             }
@@ -152,30 +102,16 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static EventPoolWrapper<WorldType, T> GetPool<T>() where T : struct, IEvent {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new Exception($"Events<{typeof(WorldType)}>, Method: GetPool<{typeof(T)}>, World not initialized");
-                if (!_poolIdxByType.ContainsKey(typeof(T))) throw new Exception($"Events<{typeof(WorldType)}>, Method: GetPool, Event type {typeof(T)} not registered");
+                if (!IsWorldInitialized()) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool<{typeof(T)}>, World not initialized");
+                if (!_poolIdxByType.ContainsKey(typeof(T))) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool, Event type {typeof(T)} not registered");
                 #endif
                 return default;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static bool TryGetPool(EventDynId id, out IEventPoolWrapper pool) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new Exception($"Events<{typeof(WorldType)}>, Method: GetPool, World not initialized");
-                #endif
-                if (id.Value >= _poolsCount) {
-                    pool = default;
-                    return false;
-                }
-
-                pool = _pools[id.Value];
-                return true;
-            }
-
-            [MethodImpl(AggressiveInlining)]
             public static bool TryGetPool(Type eventType, out IEventPoolWrapper pool) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new Exception($"Events<{typeof(WorldType)}>, Method: GetPool, World not initialized");
+                if (!IsWorldInitialized()) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool, World not initialized");
                 #endif
                 if (!_poolIdxByType.TryGetValue(eventType, out var idx)) {
                     pool = default;
@@ -189,25 +125,24 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static bool TryGetPool<T>(out EventPoolWrapper<WorldType, T> pool) where T : struct, IEvent {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new Exception($"Events<{typeof(WorldType)}>, Method: GetPool<{typeof(T)}>, World not initialized");
+                if (!IsWorldInitialized()) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool<{typeof(T)}>, World not initialized");
                 #endif
                 pool = default;
                 return _poolIdxByType.ContainsKey(typeof(T));
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static EventDynId RegisterEventType<T>() where T : struct, IEvent {
+            public static void RegisterEventType<T>(IEventConfig<T, WorldType> config = null) where T : struct, IEvent {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (Status != WorldStatus.Created) {
-                    throw new Exception($"Events<{typeof(WorldType)}>, Method: RegisterEventType<{typeof(T)}>, World not initialized");
+                    throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: RegisterEventType<{typeof(T)}>, World not initialized");
                 }
                 #endif
 
-                if (Pool<T>.Value.Initialized) {
-                    return new EventDynId(Pool<T>.Value.Id);
-                }
+                if (Pool<T>.Value.Initialized) throw new StaticEcsException($"Event {typeof(T)} already registered");
                 
-                Pool<T>.Value.Create(_poolsCount);
+                config ??= DefaultEventConfig<T, WorldType>.Default;
+                Pool<T>.Value.Create(_poolsCount, config);
 
                 if (_poolsCount == _pools.Length) {
                     Array.Resize(ref _pools, _poolsCount << 1);
@@ -216,7 +151,8 @@ namespace FFS.Libraries.StaticEcs {
                 _pools[_poolsCount] = new EventPoolWrapper<WorldType, T>();
                 _poolIdxByType[typeof(T)] = _poolsCount;
                 _poolsCount++;
-                return new EventDynId(Pool<T>.Value.Id);
+
+                Serializer.Value.RegisterEventType(config);
             }
             #endregion
 
@@ -225,6 +161,7 @@ namespace FFS.Libraries.StaticEcs {
             internal static void Create() {
                 _pools = new IEventPoolWrapper[32];
                 _poolIdxByType = new Dictionary<Type, int>();
+                Serializer.Value.Create();
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -236,19 +173,28 @@ namespace FFS.Libraries.StaticEcs {
                 _poolsCount = default;
                 _pools = default;
                 _poolIdxByType = default;
+                Serializer.Value.Destroy();
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 _debugEventListeners = default;
                 #endif
             }
             #endregion
 
+            [MethodImpl(AggressiveInlining)]
             public static List<IEventPoolWrapper> GetAllRawsPools() {
                 var pools = new List<IEventPoolWrapper>();
-                for (int i = 0; i < _poolsCount; i++) {
+                for (var i = 0; i < _poolsCount; i++) {
                     pools.Add(_pools[i]);
                 }
 
                 return pools;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public static void Clear() {
+                for (var i = 0; i < _poolsCount; i++) {
+                    _pools[i].Clear();
+                }
             }
         }
 

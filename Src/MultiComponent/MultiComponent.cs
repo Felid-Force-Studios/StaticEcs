@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
@@ -8,21 +7,124 @@ using Unity.IL2CPP.CompilerServices;
 #endif
 
 namespace FFS.Libraries.StaticEcs {
+    public interface IRefProvider<T, V> {
+        protected internal ref V RefValue(ref T component);
+    }
+
+    public interface IMultiComponent<T, V> : IComponent, IRefProvider<T, Multi<V>> where T : struct where V : struct { }
     
-    public interface IMultiComponent<T> : IComponent where T : struct {
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, false)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
+    public struct ROMulti<T> : IMultiComponent<ROMulti<T>, T>, IEquatable<ROMulti<T>> where T : struct {
+        internal Multi<T> multi;
         
-        public void Access<A>(A access) where A : struct, AccessMulti<T>;
+        internal void Init(Multi<T> value) {
+            multi = value;
+        }
+
+        public ushort Capacity {
+            [MethodImpl(AggressiveInlining)]
+            get => multi.capacity;
+        }
+
+        public ushort Count {
+            [MethodImpl(AggressiveInlining)]
+            get => multi.count;
+        }
+
+        public T this[int idx] {
+            [MethodImpl(AggressiveInlining)]
+            get => multi[idx];
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public readonly T First() {
+            return multi.First();
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public readonly T Last() {
+            return multi.Last();
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public int IndexOf(T item) {
+            return multi.IndexOf(item);
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public readonly bool IsEmpty() => multi.IsEmpty();
+
+        [MethodImpl(AggressiveInlining)]
+        public readonly bool IsNotEmpty() => multi.IsNotEmpty();
+
+        [MethodImpl(AggressiveInlining)]
+        public readonly bool IsFull() => multi.IsFull();
+
+        [MethodImpl(AggressiveInlining)]
+        public readonly bool Contains(T item) {
+            return multi.Contains(item);
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public readonly bool Contains<C>(T item, C comparer) where C : IEqualityComparer<T> {
+            return multi.Contains(item, comparer);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void CopyTo(T[] dst) {
+            multi.CopyTo(dst);
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public void CopyTo(T[] dst, int dstIdx, int len) {
+            multi.CopyTo(dst, dstIdx, len);
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        ref Multi<T> IRefProvider<ROMulti<T>, Multi<T>>.RefValue(ref ROMulti<T> component) => ref component.multi;
+
+        public override string ToString() {
+            var res = "";
+            for (int i = 0; i < Count; i++) {
+                res += this[i].ToString();
+                if (i + 1 < Count) {
+                    res += ", ";
+                }
+            }
+
+            return res;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public ROMultiComponentsIterator<T> GetEnumerator() => new(this);
+
+        [MethodImpl(AggressiveInlining)]
+        public bool Equals(ROMulti<T> other) {
+            return multi.Equals(other.multi);
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public override bool Equals(object obj) => throw new StaticEcsException($"ROMulti<{typeof(T)}> `Equals object` not allowed!");
+
+        [MethodImpl(AggressiveInlining)]
+        public override int GetHashCode() => throw new StaticEcsException($"ROMulti<{typeof(T)}> `GetHashCode object` not allowed!");
+
+        [MethodImpl(AggressiveInlining)]
+        public static bool operator ==(ROMulti<T> left, ROMulti<T> right) => left.Equals(right);
+
+        [MethodImpl(AggressiveInlining)]
+        public static bool operator !=(ROMulti<T> left, ROMulti<T> right) => !left.Equals(right);
     }
     
-    public interface AccessMulti<T> where T : struct {
-        public void For(ref Multi<T> values);
-    }
 
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Multi<T> : IMultiComponent<T> where T : struct {
+    public struct Multi<T> : IMultiComponent<Multi<T>, T>, IEquatable<Multi<T>> where T : struct {
         internal MultiComponents<T> data;
         internal uint offset;
         internal ushort count;
@@ -49,7 +151,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             get {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (idx >= count) throw new Exception($"[ Multi<{typeof(T)}>.Indexer ] index out of bounds: {idx}");
+                if (idx >= count) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Indexer ] index out of bounds: {idx}");
                 #endif
                 return ref data.values[offset + idx];
             }
@@ -58,7 +160,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public readonly ref T First() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (count == 0) throw new Exception($"[ Multi<{typeof(T)}>.First ] index out of bounds: {0}");
+            if (count == 0) throw new StaticEcsException($"[ Multi<{typeof(T)}>.First ] index out of bounds: {0}");
             #endif
             return ref data.values[offset];
         }
@@ -66,7 +168,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public readonly ref T Last() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (count == 0) throw new Exception($"[ Multi<{typeof(T)}>.Last ] index out of bounds: {0}");
+            if (count == 0) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Last ] index out of bounds: {0}");
             #endif
             return ref data.values[offset + count - 1];
         }
@@ -74,7 +176,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Add(T val) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
             #endif
             if (count == capacity) {
                 data.Resize(ref this, (uint) (capacity << 1));
@@ -85,7 +187,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Add(T val1, T val2) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
             #endif
             if (count + 1 >= capacity) {
                 data.Resize(ref this, (uint) (capacity << 1));
@@ -97,7 +199,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Add(T val1, T val2, T val3) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
             #endif
             if (count + 2 >= capacity) {
                 data.Resize(ref this, (uint) (capacity << 1));
@@ -110,7 +212,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Add(T val1, T val2, T val3, T val4) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
             #endif
             if (count + 3 >= capacity) {
                 data.Resize(ref this, (uint) (capacity << 1));
@@ -124,8 +226,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Add(T[] src) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (src == null) throw new Exception($"[ Multi<{typeof(T)}>.Add ] src is null");
-            if (src.Length > short.MaxValue + 1) throw new Exception($"[ Multi<{typeof(T)}>.Add ] src.Length > 32768");
+            if (src == null) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] src is null");
+            if (src.Length > short.MaxValue + 1) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] src.Length > 32768");
             #endif
             Add(src, 0, (ushort) src.Length);
         }
@@ -133,10 +235,10 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Add(T[] src, int srcIdx, int len) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (src == null) throw new Exception($"[ Multi<{typeof(T)}>.Add ] src is null");
-            if (srcIdx >= src.Length) throw new Exception($"[ Multi<{typeof(T)}>.Add ] srcIdx >= src.Length");
-            if (srcIdx + len > src.Length) throw new Exception($"[ Multi<{typeof(T)}>.Add ] srcIdx + len > src.Length");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
+            if (src == null) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] src is null");
+            if (srcIdx >= src.Length) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] srcIdx >= src.Length");
+            if (srcIdx + len > src.Length) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] srcIdx + len > src.Length");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
             #endif
             if (count + len >= capacity) {
                 data.Resize(ref this, Utils.CalculateSize((uint) (count + len)));
@@ -154,9 +256,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Add(ref Multi<T> src, int srcIdx, int len) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (srcIdx >= src.Count) throw new Exception($"[ Multi<{typeof(T)}>.Add ] srcIdx >= src.Count");
-            if (srcIdx + len > src.Count) throw new Exception($"[ Multi<{typeof(T)}>.Add ] srcIdx + len > src.Count");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
+            if (srcIdx >= src.Count) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] srcIdx >= src.Count");
+            if (srcIdx + len > src.Count) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] srcIdx + len > src.Count");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
             #endif
             if (count + len >= capacity) {
                 data.Resize(ref this, Utils.CalculateSize((uint) (count + len)));
@@ -169,8 +271,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void InsertAt(int idx, T value) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (idx >= count) throw new Exception($"[ Multi<{typeof(T)}>.InsertAt ] index out of bounds: {idx}");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.InsertAt ] data is blocked by iterator");
+            if (idx >= count) throw new StaticEcsException($"[ Multi<{typeof(T)}>.InsertAt ] index out of bounds: {idx}");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.InsertAt ] data is blocked by iterator");
             #endif
             if (count == capacity) {
                 data.Resize(ref this, (uint) (capacity << 1));
@@ -187,8 +289,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void RemoveFirst() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (count == 0) throw new Exception($"[ Multi<{typeof(T)}>.DeleteFirst ] index out of bounds: {0}");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.DeleteFirst ] data is blocked by iterator");
+            if (count == 0) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteFirst ] index out of bounds: {0}");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteFirst ] data is blocked by iterator");
             #endif
             count--;
             if (count > 0) {
@@ -202,8 +304,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void RemoveFirstSwap() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (count == 0) throw new Exception($"[ Multi<{typeof(T)}>.DeleteFirstSwap ] index out of bounds: {0}");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.DeleteFirstSwap ] data is blocked by iterator");
+            if (count == 0) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteFirstSwap ] index out of bounds: {0}");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteFirstSwap ] data is blocked by iterator");
             #endif
             data.values[offset] = data.values[offset + --count];
             data.values[offset + count] = default;
@@ -212,8 +314,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void RemoveLast() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (count == 0) throw new Exception($"[ Multi<{typeof(T)}>.DeleteLast ] index out of bounds: {0}");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.DeleteLast ] data is blocked by iterator");
+            if (count == 0) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteLast ] index out of bounds: {0}");
+            if (data.IsBlocked(offset, count - 1)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteLast ] data is blocked by iterator");
             #endif
             data.values[offset + --count] = default;
         }
@@ -221,8 +323,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void RemoveLastFast() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (count == 0) throw new Exception($"[ Multi<{typeof(T)}>.DeleteLast ] index out of bounds: {0}");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.DeleteLast ] data is blocked by iterator");
+            if (count == 0) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteLast ] index out of bounds: {0}");
+            if (data.IsBlocked(offset, count - 1)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteLast ] data is blocked by iterator");
             #endif
             --count;
         }
@@ -230,8 +332,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void RemoveAt(int idx) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (idx >= count) throw new Exception($"[ Multi<{typeof(T)}>.DeleteAt ] index out of bounds: {idx}");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.DeleteAt ] data is blocked by iterator");
+            if (idx >= count) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteAt ] index out of bounds: {idx}");
+            if (data.IsBlocked(offset, idx)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteAt ] data is blocked by iterator");
             #endif
             count--;
             if (idx == count) {
@@ -243,10 +345,80 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
+        public bool TryRemoveSwap(T item) {
+            var idx = IndexOf(item);
+            if (idx >= 0) {
+                RemoveAtSwap(idx);
+                return true;
+            }
+
+            return false;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public bool TryRemove(T item) {
+            var idx = IndexOf(item);
+            if (idx >= 0) {
+                RemoveAt(idx);
+                return true;
+            }
+
+            return false;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void TryRemove(T item1, T item2) {
+            var idx = IndexOf(item1);
+            if (idx >= 0) {
+                RemoveAt(idx);
+            }
+            idx = IndexOf(item2);
+            if (idx >= 0) {
+                RemoveAt(idx);
+            }
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void TryRemove(T item1, T item2, T item3) {
+            var idx = IndexOf(item1);
+            if (idx >= 0) {
+                RemoveAt(idx);
+            }
+            idx = IndexOf(item2);
+            if (idx >= 0) {
+                RemoveAt(idx);
+            }
+            idx = IndexOf(item3);
+            if (idx >= 0) {
+                RemoveAt(idx);
+            }
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void TryRemove(T item1, T item2, T item3, T item4) {
+            var idx = IndexOf(item1);
+            if (idx >= 0) {
+                RemoveAt(idx);
+            }
+            idx = IndexOf(item2);
+            if (idx >= 0) {
+                RemoveAt(idx);
+            }
+            idx = IndexOf(item3);
+            if (idx >= 0) {
+                RemoveAt(idx);
+            }
+            idx = IndexOf(item4);
+            if (idx >= 0) {
+                RemoveAt(idx);
+            }
+        }
+        
+        [MethodImpl(AggressiveInlining)]
         public void RemoveAtSwap(int idx) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (idx >= count) throw new Exception($"[ Multi<{typeof(T)}>.DeleteAtSwap ] index out of bounds: {idx}");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.DeleteAtSwap ] data is blocked by iterator");
+            if (idx >= count) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteAtSwap ] index out of bounds: {idx}");
+            if (data.IsBlocked(offset, idx)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.DeleteAtSwap ] data is blocked by iterator");
             #endif
             data.values[offset + idx] = data.values[offset + --count];
             data.values[offset + count] = default;
@@ -255,7 +427,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public int IndexOf(T item) {
             var indexOf = Array.IndexOf(data.values, item, (int)offset, count);
-            return (int) (indexOf > 0 ? indexOf - offset : -1);
+            return (int) (indexOf >= 0 ? indexOf - offset : -1);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -289,7 +461,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Clear() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.Clear ] data is blocked by iterator");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Clear ] data is blocked by iterator");
             #endif
             Utils.LoopFallbackClear(data.values, (int) offset, count);
             count = 0;
@@ -298,7 +470,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void ResetCount() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.ResetCount ] data is blocked by iterator");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.ResetCount ] data is blocked by iterator");
             #endif
             count = 0;
         }
@@ -306,8 +478,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Resize(int newCapacity) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (newCapacity > short.MaxValue + 1) throw new Exception($"[ Multi<{typeof(T)}>.Resize ] newCapacity > 32768");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.Resize ] data is blocked by iterator");
+            if (newCapacity > short.MaxValue + 1) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Resize ] newCapacity > 32768");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Resize ] data is blocked by iterator");
             #endif
             if (capacity < newCapacity) {
                 data.Resize(ref this, Utils.CalculateSize((uint) newCapacity));
@@ -317,8 +489,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void EnsureSize(int size) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (size + count > short.MaxValue + 1) throw new Exception($"[ Multi<{typeof(T)}>.EnsureSize ] size + count > 32768");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.EnsureSize ] data is blocked by iterator");
+            if (size + count > short.MaxValue + 1) throw new StaticEcsException($"[ Multi<{typeof(T)}>.EnsureSize ] size + count > 32768");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.EnsureSize ] data is blocked by iterator");
             #endif
             if (count + size >= capacity) {
                 data.Resize(ref this, Utils.CalculateSize((uint) (count + size)));
@@ -328,8 +500,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void EnsureCount(int size) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (size + count > short.MaxValue + 1) throw new Exception($"[ Multi<{typeof(T)}>.EnsureCount ] size + count > 32768");
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.EnsureCount ] data is blocked by iterator");
+            if (size + count > short.MaxValue + 1) throw new StaticEcsException($"[ Multi<{typeof(T)}>.EnsureCount ] size + count > 32768");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.EnsureCount ] data is blocked by iterator");
             #endif
             if (count + size >= capacity) {
                 data.Resize(ref this, Utils.CalculateSize((uint) (count + size)));
@@ -341,8 +513,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void CopyTo(T[] dst) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (dst == null) throw new Exception($"[ Multi<{typeof(T)}>.CopyTo ] items is null");
-            if (count > dst.Length) throw new Exception($"[ Multi<{typeof(T)}>.CopyTo ] len > count");
+            if (dst == null) throw new StaticEcsException($"[ Multi<{typeof(T)}>.CopyTo ] items is null");
+            if (count > dst.Length) throw new StaticEcsException($"[ Multi<{typeof(T)}>.CopyTo ] len > count");
             #endif
             Utils.LoopFallbackCopy(data.values, offset, dst, 0, count);
         }
@@ -350,10 +522,10 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void CopyTo(T[] dst, int dstIdx, int len) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (dst == null) throw new Exception($"[ Multi<{typeof(T)}>.CopyTo ] items is null");
-            if (dstIdx >= dst.Length) throw new Exception($"[ Multi<{typeof(T)}>.CopyTo ] arrayIndex >= array.Length");
-            if (dstIdx + len > dst.Length) throw new Exception($"[ Multi<{typeof(T)}>.CopyTo ] arrayIndex + len > array.Length");
-            if (len > count) throw new Exception($"[ Multi<{typeof(T)}>.CopyTo ] len > count");
+            if (dst == null) throw new StaticEcsException($"[ Multi<{typeof(T)}>.CopyTo ] items is null");
+            if (dstIdx >= dst.Length) throw new StaticEcsException($"[ Multi<{typeof(T)}>.CopyTo ] arrayIndex >= array.Length");
+            if (dstIdx + len > dst.Length) throw new StaticEcsException($"[ Multi<{typeof(T)}>.CopyTo ] arrayIndex + len > array.Length");
+            if (len > count) throw new StaticEcsException($"[ Multi<{typeof(T)}>.CopyTo ] len > count");
             #endif
             Utils.LoopFallbackCopy(data.values, offset, dst, (uint) dstIdx, (uint) len);
         }
@@ -361,7 +533,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Sort<C>(C comparer) where C : IComparer<T> {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.Sort ] data is blocked by iterator");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Sort ] data is blocked by iterator");
             #endif
             Array.Sort(data.values, (int)offset, count, comparer);
         }
@@ -369,16 +541,45 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Sort() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (data.IsBlocked(offset)) throw new Exception($"[ Multi<{typeof(T)}>.Sort ] data is blocked by iterator");
+            if (data.IsBlocked(offset, 0)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Sort ] data is blocked by iterator");
             #endif
             Array.Sort(data.values, (int)offset, count);
         }
 
         [MethodImpl(AggressiveInlining)]
+        ref Multi<T> IRefProvider<Multi<T>, Multi<T>>.RefValue(ref Multi<T> component) => ref component;
+
+        public override string ToString() {
+            var res = "";
+            for (int i = 0; i < Count; i++) {
+                res += this[i].ToString();
+                if (i + 1 < Count) {
+                    res += ", ";
+                }
+            }
+
+            return res;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
         public MultiComponentsIterator<T> GetEnumerator() => new(this);
 
         [MethodImpl(AggressiveInlining)]
-        public void Access<A>(A access) where A : struct, AccessMulti<T> => access.For(ref this);
+        public bool Equals(Multi<T> other) {
+            return ReferenceEquals(data, other.data) && offset == other.offset && count == other.count && capacity == other.capacity;
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public override bool Equals(object obj) => throw new StaticEcsException($"Multi<{typeof(T)}> `Equals object` not allowed!");
+
+        [MethodImpl(AggressiveInlining)]
+        public override int GetHashCode() => throw new StaticEcsException($"Multi<{typeof(T)}> `GetHashCode object` not allowed!");
+
+        [MethodImpl(AggressiveInlining)]
+        public static bool operator ==(Multi<T> left, Multi<T> right) => left.Equals(right);
+
+        [MethodImpl(AggressiveInlining)]
+        public static bool operator !=(Multi<T> left, Multi<T> right) => !left.Equals(right);
     }
     
     #if ENABLE_IL2CPP
@@ -388,29 +589,74 @@ namespace FFS.Libraries.StaticEcs {
     public ref struct MultiComponentsIterator<C> where C : struct {
         internal MultiComponents<C> data;
         internal uint offset;
-        internal short from;
         internal ushort to;
 
         [MethodImpl(AggressiveInlining)]
         public MultiComponentsIterator(Multi<C> multi) {
             data = multi.data;
             offset = multi.offset;
-            from = -1;
             to = multi.count;
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            data.Block(offset);
+            data.Block(offset, to);
             #endif
         }
 
         public readonly ref C Current {
             [MethodImpl(AggressiveInlining)]
-            get => ref data.values[offset + from];
+            get => ref data.values[offset + to];
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool MoveNext() {
-            if (from < to - 1) {
-                from++;
+            if (to > 0) {
+                to--;
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                data.Block(offset, to);
+                #endif
+                return true;
+            }
+            return false;
+        }
+
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Dispose() {
+            data.Unblock(offset);
+        }
+        #endif
+    }
+    
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, false)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
+    public ref struct ROMultiComponentsIterator<C> where C : struct {
+        internal MultiComponents<C> data;
+        internal uint offset;
+        internal ushort to;
+
+        [MethodImpl(AggressiveInlining)]
+        public ROMultiComponentsIterator(ROMulti<C> val) {
+            data = val.multi.data;
+            offset = val.multi.offset;
+            to = val.multi.count;
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            data.Block(offset, to);
+            #endif
+        }
+
+        public readonly C Current {
+            [MethodImpl(AggressiveInlining)]
+            get => data.values[offset + to];
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public bool MoveNext() {
+            if (to > 0) {
+                to--;
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                data.Block(offset, to);
+                #endif
                 return true;
             }
             return false;
@@ -432,7 +678,7 @@ namespace FFS.Libraries.StaticEcs {
         private const int LevelOffset = 16;
         
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
-        private readonly HashSet<uint> _blocked = new();
+        private readonly Dictionary<uint, int> _blocked = new();
         private MultiThreadStatus _mtStatus;
         #endif
         
@@ -527,7 +773,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         internal void Resize(ref Multi<T> value, uint newCapacity) {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (_mtStatus.Active) throw new Exception($"MultiComponents<{typeof(T)}>, Method: Resize, this operation is not supported in multithreaded mode");
+            if (_mtStatus.Active) throw new StaticEcsException($"MultiComponents<{typeof(T)}>, Method: Resize, this operation is not supported in multithreaded mode");
             #endif
             if (!FindFree(newCapacity, out var offset)) {
                 if (_valuesCount + newCapacity >= values.Length) {
@@ -546,7 +792,7 @@ namespace FFS.Libraries.StaticEcs {
         internal bool FindFree(uint capacity, out uint offset) {
             var levelIdx = Log2(capacity) - _minLevel;
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (levelIdx >= _levels.Length) throw new Exception($"[ Multi<{typeof(T)}> ] max capacity is {short.MaxValue + 1}");
+            if (levelIdx >= _levels.Length) throw new StaticEcsException($"[ Multi<{typeof(T)}> ] max capacity is {short.MaxValue + 1}");
             #endif
             ref var level = ref _levels[levelIdx];
             if (level.Count > 0) {
@@ -563,13 +809,13 @@ namespace FFS.Libraries.StaticEcs {
         
         #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        internal bool IsBlocked(uint offset) {
-            return _blocked.Contains(offset);
+        internal bool IsBlocked(uint offset, int val) {
+            return _blocked.TryGetValue(offset, out var v) && v < val;
         }
         
         [MethodImpl(AggressiveInlining)]
-        internal void Block(uint offset) {
-            _blocked.Add(offset);
+        internal void Block(uint offset, int val) {
+            _blocked[offset] = val;
         }
         
         [MethodImpl(AggressiveInlining)]

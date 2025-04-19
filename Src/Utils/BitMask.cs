@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Buffers;
 using System.Runtime.CompilerServices;
+using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -51,6 +53,43 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
+        public void Write(ref BinaryPackWriter writer, uint entitiesCount) {
+            writer.WriteUshort(_maskLen);
+            writer.WriteInt(_bitMap.Length);
+            writer.WriteArrayUnmanaged(_bitMap, 0, (int) (entitiesCount * _maskLen));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void WriteWithDisabled(ref BinaryPackWriter writer, uint entitiesCount) {
+            writer.WriteUshort(_maskLen);
+            writer.WriteInt(_bitMap.Length);
+            writer.WriteArrayUnmanaged(_bitMap, 0, (int) (entitiesCount * _maskLen));
+            writer.WriteArrayUnmanaged(_bitMapDisabled, 0, (int) (entitiesCount * _maskLen));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void Read(ref BinaryPackReader reader) {
+            _maskLen = reader.ReadUshort();
+            var capacity = reader.ReadInt();
+            if (_bitMap == null || capacity > _bitMap.Length) {
+                Array.Resize(ref _bitMap, capacity);
+            }
+            reader.ReadArrayUnmanaged(ref _bitMap);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void ReadWithDisabled(ref BinaryPackReader reader) {
+            _maskLen = reader.ReadUshort();
+            var capacity = reader.ReadInt();
+            if (_bitMap == null || capacity > _bitMap.Length) {
+                Array.Resize(ref _bitMap, capacity);
+                Array.Resize(ref _bitMapDisabled, capacity);
+            }
+            reader.ReadArrayUnmanaged(ref _bitMap);
+            reader.ReadArrayUnmanaged(ref _bitMapDisabled);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
         internal void ResizeBitMap(uint size) {
             Array.Resize(ref _bitMap, (int) (size * _maskLen));
             if (_bitMapDisabled != null) {
@@ -61,7 +100,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         internal byte BorrowBuf() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (_tempBufferFreeCount == 0) throw new Exception("Bitmask buffer is empty");
+            if (_tempBufferFreeCount == 0) throw new StaticEcsException("Bitmask buffer is empty");
             #endif
             
             var maskBufId = --_tempBufferFreeCount;
@@ -196,6 +235,71 @@ namespace FFS.Libraries.StaticEcs {
             var index = bitMapIdx * _maskLen + div;
             _bitMap[index] &= ~(1UL << rem);
             _bitMapDisabled[index] &= ~(1UL << rem);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DelRangeWithDisabled(uint bitMapIdxFrom, uint bitMapIdxTo, ushort bitPos) {
+            var div = (ushort) (bitPos >> 6);
+            var rem = (ushort) (bitPos & 63);
+
+            var cur = bitMapIdxFrom * _maskLen;
+            for (var i = bitMapIdxFrom; i < bitMapIdxTo; i++, cur += _maskLen) {
+                var index = cur + div;
+                _bitMap[index] &= ~(1UL << rem);
+                _bitMapDisabled[index] &= ~(1UL << rem);
+            }
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DelRange(uint bitMapIdxFrom, uint bitMapIdxTo, ushort bitPos) {
+            var div = (ushort) (bitPos >> 6);
+            var rem = (ushort) (bitPos & 63);
+
+            var cur = bitMapIdxFrom * _maskLen;
+            for (var i = bitMapIdxFrom; i < bitMapIdxTo; i++, cur += _maskLen) {
+                _bitMap[cur + div] &= ~(1UL << rem);
+            }
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void MigrateWithDisabled(uint bitMapIdxFrom, uint bitMapIdxTo, ushort bitPosFrom, ushort bitPosTo, ulong[] srcBitMap, ulong[] srcBitMapDisabled) {
+            var divFrom = (ushort) (bitPosFrom >> 6);
+            var remFrom = (ushort) (bitPosFrom & 63);
+            var divTo = (ushort) (bitPosTo >> 6);
+            var remTo = (ushort) (bitPosTo & 63);
+
+            var cur = bitMapIdxFrom * _maskLen;
+            for (var i = bitMapIdxFrom; i < bitMapIdxTo; i++, cur += _maskLen) {
+                ref var from = ref srcBitMap[cur + divFrom];
+                ref var fromDisabled = ref srcBitMapDisabled[cur + divFrom];
+                if ((from & (1UL << remFrom)) != 0UL) {
+                    _bitMap[cur + divTo] |= 1UL << remTo;
+                }
+                if ((fromDisabled & (1UL << remFrom)) != 0UL) {
+                    _bitMapDisabled[cur + divTo] |= 1UL << remTo;
+                }
+                
+                from &= ~(1UL << remFrom);
+                fromDisabled &= ~(1UL << remFrom);
+            }
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void Migrate(uint bitMapIdxFrom, uint bitMapIdxTo, ushort bitPosFrom, ushort bitPosTo, ulong[] srcBitMap) {
+            var divFrom = (ushort) (bitPosFrom >> 6);
+            var remFrom = (ushort) (bitPosFrom & 63);
+            var divTo = (ushort) (bitPosTo >> 6);
+            var remTo = (ushort) (bitPosTo & 63);
+
+            var cur = bitMapIdxFrom * _maskLen;
+            for (var i = bitMapIdxFrom; i < bitMapIdxTo; i++, cur += _maskLen) {
+                ref var from = ref srcBitMap[cur + divFrom];
+                if ((from & (1UL << remFrom)) != 0UL) {
+                    _bitMap[cur + divTo] |= 1UL << remTo;
+                }
+                
+                from &= ~(1UL << remFrom);
+            }
         }
         
         [MethodImpl(AggressiveInlining)]
@@ -862,8 +966,33 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void Clear() {
+            Utils.LoopFallbackClear(_tempBuffer, 0, _tempBuffer.Length);
+            _tempBufferFreeCount = _tempBufferCount;
+            _tempBufferBorrowed = 0;
+            
+            Utils.LoopFallbackClear(_indexedBuffer, 0, _indexedBuffer.Length);
+            _indexedBufferCount = 0;
+            
             Array.Clear(_bitMap, 0, _bitMap.Length);
-            Array.Clear(_bitMapDisabled, 0, _bitMap.Length);
+            if (_bitMapDisabled != null) {
+                Array.Clear(_bitMapDisabled, 0, _bitMap.Length);
+            }
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public ulong[] CopyBitMapToArrayPool() {
+            var res = ArrayPool<ulong>.Shared.Rent(_bitMap.Length);
+            Array.Copy(_bitMap, res, _bitMap.Length);
+
+            return res;
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public ulong[] CopyDisabledBitMapToArrayPool() {
+            var res = ArrayPool<ulong>.Shared.Rent(_bitMapDisabled.Length);
+            Array.Copy(_bitMapDisabled, res, _bitMapDisabled.Length);
+
+            return res;
         }
 
         [MethodImpl(AggressiveInlining)]

@@ -4,7 +4,7 @@ has_toc: false
 parent: Main page
 ---
 
-![Version](https://img.shields.io/badge/version-0.9.82-blue.svg?style=for-the-badge)  
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg?style=for-the-badge)  
 
 ___
 
@@ -15,7 +15,6 @@ ___
 - Легковесность
 - Производительность
 - Отсутсвие аллокаций
-- Отсутствие зависимостей
 - Без Unsafe в ядре
 - Основан на статике и структурах
 - Типобезопасность
@@ -27,7 +26,6 @@ ___
 {: .noteru-title }
 > Ограничения и особенности:
 > - Не потокобезопасен
-> - Могут быть незначительные изменения API
 
 ## Оглавление
 * [Контакты](#контакты)
@@ -36,7 +34,7 @@ ___
 * [Быстрый старт](#быстрый-старт)
 * [Основные типы](maintypes.md)
   * [Сущность](main-types/entity.md)
-  * [Упакованная сущность](main-types/packedentity.md)
+  * [Глобальный идентификатор сущности](main-types/gid.md)
   * [Компонент](main-types/component.md)
   * [Стандартный компонент](main-types/standardcomponent.md)
   * [Мульти-компонент](main-types/multicomponent.md)
@@ -47,9 +45,10 @@ ___
   * [Контекст](main-types/context.md)
   * [Запросы](main-types/query.md)
 * [Дополнительны возможности](additionalfeatures.md)
-  * [Авто обработчики](additional-features/autohandlers.md)
+  * [Конфигураторы компонентов](additional-features/configs.md)
   * [События](additional-features/events.md)
   * [Отношения](additional-features/relations.md)
+  * [Сериализация](additional-features/serialization.md)
   * [Директивы компилятора](additional-features/compilerdirectives.md)
 * [Производительность](performance.md)
 * [Шаблоны](livetemplates.md)
@@ -72,6 +71,8 @@ ___
 > - Основная идея данной реализации в статике, все данные о мире и компонентах находятся в статических классах, что дает вохможность избегать дорогостоящих виртуальных вызовов, иметь удобный API со множеством сахара
 > - Даннный фреймворк нацелен на максмальную простоту использования, скорость и комфорт написания кода без жертв в производительности
 > - Доступно создание мульти-миров, строгая типизация, обширные бесплатные абстракции
+> - Система сериализации
+> - Система отношений сущностей
 > - Основан на sparse-set архитектуре, ядро вдохновленно серией библиотек от Leopotam
 > - Фреймворк создан для нужд частного проекта и выложен в open-source.
 

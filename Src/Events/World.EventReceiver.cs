@@ -24,7 +24,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void MarkAsReadAll() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (_id < 0) throw new Exception($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.MarkAsReadAll ] receiver is deleted");
+            if (_id < 0) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.MarkAsReadAll ] receiver is deleted");
             #endif
             World<WorldType>.Events.Pool<T>.Value.MarkAsReadAll(_id);
         }
@@ -32,7 +32,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void SuppressAll() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (_id < 0) throw new Exception($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.SuppressAll ] receiver is deleted");
+            if (_id < 0) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.SuppressAll ] receiver is deleted");
             #endif
             World<WorldType>.Events.Pool<T>.Value.ClearEvents(_id);
         }
@@ -40,8 +40,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public World<WorldType>.EventIterator<T> GetEnumerator() {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (_id < 0) throw new Exception($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] receiver is deleted");
-            if (World<WorldType>.Events.Pool<T>.Value.IsBlocked()) throw new Exception($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] event pool is blocked");
+            if (_id < 0) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] receiver is deleted");
+            if (World<WorldType>.Events.Pool<T>.Value.IsBlocked()) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] event pool is blocked");
             #endif
             return new World<WorldType>.EventIterator<T>(_id);
         }

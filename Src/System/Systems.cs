@@ -26,11 +26,18 @@ namespace FFS.Libraries.StaticEcs {
 
             internal static uint _currentSystemIndex;
             internal static uint _updateSystemsCount;
+            internal static bool _initialized;
 
             [MethodImpl(AggressiveInlining)]
             public static void Create(uint baseSize = 64) {
                 _batchSystems = new ISystemsBatch[baseSize];
                 _allSystems = new (ISystem, short, int)[baseSize];
+                _initialized = default;
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public static bool IsInitialized() {
+                return _initialized;
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -72,6 +79,8 @@ namespace FFS.Libraries.StaticEcs {
                         _batchSystems[_batchSystemsCount++] = batch;
                     }
                 }
+
+                _initialized = true;
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -99,6 +108,7 @@ namespace FFS.Libraries.StaticEcs {
                 _batchSystemsCount = default;
                 _currentSystemIndex = default;
                 _updateSystemsCount = default;
+                _initialized = default;
             }
 
             [MethodImpl(AggressiveInlining)]

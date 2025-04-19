@@ -7,9 +7,17 @@ using static System.Runtime.CompilerServices.MethodImplOptions;
 using Unity.IL2CPP.CompilerServices;
 #endif
 
-[assembly: InternalsVisibleTo("Tests")]
+[assembly: InternalsVisibleTo("Test")]
 [assembly: InternalsVisibleTo("FFS.StaticEcs.Unity")]
 [assembly: InternalsVisibleTo("FFS.StaticEcs.Unity.Editor")]
+
+internal class StaticEcsException : Exception {
+    public StaticEcsException() { }
+
+    public StaticEcsException(string message) : base(message) { }
+
+    public StaticEcsException(string message, Exception inner) : base(message, inner) { }
+}
 
 namespace FFS.Libraries.StaticEcs {
     
@@ -27,6 +35,10 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption (Option.ArrayBoundsChecks, false)]
     #endif
     public static class Utils {
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        public static Func<EntityGID, string> EntityGidToString = gid => $"GID {gid.Id()} : Version {gid.Version()}";
+        #endif
+        
         internal static ushort CalculateMaskLen(ushort count) {
             var len = (ushort) (count >> 6);
             if (count - (len << 6) != 0) {
@@ -115,8 +127,8 @@ namespace FFS.Libraries.StaticEcs {
         internal static FileLogger<WorldType> FileLogger;
         
         public static void CreateFileLogger(string logsFilePath, OperationType[] excludedOperations = null, ICsvColumnHandler<WorldType>[] columnWriters = null) {
-            if (Status != WorldStatus.Created) throw new Exception($"World<{typeof(WorldType)}>, Method: CreateFileLogger, world status not `Created`");
-            if (FileLogger != null) throw new Exception("File logger already added");
+            if (Status != WorldStatus.Created) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CreateFileLogger, world status not `Created`");
+            if (FileLogger != null) throw new StaticEcsException("File logger already added");
 
             FileLogger = new FileLogger<WorldType>(logsFilePath, excludedOperations, columnWriters);
             FileLogger.Enable();
@@ -124,7 +136,7 @@ namespace FFS.Libraries.StaticEcs {
         
         public static void EnableFileLogger() {
             if (FileLogger == null) {
-                throw new Exception("File logger not added");
+                throw new StaticEcsException("File logger not added");
             }
             
             FileLogger.Enable();
@@ -132,7 +144,7 @@ namespace FFS.Libraries.StaticEcs {
         
         public static void DisableFileLogger() {
             if (FileLogger == null) {
-                throw new Exception("File logger not added");
+                throw new StaticEcsException("File logger not added");
             }
             
             FileLogger.Disable();
@@ -349,7 +361,7 @@ namespace FFS.Libraries.StaticEcs {
             Writer.Write(";");
             
             if (entity._id != uint.MaxValue) {
-                Writer.Write(entity.Version());
+                Writer.Write(entity.Gid().id);
             }
 
             Writer.Write(";");
