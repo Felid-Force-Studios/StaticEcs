@@ -1,3 +1,4 @@
+#if !FFS_ECS_DISABLE_TAGS
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -206,3 +207,4 @@ namespace FFS.Libraries.StaticEcs {
         }
     }
 }
+#endif
