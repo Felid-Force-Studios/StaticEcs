@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !FFS_ECS_DISABLE_MASKS
+using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 using FFS.Libraries.StaticPack;
@@ -55,3 +56,4 @@ namespace FFS.Libraries.StaticEcs {
         }
     }
 }
+#endif
