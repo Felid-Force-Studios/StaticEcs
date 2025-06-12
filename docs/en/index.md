@@ -61,11 +61,16 @@ ___
 * [Telegram](https://t.me/felid_force_studios)
 
 # Installation
+The library has a dependency on [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) for binary serialization, StaticPack must also be installed
 * ### As source code
   From the release page or as an archive from the branch. In the `master` branch there is a stable tested version
 * ### Installation for Unity
-  git module `https://github.com/Felid-Force-Studios/StaticEcs.git` in Unity PackageManager  
-  or adding it to `Packages/manifest.json` `"com.felid-force-studios.static-ecs": "https://github.com/Felid-Force-Studios/StaticEcs.git"`
+  - How to git module in Unity PackageManager     
+    `https://github.com/Felid-Force-Studios/StaticEcs.git`  
+    `https://github.com/Felid-Force-Studios/StaticPack.git`
+  - Or adding to the manifest `Packages/manifest.json`  
+    `"com.felid-force-studios.static-ecs": "https://github.com/Felid-Force-Studios/StaticEcs.git"`  
+    `"com.felid-force-studios.static-pack": "https://github.com/Felid-Force-Studios/StaticPack.git"`
 
 
 # Concept
