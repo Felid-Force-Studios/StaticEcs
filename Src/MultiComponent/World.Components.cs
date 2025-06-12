@@ -126,7 +126,7 @@ namespace FFS.Libraries.StaticEcs {
             if (count > 0) {
                 World<WorldType>.Context<MultiComponents<T>>.Get().Add(ref value, count);
                 for (var i = 0; i < count; i++) {
-                    value.Add(reader.Read<T>());
+                    value.Add(reader.ReadDyn<T>());
                 }
             } else {
                 World<WorldType>.Context<MultiComponents<T>>.Get().Add(ref value);
@@ -143,7 +143,7 @@ namespace FFS.Libraries.StaticEcs {
                 var values = value.data.values;
                 var offset = value.offset;
                 for (var i = 0; i < count; i++) {
-                    writer.Write(in values[i + offset]);
+                    writer.WriteDyn(in values[i + offset]);
                 }
             }
         }

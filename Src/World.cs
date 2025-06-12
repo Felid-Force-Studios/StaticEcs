@@ -60,12 +60,10 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             IncrementRuntimeVersion();
             
-            BinaryPack.RegisterAllWriters((ref BinaryPackWriter w, in EntityGID v) => w.WriteUint(v.id), new UnmanagedPackArrayStrategy<EntityGID>());
-            BinaryPack.RegisterAllReaders((ref BinaryPackReader r) => new EntityGID(r.ReadUint()), new UnmanagedPackArrayStrategy<EntityGID>());
+            BinaryPack.RegisterWithCollections<EntityGID, UnmanagedPackArrayStrategy<EntityGID>>(EntityGIDSerializer.WriteEntityGID, EntityGIDSerializer.ReadEntityGID);
 
-            if (!BinaryPack<GIDStoreSnapshot>.HasReader() || !BinaryPack<GIDStoreSnapshot>.HasWriter()) {
-                BinaryPack<GIDStoreSnapshot>.RegisterReader(GIDStoreSnapshot.Read);
-                BinaryPack<GIDStoreSnapshot>.RegisterWriter(GIDStoreSnapshot.Write);
+            if (!BinaryPack.IsRegistered<GIDStoreSnapshot>()) {
+                BinaryPack.Register(GIDStoreSnapshot.Write, GIDStoreSnapshot.Read);
             }
             
             ModuleStandardComponents.Value.RegisterComponentType(new EntityStatusConfig<WorldType>(), false);

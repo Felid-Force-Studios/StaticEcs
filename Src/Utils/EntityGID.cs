@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using FFS.Libraries.StaticPack;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
@@ -86,6 +87,23 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly override int GetHashCode() {
             return (int) id;
+        }
+    }
+    
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, false)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
+    public static class EntityGIDSerializer {
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteEntityGID(this ref BinaryPackWriter writer, in EntityGID value) {
+            writer.WriteUint(value.id);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static EntityGID ReadEntityGID(this ref BinaryPackReader reader) {
+            return new EntityGID(reader.ReadUint());
         }
     }
 }

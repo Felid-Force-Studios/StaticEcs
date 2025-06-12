@@ -49,8 +49,7 @@ namespace FFS.Libraries.StaticEcs {
                         if (guid != Guid.Empty) {
                             _readWriteArrayStrategy = config.ReadWriteStrategy();
                             _migrationReader = config.MigrationReader();
-                            BinaryPack.RegisterAllWriters(config.Writer(), _readWriteArrayStrategy);
-                            BinaryPack.RegisterAllReaders(config.Reader(), _readWriteArrayStrategy);
+                            BinaryPack.RegisterWithCollections(config.Writer(), config.Reader(), _readWriteArrayStrategy);
                         }
                     }
 
@@ -86,7 +85,7 @@ namespace FFS.Libraries.StaticEcs {
                         if (version == oldVersion) {
                             reader.SkipArrayHeaders();
                             for (var i = 0; i < dataCount; i++) {
-                                pool.Add(reader.Read<T>());
+                                pool.Add(reader.ReadDyn<T>());
                             }
                         } else {
                             reader.SkipArrayHeaders();

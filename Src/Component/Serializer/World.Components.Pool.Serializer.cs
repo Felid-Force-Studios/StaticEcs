@@ -45,8 +45,7 @@ namespace FFS.Libraries.StaticEcs {
                     if (guid != System.Guid.Empty) {
                         _readWriteArrayStrategy = config.ReadWriteStrategy();
                         _migrationReader = config.MigrationReader();
-                        BinaryPack.RegisterAllWriters(config.Writer(), _readWriteArrayStrategy);
-                        BinaryPack.RegisterAllReaders(config.Reader(), _readWriteArrayStrategy);
+                        BinaryPack.RegisterWithCollections(config.Writer(), config.Reader(), _readWriteArrayStrategy);
                     }
                 }
 
@@ -107,7 +106,7 @@ namespace FFS.Libraries.StaticEcs {
                     var offset = writer.MakePoint(sizeof(short));
                     writer.WriteByte(version);
                     var idx = pool._dataIdxByEntityId[entity._id];
-                    writer.Write(in pool._data[idx & Const.DisabledComponentMaskInv]);
+                    writer.WriteDyn(in pool._data[idx & Const.DisabledComponentMaskInv]);
                     var size = writer.Position - (offset + sizeof(short));
                     #if DEBUG || FFS_ECS_ENABLE_DEBUG
                     if (size > short.MaxValue) throw new StaticEcsException($"Size of component {typeof(T)} more than {short.MaxValue} bytes");
@@ -126,7 +125,7 @@ namespace FFS.Libraries.StaticEcs {
                     var oldVersion = reader.ReadByte();
 
                     pool.AddInternal(entity, version == oldVersion 
-                                         ? reader.Read<T>() 
+                                         ? reader.ReadDyn<T>() 
                                          : _migrationReader(ref reader, entity, oldVersion, disabled));
 
                     if (disabled) {
