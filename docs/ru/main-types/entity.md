@@ -84,7 +84,7 @@ clone.CopyTo(entity2);                   // Копировать все комп
 var entity3 = World.Entity.New<Name>();
 entity2.MoveTo(entity3);                 // Перенести все компоненты в указанную сущность и удалить текущую
 
-PackedEntity packed = entity3.Pack();    // Упаковать сущность с мета информацией о версии для передачи
+EntityGID gid = entity3.Gid();           // Получить глобальный идентификатор сущности
 
 var str = entity3.ToPrettyString;        // Получить строку со всей информацией о сущности
 ```

@@ -13,12 +13,12 @@ namespace FFS.Libraries.StaticEcs {
     public abstract partial class World<WorldType> {
 
         [MethodImpl(AggressiveInlining)]
-        public static void RegisterMultiComponentType<T, V>(ushort defaultComponentCapacity, IComponentConfig<T, WorldType> config, uint basePoolCapacity = 128)
+        public static void RegisterMultiComponentType<T, V>(ushort defaultComponentCapacity, IComponentConfig<T, WorldType> config = null, uint basePoolCapacity = 128)
             where T : struct, IMultiComponent<T, V> where V : struct {
             if (Status != WorldStatus.Created) {
                 throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: RegisterMultiComponentType<{typeof(T)}, {typeof(V)}>, World not created");
             }
-
+            config ??= DefaultComponentConfig<T, WorldType>.Default;
             ModuleComponents.Value.RegisterMultiComponentType<T, V>(defaultComponentCapacity, basePoolCapacity, config);
         }
         

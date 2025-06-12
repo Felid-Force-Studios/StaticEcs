@@ -52,16 +52,15 @@ public struct Item {
 }
 
 // Define the type of component
-public struct Inventory : IMultiComponent<Item> {
+public struct Inventory : IMultiComponent<Inventory, Item> {
     // Define the values of the multicomponent
     public Multi<Item> Items;
-    
+  
     // Add any custom data if needed, just like in a simple component
     public int SomeUserData;
-    
-    // Implement the IMultiComponent<Item> interface method, for access and automatic value management
-    // it is necessary to specify access to values via access.For(ref Values)
-    public void Access<A>(A access) where A : struct, AccessMulti<Item> => access.For(ref Items);
+  
+    // Implement the IMultiComponent<Inventory, Item> interface method, for access and automatic value management
+    public ref Multi<Item> RefValue(ref Inventory component) => ref component.Items;
 }
 
 World.Create(WorldConfig.Default());

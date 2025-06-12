@@ -85,7 +85,7 @@ clone.CopyTo(entity2);                   // Copy all components, tags, masks to 
 var entity3 = World.Entity.New<Name>();
 entity2.MoveTo(entity3);                 // Move all components to the specified entity and delete the current entity
 
-PackedEntity packed = entity3.Pack();  // Pack an entity with meta information about the version to be transmitted
+EntityGID gid = entity3.Gid();           // Get global entity identifier
 
 var str = entity3.ToPrettyString();      // Get a string with all information about the entity
 
