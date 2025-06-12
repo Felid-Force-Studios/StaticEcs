@@ -65,12 +65,12 @@ public struct SomeCreateEntityClientCommand {
     public EntityGID Id;
     public string prefab;
 }
-// Cервер
+// Server
 //.. 
 var serverEntityPlayer;
 client.SendMessage(new SomeCreateEntityClientCommand(serverEntityPlayer.Gid(), "player"))
 
-// Клиент:
+// Client:
 var someCreateEntityClientCommand = server.ReceiveMessage();
 var gidFromServer = someCreateEntityClientCommand.Id;
 var entity = ClientWorld.Entity.New(gidFromServer);

@@ -39,7 +39,7 @@ ___
   The library has a dependency on [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) for binary serialization, StaticPack must also be installed
 * ### As source code
   From the release page or as an archive from the branch. In the `master` branch there is a stable tested version
-* ### Установка для Unity
+* ### Installation for Unity
   - How to git module in Unity PackageManager     
     `https://github.com/Felid-Force-Studios/StaticEcs.git`  
     `https://github.com/Felid-Force-Studios/StaticPack.git`
