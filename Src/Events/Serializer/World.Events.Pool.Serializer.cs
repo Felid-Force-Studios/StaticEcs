@@ -85,7 +85,7 @@ namespace FFS.Libraries.StaticEcs {
                         if (version == oldVersion) {
                             reader.SkipArrayHeaders();
                             for (var i = 0; i < dataCount; i++) {
-                                pool.Add(reader.ReadDyn<T>());
+                                pool.Add(reader.Read<T>());
                             }
                         } else {
                             reader.SkipArrayHeaders();

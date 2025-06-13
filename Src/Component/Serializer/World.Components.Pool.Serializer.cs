@@ -106,7 +106,7 @@ namespace FFS.Libraries.StaticEcs {
                     var offset = writer.MakePoint(sizeof(short));
                     writer.WriteByte(version);
                     var idx = pool._dataIdxByEntityId[entity._id];
-                    writer.WriteDyn(in pool._data[idx & Const.DisabledComponentMaskInv]);
+                    writer.Write(in pool._data[idx & Const.DisabledComponentMaskInv]);
                     var size = writer.Position - (offset + sizeof(short));
                     #if DEBUG || FFS_ECS_ENABLE_DEBUG
                     if (size > short.MaxValue) throw new StaticEcsException($"Size of component {typeof(T)} more than {short.MaxValue} bytes");
@@ -125,7 +125,7 @@ namespace FFS.Libraries.StaticEcs {
                     var oldVersion = reader.ReadByte();
 
                     pool.AddInternal(entity, version == oldVersion 
-                                         ? reader.ReadDyn<T>() 
+                                         ? reader.Read<T>() 
                                          : _migrationReader(ref reader, entity, oldVersion, disabled));
 
                     if (disabled) {

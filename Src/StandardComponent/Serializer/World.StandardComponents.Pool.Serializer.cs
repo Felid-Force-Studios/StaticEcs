@@ -91,7 +91,7 @@ namespace FFS.Libraries.StaticEcs {
                 internal void Write(ref BinaryPackWriter writer, ref StandardComponents<T> pool, Entity entity) {
                     var offset = writer.MakePoint(sizeof(short));
                     writer.WriteByte(version);
-                    writer.WriteDyn(in pool._data[entity._id]);
+                    writer.Write(in pool._data[entity._id]);
                     var size = writer.Position - (offset + sizeof(short));
                     #if DEBUG || FFS_ECS_ENABLE_DEBUG
                     if (size > short.MaxValue) throw new StaticEcsException($"Size of component {typeof(T)} more than {short.MaxValue} bytes");
@@ -105,7 +105,7 @@ namespace FFS.Libraries.StaticEcs {
                     var oldVersion = reader.ReadByte();
 
                     pool._data[entity._id] = version == oldVersion
-                        ? reader.ReadDyn<T>()
+                        ? reader.Read<T>()
                         : _migrationReader(ref reader, entity, oldVersion);
                 }
             }

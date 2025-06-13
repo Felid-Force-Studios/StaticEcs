@@ -47,8 +47,8 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public static void RegisterOneToOneRelationType<L, R>(
-            BiDirectionalDeleteStrategy leftDeleteStrategy = BiDirectionalDeleteStrategy.Default,
-            BiDirectionalDeleteStrategy rightDeleteStrategy = BiDirectionalDeleteStrategy.Default,
+            BiDirectionalDeleteStrategy leftDeleteStrategy = BiDirectionalDeleteStrategy.DeleteAnotherLink,
+            BiDirectionalDeleteStrategy rightDeleteStrategy = BiDirectionalDeleteStrategy.DeleteAnotherLink,
             CopyStrategy leftCopyStrategy = CopyStrategy.Default,
             CopyStrategy rightCopyStrategy = CopyStrategy.Default,
             IComponentConfig<L, WorldType> leftConfig = null,
@@ -70,8 +70,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static void RegisterOneToManyRelationType<O, M>(
             ushort defaultComponentCapacity,
-            BiDirectionalDeleteStrategy leftDeleteStrategy = BiDirectionalDeleteStrategy.Default,
-            BiDirectionalDeleteStrategy rightDeleteStrategy = BiDirectionalDeleteStrategy.Default,
+            BiDirectionalDeleteStrategy leftDeleteStrategy = BiDirectionalDeleteStrategy.DeleteAnotherLink,
+            BiDirectionalDeleteStrategy rightDeleteStrategy = BiDirectionalDeleteStrategy.DeleteAnotherLink,
             CopyStrategy leftCopyStrategy = CopyStrategy.Default,
             CopyStrategy rightCopyStrategy = CopyStrategy.Default,
             IComponentConfig<O, WorldType> leftConfig = null,
@@ -94,8 +94,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static void RegisterManyToManyRelationType<L, R>(
             ushort defaultComponentCapacity,
-            BiDirectionalDeleteStrategy leftDeleteStrategy = BiDirectionalDeleteStrategy.Default,
-            BiDirectionalDeleteStrategy rightDeleteStrategy = BiDirectionalDeleteStrategy.Default,
+            BiDirectionalDeleteStrategy leftDeleteStrategy = BiDirectionalDeleteStrategy.DeleteAnotherLink,
+            BiDirectionalDeleteStrategy rightDeleteStrategy = BiDirectionalDeleteStrategy.DeleteAnotherLink,
             CopyStrategy leftCopyStrategy = CopyStrategy.Default,
             CopyStrategy rightCopyStrategy = CopyStrategy.Default,
             IComponentConfig<L, WorldType> leftConfig = null,
