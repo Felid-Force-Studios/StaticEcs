@@ -11,7 +11,7 @@ nav_order: 4
 
 ### Виды связей:
 
-- #### Однонаправленная связь к одному (To-One)
+#### Однонаправленная связь к одному (To-One)
 
 #### Пример:
 ```csharp
@@ -29,7 +29,7 @@ W.RegisterToOneRelationType<Passenger>();
 ___
 
 
-- #### Однонаправленная связь ко многим (To-Many)
+#### Однонаправленная связь ко многим (To-Many)
 
 #### Пример:
 ```csharp
@@ -52,7 +52,7 @@ W.RegisterToManyRelationType<Passengers>();
 ___
 
 
-- #### Двунаправленная связь один к одному (One-To-One)
+#### Двунаправленная связь один к одному (One-To-One)
 
 #### Пример:
 ```csharp
@@ -76,7 +76,7 @@ W.RegisterOneToOneRelationType<Parent, Child>();
 ___
 
 
-- #### Двунаправленная связь один к одному (замкнутая пара) (One-To-One)
+#### Двунаправленная связь один к одному (замкнутая пара) (One-To-One)
 
 #### Пример:
 ```csharp
@@ -97,7 +97,7 @@ W.RegisterOneToOneRelationType<MarriedTo, MarriedTo>()
 ___
 
 
-- #### Двунаправленная связь один ко многим (One-To-Many)
+#### Двунаправленная связь один ко многим (One-To-Many)
 
 #### Пример:
 ```csharp
@@ -126,7 +126,7 @@ W.RegisterOneToManyRelationType<Parent, Childs>(defaultComponentCapacity: 4);
 ___
 
 
-- #### Двунаправленная связь многие ко многим (Many-To-Many)
+#### Двунаправленная связь многие ко многим (Many-To-Many)
 
 #### Пример:
 ```csharp
