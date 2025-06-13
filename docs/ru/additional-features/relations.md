@@ -15,7 +15,7 @@ nav_order: 4
 
 #### Пример:
 ```csharp
-// A Passenger -> B
+//  A Passenger -> B
     
 public struct Passenger : IEntityLinkComponent<Passenger> {
     public EntityGID Link;
@@ -33,12 +33,11 @@ ___
 
 #### Пример:
 ```csharp
-                       
-    Passenger -> B
- /
-A-- Passenger -> C
- \
-    Passenger -> D
+//      Passenger -> B
+//   /
+//  A-- Passenger -> C
+//   \
+//      Passenger -> D
         
 public struct Passengers : IEntityLinksComponent<Passengers> {
     public ROMulti<EntityGID> Links;
@@ -56,7 +55,7 @@ ___
 
 #### Пример:
 ```csharp
-A <- Parent Child -> B <- Parent Child -> C
+//  A <- Parent Child -> B <- Parent Child -> C
     
 public struct Parent : IEntityLinkComponent<Parent> {
     public EntityGID Link;
@@ -80,10 +79,10 @@ ___
 
 #### Пример:
 ```csharp
-  Married   
-A -------> B
-  Married   
-A <------- B
+//    Married   
+//  A -------> B
+//    Married   
+//  A <------- B
     
 public struct MarriedTo : IEntityLinkComponent<MarriedTo> {
     public EntityGID Link;
@@ -102,11 +101,11 @@ ___
 #### Пример:
 ```csharp
                        
-   <- Parent Child -> B 
- /                     
-A- <- Parent Child -> С 
- \
-   <- Parent Child -> D
+//     <- Parent Child -> B 
+//   /                     
+//  A- <- Parent Child -> С 
+//   \
+//     <- Parent Child -> D
        
 public struct Parent : IEntityLinkComponent<Parent> {
     public EntityGID Link;
@@ -131,11 +130,11 @@ ___
 #### Пример:
 ```csharp
                        
-   <- Owners Ownerships -> B 
- /            
-A- <- Owners Ownerships -> С 
- /            
-D- <- Owners Ownerships -> E 
+//     <- Owners Ownerships -> B 
+//   /            
+//  A- <- Owners Ownerships -> С 
+//   /            
+//  D- <- Owners Ownerships -> E 
 
 public struct Ownerships : IEntityLinksComponent<Ownerships> {
     public ROMulti<EntityGID> Links;
@@ -207,8 +206,7 @@ var sonKevin = W.Entity.New(new Name("Son Kevin"));
 ___
 
 
-- Регистрация связи  
-> Вариант 1 со стороны родителя  
+- Регистрация связи (Вариант 1 со стороны родителя)
 > Устанавливаем связь где father ссылается на детей {`sonAlex`, `sonJack`, `sonKevin`}  
 > При установке компонента дети автоматически получат обратный компонент `Parent` с ссылкой на father  
 > Метод `SetLinks` создает или использует существующий компонент (используется для типа `IEntityLinksComponent`)  
@@ -220,11 +218,10 @@ ref Childs childs = ref father.SetLinks<Childs>(sonAlex, sonJack, sonKevin);
 
 ___
 
-
-> Вариант 2 со стороны детей
-> Мы могли бы установить связь со стороны детей
-> При установке компонента родитель автоматически получит обратный компонент Childs с ссылкой на ребенка
-> Метод `SetLink` добавляет компонент и устанавливает значение (используется для типа `IEntityLinkComponent`)  
+- Регистрация связи (Вариант 2 со стороны детей)
+> Мы могли бы установить связь со стороны детей  
+> При установке компонента родитель автоматически получит обратный компонент Childs с ссылкой на ребенка  
+> Метод `SetLink` добавляет компонент и устанавливает значение (используется для типа `IEntityLinkComponent`)   
 > в случае если компонент уже присутствует то компонент удаляется и добавляется новый  
 > это необходимо для автоматического менеджмента связей
 
