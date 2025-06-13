@@ -12,7 +12,8 @@ nav_order: 4
 ### Виды связей:
 
 - #### Однонаправленная связь к одному (To-One)
-Пример:
+
+#### Пример:
 ```csharp
 // A Passenger -> B
     
@@ -25,8 +26,12 @@ public struct Passenger : IEntityLinkComponent<Passenger> {
 W.RegisterToOneRelationType<Passenger>();
 ```
 
+___
+
+
 - #### Однонаправленная связь ко многим (To-Many)
-Пример:
+
+#### Пример:
 ```csharp
                        
     Passenger -> B
@@ -44,8 +49,12 @@ public struct Passengers : IEntityLinksComponent<Passengers> {
 W.RegisterToManyRelationType<Passengers>();
 ```
 
+___
+
+
 - #### Двунаправленная связь один к одному (One-To-One)
-Пример:
+
+#### Пример:
 ```csharp
 A <- Parent Child -> B <- Parent Child -> C
     
@@ -64,8 +73,12 @@ public struct Child : IEntityLinkComponent<Child> {
 W.RegisterOneToOneRelationType<Parent, Child>();
 ```
 
+___
+
+
 - #### Двунаправленная связь один к одному (замкнутая пара) (One-To-One)
-Пример:
+
+#### Пример:
 ```csharp
   Married   
 A -------> B
@@ -81,8 +94,12 @@ public struct MarriedTo : IEntityLinkComponent<MarriedTo> {
 W.RegisterOneToOneRelationType<MarriedTo, MarriedTo>()
 ```
 
+___
+
+
 - #### Двунаправленная связь один ко многим (One-To-Many)
-Пример:
+
+#### Пример:
 ```csharp
                        
    <- Parent Child -> B 
@@ -106,8 +123,12 @@ public struct Childs: IEntityLinksComponent<Childs> {
 W.RegisterOneToManyRelationType<Parent, Childs>(defaultComponentCapacity: 4);
 ```
 
+___
+
+
 - #### Двунаправленная связь многие ко многим (Many-To-Many)
-Пример:
+
+#### Пример:
 ```csharp
                        
    <- Owners Ownerships -> B 
@@ -131,6 +152,7 @@ public struct Owners : IEntityLinksComponent<Owners> {
 W.RegisterManyToManyRelationType<Ownerships, Owners>(16)
 ```
 
+___
 
 
 ### Рассмотрим конфигурацию и пример шаг за шагом на примере связи `Один ко многим`
@@ -138,6 +160,7 @@ W.RegisterManyToManyRelationType<Ownerships, Owners>(16)
 > Компоненты могут быть двух видов:  
 > `IEntityLinkComponent` - интерфейс компонента для хранения ссылки на одну сущность  
 > `IEntityLinksComponent` - интерфейс компонента для хранения ссылок на несколько сущностей  
+
 ```csharp
 // Определим компонент связи Родителя - `One` типа IEntityLinkComponent
 public struct Parent : IEntityLinkComponent<Parent> {
@@ -161,7 +184,11 @@ public struct Childs: IEntityLinksComponent<Childs> {
 }
 ```
 
+___
+
+
 - Создание мира и сущностей
+
 ```csharp
 
 W.Create(WorldConfig.Default());
@@ -177,15 +204,22 @@ var sonJack = W.Entity.New(new Name("Son Jack"));
 var sonKevin = W.Entity.New(new Name("Son Kevin"));
 ```
 
+___
+
+
 - Регистрация связи  
 > Вариант 1 со стороны родителя  
 > Устанавливаем связь где father ссылается на детей {`sonAlex`, `sonJack`, `sonKevin`}  
 > При установке компонента дети автоматически получат обратный компонент `Parent` с ссылкой на father  
 > Метод `SetLinks` создает или использует существующий компонент (используется для типа `IEntityLinksComponent`)  
 > принимает от 1-5 `EntityGID` значений и возвращает ссылку на компонент, в случае если значение уже установлена в `DEBUG` будет ошибка  
+
 ```csharp
 ref Childs childs = ref father.SetLinks<Childs>(sonAlex, sonJack, sonKevin);
 ```
+
+___
+
 
 > Вариант 2 со стороны детей
 > Мы могли бы установить связь со стороны детей
@@ -193,13 +227,16 @@ ref Childs childs = ref father.SetLinks<Childs>(sonAlex, sonJack, sonKevin);
 > Метод `SetLink` добавляет компонент и устанавливает значение (используется для типа `IEntityLinkComponent`)  
 > в случае если компонент уже присутствует то компонент удаляется и добавляется новый  
 > это необходимо для автоматического менеджмента связей
+
 ```csharp
  ref Parent sonAlexParent = ref sonAlex.SetLink<Parent>(father);
  ref Parent sonJackParent = ref sonJack.SetLink<Parent>(father);
  ref Parent sonKevinParent = ref sonKevin.SetLink<Parent>(father);
 ```
+
 Таким образом не имеет значения с какой стороны установлена связь, обратная ссылка будет установлена в любом случае  
 Просмотрев все сущности мы можем убедиться в этом
+
 ```csharp
 foreach (var entity in W.AllEntities()) {
     Console.WriteLine(entity.PrettyString);
@@ -224,21 +261,29 @@ foreach (var entity in W.AllEntities()) {
 //   - [0] Name ( Father )
 //   - [2] Childs ( Son Alex, Son Jack, Son Kevin )
 ```
+
+___
+
+
 - Удаление связи
 > Вариант 1 со стороны детей  
 > Метод `TryDeleteLink` удаляет связь (и компонент) если она есть (используется для типа `IEntityLinkComponent`)
+
 ```csharp
 sonAlex.TryDeleteLink<Parent>();
 sonJack.TryDeleteLink<Parent>();
 sonKevin.TryDeleteLink<Parent>();
 ```
+
 > По умолчанию при удалении связи будет удалена обратная ссылка  
 > Это значит что у `father` будет удалена ссылка на всех детей  
 > Чтобы переопределить это поведение необходимо указать стратегию удаления при регистрации компонентов  
 > `leftDeleteStrategy` - стратегия удаления для компонента `Parent`
+
 ```csharp
 W.RegisterOneToManyRelationType<Parent, Childs>(defaultComponentCapacity: 4, leftDeleteStrategy: Default);
 ```
+
 Доступны следующие виды стратегий:  
     - `Default`               : Ничего не делает при удалении  
     - `DestroyLinkedEntity`   : Уничтожает прилинкованную сущность  
@@ -249,9 +294,11 @@ W.RegisterOneToManyRelationType<Parent, Childs>(defaultComponentCapacity: 4, lef
 > Метод `TryDeleteLinks` удаляет связь если она есть (используется для типа `IEntityLinksComponent`)  
 > принимает от 0-5 `EntityGID` значение, если значение не передано удаляет все связи  
 > если связей не осталось то компонент тоже будет удален
+
 ```csharp
 father.TryDeleteLinks<Childs>();
 ```
+
 > По умолчанию при удалении связи будет удалена обратная ссылка
 > Это значит что у всех детей будет удалена ссылка на родитея
 > Чтобы переопределить это поведение необходимо указать стратегию удаления при регистрации компонентов
@@ -265,6 +312,9 @@ W.RegisterOneToManyRelationType<Parent, Childs>(defaultComponentCapacity: 4, rig
     - `DestroyLinkedEntity`   : Уничтожает прилинкованную сущность  
     - `DeleteAnotherLink`     : Удаляет связь у прилинкованной сущности (поведение по умолчанию)
 
+___
+
+
 - Дополнительно
 > При регистрации можно переопределить DEBUG валидацию циклических связей, по умолчанию она включена  
 > Для этого необходимо указать `disableRelationsCheckDebug` = `true` в методе регистрации компонентов  
@@ -272,23 +322,30 @@ W.RegisterOneToManyRelationType<Parent, Childs>(defaultComponentCapacity: 4, rig
 > При регистрации можно переопределить поведение при копировании указав CopyStrategy `FFS.Libraries.StaticEcs.CopyStrategy`
 
 > Компоненты отношений являются обычными компонентами и доступны все стандартные методы работы с некоторыми особенностями
+
 ```csharp
 entity.Ref<Parent>();
 entity.HasAllOf<Parent>();
 //..
 ```
-{: .importantru }  
+
+{: .importantru }
 Однако стоит предостеречь изменения значений связей вручную (не через специальные методы такие как `SetLink`, `SetLinks`, `TryDeleteLink`, `TryDeleteLinks`)  
 например не стоит делать так: `entity.Ref<Parent>().Link = someGid;`  
 потому что это не позволяет автоматически управлять обратными ссылками и другими действиями и может привести к сломаной игровой логике  
 при этом ничего не мешает хранить дополнительные данные в компонентах помимо самой связи
 
+___
+
+
 - Методы фильтрации
 > Компоненты отношений можно использовать в запросах как и любые другие компоненты
+
 ```csharp
 W.QueryEntities.For<All<Parent, Childs>>()
 // ..
 ```
+
 Существуют специальные методы запросов:
 
 - `WithLink<P, WT, QM>`  
@@ -297,6 +354,7 @@ W.QueryEntities.For<All<Parent, Childs>>()
 > Стандартный фильтр запроса такой как All Any и тд  
 > Данный запрос найдет всех сущностей у которых есть активная связь с P, и у сущности связи фильтр совдает с указаным   
 > В примере ниже будут найдены все сущности у которых есть связь типа `Parent`, и у родителя есть компоненты Name и Position
+
 ```csharp
 foreach (var entity in W.QueryEntities.For<WithLink<Parent, WT, All<Name, Position>>>()) {
     //..
@@ -309,6 +367,7 @@ foreach (var entity in W.QueryEntities.For<WithLink<Parent, WT, All<Name, Positi
 > Стандартный фильтр запроса такой как All Any и тд  
 > Данный запрос найдет всех сущностей у которых есть активная связь с P, и ХОТЯ БЫ У ОДНОЙ сущности связи фильтр совдает с указаным   
 > В примере ниже будут найдены все сущности у которых есть связь типа `Childs`, и у хотя бы одного ребенка есть компоненты Name и Position
+
 ```csharp
 foreach (var entity in W.QueryEntities.For<WithLinksAny<Childs, WT, All<Name, Position>>>()) {
     //..
@@ -321,6 +380,7 @@ foreach (var entity in W.QueryEntities.For<WithLinksAny<Childs, WT, All<Name, Po
 > Стандартный фильтр запроса такой как All Any и тд  
 > Данный запрос найдет всех сущностей у которых есть активная связь с P, и у ВСЕХ сущностей связи фильтр совдает с указаным   
 > В примере ниже будут найдены все сущности у которых есть связь типа `Childs`, и у всех детей есть компоненты Name и Position
+
 ```csharp
 foreach (var entity in W.QueryEntities.For<WithLinksAll<Childs, WT, All<Name, Position>>>()) {
     //..
