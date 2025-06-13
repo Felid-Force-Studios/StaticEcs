@@ -15,10 +15,16 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
     public abstract partial class World<WorldType> {
-
-        [MethodImpl(AggressiveInlining)]
-        public void SetEventDeleteMigrator(Guid id, EcsEventDeleteMigrationReader<WorldType> migrator) {
-            Events.Serializer.Value.SetDeleteMigrator(id, migrator);
+        
+        #if ENABLE_IL2CPP
+        [Il2CppSetOption(Option.NullChecks, false)]
+        [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+        #endif
+        public static partial class Serializer {
+            [MethodImpl(AggressiveInlining)]
+            public static void SetEventDeleteMigrator(Guid id, EcsEventDeleteMigrationReader<WorldType> migrator) {
+                Events.Serializer.Value.SetDeleteMigrator(id, migrator);
+            }
         }
         
         #if ENABLE_IL2CPP
@@ -82,17 +88,16 @@ namespace FFS.Libraries.StaticEcs {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Event, Method: LoadSnapshot, World not initialized");
                 #endif
-                BinaryPackWriter writer;
                 if (gzip) {
-                    writer = BinaryPackWriter.CreateFromPool((uint) (snapshot.Length * 2));
+                    var writer = BinaryPackWriter.CreateFromPool((uint) (snapshot.Length * 2));
                     writer.WriteGzipData(snapshot);
+                    var reader = writer.AsReader();
+                    Serializer.Value.Read(ref reader);
+                    writer.Dispose();
                 } else {
-                    writer = BinaryPackWriter.Create(snapshot);
+                    var reader = new BinaryPackReader(snapshot, (uint) snapshot.Length, 0);
+                    Serializer.Value.Read(ref reader);
                 }
-
-                var reader = writer.AsReader();
-                Serializer.Value.Read(ref reader);
-                writer.Dispose();
             }
 
             [MethodImpl(AggressiveInlining)]

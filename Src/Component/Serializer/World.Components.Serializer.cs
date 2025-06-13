@@ -14,10 +14,16 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
     public abstract partial class World<WorldType> {
-
-        [MethodImpl(AggressiveInlining)]
-        public void SetComponentDeleteMigrator(Guid id, EcsComponentDeleteMigrationReader<WorldType> migrator) {
-            ModuleComponents.Serializer.Value.SetDeleteMigrator(id, migrator);
+        
+        #if ENABLE_IL2CPP
+        [Il2CppSetOption(Option.NullChecks, false)]
+        [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+        #endif
+        public static partial class Serializer {
+            [MethodImpl(AggressiveInlining)]
+            public static void SetComponentDeleteMigrator(Guid id, EcsComponentDeleteMigrationReader<WorldType> migrator) {
+                ModuleComponents.Serializer.Value.SetDeleteMigrator(id, migrator);
+            }
         }
         
         #if ENABLE_IL2CPP

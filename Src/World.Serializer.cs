@@ -265,17 +265,16 @@ namespace FFS.Libraries.StaticEcs {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: ReadFromBytes, World not initialized");
                 #endif
-                BinaryPackWriter writer;
                 if (gzip) {
-                    writer = BinaryPackWriter.CreateFromPool((uint) (snapshot.Length * 2));
+                    var writer = BinaryPackWriter.CreateFromPool((uint) (snapshot.Length * 2));
                     writer.WriteGzipData(snapshot);
+                    var reader = writer.AsReader();
+                    Read(ref reader);
+                    writer.Dispose();
                 } else {
-                    writer = BinaryPackWriter.Create(snapshot);
+                    var reader = new BinaryPackReader(snapshot, (uint) snapshot.Length, 0);
+                    Read(ref reader);
                 }
-
-                var reader = writer.AsReader();
-                Read(ref reader);
-                writer.Dispose();
             }
 
             [MethodImpl(AggressiveInlining)]
