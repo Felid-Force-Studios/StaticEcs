@@ -233,7 +233,7 @@ CreateEntities();
 Console.WriteLine("Created entities:");
 // Creating an entity writer
 // It writes down the necessary information for entity recovery
-var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
+using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
 foreach (var entity in W.AllEntities()) {
     // Write the entity
     entitiesWriter.Write(entity);
@@ -346,7 +346,7 @@ Example with saving and loading entities (with global identifiers preserved)
 InitWorld();
 CreateEntities();
 Console.WriteLine("Created entities:");
-var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
+using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
 foreach (var entity in W.AllEntities()) {
     entitiesWriter.Write(entity);
     Console.WriteLine(entity.PrettyString);

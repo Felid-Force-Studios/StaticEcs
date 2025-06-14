@@ -233,7 +233,7 @@ CreateEntities();
 Console.WriteLine("Созданные сущности:");
 // Создаем писателя сущностей
 // Он записывает необходимую информацию для восстановления сущностей
-var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
+using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
 foreach (var entity in W.AllEntities()) {
     // Записываем сущность
     entitiesWriter.Write(entity);
@@ -346,7 +346,7 @@ W.Destroy();
 InitWorld();
 CreateEntities();
 Console.WriteLine("Созданные сущности:");
-var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
+using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
 foreach (var entity in W.AllEntities()) {
     entitiesWriter.Write(entity);
     Console.WriteLine(entity.PrettyString);
