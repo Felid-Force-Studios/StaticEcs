@@ -1,6 +1,6 @@
 ---
 title: Сериализация
-parent: Дополнительны возможности
+parent: Дополнительныe возможности
 nav_order: 5
 ---
 
@@ -404,7 +404,7 @@ W.Destroy();
 
 // Теперь мы можем увидеть что все связи между сущностями корректны
 // Так как при создании someEntity1 и someEntity2 не были использованы идентификаторы загружаемых сущностей
-// Такой подход позволяет, загружать и сохранять разные пачки сущностей, например при стриминги мира, или загрузке разных локаций
+// Такой подход позволяет, загружать и сохранять разные пачки сущностей, например при стриминге мира, или загрузке разных локаций
 // и гарантировать что сохраненные идентификаторы в компонентах и событиях не будут перепутаны
 
 //  Загруженые сущности:
@@ -513,13 +513,13 @@ public struct Position : IComponent {
 }
 ```
 
-- У меня удалился\добавлся компонент, могу ли я загрузить снимок мира\сущностей версии созданный до изменений?
+- У меня удалился\добавился компонент, могу ли я загрузить снимок мира\сущностей версии созданный до изменений?
 
 ```csharp
 // В случае добавления новых компонентов, старый снимок должен корректно загрузиться, восстановление произойдет автоматически
 // По умолчанию если компонент был удален то при загрузке он будет пропущен автоматически, ничего дополнительно не требуется
 
-// Если требуется обработать удаление особым образом то требуется зарегестрировать функцию с GUID старого компонента
+// Если требуется обработать удаление особым образом то требуется зарегистрировать функцию с GUID старого компонента
 
 // Пример для компонентов
 W.Serializer.SetComponentDeleteMigrator(
@@ -573,26 +573,97 @@ W.Serializer.LoadWorldSnapshot(snapshot, gzip: true);
 W.Serializer.LoadWorldSnapshot("Path/to/save/data/world.bin", gzip: true);
 ```
 
-- Как автоматизировать кастомную логику при сохранении\загрузке мира\сущностей?
+- Как автоматизировать реагирование на сохранение\загрузку мира\сущностей?
 
 ```csharp
+// Можно зарегистрировать любое количество колбеков
 
+// Перед созданием снимка
+W.Serializer.RegisterPreCreateSnapshotCallback(() => Console.WriteLine("Entities or world `CreateSnapshot` start"));
+// После созданием снимка
+W.Serializer.RegisterPostCreateSnapshotCallback(() => Console.WriteLine("Entities or world `CreateSnapshot` finish"));
+
+// Перед загрузкой снимка
+W.Serializer.RegisterPreLoadSnapshotCallback(() => Console.WriteLine("Entities or world `LoadSnapshot` start"));
+// После загрузки снимка
+W.Serializer.RegisterPostLoadSnapshotCallback(() => Console.WriteLine("Entities or world `LoadSnapshot` finish"));
+
+// Данные функции будут вызвына при вызове
+// W.Serializer.CreateWorldSnapshot(), W.Serializer.LoadWorldSnapshot(snapshot) или entitiesWriter.CreateSnapshot(), W.Serializer.LoadEntitiesSnapshot()
+
+// Как сделать так чтобы функции вызывались при сохранении\загрузке только мира или только сущностей?
+// При регистрации колбека вторым параметром можно передать SnapshotActionType, например
+W.Serializer.RegisterPreCreateSnapshotCallback(() => Console.WriteLine("Entities `CreateSnapshot` start"), SnapshotActionType.Entities);
+W.Serializer.RegisterPostCreateSnapshotCallback(() => Console.WriteLine("World `CreateSnapshot` finish"), SnapshotActionType.World);
 ```
 
-- Как выполнить pre\post обработку сохраняемых\загружаемых сущностей?
+- Как выполнить post обработку сохраняемых\загружаемых сущностей?
 
 ```csharp
+// Можно зарегистрировать любое количество колбеков для сущностей
 
+// После созданием снимка
+W.Serializer.RegisterPostCreateSnapshotEachEntityCallback(entity => Console.WriteLine($"Saved {entity.PrettyString}"));
+// После загрузки снимка
+W.Serializer.RegisterPostLoadSnapshotEachEntityCallback(entity => Console.WriteLine($"Loaded {entity.PrettyString}"));
+
+// Данные функции будут вызвына при вызове
+// W.Serializer.CreateWorldSnapshot(), W.Serializer.LoadWorldSnapshot(snapshot) или entitiesWriter.CreateSnapshot(), W.Serializer.LoadEntitiesSnapshot()
+
+// Как сделать так чтобы функции вызывались при сохранении\загрузке только мира или только сущностей?
+// При регистрации колбека вторым параметром можно передать SnapshotActionType, например
+W.Serializer.RegisterPostCreateSnapshotEachEntityCallback(entity => Console.WriteLine($"Saved {entity.PrettyString}"), SnapshotActionType.Entities);
+W.Serializer.RegisterPostLoadSnapshotEachEntityCallback(entity => Console.WriteLine($"Loaded {entity.PrettyString}"), SnapshotActionType.World);
+
+
+// Также при загрузке снимка сущностей можно передать функцию постобработки сущностей в метод
+W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: true, onLoad: entity => {
+    Console.WriteLine($"Loaded {entity.PrettyString}");
+});
 ```
 
-- Как добавить свои общие данные в снимок мира\сущностей (например данные из систем или сервисов)?
+- Как добавить специальные данные в снимок мира\сущностей (например данные из систем или сервисов)?
 
 ```csharp
-
+// Можно зарегистрировать любое количество кастомных обработчиков
+// Например:
+W.Serializer.SetSnapshotHandler(
+    new ("57c15483-988a-47e7-919c-51b9a7b957b5"),      // Уникальный гуид типа данных
+    version: 0,                                        // Версия
+    (ref BinaryPackWriter writer) => {                 // Писатель кастомных данных
+        writer.WriteDateTime(DateTime.Now);
+        Console.WriteLine("Saved current time");
+    },
+    (ref BinaryPackReader reader, ushort version) => { // Читатель кастомных данных
+        var time = reader.ReadDateTime();
+        Console.WriteLine($"Save dateTime is {time}");
+    },
+    SnapshotActionType.All                            // Тип снимка для которого будет использован данный обработчик
+);
 ```
 
 - Как добавить специальные данные для каждой сущности в снимок мира\сущностей?
 
 ```csharp
+// Можно зарегистрировать любое количество кастомных обработчиков для сущнсотей
+// Например:
+W.Serializer.SetSnapshotHandlerEachEntity(
+    new ("57c15483-988a-47e7-919c-51b9a7b957b5"),       // Уникальный гуид типа данных
+    version: 0,                                         // Версия
+    (ref BinaryPackWriter writer, W.Entity entity) => {
+        // Write custom entity data
+    },
+    (ref BinaryPackReader reader, W.Entity entity, ushort version) => {
+        // Read custom entity data
+    },
+    SnapshotActionType.All                             // Тип снимка для которого будет использован данный обработчик
+);
+```
 
+- Могу ли я сохранить и загрузить данные событий?
+
+```csharp
+// Загрзука и сохранение событий выполняется через методы
+ W.Events.CreateSnapshot();
+ W.Events.LoadSnapshot();
 ```

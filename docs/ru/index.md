@@ -44,7 +44,7 @@ ___
   * [Системы](main-types/systems.md)
   * [Контекст](main-types/context.md)
   * [Запросы](main-types/query.md)
-* [Дополнительны возможности](additionalfeatures.md)
+  * [Дополнительныe возможности](additionalfeatures.md)
   * [Конфигураторы компонентов](additional-features/configs.md)
   * [События](additional-features/events.md)
   * [Отношения](additional-features/relations.md)
