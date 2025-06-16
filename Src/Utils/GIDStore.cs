@@ -190,6 +190,20 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
+            internal bool TryGetEntity(uint gidId, out Entity entity) {
+                if (_entityByGlobalId.Length > gidId) {
+                    var val = _entityByGlobalId[gidId];
+                    if (val > 0) {
+                        entity = new Entity(val - 1);
+                        return true;
+                    }
+                }
+
+                entity = default;
+                return false;
+            }
+
+            [MethodImpl(AggressiveInlining)]
             public bool IsRegistered(EntityGID gid) {
                 return _versions[gid.Id()] == gid.Version();
             }
