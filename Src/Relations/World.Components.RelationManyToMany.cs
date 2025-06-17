@@ -39,7 +39,7 @@ namespace FFS.Libraries.StaticEcs {
                 AddItemsHandlers<L, R>(leftDeleteStrategy);
                 
                 var actualConfigLeft = new ValueComponentConfig<L, WorldType>(leftConfig) {
-                    OnAddWithValueHandler = OnAddHandler(leftConfig.OnAdd()),
+                    OnPutHandler = OnAddHandler(leftConfig.OnPut()),
                     OnDeleteHandler = OnDeleteHandlerManyToMany<L, R>(leftDeleteStrategy, leftConfig.OnDelete()),
                     OnCopyHandler = OnCopyManyHandler(leftCopyStrategy, leftConfig.OnCopy()),
                     OnAddHandler = OnAddHandler(leftConfig.OnAdd()),
@@ -48,8 +48,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 RegisterComponentType(
                     capacity: capacity,
-                    actualConfigLeft,
-                    putNotAllowed: true
+                    actualConfigLeft
                 );
 
                 ValidateComponentRegistration<R>();
@@ -61,7 +60,7 @@ namespace FFS.Libraries.StaticEcs {
                 AddItemsHandlers<R, L>(rightDeleteStrategy);
                 
                 var actualConfigRight = new ValueComponentConfig<R, WorldType>(rightConfig) {
-                    OnAddWithValueHandler = OnAddHandler(rightConfig.OnAdd()),
+                    OnPutHandler = OnAddHandler(rightConfig.OnPut()),
                     OnDeleteHandler = OnDeleteHandlerManyToMany<R, L>(rightDeleteStrategy, rightConfig.OnDelete()),
                     OnCopyHandler = OnCopyManyHandler(rightCopyStrategy, rightConfig.OnCopy()),
                     OnAddHandler = OnAddHandler(rightConfig.OnAdd()),
@@ -70,8 +69,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 RegisterComponentType(
                     capacity: capacity,
-                    actualConfigRight,
-                    putNotAllowed: true
+                    actualConfigRight
                 );
 
                 return;

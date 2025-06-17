@@ -353,6 +353,51 @@ namespace FFS.Libraries.StaticEcs {
                 entity.Put(comp1, comp2, comp3, comp4, comp5);
                 return entity;
             }
+            
+            [MethodImpl(AggressiveInlining)]
+            public static Entity New<C1, C2, C3, C4, C5, C6>(C1 comp1, C2 comp2, C3 comp3, C4 comp4, C5 comp5, C6 comp6)
+                where C1 : struct, IComponent
+                where C2 : struct, IComponent
+                where C3 : struct, IComponent
+                where C4 : struct, IComponent
+                where C5 : struct, IComponent
+                where C6 : struct, IComponent {
+                var entity = New();
+                entity.Put(comp1, comp2, comp3, comp4, comp5);
+                entity.Put(comp6);
+                return entity;
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public static Entity New<C1, C2, C3, C4, C5, C6, C7>(C1 comp1, C2 comp2, C3 comp3, C4 comp4, C5 comp5, C6 comp6, C7 comp7)
+                where C1 : struct, IComponent
+                where C2 : struct, IComponent
+                where C3 : struct, IComponent
+                where C4 : struct, IComponent
+                where C5 : struct, IComponent
+                where C6 : struct, IComponent
+                where C7 : struct, IComponent {
+                var entity = New();
+                entity.Put(comp1, comp2, comp3, comp4, comp5);
+                entity.Put(comp6, comp7);
+                return entity;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public static Entity New<C1, C2, C3, C4, C5, C6, C7, C8>(C1 comp1, C2 comp2, C3 comp3, C4 comp4, C5 comp5, C6 comp6, C7 comp7, C8 comp8)
+                where C1 : struct, IComponent
+                where C2 : struct, IComponent
+                where C3 : struct, IComponent
+                where C4 : struct, IComponent
+                where C5 : struct, IComponent
+                where C6 : struct, IComponent
+                where C7 : struct, IComponent
+                where C8 : struct, IComponent {
+                var entity = New();
+                entity.Put(comp1, comp2, comp3, comp4, comp5);
+                entity.Put(comp6, comp7, comp8);
+                return entity;
+            }
             #endregion
 
             #region NEW_BY_RAW_TYPE
@@ -386,7 +431,7 @@ namespace FFS.Libraries.StaticEcs {
                 ref var components1 = ref Components<C1>.Value;
                 components1.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Add(entity, default);
+                    components1.Add(entity);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -400,8 +445,8 @@ namespace FFS.Libraries.StaticEcs {
                 components1.EnsureSize(count);
                 components2.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Add(entity, default);
-                    components2.Add(entity, default);
+                    components1.Add(entity);
+                    components2.Add(entity);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -418,9 +463,9 @@ namespace FFS.Libraries.StaticEcs {
                 components2.EnsureSize(count);
                 components3.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Add(entity, default);
-                    components2.Add(entity, default);
-                    components3.Add(entity, default);
+                    components1.Add(entity);
+                    components2.Add(entity);
+                    components3.Add(entity);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -440,10 +485,10 @@ namespace FFS.Libraries.StaticEcs {
                 components3.EnsureSize(count);
                 components4.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Add(entity, default);
-                    components2.Add(entity, default);
-                    components3.Add(entity, default);
-                    components4.Add(entity, default);
+                    components1.Add(entity);
+                    components2.Add(entity);
+                    components3.Add(entity);
+                    components4.Add(entity);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -466,11 +511,11 @@ namespace FFS.Libraries.StaticEcs {
                 components4.EnsureSize(count);
                 components5.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Add(entity, default);
-                    components2.Add(entity, default);
-                    components3.Add(entity, default);
-                    components4.Add(entity, default);
-                    components5.Add(entity, default);
+                    components1.Add(entity);
+                    components2.Add(entity);
+                    components3.Add(entity);
+                    components4.Add(entity);
+                    components5.Add(entity);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -871,5 +916,15 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public readonly EntitiesIterator<WorldType> GetEnumerator() => this;
+
+        [MethodImpl(AggressiveInlining)]
+        public List<World<WorldType>.Entity> ToList() {
+            var entities = new List<World<WorldType>.Entity>();
+            while (MoveNext()) {
+                entities.Add(_current);
+            }
+
+            return entities;
+        }
     }
 }

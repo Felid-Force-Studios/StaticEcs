@@ -26,8 +26,8 @@ public struct Scale : IComponent {
             return (World<WorldType>.Entity entity, ref Scale component) => { };
         }
 
-        // replaces the behavior when creating a component via the Add method with passing the value of
-        public World<WorldType>.OnComponentHandler<Scale> OnAddWithValue() {
+        // replaces the behavior when creating a component via the Put method
+        public World<WorldType>.OnComponentHandler<Scale> OnPut() {
             return (World<WorldType>.Entity entity, ref Scale component) => { };
         }
 

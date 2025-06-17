@@ -6,7 +6,7 @@ namespace FFS.Libraries.StaticEcs {
         where T : struct
         where WorldType : struct, IWorldType {
         public World<WorldType>.OnComponentHandler<T> OnAdd();
-        public World<WorldType>.OnComponentHandler<T> OnAddWithValue();
+        public World<WorldType>.OnComponentHandler<T> OnPut();
         public World<WorldType>.OnComponentHandler<T> OnDelete();
         public World<WorldType>.OnCopyHandler<T> OnCopy();
         public bool IsCopyable();
@@ -26,7 +26,7 @@ namespace FFS.Libraries.StaticEcs {
         public static readonly DefaultComponentConfig<T, WorldType> Default = new();
         
         public virtual World<WorldType>.OnComponentHandler<T> OnAdd() => null;
-        public virtual World<WorldType>.OnComponentHandler<T> OnAddWithValue() => OnAdd();
+        public virtual World<WorldType>.OnComponentHandler<T> OnPut() => null;
         public virtual World<WorldType>.OnComponentHandler<T> OnDelete() => null;
         public virtual World<WorldType>.OnCopyHandler<T> OnCopy() => null;
         public virtual bool IsCopyable() => true;
@@ -47,7 +47,7 @@ namespace FFS.Libraries.StaticEcs {
         where T : struct
         where WorldType : struct, IWorldType {
         public World<WorldType>.OnComponentHandler<T> OnAddHandler;
-        public World<WorldType>.OnComponentHandler<T> OnAddWithValueHandler;
+        public World<WorldType>.OnComponentHandler<T> OnPutHandler;
         public World<WorldType>.OnComponentHandler<T> OnDeleteHandler;
         public World<WorldType>.OnCopyHandler<T> OnCopyHandler;
         public bool Copyable;
@@ -62,7 +62,7 @@ namespace FFS.Libraries.StaticEcs {
 
         public ValueComponentConfig(
             World<WorldType>.OnComponentHandler<T> onAdd = null,
-            World<WorldType>.OnComponentHandler<T> onAddWithValue = null,
+            World<WorldType>.OnComponentHandler<T> onPut = null,
             World<WorldType>.OnComponentHandler<T> onDelete = null,
             World<WorldType>.OnCopyHandler<T> onCopy = null,
             bool copyable = true,
@@ -74,7 +74,7 @@ namespace FFS.Libraries.StaticEcs {
             IPackArrayStrategy<T> readWriteStrategyValue = null
         ) {
             OnAddHandler = onAdd;
-            OnAddWithValueHandler = onAddWithValue;
+            OnPutHandler = onPut;
             OnDeleteHandler = onDelete;
             OnCopyHandler = onCopy;
             Copyable = copyable;
@@ -92,7 +92,7 @@ namespace FFS.Libraries.StaticEcs {
 
         public void CopyFrom(IComponentConfig<T, WorldType> config) {
             OnAddHandler = config.OnAdd();
-            OnAddWithValueHandler = config.OnAdd();
+            OnPutHandler = config.OnAdd();
             OnDeleteHandler = config.OnDelete();
             OnCopyHandler = config.OnCopy();
             Copyable = config.IsCopyable();
@@ -105,7 +105,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         public World<WorldType>.OnComponentHandler<T> OnAdd() => OnAddHandler;
-        public World<WorldType>.OnComponentHandler<T> OnAddWithValue() => OnAddWithValueHandler;
+        public World<WorldType>.OnComponentHandler<T> OnPut() => OnPutHandler;
         public World<WorldType>.OnComponentHandler<T> OnDelete() => OnDeleteHandler;
         public World<WorldType>.OnCopyHandler<T> OnCopy() => OnCopyHandler;
         public bool IsCopyable() => Copyable;
