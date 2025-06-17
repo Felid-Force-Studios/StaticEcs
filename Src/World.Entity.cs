@@ -871,5 +871,15 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public readonly EntitiesIterator<WorldType> GetEnumerator() => this;
+
+        [MethodImpl(AggressiveInlining)]
+        public List<World<WorldType>.Entity> ToList() {
+            var entities = new List<World<WorldType>.Entity>();
+            while (MoveNext()) {
+                entities.Add(_current);
+            }
+
+            return entities;
+        }
     }
 }

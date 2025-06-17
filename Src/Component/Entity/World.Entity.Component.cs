@@ -172,15 +172,15 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public void Enable<C>()
                 where C : struct, IComponent {
-                Components<C>.Value.Disable(this);
+                Components<C>.Value.Enable(this);
             }
             
             [MethodImpl(AggressiveInlining)]
             public void Enable<C1, C2>()
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
-                Components<C1>.Value.Disable(this);
-                Components<C2>.Value.Disable(this);
+                Components<C1>.Value.Enable(this);
+                Components<C2>.Value.Enable(this);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -188,9 +188,9 @@ namespace FFS.Libraries.StaticEcs {
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent {
-                Components<C1>.Value.Disable(this);
-                Components<C2>.Value.Disable(this);
-                Components<C3>.Value.Disable(this);
+                Components<C1>.Value.Enable(this);
+                Components<C2>.Value.Enable(this);
+                Components<C3>.Value.Enable(this);
             }
             #endregion
             
