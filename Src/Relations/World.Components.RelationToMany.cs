@@ -35,22 +35,21 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
                 
                 var actualConfig = new ValueComponentConfig<T, WorldType>(config) {
-                    OnAddWithValueHandler = OnAddHandler(config.OnAdd(), disableRelationsCheckDebug),
+                    OnPutHandler = OnPutHandler(config.OnPut(), disableRelationsCheckDebug),
                     OnDeleteHandler = OnDeleteHandler(deleteStrategy, config.OnDelete()),
                     OnCopyHandler = OnCopyManyHandler(copyStrategy, config.OnCopy()),
-                    OnAddHandler = OnAddHandler(config.OnAdd(), disableRelationsCheckDebug),
+                    OnAddHandler = OnPutHandler(config.OnAdd(), disableRelationsCheckDebug),
                     Copyable = copyStrategy != CopyStrategy.NotCopy
                 };
 
                 RegisterComponentType(
                     capacity: capacity,
-                    actualConfig,
-                    putNotAllowed: true
+                    actualConfig
                 );
                 return;
 
                 [MethodImpl(AggressiveInlining)]
-                static OnComponentHandler<T> OnAddHandler(OnComponentHandler<T> handler, bool disableRelationCheck) {
+                static OnComponentHandler<T> OnPutHandler(OnComponentHandler<T> handler, bool disableRelationCheck) {
                     if (handler != null) {
                         return (Entity entity, ref T component) => {
                             OnAddMultiLink(entity, ref component);

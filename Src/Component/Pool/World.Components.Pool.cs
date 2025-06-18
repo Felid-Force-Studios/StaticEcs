@@ -25,10 +25,10 @@ namespace FFS.Libraries.StaticEcs {
             internal List<IComponentsDebugEventListener> debugEventListeners;
             #endif
             
-            private OnComponentHandler<T> _onAddHandler;
-            private OnComponentHandler<T> _onAddWithValueHandler;
-            private OnComponentHandler<T> _onDeleteHandler;
-            private OnCopyHandler<T> _onCopyHandler;
+            internal OnComponentHandler<T> onAddHandler;
+            internal OnComponentHandler<T> onPutHandler;
+            internal OnComponentHandler<T> onDeleteHandler;
+            internal OnCopyHandler<T> onCopyHandler;
             
             private uint[] _entities;
             private T[] _data;
@@ -38,7 +38,6 @@ namespace FFS.Libraries.StaticEcs {
             internal ushort id;
             private bool _registered;
             private bool _copyable;
-            private bool _putNotAllowed;
 
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
             private int _blockers;
@@ -89,7 +88,7 @@ namespace FFS.Libraries.StaticEcs {
                 
                 ref var data = ref _data[_componentsCount];
                 _componentsCount++;
-                _onAddHandler?.Invoke(entity, ref data);
+                onAddHandler?.Invoke(entity, ref data);
 
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 foreach (var listener in debugEventListeners) {
@@ -98,40 +97,6 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
                 
                 return ref data;
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public void Add(Entity entity, T component) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Add, World not initialized");
-                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, Component type not registered");
-                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, cannot access Entity ID - {id} from deleted entity");
-                if (Has(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, ID - {entity._id} is already on an entity");
-                if (IsBlocked()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, component pool cannot be changed, it is in read-only mode due to multiple accesses");
-                if (IsBlockedAdd()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, component pool cannot be changed, it is in read-only mode due to multiple accesses");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, this operation is not supported in multithreaded mode");
-                #endif
-
-                if (_entities.Length == _componentsCount) {
-                    ResizeData(_componentsCount << 1);
-                }
-
-                var eid = entity._id;
-                _entities[_componentsCount] = eid;
-                _dataIdxByEntityId[eid] = _componentsCount;
-
-                _bitMask.Set(eid, id);
-
-                ref var data = ref _data[_componentsCount];
-                data = component;
-                _componentsCount++;
-                _onAddWithValueHandler?.Invoke(entity, ref data);
-                
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-                foreach (var listener in debugEventListeners) {
-                    listener.OnComponentAdd(entity, ref data);
-                }
-                #endif
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -166,15 +131,16 @@ namespace FFS.Libraries.StaticEcs {
                 if (IsBlocked()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Put, component pool cannot be changed, it is in read-only mode due to multiple accesses");
                 if (IsBlockedAdd()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Put, component pool cannot be changed, it is in read-only mode due to multiple accesses");
                 if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Put, this operation is not supported in multithreaded mode");
-                if (_putNotAllowed) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Put, this operation is not supported for this type of component");
                 #endif
                 var eid = entity._id;
                 ref var dataId = ref _dataIdxByEntityId[eid];
                 if (dataId != Const.EmptyComponentMask) {
-                    _data[dataId & Const.DisabledComponentMaskInv] = component;
+                    ref var data = ref _data[dataId & Const.DisabledComponentMaskInv];
+                    data = component;
+                    onPutHandler?.Invoke(entity, ref data);
                     #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                     foreach (var listener in debugEventListeners) {
-                        listener.OnComponentPut(entity, ref _data[dataId & Const.DisabledComponentMaskInv]);
+                        listener.OnComponentPut(entity, ref data);
                     }
                     #endif
                     return;
@@ -189,11 +155,13 @@ namespace FFS.Libraries.StaticEcs {
                 _componentsCount++;
 
                 _bitMask.Set(eid, id);
-                _data[dataId] = component;
-                
+                ref var val = ref _data[dataId];
+                val = component;
+                onPutHandler?.Invoke(entity, ref val);
+
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 foreach (var listener in debugEventListeners) {
-                    listener.OnComponentPut(entity, ref _data[dataId]);
+                    listener.OnComponentPut(entity, ref val);
                 }
                 #endif
             }
@@ -203,15 +171,6 @@ namespace FFS.Libraries.StaticEcs {
                 return ref Has(entity)
                     ? ref Ref(entity)
                     : ref Add(entity);
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public void TryAdd(Entity entity, T value) {
-                if (Has(entity)) {
-                    Ref(entity) = value;
-                } else {
-                    Add(entity, value);
-                }
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -319,10 +278,10 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
 
                 if (_copyable) {
-                    if (_onCopyHandler == null) {
+                    if (onCopyHandler == null) {
                         TryAdd(dst) = Ref(src);
                     } else {
-                        _onCopyHandler(src, dst, ref Ref(src), ref TryAdd(dst));
+                        onCopyHandler(src, dst, ref Ref(src), ref TryAdd(dst));
                     }
 
                     if (HasDisabled(src)) {
@@ -394,8 +353,7 @@ namespace FFS.Libraries.StaticEcs {
             
             internal void Create(ushort componentId, BitMask bitMask, uint entitiesCapacity,
                                  IComponentConfig<T, WorldType> config,
-                                 uint baseCapacity = 128,
-                                 bool putNotAllowed = false) {
+                                 uint baseCapacity = 128) {
                 _bitMask = bitMask;
                 id = componentId;
                 _entities = new uint[baseCapacity];
@@ -405,12 +363,11 @@ namespace FFS.Libraries.StaticEcs {
                 for (uint i = 0; i < _dataIdxByEntityId.Length; i++) {
                     _dataIdxByEntityId[i] = Const.EmptyComponentMask;
                 }
-                _onAddHandler = config.OnAdd();
-                _onAddWithValueHandler = config.OnAddWithValue();
-                _onDeleteHandler = config.OnDelete();
-                _onCopyHandler = config.OnCopy();
+                onAddHandler = config.OnAdd();
+                onPutHandler = config.OnPut();
+                onDeleteHandler = config.OnDelete();
+                onCopyHandler = config.OnCopy();
                 _copyable = config.IsCopyable();
-                _putNotAllowed = putNotAllowed;
                 Serializer.Value.Create(config);
                 _registered = true;
             }
@@ -460,13 +417,13 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 #endif
                 
-                if (_onDeleteHandler == null) {
+                if (onDeleteHandler == null) {
                     data = default;
                 } else {
                     #if DEBUG || FFS_ECS_ENABLE_DEBUG
                     AddBlockerAdd(1);
                     #endif
-                    _onDeleteHandler(entity, ref data);
+                    onDeleteHandler(entity, ref data);
                     #if DEBUG || FFS_ECS_ENABLE_DEBUG
                     AddBlockerAdd(-1);
                     #endif
@@ -516,10 +473,10 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal void Destroy() {
-                _onAddHandler = null;
-                _onAddWithValueHandler = null;
-                _onDeleteHandler = null;
-                _onCopyHandler = null;
+                onAddHandler = null;
+                onPutHandler = null;
+                onDeleteHandler = null;
+                onCopyHandler = null;
                 _entities = null;
                 _data = null;
                 _dataIdxByEntityId = null;
@@ -534,7 +491,6 @@ namespace FFS.Libraries.StaticEcs {
                 _blockers = 0;
                 _blockersAdd = 0;
                 #endif
-                _putNotAllowed = false;
                 _copyable = false;
                 _registered = false;
             }
@@ -558,9 +514,9 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal void Clear() {
-                if (_onDeleteHandler != null) {
+                if (onDeleteHandler != null) {
                     for (var i = 0; i < _componentsCount; i++) {
-                        _onDeleteHandler(Entity.FromIdx(_entities[i]), ref _data[i]);
+                        onDeleteHandler(Entity.FromIdx(_entities[i]), ref _data[i]);
                     }
                 } else {
                     Utils.LoopFallbackClear(_data, 0, (int) _componentsCount);

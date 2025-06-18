@@ -8,7 +8,7 @@
         <AssemblyName>FFS.StaticEcs</AssemblyName>
         <RootNamespace>FFS.Libraries.StaticEcs</RootNamespace>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>1.0.0</Version>
+        <Version>1.0.1</Version>
         <Authors>Felid-Force-Studios</Authors>
         <Description>C# Entity Component System Framework</Description>
         <Copyright>Felid-Force-Studios</Copyright>

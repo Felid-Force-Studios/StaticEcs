@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -37,17 +36,16 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
                 
                 var actualConfigLeft = new ValueComponentConfig<L, WorldType>(leftConfig) {
-                    OnAddWithValueHandler = OnAddHandler<L, R>(leftConfig.OnAdd(), disableRelationsCheckLeftDebug),
+                    OnPutHandler = OnPutHandler<L, R>(leftConfig.OnPut(), disableRelationsCheckLeftDebug),
                     OnDeleteHandler = OnDeleteHandler<L, R>(leftDeleteStrategy, leftConfig.OnDelete()),
                     OnCopyHandler = OnCopyOneHandler(leftCopyStrategy, leftConfig.OnCopy()),
-                    OnAddHandler = UseAddLinkMethodException,
+                    OnAddHandler = UseSetLinkMethodException,
                     Copyable = leftCopyStrategy != CopyStrategy.NotCopy
                 };
 
                 RegisterComponentType(
                     capacity: capacity,
-                    actualConfigLeft,
-                    putNotAllowed: true
+                    actualConfigLeft
                 );
 
                 if (Components<R>.Value.IsRegistered()) {
@@ -60,21 +58,20 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
                 
                 var actualConfigRight = new ValueComponentConfig<R, WorldType>(rightConfig) {
-                    OnAddWithValueHandler = OnAddHandler<R, L>(rightConfig.OnAdd(), disableRelationsCheckRightDebug),
+                    OnPutHandler = OnPutHandler<R, L>(rightConfig.OnPut(), disableRelationsCheckRightDebug),
                     OnDeleteHandler = OnDeleteHandler<R, L>(rightDeleteStrategy, rightConfig.OnDelete()),
                     OnCopyHandler = OnCopyOneHandler(rightCopyStrategy, rightConfig.OnCopy()),
-                    OnAddHandler = UseAddLinkMethodException,
+                    OnAddHandler = UseSetLinkMethodException,
                     Copyable = rightCopyStrategy != CopyStrategy.NotCopy
                 };
 
                 RegisterComponentType(
                     capacity: capacity,
-                    actualConfigRight,
-                    putNotAllowed: true
+                    actualConfigRight
                 );
                 return;
 
-                static OnComponentHandler<A> OnAddHandler<A, B>(OnComponentHandler<A> handler, bool disableRelationsCheck)
+                static OnComponentHandler<A> OnPutHandler<A, B>(OnComponentHandler<A> handler, bool disableRelationsCheck)
                     where A : struct, IEntityLinkComponent<A>
                     where B : struct, IEntityLinkComponent<B> {
 
@@ -95,20 +92,24 @@ namespace FFS.Libraries.StaticEcs {
                         }
                         #endif
                         var unpacked = component.RefValue(ref component).Unpack<WorldType>();
-                        if (!Components<B>.Value.Has(unpacked)) {
-                            var value = default(B);
-                            value.RefValue(ref value) = e.Gid();
-                            Components<B>.Value.Add(unpacked, value);
-                        }
-                        #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
-                        else {
-                            var oldLink = Components<B>.Value.Ref(unpacked).Link();
-                            var newLink = e.Gid();
-                            if (oldLink != e.Gid()) {
-                                throw new StaticEcsException($"{unpacked} contains a {typeof(B)} with another link ({oldLink}) than the added ({newLink}), delete the previous link before adding a new one");
+                        var gid = e.Gid();
+                        if (Components<B>.Value.Has(unpacked)) {
+                            ref var link = ref Components<B>.Value.Ref(unpacked);
+                            if (link.RefValue(ref link).Equals(gid)) {
+                                return;
                             }
+                            if (Components<B>.Value.onDeleteHandler != null) {
+                                Components<B>.Value.onDeleteHandler(unpacked, ref link);
+                            } else {
+                                link = default;
+                            }
+                            
+                            Components<B>.Value.onPutHandler?.Invoke(unpacked, ref link);
+                            return;
                         }
-                        #endif
+                        var value = default(B);
+                        value.RefValue(ref value) = gid;
+                        Components<B>.Value.Put(unpacked, value);
                     }
                 }
 

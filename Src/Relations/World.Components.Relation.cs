@@ -22,8 +22,8 @@ namespace FFS.Libraries.StaticEcs {
                 if (Components<L>.Value.IsRegistered()) throw new StaticEcsException($"Component {typeof(L)} already registered");
             }
             
-            private static void UseAddLinkMethodException<T>(Entity _, ref T component) where T : struct, IComponent {
-                throw new StaticEcsException("Method not allowed for relation components, use entity.AddLink()");
+            private static void UseSetLinkMethodException<T>(Entity _, ref T component) where T : struct, IComponent {
+                throw new StaticEcsException("Method not allowed for relation components, use entity.SetLink()");
             }
             
             private static void OnAddMultiLink<T>(Entity _, ref T component) where T : struct, IEntityLinksComponent<T> {

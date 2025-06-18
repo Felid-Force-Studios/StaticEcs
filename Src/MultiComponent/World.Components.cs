@@ -49,14 +49,14 @@ namespace FFS.Libraries.StaticEcs {
                     actualConfig.OnAddHandler = OnAddMultiComponent<T, V>;
                 }
 
-                var onAddWithValue = config.OnAddWithValue();
-                if (onAddWithValue != null) {
-                    actualConfig.OnAddWithValueHandler = (Entity e, ref T component) => {
+                var onPut = config.OnPut();
+                if (onPut != null) {
+                    actualConfig.OnPutHandler = (Entity e, ref T component) => {
                         OnAddMultiComponent<T, V>(e, ref component);
-                        onAddWithValue(e, ref component);
+                        onPut(e, ref component);
                     };
                 } else {
-                    actualConfig.OnAddWithValueHandler = OnAddMultiComponent<T, V>;
+                    actualConfig.OnPutHandler = OnAddMultiComponent<T, V>;
                 }
 
                 var onDelete = config.OnDelete();
@@ -81,8 +81,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 RegisterComponentType(
                     capacity: capacity,
-                    config : actualConfig,
-                    putNotAllowed: true
+                    config : actualConfig
                 );
             }
             

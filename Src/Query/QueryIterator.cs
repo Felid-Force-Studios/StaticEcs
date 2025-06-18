@@ -16,7 +16,10 @@ namespace FFS.Libraries.StaticEcs {
         private uint _count;                              //4
         private QM _queryMethod;                          //???
         private readonly EntityStatusType _entitiesParam; //1
-
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        private bool _disposed;                           //1
+        #endif
+        
         [MethodImpl(AggressiveInlining)]
         public QueryEntitiesIterator(QM queryMethod, EntityStatusType entities = EntityStatusType.Enabled) {
             _entitiesParam = entities;
@@ -26,6 +29,9 @@ namespace FFS.Libraries.StaticEcs {
             _count = int.MaxValue;
             _queryMethod.SetData<WorldType>(ref _count, ref _entities);
             _entitiesStatus = World<WorldType>.StandardComponents<EntityStatus>.Value.Data();
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            _disposed = false;
+            #endif
         }
 
         public readonly World<WorldType>.Entity Current {
@@ -55,11 +61,15 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void Dispose() {
             _queryMethod.Dispose<WorldType>();
+            _disposed = true;
         }
         #endif
 
         [MethodImpl(AggressiveInlining)]
         public void DestroyAllEntities() {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             while (_count > 0) {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
@@ -73,6 +83,9 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public bool First(out World<WorldType>.Entity entity) {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             var moveNext = MoveNext();
             entity = new World<WorldType>.Entity(_current);
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -83,6 +96,9 @@ namespace FFS.Libraries.StaticEcs {
         
         [MethodImpl(AggressiveInlining)]
         public int EntitiesCount() {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             var count = 0;
             while (_count > 0) {
                 _current = _entities[--_count];
@@ -99,11 +115,14 @@ namespace FFS.Libraries.StaticEcs {
         #region COMPONENTS
         [MethodImpl(AggressiveInlining)]
         public void AddForAll<T1>() where T1 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var components = ref World<WorldType>.Components<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
-                    components.Add(new World<WorldType>.Entity(_current), default);
+                    components.Add(new World<WorldType>.Entity(_current));
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -115,14 +134,17 @@ namespace FFS.Libraries.StaticEcs {
         public void AddForAll<T1, T2>() 
             where T1 : struct, IComponent
             where T2 : struct, IComponent{
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.Add(entity, default);
-                    container2.Add(entity, default);
+                    container1.Add(entity);
+                    container2.Add(entity);
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -135,6 +157,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -142,9 +167,9 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.Add(entity, default);
-                    container2.Add(entity, default);
-                    container3.Add(entity, default);
+                    container1.Add(entity);
+                    container2.Add(entity);
+                    container3.Add(entity);
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -158,6 +183,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, IComponent
             where T3 : struct, IComponent
             where T4 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -166,10 +194,10 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.Add(entity, default);
-                    container2.Add(entity, default);
-                    container3.Add(entity, default);
-                    container4.Add(entity, default);
+                    container1.Add(entity);
+                    container2.Add(entity);
+                    container3.Add(entity);
+                    container4.Add(entity);
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -184,6 +212,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, IComponent
             where T4 : struct, IComponent
             where T5 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -193,11 +224,11 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.Add(entity, default);
-                    container2.Add(entity, default);
-                    container3.Add(entity, default);
-                    container4.Add(entity, default);
-                    container5.Add(entity, default);
+                    container1.Add(entity);
+                    container2.Add(entity);
+                    container3.Add(entity);
+                    container4.Add(entity);
+                    container5.Add(entity);
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -207,12 +238,15 @@ namespace FFS.Libraries.StaticEcs {
         
         [MethodImpl(AggressiveInlining)]
         public void TryAddForAll<T1>() where T1 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var components = ref World<WorldType>.Components<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    components.TryAdd(entity, default);
+                    components.TryAdd(entity);
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -224,14 +258,17 @@ namespace FFS.Libraries.StaticEcs {
         public void TryAddForAll<T1, T2>() 
             where T1 : struct, IComponent
             where T2 : struct, IComponent{
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.TryAdd(entity, default);
-                    container2.TryAdd(entity, default);
+                    container1.TryAdd(entity);
+                    container2.TryAdd(entity);
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -244,6 +281,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -251,9 +291,9 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.TryAdd(entity, default);
-                    container2.TryAdd(entity, default);
-                    container3.TryAdd(entity, default);
+                    container1.TryAdd(entity);
+                    container2.TryAdd(entity);
+                    container3.TryAdd(entity);
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -267,6 +307,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, IComponent
             where T3 : struct, IComponent
             where T4 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -275,10 +318,10 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.TryAdd(entity, default);
-                    container2.TryAdd(entity, default);
-                    container3.TryAdd(entity, default);
-                    container4.TryAdd(entity, default);
+                    container1.TryAdd(entity);
+                    container2.TryAdd(entity);
+                    container3.TryAdd(entity);
+                    container4.TryAdd(entity);
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -293,6 +336,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, IComponent
             where T4 : struct, IComponent
             where T5 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -302,11 +348,11 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.TryAdd(entity, default);
-                    container2.TryAdd(entity, default);
-                    container3.TryAdd(entity, default);
-                    container4.TryAdd(entity, default);
-                    container5.TryAdd(entity, default);
+                    container1.TryAdd(entity);
+                    container2.TryAdd(entity);
+                    container3.TryAdd(entity);
+                    container4.TryAdd(entity);
+                    container5.TryAdd(entity);
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -317,12 +363,15 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void AddForAll<T1>(T1 t1) 
             where T1 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.Add(entity, t1);
+                    container1.Add(entity) = t1;
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -334,14 +383,17 @@ namespace FFS.Libraries.StaticEcs {
         public void AddForAll<T1, T2>(T1 t1, T2 t2) 
             where T1 : struct, IComponent
             where T2 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.Add(entity, t1);
-                    container2.Add(entity, t2);
+                    container1.Add(entity) = t1;
+                    container2.Add(entity) = t2;
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -354,6 +406,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -361,9 +416,9 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.Add(entity, t1);
-                    container2.Add(entity, t2);
-                    container3.Add(entity, t3);
+                    container1.Add(entity) = t1;
+                    container2.Add(entity) = t2;
+                    container3.Add(entity) = t3;
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -377,6 +432,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, IComponent
             where T3 : struct, IComponent
             where T4 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -385,10 +443,10 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.Add(entity, t1);
-                    container2.Add(entity, t2);
-                    container3.Add(entity, t3);
-                    container4.Add(entity, t4);
+                    container1.Add(entity) = t1;
+                    container2.Add(entity) = t2;
+                    container3.Add(entity) = t3;
+                    container4.Add(entity) = t4;
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -403,6 +461,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, IComponent
             where T4 : struct, IComponent
             where T5 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -412,11 +473,11 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.Add(entity, t1);
-                    container2.Add(entity, t2);
-                    container3.Add(entity, t3);
-                    container4.Add(entity, t4);
-                    container5.Add(entity, t5);
+                    container1.Add(entity) = t1;
+                    container2.Add(entity) = t2;
+                    container3.Add(entity) = t3;
+                    container4.Add(entity) = t4;
+                    container5.Add(entity) = t5;
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -427,12 +488,15 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void TryAddForAll<T1>(T1 t1) 
             where T1 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.TryAdd(entity, t1);
+                    container1.TryAdd(entity) = t1;
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -444,14 +508,17 @@ namespace FFS.Libraries.StaticEcs {
         public void TryAddForAll<T1, T2>(T1 t1, T2 t2) 
             where T1 : struct, IComponent
             where T2 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.TryAdd(entity, t1);
-                    container2.TryAdd(entity, t2);
+                    container1.TryAdd(entity) = t1;
+                    container2.TryAdd(entity) = t2;
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -464,6 +531,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -471,9 +541,9 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.TryAdd(entity, t1);
-                    container2.TryAdd(entity, t2);
-                    container3.TryAdd(entity, t3);
+                    container1.TryAdd(entity) = t1;
+                    container2.TryAdd(entity) = t2;
+                    container3.TryAdd(entity) = t3;
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -487,6 +557,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, IComponent
             where T3 : struct, IComponent
             where T4 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -495,10 +568,10 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.TryAdd(entity, t1);
-                    container2.TryAdd(entity, t2);
-                    container3.TryAdd(entity, t3);
-                    container4.TryAdd(entity, t4);
+                    container1.TryAdd(entity) = t1;
+                    container2.TryAdd(entity) = t2;
+                    container3.TryAdd(entity) = t3;
+                    container4.TryAdd(entity) = t4;
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -513,6 +586,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, IComponent
             where T4 : struct, IComponent
             where T5 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -522,11 +598,11 @@ namespace FFS.Libraries.StaticEcs {
                 _current = _entities[--_count];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == _entitiesStatus[_current].Value) && _queryMethod.CheckEntity(_current)) {
                     var entity = new World<WorldType>.Entity(_current);
-                    container1.TryAdd(entity, t1);
-                    container2.TryAdd(entity, t2);
-                    container3.TryAdd(entity, t3);
-                    container4.TryAdd(entity, t4);
-                    container5.TryAdd(entity, t5);
+                    container1.TryAdd(entity) = t1;
+                    container2.TryAdd(entity) = t2;
+                    container3.TryAdd(entity) = t3;
+                    container4.TryAdd(entity) = t4;
+                    container5.TryAdd(entity) = t5;
                 }
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -537,6 +613,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void PutForAll<T1>(T1 t1) 
             where T1 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
@@ -554,6 +633,9 @@ namespace FFS.Libraries.StaticEcs {
         public void PutForAll<T1, T2>(T1 t1, T2 t2) 
             where T1 : struct, IComponent
             where T2 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             while (_count > 0) {
@@ -574,6 +656,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -597,6 +682,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, IComponent
             where T3 : struct, IComponent
             where T4 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -623,6 +711,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, IComponent
             where T4 : struct, IComponent
             where T5 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -647,6 +738,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void DeleteForAll<T1>() 
             where T1 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
@@ -664,6 +758,9 @@ namespace FFS.Libraries.StaticEcs {
         public void DeleteForAll<T1, T2>() 
             where T1 : struct, IComponent
             where T2 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             while (_count > 0) {
@@ -684,6 +781,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -707,6 +807,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, IComponent
             where T3 : struct, IComponent
             where T4 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -733,6 +836,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, IComponent
             where T4 : struct, IComponent
             where T5 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -757,6 +863,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void TryDeleteForAll<T1>() 
             where T1 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
@@ -774,6 +883,9 @@ namespace FFS.Libraries.StaticEcs {
         public void TryDeleteForAll<T1, T2>() 
             where T1 : struct, IComponent
             where T2 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             while (_count > 0) {
@@ -794,6 +906,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, IComponent
             where T2 : struct, IComponent
             where T3 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -817,6 +932,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, IComponent
             where T3 : struct, IComponent
             where T4 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -843,6 +961,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, IComponent
             where T4 : struct, IComponent
             where T5 : struct, IComponent {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Components<T1>.Value;
             ref var container2 = ref World<WorldType>.Components<T2>.Value;
             ref var container3 = ref World<WorldType>.Components<T3>.Value;
@@ -869,6 +990,9 @@ namespace FFS.Libraries.StaticEcs {
         #if !FFS_ECS_DISABLE_TAGS
         [MethodImpl(AggressiveInlining)]
         public void SetTagForAll<T1>() where T1 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container = ref World<WorldType>.Tags<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
@@ -886,6 +1010,9 @@ namespace FFS.Libraries.StaticEcs {
         public void SetTagForAll<T1, T2>() 
             where T1 : struct, ITag
             where T2 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             while (_count > 0) {
@@ -906,6 +1033,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, ITag
             where T2 : struct, ITag
             where T3 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             ref var container3 = ref World<WorldType>.Tags<T3>.Value;
@@ -929,6 +1059,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, ITag
             where T3 : struct, ITag
             where T4 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             ref var container3 = ref World<WorldType>.Tags<T3>.Value;
@@ -955,6 +1088,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, ITag
             where T4 : struct, ITag
             where T5 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             ref var container3 = ref World<WorldType>.Tags<T3>.Value;
@@ -979,6 +1115,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void DeleteTagForAll<T1>() 
             where T1 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
@@ -996,6 +1135,9 @@ namespace FFS.Libraries.StaticEcs {
         public void DeleteTagForAll<T1, T2>() 
             where T1 : struct, ITag
             where T2 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             while (_count > 0) {
@@ -1016,6 +1158,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, ITag
             where T2 : struct, ITag
             where T3 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             ref var container3 = ref World<WorldType>.Tags<T3>.Value;
@@ -1039,6 +1184,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, ITag
             where T3 : struct, ITag
             where T4 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             ref var container3 = ref World<WorldType>.Tags<T3>.Value;
@@ -1065,6 +1213,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, ITag
             where T4 : struct, ITag
             where T5 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             ref var container3 = ref World<WorldType>.Tags<T3>.Value;
@@ -1089,6 +1240,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void TryDeleteTagForAll<T1>() 
             where T1 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
@@ -1106,6 +1260,9 @@ namespace FFS.Libraries.StaticEcs {
         public void TryDeleteTagForAll<T1, T2>() 
             where T1 : struct, ITag
             where T2 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             while (_count > 0) {
@@ -1126,6 +1283,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, ITag
             where T2 : struct, ITag
             where T3 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             ref var container3 = ref World<WorldType>.Tags<T3>.Value;
@@ -1149,6 +1309,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, ITag
             where T3 : struct, ITag
             where T4 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             ref var container3 = ref World<WorldType>.Tags<T3>.Value;
@@ -1175,6 +1338,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, ITag
             where T4 : struct, ITag
             where T5 : struct, ITag {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Tags<T1>.Value;
             ref var container2 = ref World<WorldType>.Tags<T2>.Value;
             ref var container3 = ref World<WorldType>.Tags<T3>.Value;
@@ -1202,6 +1368,9 @@ namespace FFS.Libraries.StaticEcs {
         #if !FFS_ECS_DISABLE_MASKS
         [MethodImpl(AggressiveInlining)]
         public void SetMaskForAll<T1>() where T1 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container = ref World<WorldType>.Masks<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
@@ -1219,6 +1388,9 @@ namespace FFS.Libraries.StaticEcs {
         public void SetMaskForAll<T1, T2>() 
             where T1 : struct, IMask
             where T2 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             while (_count > 0) {
@@ -1239,6 +1411,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, IMask
             where T2 : struct, IMask
             where T3 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             ref var container3 = ref World<WorldType>.Masks<T3>.Value;
@@ -1262,6 +1437,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, IMask
             where T3 : struct, IMask
             where T4 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             ref var container3 = ref World<WorldType>.Masks<T3>.Value;
@@ -1288,6 +1466,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, IMask
             where T4 : struct, IMask
             where T5 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             ref var container3 = ref World<WorldType>.Masks<T3>.Value;
@@ -1312,6 +1493,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void DeleteMaskForAll<T1>() 
             where T1 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
@@ -1329,6 +1513,9 @@ namespace FFS.Libraries.StaticEcs {
         public void DeleteMaskForAll<T1, T2>() 
             where T1 : struct, IMask
             where T2 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             while (_count > 0) {
@@ -1349,6 +1536,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, IMask
             where T2 : struct, IMask
             where T3 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             ref var container3 = ref World<WorldType>.Masks<T3>.Value;
@@ -1372,6 +1562,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, IMask
             where T3 : struct, IMask
             where T4 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             ref var container3 = ref World<WorldType>.Masks<T3>.Value;
@@ -1398,6 +1591,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, IMask
             where T4 : struct, IMask
             where T5 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             ref var container3 = ref World<WorldType>.Masks<T3>.Value;
@@ -1422,6 +1618,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void TryDeleteMaskForAll<T1>() 
             where T1 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             while (_count > 0) {
                 _current = _entities[--_count];
@@ -1439,6 +1638,9 @@ namespace FFS.Libraries.StaticEcs {
         public void TryDeleteMaskForAll<T1, T2>() 
             where T1 : struct, IMask
             where T2 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             while (_count > 0) {
@@ -1459,6 +1661,9 @@ namespace FFS.Libraries.StaticEcs {
             where T1 : struct, IMask
             where T2 : struct, IMask
             where T3 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             ref var container3 = ref World<WorldType>.Masks<T3>.Value;
@@ -1482,6 +1687,9 @@ namespace FFS.Libraries.StaticEcs {
             where T2 : struct, IMask
             where T3 : struct, IMask
             where T4 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             ref var container3 = ref World<WorldType>.Masks<T3>.Value;
@@ -1508,6 +1716,9 @@ namespace FFS.Libraries.StaticEcs {
             where T3 : struct, IMask
             where T4 : struct, IMask
             where T5 : struct, IMask {
+            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            if (_disposed) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> already disposed");
+            #endif
             ref var container1 = ref World<WorldType>.Masks<T1>.Value;
             ref var container2 = ref World<WorldType>.Masks<T2>.Value;
             ref var container3 = ref World<WorldType>.Masks<T3>.Value;

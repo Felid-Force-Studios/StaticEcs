@@ -26,21 +26,20 @@ namespace FFS.Libraries.StaticEcs {
                 ValidateComponentRegistration<T>();
                 
                 var actualConfig = new ValueComponentConfig<T, WorldType>(config) {
-                    OnAddWithValueHandler = OnAddHandler(config.OnAdd(), disableRelationCheck),
+                    OnPutHandler = OnPutHandler(config.OnPut(), disableRelationCheck),
                     OnDeleteHandler = OnDeleteHandler(onDeleteStrategy, config.OnDelete()),
                     OnCopyHandler = OnCopyOneHandler(onCopyStrategy, config.OnCopy()),
-                    OnAddHandler = UseAddLinkMethodException,
+                    OnAddHandler = UseSetLinkMethodException,
                     Copyable = onCopyStrategy != CopyStrategy.NotCopy
                 };
 
                 RegisterComponentType(
                     capacity: capacity,
-                    actualConfig,
-                    putNotAllowed: true
+                    actualConfig
                 );
                 return;
 
-                static OnComponentHandler<T> OnAddHandler(OnComponentHandler<T> handler, bool disableRelationsCheck) {
+                static OnComponentHandler<T> OnPutHandler(OnComponentHandler<T> handler, bool disableRelationsCheck) {
                     #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
                     if (!disableRelationsCheck) {
                         if (handler != null) {

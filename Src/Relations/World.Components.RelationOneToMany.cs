@@ -32,17 +32,16 @@ namespace FFS.Libraries.StaticEcs {
                 ValidateComponentRegistration<O>();
                 
                 var actualConfigLeft = new ValueComponentConfig<O, WorldType>(leftConfig) {
-                    OnAddWithValueHandler = OnAddLeftHandle(leftConfig.OnAdd(), disableRelationsCheckLeftDebug),
+                    OnPutHandler = OnPutLeftHandle(leftConfig.OnPut(), disableRelationsCheckLeftDebug),
                     OnDeleteHandler = OnDeleteHandlerOneToMany(leftDeleteStrategy, leftConfig.OnDelete()),
                     OnCopyHandler = OnCopyOneHandler(leftCopyStrategy, leftConfig.OnCopy()),
-                    OnAddHandler = UseAddLinkMethodException,
+                    OnAddHandler = UseSetLinkMethodException,
                     Copyable = leftCopyStrategy != CopyStrategy.NotCopy
                 };
 
                 RegisterComponentType(
                     capacity: capacity,
-                    actualConfigLeft,
-                    putNotAllowed: true
+                    actualConfigLeft
                 );
 
                 ValidateComponentRegistration<M>();
@@ -59,7 +58,7 @@ namespace FFS.Libraries.StaticEcs {
                 RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity, capacity);
                 
                 var actualConfigRight = new ValueComponentConfig<M, WorldType>(rightConfig) {
-                    OnAddWithValueHandler = OnAddManyHandler(rightConfig.OnAdd(), disableRelationsCheckRightDebug),
+                    OnPutHandler = OnAddManyHandler(rightConfig.OnPut(), disableRelationsCheckRightDebug),
                     OnDeleteHandler = OnDeleteHandlerManyToOne(rightDeleteStrategy, rightConfig.OnDelete()),
                     OnCopyHandler = OnCopyManyHandler(rightCopyStrategy, rightConfig.OnCopy()),
                     OnAddHandler = OnAddManyHandler(rightConfig.OnAdd(), disableRelationsCheckRightDebug),
@@ -68,8 +67,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 RegisterComponentType(
                     capacity: capacity,
-                    actualConfigRight,
-                    putNotAllowed: true
+                    actualConfigRight
                 );
 
                 return;
@@ -80,21 +78,25 @@ namespace FFS.Libraries.StaticEcs {
                         CheckManyRelation<M>(e, link);
                     }
                     #endif
-                    if (!Components<O>.Value.Has(link)) {
-                        var value = default(O);
-                        value.RefValue(ref value) = e.Gid();
-                        Components<O>.Value.Add(link, value);
-                    }
-                    #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
-                    else {
-                        var oldLink = Components<O>.Value.Ref(link).Link();
-                        var newLink = e.Gid();
-                        if (oldLink != e.Gid()) {
-                            throw new StaticEcsException(
-                                $"{link} contains a {typeof(O)} with another link ({oldLink}) than the added ({newLink}), delete the previous link before adding a new one");
+                    var gid = e.Gid();
+                    if (Components<O>.Value.Has(link)) {
+                        Components<O>.Value.Delete(link);
+                        ref var val = ref Components<O>.Value.Ref(link);
+                        if (val.RefValue(ref val).Equals(gid)) {
+                            return;
                         }
+                        if (Components<O>.Value.onDeleteHandler != null) {
+                            Components<O>.Value.onDeleteHandler(link, ref val);
+                        } else {
+                            val = default;
+                        }
+    
+                        Components<O>.Value.onPutHandler?.Invoke(link, ref val);
+                        return;
                     }
-                    #endif
+                    var value = default(O);
+                    value.RefValue(ref value) = e.Gid();
+                    Components<O>.Value.Put(link, value);
                 }
 
                 static void DeepLeftDestroy(Entity _, EntityGID entity) {
@@ -113,7 +115,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
 
-                static OnComponentHandler<O> OnAddLeftHandle(OnComponentHandler<O> handler, bool disableRelationsCheck) {
+                static OnComponentHandler<O> OnPutLeftHandle(OnComponentHandler<O> handler, bool disableRelationsCheck) {
                     #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
                     CyclicCheck<O>.Value = !disableRelationsCheck;
                     #endif

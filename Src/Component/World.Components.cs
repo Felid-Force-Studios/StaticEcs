@@ -99,8 +99,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal void RegisterComponentType<T>(uint capacity,
-                                                   IComponentConfig<T, WorldType> config,
-                                                   bool putNotAllowed = false) where T : struct, IComponent {
+                                                   IComponentConfig<T, WorldType> config) where T : struct, IComponent {
                 if (Components<T>.Value.IsRegistered()) throw new StaticEcsException($"Component {typeof(T)} already registered");
 
                 if (_poolsCount == _pools.Length) {
@@ -109,7 +108,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 _pools[_poolsCount] = new ComponentsWrapper<T>();
                 _poolByType[typeof(T)] = new ComponentsWrapper<T>();
-                Components<T>.Value.Create(_poolsCount, BitMask, EntitiesCapacity(), config, capacity, putNotAllowed);
+                Components<T>.Value.Create(_poolsCount, BitMask, EntitiesCapacity(), config, capacity);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
                 Components<T>.Value.debugEventListeners = _debugEventListeners;
                 #endif
