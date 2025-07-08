@@ -29,7 +29,7 @@ namespace FFS.Libraries.StaticEcs {
                     OnPutHandler = OnPutHandler(config.OnPut(), disableRelationCheck),
                     OnDeleteHandler = OnDeleteHandler(onDeleteStrategy, config.OnDelete()),
                     OnCopyHandler = OnCopyOneHandler(onCopyStrategy, config.OnCopy()),
-                    OnAddHandler = UseSetLinkMethodException,
+                    OnAddHandler = OnPutHandler(config.OnAdd(), disableRelationCheck),
                     Copyable = onCopyStrategy != CopyStrategy.NotCopy
                 };
 
@@ -37,6 +37,7 @@ namespace FFS.Libraries.StaticEcs {
                     capacity: capacity,
                     actualConfig
                 );
+                Components<T>.Value.AddWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
                 return;
 
                 static OnComponentHandler<T> OnPutHandler(OnComponentHandler<T> handler, bool disableRelationsCheck) {

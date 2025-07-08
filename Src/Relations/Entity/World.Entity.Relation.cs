@@ -25,8 +25,7 @@ namespace FFS.Libraries.StaticEcs {
                 
                 var component = default(L);
                 component.RefValue(ref component) = link;
-                Components<L>.Value.Put(this, component);
-                return ref Components<L>.Value.Ref(this);
+                return ref Components<L>.Value.Add(this, component);
             }
             
             [MethodImpl(AggressiveInlining)]

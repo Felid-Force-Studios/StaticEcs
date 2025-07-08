@@ -35,7 +35,7 @@ namespace FFS.Libraries.StaticEcs {
                     OnPutHandler = OnPutLeftHandle(leftConfig.OnPut(), disableRelationsCheckLeftDebug),
                     OnDeleteHandler = OnDeleteHandlerOneToMany(leftDeleteStrategy, leftConfig.OnDelete()),
                     OnCopyHandler = OnCopyOneHandler(leftCopyStrategy, leftConfig.OnCopy()),
-                    OnAddHandler = UseSetLinkMethodException,
+                    OnAddHandler = OnPutLeftHandle(leftConfig.OnAdd(), disableRelationsCheckLeftDebug),
                     Copyable = leftCopyStrategy != CopyStrategy.NotCopy
                 };
 
@@ -43,6 +43,7 @@ namespace FFS.Libraries.StaticEcs {
                     capacity: capacity,
                     actualConfigLeft
                 );
+                Components<O>.Value.AddWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
 
                 ValidateComponentRegistration<M>();
 
@@ -80,7 +81,6 @@ namespace FFS.Libraries.StaticEcs {
                     #endif
                     var gid = e.Gid();
                     if (Components<O>.Value.Has(link)) {
-                        Components<O>.Value.Delete(link);
                         ref var val = ref Components<O>.Value.Ref(link);
                         if (val.RefValue(ref val).Equals(gid)) {
                             return;
@@ -96,7 +96,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                     var value = default(O);
                     value.RefValue(ref value) = e.Gid();
-                    Components<O>.Value.Put(link, value);
+                    Components<O>.Value.Add(link, value);
                 }
 
                 static void DeepLeftDestroy(Entity _, EntityGID entity) {

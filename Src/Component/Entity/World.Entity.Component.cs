@@ -248,15 +248,15 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public void Add<C1>(C1 c1)
                 where C1 : struct, IComponent {
-                Components<C1>.Value.Add(this) = c1;
+                Components<C1>.Value.Add(this, c1);
             }
             
             [MethodImpl(AggressiveInlining)]
             public void Add<C1, C2>(C1 c1, C2 c2)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
-                Components<C1>.Value.Add(this) = c1;
-                Components<C2>.Value.Add(this) = c2;
+                Components<C1>.Value.Add(this, c1);
+                Components<C2>.Value.Add(this, c2);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -264,9 +264,9 @@ namespace FFS.Libraries.StaticEcs {
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent {
-                Components<C1>.Value.Add(this) = c1;
-                Components<C2>.Value.Add(this) = c2;
-                Components<C3>.Value.Add(this) = c3;
+                Components<C1>.Value.Add(this, c1);
+                Components<C2>.Value.Add(this, c2);
+                Components<C3>.Value.Add(this, c3);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -275,10 +275,10 @@ namespace FFS.Libraries.StaticEcs {
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent {
-                Components<C1>.Value.Add(this) = c1;
-                Components<C2>.Value.Add(this) = c2;
-                Components<C3>.Value.Add(this) = c3;
-                Components<C4>.Value.Add(this) = c4;
+                Components<C1>.Value.Add(this, c1);
+                Components<C2>.Value.Add(this, c2);
+                Components<C3>.Value.Add(this, c3);
+                Components<C4>.Value.Add(this, c4);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -288,11 +288,11 @@ namespace FFS.Libraries.StaticEcs {
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent
                 where C5 : struct, IComponent {
-                Components<C1>.Value.Add(this) = c1;
-                Components<C2>.Value.Add(this) = c2;
-                Components<C3>.Value.Add(this) = c3;
-                Components<C4>.Value.Add(this) = c4;
-                Components<C5>.Value.Add(this) = c5;
+                Components<C1>.Value.Add(this, c1);
+                Components<C2>.Value.Add(this, c2);
+                Components<C3>.Value.Add(this, c3);
+                Components<C4>.Value.Add(this, c4);
+                Components<C5>.Value.Add(this, c5);
             }
             
             [MethodImpl(AggressiveInlining)]

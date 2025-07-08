@@ -525,7 +525,7 @@ namespace FFS.Libraries.StaticEcs {
                 ref var components1 = ref Components<C1>.Value;
                 components1.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Put(entity, c1);
+                    components1.Add(entity, c1);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -539,8 +539,8 @@ namespace FFS.Libraries.StaticEcs {
                 components1.EnsureSize(count);
                 components2.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Put(entity, c1);
-                    components2.Put(entity, c2);
+                    components1.Add(entity, c1);
+                    components2.Add(entity, c2);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -557,9 +557,9 @@ namespace FFS.Libraries.StaticEcs {
                 components2.EnsureSize(count);
                 components3.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Put(entity, c1);
-                    components2.Put(entity, c2);
-                    components3.Put(entity, c3);
+                    components1.Add(entity, c1);
+                    components2.Add(entity, c2);
+                    components3.Add(entity, c3);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -579,10 +579,10 @@ namespace FFS.Libraries.StaticEcs {
                 components3.EnsureSize(count);
                 components4.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Put(entity, c1);
-                    components2.Put(entity, c2);
-                    components3.Put(entity, c3);
-                    components4.Put(entity, c4);
+                    components1.Add(entity, c1);
+                    components2.Add(entity, c2);
+                    components3.Add(entity, c3);
+                    components4.Add(entity, c4);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -605,11 +605,11 @@ namespace FFS.Libraries.StaticEcs {
                 components4.EnsureSize(count);
                 components5.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Put(entity, c1);
-                    components2.Put(entity, c2);
-                    components3.Put(entity, c3);
-                    components4.Put(entity, c4);
-                    components5.Put(entity, c5);
+                    components1.Add(entity, c1);
+                    components2.Add(entity, c2);
+                    components3.Add(entity, c3);
+                    components4.Add(entity, c4);
+                    components5.Add(entity, c5);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -635,12 +635,12 @@ namespace FFS.Libraries.StaticEcs {
                 components5.EnsureSize(count);
                 components6.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Put(entity, c1);
-                    components2.Put(entity, c2);
-                    components3.Put(entity, c3);
-                    components4.Put(entity, c4);
-                    components5.Put(entity, c5);
-                    components6.Put(entity, c6);
+                    components1.Add(entity, c1);
+                    components2.Add(entity, c2);
+                    components3.Add(entity, c3);
+                    components4.Add(entity, c4);
+                    components5.Add(entity, c5);
+                    components6.Add(entity, c6);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -669,13 +669,13 @@ namespace FFS.Libraries.StaticEcs {
                 components6.EnsureSize(count);
                 components7.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Put(entity, c1);
-                    components2.Put(entity, c2);
-                    components3.Put(entity, c3);
-                    components4.Put(entity, c4);
-                    components5.Put(entity, c5);
-                    components6.Put(entity, c6);
-                    components7.Put(entity, c7);
+                    components1.Add(entity, c1);
+                    components2.Add(entity, c2);
+                    components3.Add(entity, c3);
+                    components4.Add(entity, c4);
+                    components5.Add(entity, c5);
+                    components6.Add(entity, c6);
+                    components7.Add(entity, c7);
                     onCreate?.Invoke(entity);
                 }
             }
@@ -707,14 +707,14 @@ namespace FFS.Libraries.StaticEcs {
                 components7.EnsureSize(count);
                 components8.EnsureSize(count);
                 foreach (var entity in CreateEntitiesInternal(count)) {
-                    components1.Put(entity, c1);
-                    components2.Put(entity, c2);
-                    components3.Put(entity, c3);
-                    components4.Put(entity, c4);
-                    components5.Put(entity, c5);
-                    components6.Put(entity, c6);
-                    components7.Put(entity, c7);
-                    components8.Put(entity, c8);
+                    components1.Add(entity, c1);
+                    components2.Add(entity, c2);
+                    components3.Add(entity, c3);
+                    components4.Add(entity, c4);
+                    components5.Add(entity, c5);
+                    components6.Add(entity, c6);
+                    components7.Add(entity, c7);
+                    components8.Add(entity, c8);
                     onCreate?.Invoke(entity);
                 }
             }

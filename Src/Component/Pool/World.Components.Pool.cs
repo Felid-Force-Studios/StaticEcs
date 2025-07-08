@@ -42,6 +42,7 @@ namespace FFS.Libraries.StaticEcs {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
             private int _blockers;
             private int _blockersAdd;
+            internal string AddWithoutValueError;
             #endif
 
             #region PUBLIC
@@ -74,6 +75,7 @@ namespace FFS.Libraries.StaticEcs {
                 if (IsBlocked()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, component pool cannot be changed, it is in read-only mode due to multiple accesses");
                 if (IsBlockedAdd()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, component pool cannot be changed, it is in read-only mode due to multiple accesses");
                 if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, this operation is not supported in multithreaded mode");
+                if (AddWithoutValueError != null) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, {AddWithoutValueError}");
                 #endif
 
                 if (_entities.Length == _componentsCount) {
@@ -96,6 +98,41 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 #endif
                 
+                return ref data;
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public ref T Add(Entity entity, T val) {
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Add, World not initialized");
+                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, Component type not registered");
+                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, cannot access Entity ID - {id} from deleted entity");
+                if (Has(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, ID - {entity._id} is already on an entity");
+                if (IsBlocked()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, component pool cannot be changed, it is in read-only mode due to multiple accesses");
+                if (IsBlockedAdd()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, component pool cannot be changed, it is in read-only mode due to multiple accesses");
+                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, this operation is not supported in multithreaded mode");
+                #endif
+
+                if (_entities.Length == _componentsCount) {
+                    ResizeData(_componentsCount << 1);
+                }
+
+                var eid = entity._id;
+                _entities[_componentsCount] = eid;
+                _dataIdxByEntityId[eid] = _componentsCount;
+
+                _bitMask.Set(eid, id);
+                
+                ref var data = ref _data[_componentsCount];
+                data = val;
+                _componentsCount++;
+                onAddHandler?.Invoke(entity, ref data);
+
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                foreach (var listener in debugEventListeners) {
+                    listener.OnComponentAdd(entity, ref data);
+                }
+                #endif
                 return ref data;
             }
 
@@ -490,6 +527,7 @@ namespace FFS.Libraries.StaticEcs {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 _blockers = 0;
                 _blockersAdd = 0;
+                AddWithoutValueError = default;
                 #endif
                 _copyable = false;
                 _registered = false;

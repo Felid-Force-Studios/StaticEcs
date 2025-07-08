@@ -39,7 +39,7 @@ namespace FFS.Libraries.StaticEcs {
                     OnPutHandler = OnPutHandler<L, R>(leftConfig.OnPut(), disableRelationsCheckLeftDebug),
                     OnDeleteHandler = OnDeleteHandler<L, R>(leftDeleteStrategy, leftConfig.OnDelete()),
                     OnCopyHandler = OnCopyOneHandler(leftCopyStrategy, leftConfig.OnCopy()),
-                    OnAddHandler = UseSetLinkMethodException,
+                    OnAddHandler = OnPutHandler<L, R>(leftConfig.OnAdd(), disableRelationsCheckLeftDebug),
                     Copyable = leftCopyStrategy != CopyStrategy.NotCopy
                 };
 
@@ -47,6 +47,8 @@ namespace FFS.Libraries.StaticEcs {
                     capacity: capacity,
                     actualConfigLeft
                 );
+                Components<L>.Value.AddWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
+                
 
                 if (Components<R>.Value.IsRegistered()) {
                     // Same types
@@ -61,7 +63,7 @@ namespace FFS.Libraries.StaticEcs {
                     OnPutHandler = OnPutHandler<R, L>(rightConfig.OnPut(), disableRelationsCheckRightDebug),
                     OnDeleteHandler = OnDeleteHandler<R, L>(rightDeleteStrategy, rightConfig.OnDelete()),
                     OnCopyHandler = OnCopyOneHandler(rightCopyStrategy, rightConfig.OnCopy()),
-                    OnAddHandler = UseSetLinkMethodException,
+                    OnAddHandler = OnPutHandler<R, L>(rightConfig.OnAdd(), disableRelationsCheckRightDebug),
                     Copyable = rightCopyStrategy != CopyStrategy.NotCopy
                 };
 
@@ -69,6 +71,7 @@ namespace FFS.Libraries.StaticEcs {
                     capacity: capacity,
                     actualConfigRight
                 );
+                Components<R>.Value.AddWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
                 return;
 
                 static OnComponentHandler<A> OnPutHandler<A, B>(OnComponentHandler<A> handler, bool disableRelationsCheck)
@@ -109,7 +112,7 @@ namespace FFS.Libraries.StaticEcs {
                         }
                         var value = default(B);
                         value.RefValue(ref value) = gid;
-                        Components<B>.Value.Put(unpacked, value);
+                        Components<B>.Value.Add(unpacked, value);
                     }
                 }
 
