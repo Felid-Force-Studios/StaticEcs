@@ -33,6 +33,7 @@ ___
 
 
 # Contacts
+* [Email](felid.force.studios@gmail.com)
 * [Telegram](https://t.me/felid_force_studios)
 
 # Installation
