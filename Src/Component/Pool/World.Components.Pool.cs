@@ -42,8 +42,8 @@ namespace FFS.Libraries.StaticEcs {
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
             private int _blockers;
             private int _blockersAdd;
-            internal string AddWithoutValueError;
             #endif
+            internal string AddWithoutValueError;
 
             #region PUBLIC
             [MethodImpl(AggressiveInlining)]
@@ -527,8 +527,8 @@ namespace FFS.Libraries.StaticEcs {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 _blockers = 0;
                 _blockersAdd = 0;
-                AddWithoutValueError = default;
                 #endif
+                AddWithoutValueError = default;
                 _copyable = false;
                 _registered = false;
             }
