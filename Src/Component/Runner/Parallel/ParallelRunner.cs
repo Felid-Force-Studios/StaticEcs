@@ -33,7 +33,8 @@ namespace FFS.Libraries.StaticEcs {
             _disposing = false;
             _workers = new Worker[_threadsCount - 1];
             for (var i = 0; i < _workers.Length; i++) {
-                _workers[i] = new Worker(new Thread(ThreadFunction) { IsBackground = true }).Start(i);
+                _workers[i] = new Worker(new Thread(ThreadFunction) { IsBackground = true });
+                _workers[i].Start(i);
             }
         }
 
