@@ -64,6 +64,6 @@ entity.ToggleTag<Unit>();
 entity.ToggleTag<Unit, Player>();
 
 // В зависимости от переданого значения или устанавливается тег (true) или удаляется (false) (методы перегрузки от 1-3 тегов)
-entity.ApplyMask<Unit>(true);
-entity.ApplyMask<Unit, Player>(false, true);
+entity.ApplyTag<Unit>(true);
+entity.ApplyTag<Unit, Player>(false, true);
 ```

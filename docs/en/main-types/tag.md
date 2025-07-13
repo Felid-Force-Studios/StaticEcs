@@ -64,6 +64,6 @@ entity.ToggleTag<Unit>();
 entity.ToggleTag<Unit, Player>();
 
 // Depending on the passed value, either the tag is set (true) or removed (false) (overload methods from 1-3 tags)
-entity.ApplyMask<Unit>(true);
-entity.ApplyMask<Unit, Player>(false, true);
+entity.ApplyTag<Unit>(true);
+entity.ApplyTag<Unit, Player>(false, true);
 ```
