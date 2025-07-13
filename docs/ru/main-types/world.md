@@ -96,20 +96,20 @@ World.Initialize();
 World.Destroy();
 
 // При регистрации компонента возможно указать базовой размер массива даных компонентов этого типа
-MyWorld.RegisterComponentType<Position>(256);
+World.RegisterComponentType<Position>(256);
 
 // аналогично RegisterComponentType, но для тегов
-var unitTagId = MyWorld.RegisterTagType<Unit>(256);
+var unitTagId = World.RegisterTagType<Unit>(256);
 
 // аналогично RegisterComponentType, но для масок
-var visibleMaskId = MyWorld.RegisterMaskType<Visible>();
+var visibleMaskId = World.RegisterMaskType<Visible>();
 
 // true если мир инициализирован
-bool initialized = MyWorld.IsInitialized();
+bool initialized = World.IsInitialized();
 
 // количество активных сущностей в мире
-int entitiesCount = MyWorld.EntitiesCount();
+int entitiesCount = World.EntitiesCount();
 
 // текущая емкость массива для сущностей
-int entitiesCapacity = MyWorld.EntitiesCapacity();
+int entitiesCapacity = World.EntitiesCapacity();
 ```

@@ -97,20 +97,20 @@ World.Initialize();
 World.Destroy();
 
 // When registering a component, it is possible to specify the base size of the data array of components of this type
-MyWorld.RegisterComponentType<Position>(256);
+World.RegisterComponentType<Position>(256);
 
 // similar to RegisterComponentType, but for tags
-var unitTagId = MyWorld.RegisterTagType<Unit>(256);
+var unitTagId = World.RegisterTagType<Unit>(256);
 
 // similar to RegisterComponentType, but for masks
-var visibleMaskId = MyWorld.RegisterMaskType<Visible>();
+var visibleMaskId = World.RegisterMaskType<Visible>();
 
 // true if the world is initialized
-bool initialized = MyWorld.IsInitialized();
+bool initialized = World.IsInitialized();
 
 // the number of active entities in the world
-int entitiesCount = MyWorld.EntitiesCount();
+int entitiesCount = World.EntitiesCount();
 
 // current capacity of the entity array
-int entitiesCapacity = MyWorld.EntitiesCapacity();
+int entitiesCapacity = World.EntitiesCapacity();
 ```

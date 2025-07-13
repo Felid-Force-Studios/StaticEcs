@@ -93,5 +93,27 @@ bool deleted = entity.Delete<Position, Velocity, Name>();  // deleted = true if 
 var entity2 = World.Entity.New<Name>();
 // Copy the specified components to another entity (overload methods from 1-5 components)
 entity.CopyComponentsTo<Position, Velocity>(entity2);
+
+// Disables a component (by default, disabled components are not included in the query filter (see Query)) (overload methods from 1-3 components)
+entity.Disable<Position>();
+entity.Disable<Position, Velocity, Name>();
+
+// Enables component (overload methods from 1-3 components)
+entity.Enable<Position>();
+entity.Enable<Position, Velocity, Name>();
+
+// Check for ALL disabled components (overload methods from 1-3 components)
+bool positionDisabled = entity.HasDisabledAllOf<Position>();
+bool positionAndVelocityDisabled = entity.HasDisabledAllOf<Position, Velocity>();
+
+// Check for at least one disabled component (overload methods from 1-3 components)
+bool anyPositionAndVelocityDisabled = entity.HasDisabledAllOf<Position, Velocity>();
+
+// Check for ALL enabled components (overload methods from 1-3 components)
+bool positionEnabled = entity.HasEnabledAllOf<Position>();
+bool positionAndVelocityEnabled = entity.HasEnabledAllOf<Position, Velocity>();
+
+// Check for at least one enabled component (overload methods from 1-3 components)
+bool anyPositionAndVelocityEnabled = entity.HasEnabledAnyOf<Position, Velocity>();
 ```
 

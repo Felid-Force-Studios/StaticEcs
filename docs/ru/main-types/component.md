@@ -93,5 +93,27 @@ bool deleted = entity.TryDelete<Position, Velocity, Name>();  // deleted = true 
 var entity2 = World.Entity.New<Name>();
 // Скопировать указанные компоненты на другую сущность (методы перегрузки от 1-5 компонентов)
 entity.CopyComponentsTo<Position, Velocity>(entity2);
+
+// Отключает компонент (по умолчанию отключенные компоненты не попадают в фильтр запросов (смотри Query)) (методы перегрузки от 1-3 компонентов)
+entity.Disable<Position>();
+entity.Disable<Position, Velocity, Name>();
+
+// Включает компонент (методы перегрузки от 1-3 компонентов)
+entity.Enable<Position>();
+entity.Enable<Position, Velocity, Name>();
+
+// Проверить наличие ВСЕХ отключенных компонентов (методы перегрузки от 1-3 компонентов)
+bool positionDisabled = entity.HasDisabledAllOf<Position>();
+bool positionAndVelocityDisabled = entity.HasDisabledAllOf<Position, Velocity>();
+
+// Проверить наличие хотя бы одного отключённого компонента (методы перегрузки от 1-3 компонентов)
+bool anyPositionAndVelocityDisabled = entity.HasDisabledAllOf<Position, Velocity>();
+
+// Проверить наличие ВСЕХ включенных компонентов (методы перегрузки от 1-3 компонентов)
+bool positionEnabled = entity.HasEnabledAllOf<Position>();
+bool positionAndVelocityEnabled = entity.HasEnabledAllOf<Position, Velocity>();
+
+// Проверить наличие хотя бы одного включенного компонента (методы перегрузки от 1-3 компонентов)
+bool anyPositionAndVelocityEnabled = entity.HasEnabledAnyOf<Position, Velocity>();
 ```
 

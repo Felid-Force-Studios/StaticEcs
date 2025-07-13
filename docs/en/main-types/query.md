@@ -15,20 +15,34 @@ ___
 // World.QueryEntities.For()\With() returns an iterator of entities matching the condition
 // The following types are available for applying component filtering conditions:
 
-// All - filters entities for the presence of all specified components (overload from 1 to 8)
+// All - filters entities for the presence of all specified enabled components (overload from 1 to 8)
 AllTypes<Types<Position, Direction, Velocity>> _all = default;
 // or
 All<Position, Direction, Velocity> _all2 = default;
 
-// None - filters entities for the absence of all specified components (can be used only as part of other methods) (overloading from 1 to 8)
+// AllOnlyDisabled - filters entities for the presence of all specified disabled components (overload from 1 to 8)
+AllOnlyDisabled<Position, Direction, Velocity>
+// AllWithDisabled - filters entities for the presence of all specified (enabled and disabled) components (overload from 1 to 8)
+AllWithDisabled<Position, Direction, Velocity>
+
+// None - filters entities for the absence of all specified enabled components (can be used only as part of other methods) (overloading from 1 to 8)
 NoneTypes<Types<Name>> _none = default;
 // or
 None<Name> _none2 = default;
 
-// Any - filters entities for the presence of any of the specified components (can only be used as part of other methods) (overloading from 1 to 8)
+// NoneWithDisabled - filters entities for the absence of all specified (enabled and disabled) components (can only be used as part of other methods) (overloading from 1 to 8).
+NoneWithDisabled<Position, Direction, Velocity>
+
+// Any - filters entities for the presence of any of the specified enabled components (can only be used as part of other methods) (overloading from 1 to 8)
 AnyTypes<Types<Position, Direction, Velocity>> _any = default;
 // or
 Any<Position, Direction, Velocity> _any2 = default;
+
+// AnyOnlyDisabled - filters entities for the presence of any of the specified disabled components (can only be used as part of other methods) (overload from 1 to 8)
+AnyOnlyDisabled<Position, Direction, Velocity>
+    
+// AnyWithDisabled - filters entities for the presence of any of the specified (enabled and disabled) components (can only be used as part of other methods) (overload from 1 to 8)
+AnyWithDisabled<Position, Direction, Velocity>
 
 // Analogs for tags
 // TagAll - filters entities for the presence of all specified tags (overload from 1 to 8)
@@ -67,18 +81,18 @@ MaskAny<Flammable, Frozen, Visible> _any2 = default;
 
 // Different sets of filtering methods can be applied to the World.QueryEntities.For() method for example:
 // Option 1 method through generic
-foreach (var entity in MyWorld.QueryEntities.For<All<Position, Direction, Velocity>>()) {
+foreach (var entity in World.QueryEntities.For<All<Position, Direction, Velocity>>()) {
     entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
 // Variant with 1 method via value
 var all = default(All<Position, Direction, Velocity>);
-foreach (var entity in MyWorld.QueryEntities.For(all)) {
+foreach (var entity in World.QueryEntities.For(all)) {
     entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
 // Option with 2 methods via generic
-foreach (var entity in MyWorld.QueryEntities.For<
+foreach (var entity in World.QueryEntities.For<
              All<Position, Velocity, Name>,
              None<Name>>()) {
     entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
@@ -87,14 +101,14 @@ foreach (var entity in MyWorld.QueryEntities.For<
 // Variant with 2 methods via value
 All<Position, Direction, Velocity> all2 = default;
 None<Name> none2 = default;
-foreach (var entity in MyWorld.QueryEntities.For(all2, none2)) {
+foreach (var entity in World.QueryEntities.For(all2, none2)) {
     entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
 // Alternative with 2 methods via value
 var all3 = Types<Position, Direction, Velocity>.All();
 var none3 = Types<Name>.None();
-foreach (var entity in MyWorld.QueryEntities.For(all3, none3)) {
+foreach (var entity in World.QueryEntities.For(all3, none3)) {
     entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
@@ -103,7 +117,7 @@ foreach (var entity in MyWorld.QueryEntities.For(all3, none3)) {
 // which can be applied to the World.QueryEntities.For() method, for example:
 
 // Method 1 via generic
-foreach (var entity in MyWorld.QueryEntities.For<With<
+foreach (var entity in World.QueryEntities.For<With<
              All<Position, Velocity, Name>,
              None<Name>,
              Any<Position, Direction, Velocity>
@@ -117,7 +131,7 @@ With<
     None<Name>,
     Any<Position, Direction, Velocity>
 > with = default;
-foreach (var entity in MyWorld.QueryEntities.For(with)) {
+foreach (var entity in World.QueryEntities.For(with)) {
     entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
@@ -127,7 +141,7 @@ var with2 = With.Create(
     default(None<Name>),
     default(Any<Position, Direction, Velocity>)
 );
-foreach (var entity in MyWorld.QueryEntities.For(with2)) {
+foreach (var entity in World.QueryEntities.For(with2)) {
     entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 
@@ -137,7 +151,7 @@ var with3 = With.Create(
     Types<Name>.None(),
     Types<Position, Direction, Velocity>.Any()
 );
-foreach (var entity in MyWorld.QueryEntities.For(with3)) {
+foreach (var entity in World.QueryEntities.For(with3)) {
     entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
 }
 ```
@@ -147,18 +161,18 @@ foreach (var entity in MyWorld.QueryEntities.For(with3)) {
 // World.QueryComponents.For()\With() returns an iterator of entities matching the condition immediately with components 
 
 // Option 1 with specifying a delegate and getting the required components at once, from 1 to 8 component types can be specified
-MyWorld.QueryComponents.For<Position, Velocity, Name>((World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+World.QueryComponents.For<Position, Velocity, Name>((World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
     position.Val *= velocity.Val;
 });
 
 // you can remove generics, since they are derived from the passed function type
-MyWorld.QueryComponents.For((World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+World.QueryComponents.For((World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
     position.Val *= velocity.Val;
 });
 
 // you can add a static constraint to the delegate to ensure that this delegate will not be allocated every time.
 // in combination with World.Context allows for convenient and productive code without creating closures in the delegate
-MyWorld.QueryComponents.For(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+World.QueryComponents.For(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
     position.Val *= velocity.Val;
 });
 
@@ -171,12 +185,12 @@ WithAdds<
     Any<Position, Direction, Velocity>
 > with = default;
 
-MyWorld.QueryComponents.With(with).For(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+World.QueryComponents.With(with).For(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
     position.Val *= velocity.Val;
 });
 
 // or
-MyWorld.QueryComponents.With<WithAdds<
+World.QueryComponents.With<WithAdds<
     None<Direction>,
     Any<Position, Direction, Velocity>
 >>().For(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
@@ -184,15 +198,15 @@ MyWorld.QueryComponents.With<WithAdds<
 });
 
 
-Also similarly, there are variants for searching by disabled or together with disabled components:
-It is important that the filter is applied only to components specified in the function, not to With components 
-If you need to set a filter for disabled components in With, use the constructs AllOnlyDisabled, AllWithDisabled, etc.
+// Also similarly, there are variants for searching by disabled or together with disabled components:
+// It is important that the filter is applied only to components specified in the function, not to With components 
+// If you need to set a filter for disabled components in With, use the constructs AllOnlyDisabled, AllWithDisabled, etc.
 
-MyWorld.QueryComponents.With(with).ForOnlyDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+World.QueryComponents.With(with).ForOnlyDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
     position.Val *= velocity.Val;
 });
 
-MyWorld.QueryComponents.With(with).ForWithDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
+World.QueryComponents.With(with).ForWithDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
     position.Val *= velocity.Val;
 });
 
@@ -204,19 +218,19 @@ MyWorld.QueryComponents.With(with).ForWithDiabled(static (World.Entity entity, r
 // or (CustomThreadsCount and specify the maximum number of threads) - useful when you want to specify different numbers for different worlds
 
 
-MyWorld.QueryComponents.Parallel.For(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
+World.QueryComponents.Parallel.For(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 
-MyWorld.QueryComponents.Parallel.With(with).For(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
+World.QueryComponents.Parallel.With(with).For(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 
-MyWorld.QueryComponents.Parallel.ForOnlyDiabled(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
+World.QueryComponents.Parallel.ForOnlyDiabled(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 
-MyWorld.QueryComponents.Parallel.ForWithDiabled(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
+World.QueryComponents.Parallel.ForWithDiabled(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
     position.Val *= velocity.Val;
 });
 ```
@@ -235,13 +249,13 @@ readonly struct StructFunction : World.IQueryFunction<Position, Velocity, Name> 
 }
 
 // Option 1 with generic transmission
-MyWorld.QueryComponents.For<Position, Velocity, Name, StructFunction>();
+World.QueryComponents.For<Position, Velocity, Name, StructFunction>();
 
 // Variant 1 with value transfer
-MyWorld.QueryComponents.For<Position, Velocity, Name, StructFunction>(new StructFunction());
+World.QueryComponents.For<Position, Velocity, Name, StructFunction>(new StructFunction());
 
 // Option 2 with With through generic
-MyWorld.QueryComponents.With<WithAdds<
+World.QueryComponents.With<WithAdds<
     None<Direction>,
     Any<Position, Direction, Velocity>
 >>().For<Position, Velocity, Name, StructFunction>();
@@ -251,7 +265,7 @@ WithAdds<
     None<Direction>,
     Any<Position, Direction, Velocity>
 > with = default;
-MyWorld.QueryComponents.With(with).For<Position, Velocity, Name, StructFunction>();
+World.QueryComponents.With(with).For<Position, Velocity, Name, StructFunction>();
 
 // It is also possible to combine system and IQueryFunction, for example:
 // this can improve code readability and increase perfomance + it allows accessing non-static members of the system
@@ -268,7 +282,7 @@ public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, World.IQueryFunct
     }
     
    public void Update() {
-       MyWorld.QueryComponents
+       World.QueryComponents
             .With(with)
             .For<Position, Velocity, Name, SomeFunctionSystem>(ref this);
    }
@@ -278,4 +292,16 @@ public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, World.IQueryFunct
         _userService1.CallSomeMethod(name.Val);
     }
 }
+```
+
+{: .important }
+For each filtering method `QueryComponents.For()`, `QueryEntities.For()`
+you can specify filtering by entity status, for example:
+
+```c#
+W.QueryEntities.For<All<Position>>(entities: EntityStatusType.Disabled)
+    
+World.QueryComponents.For<Position>((World.Entity entity, ref Position position) => {
+    position.Val *= velocity.Val;
+}, entities: EntityStatusType.Disabled);
 ```
