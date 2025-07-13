@@ -107,7 +107,7 @@ bool positionDisabled = entity.HasDisabledAllOf<Position>();
 bool positionAndVelocityDisabled = entity.HasDisabledAllOf<Position, Velocity>();
 
 // Check for at least one disabled component (overload methods from 1-3 components)
-bool anyPositionAndVelocityDisabled = entity.HasDisabledAllOf<Position, Velocity>();
+bool anyPositionAndVelocityDisabled = entity.HasDisabledAnyOf<Position, Velocity>();
 
 // Check for ALL enabled components (overload methods from 1-3 components)
 bool positionEnabled = entity.HasEnabledAllOf<Position>();

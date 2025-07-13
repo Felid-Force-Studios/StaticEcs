@@ -107,7 +107,7 @@ bool positionDisabled = entity.HasDisabledAllOf<Position>();
 bool positionAndVelocityDisabled = entity.HasDisabledAllOf<Position, Velocity>();
 
 // Проверить наличие хотя бы одного отключённого компонента (методы перегрузки от 1-3 компонентов)
-bool anyPositionAndVelocityDisabled = entity.HasDisabledAllOf<Position, Velocity>();
+bool anyPositionAndVelocityDisabled = entity.HasDisabledAnyOf<Position, Velocity>();
 
 // Проверить наличие ВСЕХ включенных компонентов (методы перегрузки от 1-3 компонентов)
 bool positionEnabled = entity.HasEnabledAllOf<Position>();
