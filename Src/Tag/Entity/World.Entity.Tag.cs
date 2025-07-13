@@ -63,7 +63,7 @@ namespace FFS.Libraries.StaticEcs {
             }
             #endregion
 
-            #region ADD
+            #region SET
             [MethodImpl(AggressiveInlining)]
             public void SetTag<C>()
                 where C : struct, ITag {
@@ -112,6 +112,108 @@ namespace FFS.Libraries.StaticEcs {
                 Tags<C3>.Value.Set(this);
                 Tags<C4>.Value.Set(this);
                 Tags<C5>.Value.Set(this);
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public void ToggleTag<C1>()
+                where C1 : struct, ITag {
+                if (Tags<C1>.Value.Has(this)) {
+                    Tags<C1>.Value.Delete(this);
+                } else {
+                    Tags<C1>.Value.Set(this);
+                }
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public void ToggleTag<C1, C2>()
+                where C1 : struct, ITag
+                where C2 : struct, ITag {
+                if (Tags<C1>.Value.Has(this)) {
+                    Tags<C1>.Value.Delete(this);
+                } else {
+                    Tags<C1>.Value.Set(this);
+                }
+
+                if (Tags<C2>.Value.Has(this)) {
+                    Tags<C2>.Value.Delete(this);
+                } else {
+                    Tags<C2>.Value.Set(this);
+                }
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public void ToggleTag<C1, C2, C3>()
+                where C1 : struct, ITag
+                where C2 : struct, ITag
+                where C3 : struct, ITag {
+                if (Tags<C1>.Value.Has(this)) {
+                    Tags<C1>.Value.Delete(this);
+                } else {
+                    Tags<C1>.Value.Set(this);
+                }
+
+                if (Tags<C2>.Value.Has(this)) {
+                    Tags<C2>.Value.Delete(this);
+                } else {
+                    Tags<C2>.Value.Set(this);
+                }
+
+                if (Tags<C3>.Value.Has(this)) {
+                    Tags<C3>.Value.Delete(this);
+                } else {
+                    Tags<C3>.Value.Set(this);
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void ApplyTag<C>(bool state)
+                where C : struct, ITag {
+                if (state) {
+                    Tags<C>.Value.Set(this);
+                } else {
+                    Tags<C>.Value.TryDelete(this);
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void ApplyTag<C1, C2>(bool stateC1, bool stateC2)
+                where C1 : struct, ITag
+                where C2 : struct, ITag {
+                if (stateC1) {
+                    Tags<C1>.Value.Set(this);
+                } else {
+                    Tags<C1>.Value.TryDelete(this);
+                }
+
+                if (stateC2) {
+                    Tags<C2>.Value.Set(this);
+                } else {
+                    Tags<C2>.Value.TryDelete(this);
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void ApplyTag<C1, C2, C3>(bool stateC1, bool stateC2, bool stateC3)
+                where C1 : struct, ITag
+                where C2 : struct, ITag
+                where C3 : struct, ITag {
+                if (stateC1) {
+                    Tags<C1>.Value.Set(this);
+                } else {
+                    Tags<C1>.Value.TryDelete(this);
+                }
+
+                if (stateC2) {
+                    Tags<C2>.Value.Set(this);
+                } else {
+                    Tags<C2>.Value.TryDelete(this);
+                }
+
+                if (stateC3) {
+                    Tags<C3>.Value.Set(this);
+                } else {
+                    Tags<C3>.Value.TryDelete(this);
+                }
             }
             #endregion
 

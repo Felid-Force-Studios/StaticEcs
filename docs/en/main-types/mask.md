@@ -52,4 +52,12 @@ entity.DeleteMask<Frozen>();
 
 // Remove a mask from an entity if it exists (overload methods from 1-5 masks)
 var deleted = entity.TryDeleteMask<Frozen>();
+
+// If there is no mask on the entity, it is added, if there is, it is removed (overload methods from 1-3 masks).
+entity.ToggleMask<Frozen>();
+entity.ToggleMask<Flammable, Frozen, Visible>();
+
+// Depending on the passed value, either the mask is set (true) or removed (false) (overload methods from 1-3 masks)
+entity.ApplyMask<Frozen>(true);
+entity.ApplyMask<Flammable, Frozen, Visible>(false, true, true);
 ```

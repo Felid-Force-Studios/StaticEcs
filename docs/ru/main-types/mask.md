@@ -52,4 +52,12 @@ entity.DeleteMask<Frozen>();
 
 // Удалить маску у сущности если она существует (методы перегрузки от 1-5 масок)
 var deleted = entity.TryDeleteMask<Frozen>();
+
+// Если маски нет на сущности то она добавляется, если есть то удаляется (методы перегрузки от 1-3 масок)
+entity.ToggleMask<Frozen>();
+entity.ToggleMask<Flammable, Frozen, Visible>();
+
+// В зависимости от переданого значения или устанавливается маска (true) или удаляется (false) (методы перегрузки от 1-3 масок)
+entity.ApplyMask<Frozen>(true);
+entity.ApplyMask<Flammable, Frozen, Visible>(false, true, true);
 ```

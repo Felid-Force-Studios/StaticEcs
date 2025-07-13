@@ -58,4 +58,12 @@ entity.DeleteTag<Unit, Player>();
 // Удалить тег у сущности если он есть (методы перегрузки от 1-5 тегов)
 bool deleted = entity.TryDeleteTag<Unit>();  // deleted = true если тег был удален, false если тега не было изначально
 bool deleted = entity.TryDeleteTag<Unit, Player>();  // deleted = true если ВСЕ теги был удалены, false если хотя бы 1 тега не было изначально
+
+// Если тега нет на сущности то он добавляется, если есть то удаляется (методы перегрузки от 1-3 тегов)
+entity.ToggleTag<Unit>();
+entity.ToggleTag<Unit, Player>();
+
+// В зависимости от переданого значения или устанавливается тег (true) или удаляется (false) (методы перегрузки от 1-3 тегов)
+entity.ApplyMask<Unit>(true);
+entity.ApplyMask<Unit, Player>(false, true);
 ```

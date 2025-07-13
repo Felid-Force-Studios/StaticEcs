@@ -113,6 +113,108 @@ namespace FFS.Libraries.StaticEcs {
                 Masks<C4>.Value.Set(this);
                 Masks<C5>.Value.Set(this);
             }
+            
+            [MethodImpl(AggressiveInlining)]
+            public void ToggleMask<C>()
+                where C : struct, IMask {
+                if (Masks<C>.Value.Has(this)) {
+                    Masks<C>.Value.Delete(this);
+                } else {
+                    Masks<C>.Value.Set(this);
+                }
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public void ToggleMask<C1, C2>()
+                where C1 : struct, IMask
+                where C2 : struct, IMask {
+                if (Masks<C1>.Value.Has(this)) {
+                    Masks<C1>.Value.Delete(this);
+                } else {
+                    Masks<C1>.Value.Set(this);
+                }
+
+                if (Masks<C2>.Value.Has(this)) {
+                    Masks<C2>.Value.Delete(this);
+                } else {
+                    Masks<C2>.Value.Set(this);
+                }
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public void ToggleMask<C1, C2, C3>()
+                where C1 : struct, IMask
+                where C2 : struct, IMask
+                where C3 : struct, IMask {
+                if (Masks<C1>.Value.Has(this)) {
+                    Masks<C1>.Value.Delete(this);
+                } else {
+                    Masks<C1>.Value.Set(this);
+                }
+
+                if (Masks<C2>.Value.Has(this)) {
+                    Masks<C2>.Value.Delete(this);
+                } else {
+                    Masks<C2>.Value.Set(this);
+                }
+
+                if (Masks<C3>.Value.Has(this)) {
+                    Masks<C3>.Value.Delete(this);
+                } else {
+                    Masks<C3>.Value.Set(this);
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void ApplyMask<C>(bool state)
+                where C : struct, IMask {
+                if (state) {
+                    Masks<C>.Value.Set(this);
+                } else {
+                    Masks<C>.Value.TryDelete(this);
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void ApplyMask<C1, C2>(bool stateC1, bool stateC2)
+                where C1 : struct, IMask
+                where C2 : struct, IMask {
+                if (stateC1) {
+                    Masks<C1>.Value.Set(this);
+                } else {
+                    Masks<C1>.Value.TryDelete(this);
+                }
+
+                if (stateC2) {
+                    Masks<C2>.Value.Set(this);
+                } else {
+                    Masks<C2>.Value.TryDelete(this);
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void ApplyMask<C1, C2, C3>(bool stateC1, bool stateC2, bool stateC3)
+                where C1 : struct, IMask
+                where C2 : struct, IMask
+                where C3 : struct, IMask {
+                if (stateC1) {
+                    Masks<C1>.Value.Set(this);
+                } else {
+                    Masks<C1>.Value.TryDelete(this);
+                }
+
+                if (stateC2) {
+                    Masks<C2>.Value.Set(this);
+                } else {
+                    Masks<C2>.Value.TryDelete(this);
+                }
+
+                if (stateC3) {
+                    Masks<C3>.Value.Set(this);
+                } else {
+                    Masks<C3>.Value.TryDelete(this);
+                }
+            }
             #endregion
 
             #region DELETE

@@ -58,4 +58,12 @@ entity.DeleteTag<Unit, Player>();
 // Remove a tag from an entity if it has one (overload methods from 1-5 tags)
 bool deleted = entity.TryDeleteTag<Unit>();  // deleted = true if the tag has been deleted, false if the tag was not there originally
 bool deleted = entity.TryDeleteTag<Unit, Player>();  // deleted = true if ALL tags have been deleted, false if at least 1 tag was not originally there.
+
+// If the tag is not present on the entity, it is added, if it is present, it is removed (overload methods from 1-3 tags)
+entity.ToggleTag<Unit>();
+entity.ToggleTag<Unit, Player>();
+
+// Depending on the passed value, either the tag is set (true) or removed (false) (overload methods from 1-3 tags)
+entity.ApplyMask<Unit>(true);
+entity.ApplyMask<Unit, Player>(false, true);
 ```
