@@ -180,10 +180,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public void TryDestroy() {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: DestroyEntity, World not initialized");
-                #endif
-                if (GIDStore.Value.Has(this)) {
+                if (IsWorldInitialized() && GIDStore.Value.Has(this)) {
                     Destroy();
                 }
             }
