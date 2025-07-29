@@ -188,6 +188,26 @@ namespace FFS.Libraries.StaticEcs {
                 }
             }
 
+            [MethodImpl(AggressiveInlining)]
+            bool IEntity.TryAsEntityOf<WT>(out World<WT>.Entity entity) {
+                if (typeof(WT) == typeof(WorldType)) {
+                    entity = new World<WT>.Entity(_id);
+                    return true;
+                }
+                
+                entity = default;
+                return false;
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            World<WT>.Entity IEntity.AsEntityOf<WT>() {
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                if (typeof(WT) != typeof(WorldType)) throw new StaticEcsException($"Invalid cast: expected World<{typeof(WorldType).Name}>, got World<{typeof(WT).Name}>.");
+                #endif
+                
+                return new World<WT>.Entity(_id);
+            }
+
             #region NEW_BY_TYPE_SINGLE
             [MethodImpl(AggressiveInlining)]
             #if DEBUG || FFS_ECS_ENABLE_DEBUG || !FFS_ECS_LIFECYCLE_ENTITY
@@ -876,6 +896,12 @@ namespace FFS.Libraries.StaticEcs {
         public bool IsActual();
 
         public void Destroy();
+
+        public void TryDestroy();
+        
+        internal bool TryAsEntityOf<WorldType>(out World<WorldType>.Entity entity) where WorldType : struct, IWorldType;
+        
+        internal World<WorldType>.Entity AsEntityOf<WorldType>() where WorldType : struct, IWorldType;
     }
     
     
