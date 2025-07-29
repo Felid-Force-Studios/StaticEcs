@@ -885,11 +885,11 @@ namespace FFS.Libraries.StaticEcs {
     }
 
     public partial interface IEntity {
-        internal uint GetId();
+        public uint GetId();
 
-        internal Type WorldTypeType();
+        public Type WorldTypeType();
 
-        internal IWorld World();
+        public IWorld World();
 
         public EntityGID Gid();
 
@@ -899,9 +899,9 @@ namespace FFS.Libraries.StaticEcs {
 
         public void TryDestroy();
         
-        internal bool TryAsEntityOf<WorldType>(out World<WorldType>.Entity entity) where WorldType : struct, IWorldType;
+        public bool TryAsEntityOf<WorldType>(out World<WorldType>.Entity entity) where WorldType : struct, IWorldType;
         
-        internal World<WorldType>.Entity AsEntityOf<WorldType>() where WorldType : struct, IWorldType;
+        public World<WorldType>.Entity AsEntityOf<WorldType>() where WorldType : struct, IWorldType;
     }
     
     
