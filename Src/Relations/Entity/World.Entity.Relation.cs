@@ -29,6 +29,24 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
+            public ref L SetLink<L>(EntityGID link, out bool newLink) where L : struct, IEntityLinkComponent<L> {
+                if (Components<L>.Value.Has(this)) {
+                    ref var val = ref Components<L>.Value.Ref(this);
+                    if (val.RefValue(ref val) == link) {
+                        newLink = false;
+                        return ref val;
+                    }
+                    
+                    Components<L>.Value.Delete(this);
+                }
+
+                newLink = true;
+                var component = default(L);
+                component.RefValue(ref component) = link;
+                return ref Components<L>.Value.Add(this, component);
+            }
+            
+            [MethodImpl(AggressiveInlining)]
             public void TryDeleteLink<L>() where L : struct, IEntityLinkComponent<L> {
                 Components<L>.Value.TryDelete(this);
             }
