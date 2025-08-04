@@ -6,74 +6,6 @@ using Unity.IL2CPP.CompilerServices;
 
 namespace FFS.Libraries.StaticEcs {
 
-    #region DELEFATE_QUERY_FUNCTION
-    public delegate void DelegateQueryFunctionParallel<WorldType, C1>(World<WorldType>.ROEntity entity, ref C1 c1)
-        where C1 : struct, IComponent
-        where WorldType : struct, IWorldType;
-
-    public delegate void DelegateQueryFunctionParallel<WorldType, C1, C2>(World<WorldType>.ROEntity entity, ref C1 c1, ref C2 c2)
-        where C1 : struct, IComponent
-        where C2 : struct, IComponent
-        where WorldType : struct, IWorldType;
-
-    public delegate void DelegateQueryFunctionParallel<WorldType, C1, C2, C3>(World<WorldType>.ROEntity entity, ref C1 c1, ref C2 c2, ref C3 c3)
-        where C1 : struct, IComponent
-        where C2 : struct, IComponent
-        where C3 : struct, IComponent
-        where WorldType : struct, IWorldType;
-
-    public delegate void DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4>(World<WorldType>.ROEntity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4)
-        where C1 : struct, IComponent
-        where C2 : struct, IComponent
-        where C3 : struct, IComponent
-        where C4 : struct, IComponent
-        where WorldType : struct, IWorldType;
-
-    public delegate void DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5>(World<WorldType>.ROEntity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5)
-        where C1 : struct, IComponent
-        where C2 : struct, IComponent
-        where C3 : struct, IComponent
-        where C4 : struct, IComponent
-        where C5 : struct, IComponent
-        where WorldType : struct, IWorldType;
-
-    public delegate void DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5, C6>(World<WorldType>.ROEntity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5, ref C6 c6)
-        where C1 : struct, IComponent
-        where C2 : struct, IComponent
-        where C3 : struct, IComponent
-        where C4 : struct, IComponent
-        where C5 : struct, IComponent
-        where C6 : struct, IComponent
-        where WorldType : struct, IWorldType;
-
-    public delegate void DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5, C6, C7>(World<WorldType>.ROEntity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5, ref C6 c6, ref C7 c7)
-        where C1 : struct, IComponent
-        where C2 : struct, IComponent
-        where C3 : struct, IComponent
-        where C4 : struct, IComponent
-        where C5 : struct, IComponent
-        where C6 : struct, IComponent
-        where C7 : struct, IComponent
-        where WorldType : struct, IWorldType;
-
-    public delegate void DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5, C6, C7, C8>(
-        World<WorldType>.ROEntity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5, ref C6 c6, ref C7 c7, ref C8 c8
-    )
-        where C1 : struct, IComponent
-        where C2 : struct, IComponent
-        where C3 : struct, IComponent
-        where C4 : struct, IComponent
-        where C5 : struct, IComponent
-        where C6 : struct, IComponent
-        where C7 : struct, IComponent
-        where C8 : struct, IComponent
-        where WorldType : struct, IWorldType;
-    #endregion
-
-    public abstract class AbstractParallelTask {
-        public abstract void Run(uint from, uint to);
-    }
-
     #region QUERY_FUNCTION_RUNNER
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
@@ -84,17 +16,15 @@ namespace FFS.Libraries.StaticEcs {
         where C1 : struct, IComponent
         where WorldType : struct, IWorldType {
         
-        private DelegateQueryFunctionParallel<WorldType, C1> _runner;
+        private QueryFunction<C1> _runner;
         private uint[] _entities;
-        private uint _maskLeft;
-        private uint _maskRight;
         private P _with;
         private EntityStatusType _entitiesParam;
+        private byte _componentParam;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(DelegateQueryFunctionParallel<WorldType, C1> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint minChunkSize, uint workersLimit) {
-            _maskRight = maskRight;
-            _maskLeft = maskLeft;
+        public void Run(QueryFunction<C1> runner, P with, EntityStatusType entitiesParam, ComponentStatus componentsParam, uint minChunkSize, uint workersLimit) {
+            _componentParam = (byte) componentsParam;
             _entitiesParam = entitiesParam;
             _with = with;
             _runner = runner;
@@ -104,11 +34,11 @@ namespace FFS.Libraries.StaticEcs {
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(1);
+                AddBlocker(1);
                 #endif
                 ParallelRunner<WorldType>.Run(this, count, minChunkSize, workersLimit);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+                AddBlocker(-1);
                 #endif
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -128,14 +58,23 @@ namespace FFS.Libraries.StaticEcs {
                 var entity = _entities[to];
                 var i1 = di1[entity];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == status[entity].Value)
-                    && (i1 & _maskLeft) == _maskRight
+                    && (
+                        (_componentParam == 0 && ((i1) & Const.EmptyAndDisabledComponentMask) == 0) ||
+                        (_componentParam == 1 && ((i1) & Const.EmptyComponentMask) == 0) ||
+                        (_componentParam == 2 && (i1 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                        )
+                    )
                     && _with.CheckEntity(entity)) {
-                    _runner(new World<WorldType>.ROEntity(entity),
-                            ref data1[i1 & Const.DisabledComponentMaskInv]
-                    );
+                    _runner(ref data1[i1 & Const.DisabledComponentMaskInv]);
                 }
             }
         }
+        
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        private static void AddBlocker(int val) {
+            World<WorldType>.Components<C1>.Value.AddBlocker(val);
+        }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -148,17 +87,15 @@ namespace FFS.Libraries.StaticEcs {
         where C2 : struct, IComponent
         where WorldType : struct, IWorldType {
         
-        private DelegateQueryFunctionParallel<WorldType, C1, C2> _runner;
+        private QueryFunction<C1, C2> _runner;
         private uint[] _entities;
-        private uint _maskLeft;
-        private uint _maskRight;
         private P _with;
         private EntityStatusType _entitiesParam;
+        private byte _componentParam;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(DelegateQueryFunctionParallel<WorldType, C1, C2> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint minChunkSize, uint workersLimit) {
-            _maskRight = maskRight;
-            _maskLeft = maskLeft;
+        public void Run(QueryFunction<C1, C2> runner, P with, EntityStatusType entitiesParam, ComponentStatus componentsParam, uint minChunkSize, uint workersLimit) {
+            _componentParam = (byte) componentsParam;
             _entitiesParam = entitiesParam;
             _with = with;
             _runner = runner;
@@ -170,13 +107,11 @@ namespace FFS.Libraries.StaticEcs {
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(1);
+                AddBlocker(1);
                 #endif
                 ParallelRunner<WorldType>.Run(this, count, minChunkSize, workersLimit);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+                AddBlocker(-1);
                 #endif
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -199,15 +134,27 @@ namespace FFS.Libraries.StaticEcs {
                 var i1 = di1[entity];
                 var i2 = di2[entity];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == status[entity].Value)
-                    && (i1 & _maskLeft) == _maskRight && (i2 & _maskLeft) ==_maskRight
+                    && (
+                        (_componentParam == 0 && ((i1 | i2) & Const.EmptyAndDisabledComponentMask) == 0) ||
+                        (_componentParam == 1 && ((i1 | i2) & Const.EmptyComponentMask) == 0) ||
+                        (_componentParam == 2 && (i1 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i2 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                        )
+                    )
                     && _with.CheckEntity(entity)) {
-                    _runner(new World<WorldType>.ROEntity(entity),
-                            ref data1[i1 & Const.DisabledComponentMaskInv],
+                    _runner(ref data1[i1 & Const.DisabledComponentMaskInv],
                             ref data2[i2 & Const.DisabledComponentMaskInv]
                     );
                 }
             }
         }
+        
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        private static void AddBlocker(int val) {
+            World<WorldType>.Components<C1>.Value.AddBlocker(val);
+            World<WorldType>.Components<C2>.Value.AddBlocker(val);
+        }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -221,17 +168,15 @@ namespace FFS.Libraries.StaticEcs {
         where C3 : struct, IComponent
         where WorldType : struct, IWorldType {
         
-        private DelegateQueryFunctionParallel<WorldType, C1, C2, C3> _runner;
+        private QueryFunction<C1, C2, C3> _runner;
         private uint[] _entities;
-        private uint _maskLeft;
-        private uint _maskRight;
         private P _with;
         private EntityStatusType _entitiesParam;
+        private byte _componentParam;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(DelegateQueryFunctionParallel<WorldType, C1, C2, C3> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint minChunkSize, uint workersLimit) {
-            _maskRight = maskRight;
-            _maskLeft = maskLeft;
+        public void Run(QueryFunction<C1, C2, C3> runner, P with, EntityStatusType entitiesParam, ComponentStatus componentsParam, uint minChunkSize, uint workersLimit) {
+            _componentParam = (byte) componentsParam;
             _entitiesParam = entitiesParam;
             _with = with;
             _runner = runner;
@@ -244,15 +189,11 @@ namespace FFS.Libraries.StaticEcs {
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(1);
+                AddBlocker(1);
                 #endif
                 ParallelRunner<WorldType>.Run(this, count, minChunkSize, workersLimit);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+                AddBlocker(-1);
                 #endif
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -278,17 +219,30 @@ namespace FFS.Libraries.StaticEcs {
                 var i2 = di2[entity];
                 var i3 = di3[entity];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == status[entity].Value)
-                    && (i1 & _maskLeft) == _maskRight && (i2 & _maskLeft) ==_maskRight
-                    && (i3 & _maskLeft) == _maskRight
+                    && (
+                        (_componentParam == 0 && ((i1 | i2 | i3) & Const.EmptyAndDisabledComponentMask) == 0) ||
+                        (_componentParam == 1 && ((i1 | i2 | i3) & Const.EmptyComponentMask) == 0) ||
+                        (_componentParam == 2 && (i1 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i2 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i3 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                        )
+                    )
                     && _with.CheckEntity(entity)) {
-                    _runner(new World<WorldType>.ROEntity(entity),
-                            ref data1[i1 & Const.DisabledComponentMaskInv],
+                    _runner(ref data1[i1 & Const.DisabledComponentMaskInv],
                             ref data2[i2 & Const.DisabledComponentMaskInv],
                             ref data3[i3 & Const.DisabledComponentMaskInv]
                     );
                 }
             }
         }
+        
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        private static void AddBlocker(int val) {
+            World<WorldType>.Components<C1>.Value.AddBlocker(val);
+            World<WorldType>.Components<C2>.Value.AddBlocker(val);
+            World<WorldType>.Components<C3>.Value.AddBlocker(val);
+        }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -303,17 +257,15 @@ namespace FFS.Libraries.StaticEcs {
         where C4 : struct, IComponent
         where WorldType : struct, IWorldType {
         
-        private DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4> _runner;
+        private QueryFunction<C1, C2, C3, C4> _runner;
         private uint[] _entities;
-        private uint _maskLeft;
-        private uint _maskRight;
         private P _with;
         private EntityStatusType _entitiesParam;
+        private byte _componentParam;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint minChunkSize, uint workersLimit) {
-            _maskRight = maskRight;
-            _maskLeft = maskLeft;
+        public void Run(QueryFunction<C1, C2, C3, C4> runner, P with, EntityStatusType entitiesParam, ComponentStatus componentsParam, uint minChunkSize, uint workersLimit) {
+            _componentParam = (byte) componentsParam;
             _entitiesParam = entitiesParam;
             _with = with;
             _runner = runner;
@@ -327,17 +279,11 @@ namespace FFS.Libraries.StaticEcs {
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(1);
-                World<WorldType>.Components<C4>.Value.AddBlocker(1);
+                AddBlocker(1);
                 #endif
                 ParallelRunner<WorldType>.Run(this, count, minChunkSize, workersLimit);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
+                AddBlocker(-1);
                 #endif
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -366,11 +312,17 @@ namespace FFS.Libraries.StaticEcs {
                 var i3 = di3[entity];
                 var i4 = di4[entity];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == status[entity].Value)
-                    && (i1 & _maskLeft) == _maskRight && (i2 & _maskLeft) ==_maskRight
-                    && (i3 & _maskLeft) == _maskRight && (i4 & _maskLeft) ==_maskRight
+                    && (
+                        (_componentParam == 0 && ((i1 | i2 | i3 | i4) & Const.EmptyAndDisabledComponentMask) == 0) ||
+                        (_componentParam == 1 && ((i1 | i2 | i3 | i4) & Const.EmptyComponentMask) == 0) ||
+                        (_componentParam == 2 && (i1 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i2 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i3 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i4 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                        )
+                    )
                     && _with.CheckEntity(entity)) {
-                    _runner(new World<WorldType>.ROEntity(entity),
-                            ref data1[i1 & Const.DisabledComponentMaskInv],
+                    _runner(ref data1[i1 & Const.DisabledComponentMaskInv],
                             ref data2[i2 & Const.DisabledComponentMaskInv],
                             ref data3[i3 & Const.DisabledComponentMaskInv],
                             ref data4[i4 & Const.DisabledComponentMaskInv]
@@ -378,6 +330,15 @@ namespace FFS.Libraries.StaticEcs {
                 }
             }
         }
+        
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        private static void AddBlocker(int val) {
+            World<WorldType>.Components<C1>.Value.AddBlocker(val);
+            World<WorldType>.Components<C2>.Value.AddBlocker(val);
+            World<WorldType>.Components<C3>.Value.AddBlocker(val);
+            World<WorldType>.Components<C4>.Value.AddBlocker(val);
+        }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -393,17 +354,15 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IComponent
         where WorldType : struct, IWorldType {
         
-        private DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5> _runner;
+        private QueryFunction<C1, C2, C3, C4, C5> _runner;
         private uint[] _entities;
-        private uint _maskLeft;
-        private uint _maskRight;
         private P _with;
         private EntityStatusType _entitiesParam;
+        private byte _componentParam;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint minChunkSize, uint workersLimit) {
-            _maskRight = maskRight;
-            _maskLeft = maskLeft;
+        public void Run(QueryFunction<C1, C2, C3, C4, C5> runner, P with, EntityStatusType entitiesParam, ComponentStatus componentsParam, uint minChunkSize, uint workersLimit) {
+            _componentParam = (byte) componentsParam;
             _entitiesParam = entitiesParam;
             _with = with;
             _runner = runner;
@@ -418,19 +377,11 @@ namespace FFS.Libraries.StaticEcs {
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(1);
-                World<WorldType>.Components<C4>.Value.AddBlocker(1);
-                World<WorldType>.Components<C5>.Value.AddBlocker(1);
+                AddBlocker(1);
                 #endif
                 ParallelRunner<WorldType>.Run(this, count, minChunkSize, workersLimit);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
+                AddBlocker(-1);
                 #endif
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -462,11 +413,18 @@ namespace FFS.Libraries.StaticEcs {
                 var i4 = di4[entity];
                 var i5 = di5[entity];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == status[entity].Value)
-                    && (i1 & _maskLeft) == _maskRight && (i2 & _maskLeft) ==_maskRight
-                    && (i3 & _maskLeft) == _maskRight && (i4 & _maskLeft) ==_maskRight && (i5 & _maskLeft) == _maskRight
+                    && (
+                        (_componentParam == 0 && ((i1 | i2 | i3 | i4 | i5) & Const.EmptyAndDisabledComponentMask) == 0) ||
+                        (_componentParam == 1 && ((i1 | i2 | i3 | i4 | i5) & Const.EmptyComponentMask) == 0) ||
+                        (_componentParam == 2 && (i1 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i2 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i3 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i4 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i5 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                        )
+                    )
                     && _with.CheckEntity(entity)) {
-                    _runner(new World<WorldType>.ROEntity(entity),
-                            ref data1[i1 & Const.DisabledComponentMaskInv],
+                    _runner(ref data1[i1 & Const.DisabledComponentMaskInv],
                             ref data2[i2 & Const.DisabledComponentMaskInv],
                             ref data3[i3 & Const.DisabledComponentMaskInv],
                             ref data4[i4 & Const.DisabledComponentMaskInv],
@@ -475,6 +433,16 @@ namespace FFS.Libraries.StaticEcs {
                 }
             }
         }
+        
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        private static void AddBlocker(int val) {
+            World<WorldType>.Components<C1>.Value.AddBlocker(val);
+            World<WorldType>.Components<C2>.Value.AddBlocker(val);
+            World<WorldType>.Components<C3>.Value.AddBlocker(val);
+            World<WorldType>.Components<C4>.Value.AddBlocker(val);
+            World<WorldType>.Components<C5>.Value.AddBlocker(val);
+        }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -491,17 +459,15 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IComponent
         where WorldType : struct, IWorldType {
         
-        private DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5, C6> _runner;
+        private QueryFunction<C1, C2, C3, C4, C5, C6> _runner;
         private uint[] _entities;
-        private uint _maskLeft;
-        private uint _maskRight;
         private P _with;
         private EntityStatusType _entitiesParam;
+        private byte _componentParam;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5, C6> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint minChunkSize, uint workersLimit) {
-            _maskRight = maskRight;
-            _maskLeft = maskLeft;
+        public void Run(QueryFunction<C1, C2, C3, C4, C5, C6> runner, P with, EntityStatusType entitiesParam, ComponentStatus componentsParam, uint minChunkSize, uint workersLimit) {
+            _componentParam = (byte) componentsParam;
             _entitiesParam = entitiesParam;
             _with = with;
             _runner = runner;
@@ -517,21 +483,11 @@ namespace FFS.Libraries.StaticEcs {
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(1);
-                World<WorldType>.Components<C4>.Value.AddBlocker(1);
-                World<WorldType>.Components<C5>.Value.AddBlocker(1);
-                World<WorldType>.Components<C6>.Value.AddBlocker(1);
+                AddBlocker(1);
                 #endif
                 ParallelRunner<WorldType>.Run(this, count, minChunkSize, workersLimit);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C6>.Value.AddBlocker(-1);
+                AddBlocker(-1);
                 #endif
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -566,12 +522,19 @@ namespace FFS.Libraries.StaticEcs {
                 var i5 = di5[entity];
                 var i6 = di6[entity];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == status[entity].Value)
-                    && (i1 & _maskLeft) == _maskRight && (i2 & _maskLeft) ==_maskRight
-                    && (i3 & _maskLeft) == _maskRight && (i4 & _maskLeft) ==_maskRight && (i5 & _maskLeft) == _maskRight
-                    && (i6 & _maskLeft) == _maskRight
+                    && (
+                        (_componentParam == 0 && ((i1 | i2 | i3 | i4 | i5 | i6) & Const.EmptyAndDisabledComponentMask) == 0) ||
+                        (_componentParam == 1 && ((i1 | i2 | i3 | i4 | i5 | i6) & Const.EmptyComponentMask) == 0) ||
+                        (_componentParam == 2 && (i1 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i2 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i3 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i4 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i5 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i6 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                        )
+                    )
                     && _with.CheckEntity(entity)) {
-                    _runner(new World<WorldType>.ROEntity(entity),
-                            ref data1[i1 & Const.DisabledComponentMaskInv],
+                    _runner(ref data1[i1 & Const.DisabledComponentMaskInv],
                             ref data2[i2 & Const.DisabledComponentMaskInv],
                             ref data3[i3 & Const.DisabledComponentMaskInv],
                             ref data4[i4 & Const.DisabledComponentMaskInv],
@@ -581,6 +544,17 @@ namespace FFS.Libraries.StaticEcs {
                 }
             }
         }
+        
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        private static void AddBlocker(int val) {
+            World<WorldType>.Components<C1>.Value.AddBlocker(val);
+            World<WorldType>.Components<C2>.Value.AddBlocker(val);
+            World<WorldType>.Components<C3>.Value.AddBlocker(val);
+            World<WorldType>.Components<C4>.Value.AddBlocker(val);
+            World<WorldType>.Components<C5>.Value.AddBlocker(val);
+            World<WorldType>.Components<C6>.Value.AddBlocker(val);
+        }
+        #endif
     }
 
 
@@ -599,17 +573,15 @@ namespace FFS.Libraries.StaticEcs {
         where C7 : struct, IComponent
         where WorldType : struct, IWorldType {
         
-        private DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5, C6, C7> _runner;
+        private QueryFunction<C1, C2, C3, C4, C5, C6, C7> _runner;
         private uint[] _entities;
-        private uint _maskLeft;
-        private uint _maskRight;
         private P _with;
         private EntityStatusType _entitiesParam;
+        private byte _componentParam;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5, C6, C7> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint minChunkSize, uint workersLimit) {
-            _maskRight = maskRight;
-            _maskLeft = maskLeft;
+        public void Run(QueryFunction<C1, C2, C3, C4, C5, C6, C7> runner, P with, EntityStatusType entitiesParam, ComponentStatus componentsParam, uint minChunkSize, uint workersLimit) {
+            _componentParam = (byte) componentsParam;
             _entitiesParam = entitiesParam;
             _with = with;
             _runner = runner;
@@ -626,23 +598,11 @@ namespace FFS.Libraries.StaticEcs {
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(1);
-                World<WorldType>.Components<C4>.Value.AddBlocker(1);
-                World<WorldType>.Components<C5>.Value.AddBlocker(1);
-                World<WorldType>.Components<C6>.Value.AddBlocker(1);
-                World<WorldType>.Components<C7>.Value.AddBlocker(1);
+                AddBlocker(1);
                 #endif
                 ParallelRunner<WorldType>.Run(this, count, minChunkSize, workersLimit);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C6>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C7>.Value.AddBlocker(-1);
+                AddBlocker(-1);
                 #endif
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -680,12 +640,20 @@ namespace FFS.Libraries.StaticEcs {
                 var i6 = di6[entity];
                 var i7 = di7[entity];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == status[entity].Value)
-                    && (i1 & _maskLeft) == _maskRight && (i2 & _maskLeft) ==_maskRight
-                    && (i3 & _maskLeft) == _maskRight && (i4 & _maskLeft) ==_maskRight && (i5 & _maskLeft) == _maskRight
-                    && (i6 & _maskLeft) == _maskRight && (i7 & _maskLeft) ==_maskRight
+                    && (
+                        (_componentParam == 0 && ((i1 | i2 | i3 | i4 | i5 | i6 | i7) & Const.EmptyAndDisabledComponentMask) == 0) ||
+                        (_componentParam == 1 && ((i1 | i2 | i3 | i4 | i5 | i6 | i7) & Const.EmptyComponentMask) == 0) ||
+                        (_componentParam == 2 && (i1 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i2 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i3 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i4 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i5 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i6 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i7 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                        )
+                    )
                     && _with.CheckEntity(entity)) {
-                    _runner(new World<WorldType>.ROEntity(entity),
-                            ref data1[i1 & Const.DisabledComponentMaskInv],
+                    _runner(ref data1[i1 & Const.DisabledComponentMaskInv],
                             ref data2[i2 & Const.DisabledComponentMaskInv],
                             ref data3[i3 & Const.DisabledComponentMaskInv],
                             ref data4[i4 & Const.DisabledComponentMaskInv],
@@ -696,6 +664,18 @@ namespace FFS.Libraries.StaticEcs {
                 }
             }
         }
+        
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        private static void AddBlocker(int val) {
+            World<WorldType>.Components<C1>.Value.AddBlocker(val);
+            World<WorldType>.Components<C2>.Value.AddBlocker(val);
+            World<WorldType>.Components<C3>.Value.AddBlocker(val);
+            World<WorldType>.Components<C4>.Value.AddBlocker(val);
+            World<WorldType>.Components<C5>.Value.AddBlocker(val);
+            World<WorldType>.Components<C6>.Value.AddBlocker(val);
+            World<WorldType>.Components<C7>.Value.AddBlocker(val);
+        }
+        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -714,17 +694,15 @@ namespace FFS.Libraries.StaticEcs {
         where C8 : struct, IComponent
         where WorldType : struct, IWorldType {
         
-        private DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5, C6, C7, C8> _runner;
+        private QueryFunction<C1, C2, C3, C4, C5, C6, C7, C8> _runner;
         private uint[] _entities;
-        private uint _maskLeft;
-        private uint _maskRight;
         private P _with;
         private EntityStatusType _entitiesParam;
+        private byte _componentParam;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(DelegateQueryFunctionParallel<WorldType, C1, C2, C3, C4, C5, C6, C7, C8> runner, P with, EntityStatusType entitiesParam, uint maskLeft, uint maskRight, uint minChunkSize, uint workersLimit) {
-            _maskRight = maskRight;
-            _maskLeft = maskLeft;
+        public void Run(QueryFunction<C1, C2, C3, C4, C5, C6, C7, C8> runner, P with, EntityStatusType entitiesParam, ComponentStatus componentsParam, uint minChunkSize, uint workersLimit) {
+            _componentParam = (byte) componentsParam;
             _entitiesParam = entitiesParam;
             _with = with;
             _runner = runner;
@@ -742,25 +720,11 @@ namespace FFS.Libraries.StaticEcs {
 
             if (count > 0) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(1);
-                World<WorldType>.Components<C4>.Value.AddBlocker(1);
-                World<WorldType>.Components<C5>.Value.AddBlocker(1);
-                World<WorldType>.Components<C6>.Value.AddBlocker(1);
-                World<WorldType>.Components<C7>.Value.AddBlocker(1);
-                World<WorldType>.Components<C8>.Value.AddBlocker(1);
+                AddBlocker(1);
                 #endif
                 ParallelRunner<WorldType>.Run(this, count, minChunkSize, workersLimit);
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C3>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C4>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C5>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C6>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C7>.Value.AddBlocker(-1);
-                World<WorldType>.Components<C8>.Value.AddBlocker(-1);
+                AddBlocker(-1);
                 #endif
             }
             #if DEBUG || FFS_ECS_ENABLE_DEBUG
@@ -801,12 +765,21 @@ namespace FFS.Libraries.StaticEcs {
                 var i7 = di7[entity];
                 var i8 = di8[entity];
                 if ((_entitiesParam == EntityStatusType.Any || _entitiesParam == status[entity].Value)
-                    && (i1 & _maskLeft) == _maskRight && (i2 & _maskLeft) ==_maskRight
-                    && (i3 & _maskLeft) == _maskRight && (i4 & _maskLeft) ==_maskRight && (i5 & _maskLeft) == _maskRight
-                    && (i6 & _maskLeft) == _maskRight && (i7 & _maskLeft) ==_maskRight && (i8 & _maskLeft) == _maskRight
+                    && (
+                        (_componentParam == 0 && ((i1 | i2 | i3 | i4 | i5 | i6 | i7 | i8) & Const.EmptyAndDisabledComponentMask) == 0) ||
+                        (_componentParam == 1 && ((i1 | i2 | i3 | i4 | i5 | i6 | i7 | i8) & Const.EmptyComponentMask) == 0) ||
+                        (_componentParam == 2 && (i1 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i2 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i3 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i4 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i5 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i6 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i7 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                                              && (i8 & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
+                        )
+                    )
                     && _with.CheckEntity(entity)) {
-                    _runner(new World<WorldType>.ROEntity(entity),
-                            ref data1[i1 & Const.DisabledComponentMaskInv],
+                    _runner(ref data1[i1 & Const.DisabledComponentMaskInv],
                             ref data2[i2 & Const.DisabledComponentMaskInv],
                             ref data3[i3 & Const.DisabledComponentMaskInv],
                             ref data4[i4 & Const.DisabledComponentMaskInv],
@@ -818,6 +791,19 @@ namespace FFS.Libraries.StaticEcs {
                 }
             }
         }
+        
+        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        private static void AddBlocker(int val) {
+            World<WorldType>.Components<C1>.Value.AddBlocker(val);
+            World<WorldType>.Components<C2>.Value.AddBlocker(val);
+            World<WorldType>.Components<C3>.Value.AddBlocker(val);
+            World<WorldType>.Components<C4>.Value.AddBlocker(val);
+            World<WorldType>.Components<C5>.Value.AddBlocker(val);
+            World<WorldType>.Components<C6>.Value.AddBlocker(val);
+            World<WorldType>.Components<C7>.Value.AddBlocker(val);
+            World<WorldType>.Components<C8>.Value.AddBlocker(val);
+        }
+        #endif
     }
     #endregion
 }

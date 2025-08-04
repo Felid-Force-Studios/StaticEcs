@@ -36,4 +36,10 @@ namespace FFS.Libraries.StaticEcs {
         Disabled = 1,
         Any = 2,
     }
+
+    public enum ComponentStatus : byte {
+        Enabled = 0,
+        Any = 1,
+        Disabled = 2,
+    }
 }

@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.0.22-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.0.23-blue.svg?style=for-the-badge)
 
 ### LANGUAGE
 [RU](./README_RU.md)
@@ -12,7 +12,7 @@ ___
 - Lightweight
 - Performance
 - No allocations
-- No Unsafe in core
+- No Unsafe
 - Based on statics and structures
 - Type-safe
 - Free abstractions
@@ -74,6 +74,7 @@ public abstract class Systems : W.Systems<SystemsType> { }
 
 // Define components
 public struct Position : IComponent { public Vector3 Value; }
+public struct Direction : IComponent { public Vector3 Value; }
 public struct Velocity : IComponent { public float Value; }
 
 // Define systems
@@ -82,6 +83,11 @@ public readonly struct VelocitySystem : IUpdateSystem {
         foreach (var entity in W.QueryEntities.For<All<Position, Velocity>>()) {
             entity.Ref<Position>().Value *= entity.Ref<Velocity>().Value;
         }
+        
+        // Or
+        W.QueryComponents.For((ref Position pos, ref Velocity vel, ref Direction dir) => {
+            pos.Value += dir.Value * vel.Value;
+        });
     }
 }
 
@@ -92,6 +98,7 @@ public class Program {
         
         // Registering components
         W.RegisterComponentType<Position>();
+        W.RegisterComponentType<Direction>();
         W.RegisterComponentType<Velocity>();
         
         // Initializing the world
@@ -107,7 +114,8 @@ public class Program {
         // Creating entity
         var entity = W.Entity.New(
             new Velocity { Value = 1f },
-            new Position { Value = Vector3.One }
+            new Position { Value = Vector3.Zero }
+            new Direction { Value = Vector3.UnitX }
         );
         // Update all systems - called in every frame
         Systems.Update();

@@ -100,9 +100,7 @@ namespace FFS.Libraries.StaticEcs {
         public void SetData<WorldType>(ref uint minComponentsCount, ref uint[] minEntities) where WorldType : struct, IWorldType { }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return true;
-        }
+        public bool CheckEntity(uint entityId) => true;
 
         [MethodImpl(AggressiveInlining)]
         public void Dispose<WorldType>() where WorldType : struct, IWorldType { }

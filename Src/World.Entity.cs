@@ -57,6 +57,7 @@ namespace FFS.Libraries.StaticEcs {
 
             internal readonly uint _id;
 
+            [MethodImpl(AggressiveInlining)]
             internal Entity(uint id) {
                 _id = id;
             }

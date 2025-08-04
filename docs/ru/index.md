@@ -4,7 +4,7 @@ has_toc: false
 parent: Main page
 ---
 
-![Version](https://img.shields.io/badge/version-1.0.22-blue.svg?style=for-the-badge)  
+![Version](https://img.shields.io/badge/version-1.0.23-blue.svg?style=for-the-badge)  
 
 ___
 
@@ -15,7 +15,7 @@ ___
 - Легковесность
 - Производительность
 - Отсутсвие аллокаций
-- Без Unsafe в ядре
+- Без Unsafe
 - Основан на статике и структурах
 - Типобезопасность
 - Бесплатные абстракции
@@ -99,14 +99,20 @@ public abstract class Systems : W.Systems<SystemsType> { }
 
 // Определяем компоненты
 public struct Position : IComponent { public Vector3 Value; }
+public struct Direction : IComponent { public Direction Value; }
 public struct Velocity : IComponent { public float Value; }
 
 // Определяем системы
 public readonly struct VelocitySystem : IUpdateSystem {
     public void Update() {
-        foreach (var entity in W.QueryEntities.For<All<Position, Velocity>>()) {
-            entity.Ref<Position>().Value *= entity.Ref<Velocity>().Value;
+        foreach (var entity in W.QueryEntities.For<All<Position, Velocity, Direction>>()) {
+            entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
         }
+        
+        // Или
+        W.QueryComponents.For((ref Position pos, ref Velocity vel, ref Direction dir) => {
+            pos.Value += dir.Value * vel.Value;
+        });
     }
 }
 
@@ -117,6 +123,7 @@ public class Program {
         
         // Регестрируем компоненты
         W.RegisterComponentType<Position>();
+        W.RegisterComponentType<Direction>();
         W.RegisterComponentType<Velocity>();
         
         // Инициализацируем мир
@@ -132,7 +139,8 @@ public class Program {
         // Создание сущности
         var entity = W.Entity.New(
             new Velocity { Value = 1f },
-            new Position { Value = Vector3.One }
+            new Position { Value = Vector3.Zero }
+            new Direction { Value = Vector3.UnitX }
         );
         // Обновление всех систем - вызывается в каждом кадре
         Systems.Update();

@@ -9,270 +9,311 @@ nav_order: 12
 
 ___
 
-#### Рассмотрим базовые возможности поиска сущностей в мире:
+### QueryMethods
+Типы позволяющие описать фильтрации по компонентам\тегам\маскам используемые в [QueryEntities](#QueryEntities) и [QueryComponents](#QueryComponents)  
+Все типы ниже не требуют явной инициализации, не требуют кеширования, каждый из них занимает 1 байт и может использоваться "на лету"  
+
+#### Компоненты:
+`All` - фильтрует сущности на наличие всех указанных включенных компонентов (перегрузка от 1 до 8)
 ```c#
-// Существует множество доступных вариантов запросов
-// World.QueryEntities.For()\With() возвращает итератор сущностей подходящих под условие
-// Для применение условий фильтрации компонентов доступны следующие типы:
+All<Position, Direction, Velocity> all = default;
+```
 
-// All - фильтрует сущности на наличие всех указанных включенных компонентов (перегрузка от 1 до 8)
-AllTypes<Types<Position, Direction, Velocity>> _all = default;
-// или так
-All<Position, Direction, Velocity> _all2 = default;
+`AllOnlyDisabled` - фильтрует сущности на наличие всех указанных отключенных компонентов (перегрузка от 1 до 8)
+```c#
+AllOnlyDisabled<Position, Direction, Velocity> all = default;
+```
 
-// AllOnlyDisabled - фильтрует сущности на наличие всех указанных отключенных компонентов (перегрузка от 1 до 8)
-AllOnlyDisabled<Position, Direction, Velocity>
-// AllWithDisabled - фильтрует сущности на наличие всех указанных (включенных и отключенных) компонентов (перегрузка от 1 до 8)
-AllWithDisabled<Position, Direction, Velocity>
+`AllWithDisabled` - фильтрует сущности на наличие всех указанных (включенных и отключенных) компонентов (перегрузка от 1 до 8)
+```c#
+AllWithDisabled<Position, Direction, Velocity> all = default;
+```
 
-// None - фильтрует сущности на отсутсвие всех указанных включенных компонентов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
-NoneTypes<Types<Name>> _none = default;
-// или так
-None<Name> _none2 = default;
+`None` - фильтрует сущности на отсутствие всех указанных включенных компонентов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
+```c#
+None<Position, Name> none = default;
+```
 
-// NoneWithDisabled - фильтрует сущности на отсутсвие всех указанных (включенных и отключенных) компонентов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
-NoneWithDisabled<Position, Direction, Velocity>
+`NoneWithDisabled` - фильтрует сущности на отсутствие всех указанных (включенных и отключенных) компонентов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
+```c#
+NoneWithDisabled<Position, Direction, Velocity> none = default;
+```
 
-// Any - фильтрует сущности на наличие любого из указанных включенных компонентов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
-AnyTypes<Types<Position, Direction, Velocity>> _any = default;
-// или так
-Any<Position, Direction, Velocity> _any2 = default;
+`Any` - фильтрует сущности на наличие любого из указанных включенных компонентов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
+```c#
+Any<Position, Direction, Velocity> any = default;
+```
 
-// AnyOnlyDisabled - фильтрует сущности на наличие любого из указанных отключенных компонентов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
-AnyOnlyDisabled<Position, Direction, Velocity>
-// AnyWithDisabled - фильтрует сущности на наличие любого из указанных (включенных и отключенных) компонентов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
-AnyWithDisabled<Position, Direction, Velocity>
+`AnyOnlyDisabled` - фильтрует сущности на наличие любого из указанных отключенных компонентов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
+```c#
+AnyOnlyDisabled<Position, Direction, Velocity> any = default;
+```
 
-// Аналоги для тегов
-// TagAll - фильтрует сущности на наличие всех указанных тегов (перегрузка от 1 до 8)
-TagAllTypes<Tag<Unit, Player>> _all = default;
-// или так
-TagAll<Unit, Player> _all2 = default;
+`AnyWithDisabled` - фильтрует сущности на наличие любого из указанных (включенных и отключенных) компонентов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
+```c#
+AnyWithDisabled<Position, Direction, Velocity> any = default;
+```
 
-// None - фильтрует сущности на отсутсвие всех указанных тегов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
-TagNoneTypes<Tag<Unit>> _none = default;
-// или так
-TagNone<Unit> _none2 = default;
+#### Теги:
+`TagAll` - фильтрует сущности на наличие всех указанных тегов (перегрузка от 1 до 8)
+```c#
+All<Unit, Player> all = default;
+```
 
-// Any - фильтрует сущности на наличие любого из указанных тегов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
-TagAnyTypes<Tag<Unit, Player>> _any = default;
-// или так
-TagAny<Unit, Player> _any2 = default;
+`TagNone` - фильтрует сущности на отсутствие всех указанных тегов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
+```c#
+TagNone<Unit, Player> none = default;
+```
 
-// Аналоги для масок
-// MaskAll - фильтрует сущности на наличие всех указанных масок (может использоваться только в составе других методов) (перегрузка от 1 до 8)
-MaskAllTypes<Mask<Flammable, Frozen, Visible>> _all = default;
-// или так
-MaskAll<Flammable, Frozen, Visible> _all2 = default;
+`TagAny` - фильтрует сущности на наличие любого из указанных тегов (может использоваться только в составе других методов) (перегрузка от 1 до 8)
+```c#
+TagAny<Unit, Player> any = default;
+```
 
-// None - фильтрует сущности на отсутсвие всех указанных масок (может использоваться только в составе других методов) (перегрузка от 1 до 8)
-MaskNoneTypes<Mask<Frozen>> _none = default;
-// или так
-MaskNone<Frozen> _none2 = default;
+#### Маски:
+`MaskAll` - фильтрует сущности на наличие всех указанных масок (может использоваться только в составе других методов) (перегрузка от 1 до 8)
+```c#
+MaskAll<Flammable, Frozen, Visible> all = default;
+```
 
-// Any - фильтрует сущности на наличие любой из указанных масок (может использоваться только в составе других методов) (перегрузка от 1 до 8)
-MaskAnyTypes<Mask<Flammable, Frozen, Visible>> _any = default;
-// или так
-MaskAny<Flammable, Frozen, Visible> _any2 = default;
+`MaskNone` - фильтрует сущности на отсутствие всех указанных масок (может использоваться только в составе других методов) (перегрузка от 1 до 8)
+```c#
+MaskNone<Flammable, Frozen, Visible> none = default;
+```
 
-// Все типы выше не требуют явной инициализации, не требуют кеширования, каждый из них занимает не больше 1-2 байт и может использоваться "на лету"
+`MaskAny` - фильтрует сущности на наличие любой из указанных масок (может использоваться только в составе других методов) (перегрузка от 1 до 8)
+```c#
+MaskAny<Flammable, Frozen, Visible> any = default;
+```
 
+___
 
+### QueryEntities
+Классический поиск сущностей в мире с указанными компонентами\тегами\масками  
+Все способы запросов ниже, не требуют кеширования, аллоцируются на стеке и могут использоваться "на лету"  
+
+```c#
 // Различные наборы методов фильтрации могут быть применины к методу World.QueryEntities.For() например:
 // Вариант с 1 методом через дженерик
-foreach (var entity in World.QueryEntities.For<All<Position, Direction, Velocity>>()) {
-    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
+foreach (var entity in W.QueryEntities.For<All<Position, Velocity, Direction>>()) {
+    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 
 // Вариант с 1 методом через значение
 var all = default(All<Position, Direction, Velocity>);
-foreach (var entity in World.QueryEntities.For(all)) {
-    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
+foreach (var entity in W.QueryEntities.For(all)) {
+    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 
 // Вариант с 2 методами через дженерик
-foreach (var entity in World.QueryEntities.For<
+foreach (var entity in W.QueryEntities.For<
              All<Position, Velocity, Name>,
              None<Name>>()) {
-    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
+    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
+}
+
+// Вариант с 2 методами (All и None) через дженерик, можно указать до 8 методов фильтраций
+foreach (var entity in W.QueryEntities.For<All<Position, Direction, Velocity>, None<Name>>()) {
+    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 
 // Вариант с 2 методами  через значение
 All<Position, Direction, Velocity> all2 = default;
 None<Name> none2 = default;
-foreach (var entity in World.QueryEntities.For(all2, none2)) {
-    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
+foreach (var entity in W.QueryEntities.For(all2, none2)) {
+    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
+```
 
-// Альтернативный вариант с 2 методами  через значение
-var all3 = Types<Position, Direction, Velocity>.All();
-var none3 = Types<Name>.None();
-foreach (var entity in World.QueryEntities.For(all3, none3)) {
-    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
-}
+Также все методы фильтрации могут быть сгруппированны в тип With  
+который может применяться к методу `World.QueryEntities.For()` например:  
 
-
-// Также все методы фильтрации могут быть сгруппированны в тип With
-// который может применяться к методу World.QueryEntities.For() например:
-
+```c#
 // Способ 1 через дженерика
-foreach (var entity in World.QueryEntities.For<With<
-             All<Position, Velocity, Name>,
+foreach (var entity in W.QueryEntities.For<With<
+             All<Position, Velocity, Direction>,
              None<Name>,
-             Any<Position, Direction, Velocity>
+             TagAny<Unit, Player>
          >>()) {
-    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
+    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 
 // Способ 2 через значения
 With<
-    All<Position, Velocity, Name>,
+    All<Position, Velocity, Direction>,
     None<Name>,
-    Any<Position, Direction, Velocity>
+    TagAny<Unit, Player>
 > with = default;
-foreach (var entity in World.QueryEntities.For(with)) {
-    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
+foreach (var entity in W.QueryEntities.For(with)) {
+    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 
 // Способ 3 через значения альтернативный
 var with2 = With.Create(
-    default(All<Position, Velocity, Name>),
+    default(All<Position, Velocity, Direction>),
     default(None<Name>),
-    default(Any<Position, Direction, Velocity>)
+    default(TagAny<Unit, Player>)
 );
-foreach (var entity in World.QueryEntities.For(with2)) {
-    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
-}
-
-// Способ 4 через значения альтернативный
-var with3 = With.Create(
-    Types<Position, Velocity, Name>.All(),
-    Types<Name>.None(),
-    Types<Position, Direction, Velocity>.Any()
-);
-foreach (var entity in World.QueryEntities.For(with3)) {
-    entity.Ref<Position>().Val *= entity.Ref<Velocity>().Val;
+foreach (var entity in W.QueryEntities.For(with2)) {
+    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 ```
-  
-#### Посмотрим на дополнительные способы поиска сущностей в мире:
+
+___
+
+### QueryComponents
+Оптимизированный поиск сущностей и компонентов в мире с помощью делегатов  
+Данный способ "под капотом" разворачивает циклы и является более удобным и эффективным способом  
+Все способы запросов ниже, не требуют кеширования, аллоцируются на стеке и могут использоваться "на лету"  
+> `QueryEntities` все еще полезен когда нужен "ранний" выход из цикла или не нужны данные компонентов  
+
+
+- Пример поиска всех сущностей с указанными компонентами, может быть указано от 1 до 8 типов компонентов:  
 ```c#
-// World.QueryComponents.For()\With() возвращает итератор сущностей подходящих под условие cразу с компонентами 
+W.QueryComponents.For(static (ref Position pos, ref Velocity vel, ref Direction dir) => {
+    pos.Value += dir.Value * vel.Value;
+});
+```
 
-// Вариант 1 с указанием делегата и сразу получением нужных компонентов, может быть указано от 1 до 8 типов компонентов
-World.QueryComponents.For<Position, Velocity, Name>((World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
-    position.Val *= velocity.Val;
+- Можно указать сущность перед компонентами если она требуется:
+```c#
+W.QueryComponents.For(static (W.Entity ent, ref Position pos, ref Velocity vel, ref Direction dir) => {
+    pos.Value += dir.Value * vel.Value;
+});
+```
+
+
+- Для избегания аллокаций делегата можно передать первым параметром данные любого пользовательского типа:
+```c#
+W.QueryComponents.For(deltaTime, static (float dt, W.Entity ent /* Опционально */, ref Position pos, ref Velocity vel, ref Direction dir) => {
+    pos.Value += dir.Value * vel.Value * dt;
 });
 
-// можно убрать дженерики, так как они выводятся из типа переданной функции
-World.QueryComponents.For((World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
-    position.Val *= velocity.Val;
+// Можно использовать кортежи для нескольких параметров
+W.QueryComponents.For((deltaTime, fixedDeltaTime), static ((float dt, float fdt) data, W.Entity entity /* Опционально */, ref Position pos, ref Velocity vel, ref Direction dir) => {
+    // ...
 });
 
-// можно добавить ограничение static для делегата для того чтобы гарантировать что данный делегат не будет аллоцироваться каждый раз
-// в совокупности с World.Context дает возможность удобного и производительного кода без создания замыканий в делегате
-World.QueryComponents.For(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
-    position.Val *= velocity.Val;
+// Также можно передать ref значение структуры любого пользовательского типа
+int count = 0;
+W.QueryComponents.For(ref count, static (ref int counter, W.Entity ent /* Опционально */, ref Position pos, ref Velocity vel, ref Direction dir) => {
+    pos.Value += dir.Value * vel.Value;
+    counter++;
+});
+```
+
+- Дополнительно можно указать в каком статусе необходимо искать сущностей или компоненты:
+```c#
+W.QueryComponents.For(
+    static (ref Position pos, ref Velocity vel, ref Direction dir) => {
+        // ...
+    },
+    entities: EntityStatusType.Disabled, // (Enabled, Disabled, Any) По умолчанию Enabled 
+    components: ComponentStatus.Disabled // (Enabled, Disabled, Any) По умолчанию Enabled
+);
+```
+
+- Также возможно использовать With() для дополнительной фильтрации сущностей
+> Стоит заметить что компоненты которые указаны в делегате расцениваются как фильтр All  
+> это значит что With() лишь дополняет фильтрацию и не требует указания используемых в делегате компонентов  
+```c#
+W.QueryComponents.With<TagAny<Unit, Player>>().For((ref Position pos, ref Velocity vel, ref Direction dir) => {
+    pos.Value += dir.Value * vel.Value;
 });
 
-// Также можно использовать WithAdds аналогичный With из прошлого примера но разрешающий указания только вторичных методов фильтрации (такиех как None, Any) для дополнительной фильтрации сущностей
-// Стоит заметить что компоненты которые указаны в делегате расцениваются как фильтр All
-// то есть WithAdds лишь дополнят фильтрации и не требует указания используемых компонентов
+// или
+TagAny<Unit, Player> any = default;
+W.QueryComponents.With(any).For((ref Position pos, ref Velocity vel, ref Direction dir) => {
+    pos.Value += dir.Value * vel.Value;
+});
 
+// или можно использовать WithAdds\With (WithAdds аналогичен With но разрешающий указания только вторичных методов фильтрации (таких как None, Any))
 WithAdds<
-    None<Direction>,
-    Any<Position, Direction, Velocity>
+    None<Name>,
+    TagAny<Unit, Player>
 > with = default;
 
-World.QueryComponents.With(with).For(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
-    position.Val *= velocity.Val;
+W.QueryComponents.With(with).For((ref Position pos, ref Velocity vel, ref Direction dir) => {
+    pos.Value += dir.Value * vel.Value;
 });
 
-// или так
-World.QueryComponents.With<WithAdds<
-    None<Direction>,
-    Any<Position, Direction, Velocity>
->>().For(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
-    position.Val *= velocity.Val;
+```
+
+#### Parallel
+Существует возможность многопоточной обработки:  
+Важно! Возвращается специальный тип сущности который запрещает все операции такие как (`Add`, `Put` ...), разрешены только `Ref`, `Has` и тд  
+Нельзя в многопоточной обработке создавать, удалять сущности или компоненты, только читать и изменять существующие  
+По умолчанию сервис многопоточной обработки отключен, чтобы его включить необходимо при создании мира указать в конфиге `ParallelQueryType` как `MaxThreadsCount`  
+или (`CustomThreadsCount` и указать максимальное количество потоков) - полезно когда хочется задать разное количество для разных миров  
+Все способы запросов ниже, не требуют кеширования, аллоцируются на стеке и могут использоваться "на лету"
+
+`minChunkSize` - значение определяет минимальное количество потенциальных сущностей после которого функция будет использовать несколько потоков  
+  
+Примеры:
+```c#
+W.QueryComponents.Parallel.For(minChunkSize: 50000, (W.ROEntity ent /* Опционально */, ref Position pos, ref Velocity vel, ref Direction dir) => {
+    pos.Value += dir.Value * vel.Value;
 });
 
-// Также по аналогии существуют разновидности для поиска по отключенным или вместе с отключенными компонентами:
-// Важно фильтр применяется только к компонентам указаным в функции, а не к With 
-// если нужно установить фильтр отключенных компонентов в With то используйте конструкции AllOnlyDisabled, AllWithDisabled и тд
-
-World.QueryComponents.With(with).ForOnlyDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
-    position.Val *= velocity.Val;
+W.QueryComponents.Parallel.For(minChunkSize: 50000, deltaTime, (float dt, W.ROEntity ent /* Опционально */, ref Position pos, ref Velocity vel, ref Direction dir) => {
+    pos.Value += dir.Value * vel.Value * dt;
 });
 
-World.QueryComponents.With(with).ForWithDiabled(static (World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) => {
-    position.Val *= velocity.Val;
-});
-
-
-// Также существует возможноть многопоточной обработки:
-// Важно! Возвращается специальный тип сущности который запрещает все операции кроме Ref, Has и тд
-// Нельзя в многопоточной обработке создавать, удалять сущности или компоненты, только читать и изменять существующие
-// По умолчанию сервис многопоточной обработки отключен, чтобы включить необходимо при создании мира указать в конфиге ParallelQueryType как MaxThreadsCount 
-// или (CustomThreadsCount и указать максимальное количество потоков) - полезно когда хочется задать разное количество для разных миров
-
-
-World.QueryComponents.Parallel.For(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
-    position.Val *= velocity.Val;
-});
-
-World.QueryComponents.Parallel.With(with).For(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
-    position.Val *= velocity.Val;
-});
-
-World.QueryComponents.Parallel.ForOnlyDiabled(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
-    position.Val *= velocity.Val;
-});
-
-World.QueryComponents.Parallel.ForWithDiabled(static (World.ROEntity entity, ref Position position, ref Velocity velocity) => {
-    position.Val *= velocity.Val;
+WithAdds<
+    None<Name>,
+    TagAny<Unit, Player>
+> with = default;
+W.QueryComponents.Parallel.With(with).For(minChunkSize: 50000, (ref Position pos, ref Velocity vel, ref Direction dir) => {
+    pos.Value += dir.Value * vel.Value;
 });
 ```
-  
-#### Посмотрим на особые возможности поиска сущностей в мире:
-```c#
-// Запросы с передачей структуры-функции 
-// может использоваться для оптимизации или передачи состояния в стракт или для вынесения логики
 
+
+
+#### QueryFunction
+`QueryComponents` позволяет определять структуры функции вместо делегатов  
+Может быть использовано для оптимизации, передачи состояния в структуру или для вынесения логики  
+
+```c#
 // Определим структуру-функцию которой можем заменить делегат
-// Она должна реализовывать интерфейс IQueryFunction с указанием от 1-8 компонентов
-readonly struct StructFunction : World.IQueryFunction<Position, Velocity, Name> {
-    public void Run(World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) {
-        position.Val *= velocity.Val;
+// Она должна реализовывать интерфейс World.IQueryFunction с указанием от 1-8 компонентов
+readonly struct StructFunction : W.IQueryFunction<Position, Velocity, Direction> {
+    public void Run(W.Entity entity, ref Position pos, ref Velocity vel, ref Direction dir) {
+        pos.Value += dir.Value * vel.Value;
     }
 }
 
-// Вариант 1 с передачей через дженерик
-World.QueryComponents.For<Position, Velocity, Name, StructFunction>();
+// Вариант 1 с указанием дженерика (default Структура создается автоматически)
+W.QueryComponents.For<Position, Velocity, Direction, StructFunction>();
 
 // Вариант 1 с передачей через значение
-World.QueryComponents.For<Position, Velocity, Name, StructFunction>(new StructFunction());
+W.QueryComponents.For<Position, Velocity, Direction, StructFunction>(new StructFunction());
+
+// Вариант 1 с передачей через ref значение
+var func = new StructFunction();
+W.QueryComponents.For<Position, Velocity, Direction, StructFunction>(ref func);
 
 // Вариант 2 с With через дженерик
-World.QueryComponents.With<WithAdds<
-    None<Direction>,
-    Any<Position, Direction, Velocity>
->>().For<Position, Velocity, Name, StructFunction>();
+W.QueryComponents.With<WithAdds<
+    None<Name>,
+    TagAny<Unit, Player>
+>>().For<Position, Velocity, Direction, StructFunction>();
 
 // Вариант 2 с With через значение
 WithAdds<
-    None<Direction>,
-    Any<Position, Direction, Velocity>
+    None<Name>,
+    TagAny<Unit, Player>
 > with = default;
-World.QueryComponents.With(with).For<Position, Velocity, Name, StructFunction>();
+W.QueryComponents.With(with).For<Position, Velocity, Direction, StructFunction>();
 
 // Также возможно комбинировать систему и IQueryFunction, например:
-// это может улучшить восприятия кода и увеличить производительность + это позволяет обращаться в нестатическим членам системы
-public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, World.IQueryFunction<Position, Velocity, Name> {
+// это может улучшить восприятия кода и увеличить производительность + это позволяет обращаться к нестатическим членам системы
+public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, W.IQueryFunction<Position, Velocity, Direction> {
     private UserService1 _userService1;
     
     WithAdds<
-        None<Types<Direction>>,
-        Any<Types<Position, Direction, Velocity>>
+        None<Name>,
+        TagAny<Unit, Player>
     > with;
     
     public void Init() {
@@ -280,14 +321,15 @@ public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, World.IQueryFunct
     }
     
    public void Update() {
-       World.QueryComponents
+       W.QueryComponents
             .With(with)
-            .For<Position, Velocity, Name, SomeFunctionSystem>(ref this);
+            .For<Position, Velocity, Direction, SomeFunctionSystem>(ref this); // Передаем ссылку на функцию (систему)
    }
     
-    public void Run(World.Entity entity, ref Position position, ref Velocity velocity, ref Name name) {
-        position.Val *= velocity.Val;
-        _userService1.CallSomeMethod(name.Val);
+   // Определяем функцию
+    public void Run(W.Entity entity, ref Position pos, ref Velocity vel, ref Direction dir) {
+        pos.Value += dir.Value * vel.Value;
+        _userService1.CallSomeMethod(entity);
     }
 }
 ```
