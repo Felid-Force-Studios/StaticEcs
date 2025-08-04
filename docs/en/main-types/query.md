@@ -186,6 +186,7 @@ W.QueryComponents.For(static (W.Entity ent, ref Position pos, ref Velocity vel, 
 
 
 - To avoid delegate allocations, it is possible to pass any custom data type as the first param:
+
 ```c#
 
 W.QueryComponents.For(deltaTime, static (float dt, W.Entity ent /* Optional */, ref Position pos, ref Velocity vel, ref Direction dir) => {
@@ -207,6 +208,7 @@ W.QueryComponents.For(ref count, static (ref int counter, W.Entity ent /* Option
 
 
 - Additionally, it is possible to specify in which status you want to search for entities or components:
+
 ```c#
 W.QueryComponents.For(
     static (ref Position pos, ref Velocity vel, ref Direction dir) => {
@@ -220,7 +222,7 @@ W.QueryComponents.For(
 
 - It is also possible to use With() for additional filtering of entities  
 > It should be noted that the components that are specified in the delegate are considered as All filter  
-> This means that With() only completes the filtering and does not require specifying the components used in the delegate.  
+> This means that With() only completes the filtering and does not require specifying the components used in the delegate.
 
 ```c#
 W.QueryComponents.With<TagAny<Unit, Player>>().For((ref Position pos, ref Velocity vel, ref Direction dir) => {
