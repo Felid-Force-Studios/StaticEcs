@@ -184,7 +184,7 @@ W.QueryComponents.For(static (W.Entity ent, ref Position pos, ref Velocity vel, 
 ```
 
 
-- To avoid delegate allocations, it is possible to pass any custom data type as the first parameter:
+- To avoid delegate allocations, it is possible to pass any custom data type as the first parameter:  
 ```c#
 W.QueryComponents.For(deltaTime, static (float dt, W.Entity ent /* Optional */, ref Position pos, ref Velocity vel, ref Direction dir) => {
     pos.Value += dir.Value * vel.Value * dt;
@@ -219,6 +219,7 @@ W.QueryComponents.For(
 - It is also possible to use With() for additional filtering of entities  
 > It should be noted that the components that are specified in the delegate are considered as All filter  
 > This means that With() only completes the filtering and does not require specifying the components used in the delegate.  
+
 ```c#
 W.QueryComponents.With<TagAny<Unit, Player>>().For((ref Position pos, ref Velocity vel, ref Direction dir) => {
     pos.Value += dir.Value * vel.Value;
@@ -252,7 +253,7 @@ All the query methods below do not require caching, are allocated on the stack a
 
 `minChunkSize` - the value defines the minimum number of potential entities after which the function will use several threads.  
 
-Examples:
+Examples:  
 
 ```c#
 W.QueryComponents.Parallel.For(minChunkSize: 50000, (W.ROEntity ent /* Optional */, ref Position pos, ref Velocity vel, ref Direction dir) => {
