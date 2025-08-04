@@ -175,6 +175,7 @@ W.QueryComponents.For(static (ref Position pos, ref Velocity vel, ref Direction 
 });
 ```
 
+
 - It is possible to specify an entity before the components if it is required:
 ```c#
 W.QueryComponents.For(static (W.Entity ent, ref Position pos, ref Velocity vel, ref Direction dir) => {
@@ -202,6 +203,7 @@ W.QueryComponents.For(ref count, static (ref int counter, W.Entity ent /* Option
 });
 ```
 
+
 - Additionally, it is possible to specify in which status you want to search for entities or components:
 ```c#
 W.QueryComponents.For(
@@ -212,6 +214,7 @@ W.QueryComponents.For(
     components: ComponentStatus.Disabled // (Enabled, Disabled, Any) Default Enabled
 );
 ```
+
 
 - It is also possible to use With() for additional filtering of entities  
 > It should be noted that the components that are specified in the delegate are considered as All filter  
@@ -237,6 +240,7 @@ W.QueryComponents.With(with).For((ref Position pos, ref Velocity vel, ref Direct
     pos.Value += dir.Value * vel.Value;
 });
 ```
+
 
 ### Parallel
 There is a possibility of multithreaded processing:  

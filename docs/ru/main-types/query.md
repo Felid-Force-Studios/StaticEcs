@@ -175,6 +175,7 @@ W.QueryComponents.For(static (ref Position pos, ref Velocity vel, ref Direction 
 });
 ```
 
+
 - Можно указать сущность перед компонентами если она требуется:
 ```c#
 W.QueryComponents.For(static (W.Entity ent, ref Position pos, ref Velocity vel, ref Direction dir) => {
@@ -202,6 +203,7 @@ W.QueryComponents.For(ref count, static (ref int counter, W.Entity ent /* Опц
 });
 ```
 
+
 - Дополнительно можно указать в каком статусе необходимо искать сущностей или компоненты:
 ```c#
 W.QueryComponents.For(
@@ -213,9 +215,11 @@ W.QueryComponents.For(
 );
 ```
 
+
 - Также возможно использовать With() для дополнительной фильтрации сущностей
 > Стоит заметить что компоненты которые указаны в делегате расцениваются как фильтр All  
 > это значит что With() лишь дополняет фильтрацию и не требует указания используемых в делегате компонентов  
+
 ```c#
 W.QueryComponents.With<TagAny<Unit, Player>>().For((ref Position pos, ref Velocity vel, ref Direction dir) => {
     pos.Value += dir.Value * vel.Value;
@@ -239,6 +243,7 @@ W.QueryComponents.With(with).For((ref Position pos, ref Velocity vel, ref Direct
 
 ```
 
+
 ### Parallel
 Существует возможность многопоточной обработки:  
 Важно! Возвращается специальный тип сущности который запрещает все операции такие как (`Add`, `Put` ...), разрешены только `Ref`, `Has` и тд  
@@ -249,7 +254,7 @@ W.QueryComponents.With(with).For((ref Position pos, ref Velocity vel, ref Direct
 
 `minChunkSize` - значение определяет минимальное количество потенциальных сущностей после которого функция будет использовать несколько потоков  
   
-Примеры:
+Примеры:  
 
 ```c#
 W.QueryComponents.Parallel.For(minChunkSize: 50000, (W.ROEntity ent /* Опционально */, ref Position pos, ref Velocity vel, ref Direction dir) => {
