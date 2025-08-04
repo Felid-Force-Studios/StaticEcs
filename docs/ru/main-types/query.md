@@ -185,6 +185,7 @@ W.QueryComponents.For(static (W.Entity ent, ref Position pos, ref Velocity vel, 
 
 
 - Для избегания аллокаций делегата можно передать первым параметром данные любого пользовательского типа:  
+
 ```c#
 W.QueryComponents.For(deltaTime, static (float dt, W.Entity ent /* Опционально */, ref Position pos, ref Velocity vel, ref Direction dir) => {
     pos.Value += dir.Value * vel.Value * dt;
