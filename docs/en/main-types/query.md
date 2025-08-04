@@ -4,16 +4,16 @@ parent: Main types
 nav_order: 12
 ---
 
-## Query
+# Query
 Queries are a mechanism to search for entities and their components in the world
 
 ___
 
-### QueryMethods
-Types allowing to describe filtering by components/tags/masks used in [QueryEntities](#QueryEntities) and [QueryComponents](#QueryComponents)  
+## Query Methods
+Types allowing to describe filtering by components/tags/masks used in [QueryEntities](#query-entities) and [QueryComponents](#query-components)  
 All of the types below do not require explicit initialization, do not require caching, each takes 1 byte and can be used on the fly
 
-#### Components:
+### Components:
 `All` - filters entities for the presence of all specified included components (overload from 1 to 8)
 ```c#
 All<Position, Direction, Velocity> all = default;
@@ -54,7 +54,7 @@ AnyOnlyDisabled<Position, Direction, Velocity> any = default;
 AnyWithDisabled<Position, Direction, Velocity> any = default;
 ```
 
-#### Tags:
+### Tags:
 `TagAll` - filters entities for the presence of all specified tags (overload from 1 to 8)
 ```c#
 All<Unit, Player> all = default;
@@ -70,7 +70,7 @@ TagNone<Unit, Player> none = default;
 TagAny<Unit, Player> any = default;
 ```
 
-#### Masks:
+### Masks:
 `MaskAll` - filters entities for the presence of all specified masks (can only be used as part of other methods) (overloading from 1 to 8)
 ```c#
 MaskAll<Flammable, Frozen, Visible> all = default;
@@ -88,7 +88,7 @@ MaskAny<Flammable, Frozen, Visible> any = default;
 
 ___
 
-### QueryEntities
+## Query Entities
 Classic search for entities in the world with specified components/tags/masks  
 All query methods below are cache-free, allocated on the stack and can be used on-the-fly.
 
@@ -161,7 +161,7 @@ foreach (var entity in W.QueryEntities.For(with2)) {
 
 ___
 
-### QueryComponents
+## Query Components
 Optimized search for entities and components in the world using delegates  
 This "under the hood" method deploys loops and is a more convenient and efficient way of doing things  
 All query methods below, do not require caching, are allocated on the stack and can be used on-the-fly  
@@ -236,10 +236,9 @@ WithAdds<
 W.QueryComponents.With(with).For((ref Position pos, ref Velocity vel, ref Direction dir) => {
     pos.Value += dir.Value * vel.Value;
 });
-
 ```
 
-#### Parallel
+### Parallel
 There is a possibility of multithreaded processing:  
 Important! A special entity type is returned which prohibits all operations such as (`Add`, `Put` ...), only `Ref`, `Has` etc. are allowed  
 You cannot create, delete entities or components in multithreaded processing, only read and modify existing ones.  
@@ -250,6 +249,7 @@ All the query methods below do not require caching, are allocated on the stack a
 `minChunkSize` - the value defines the minimum number of potential entities after which the function will use several threads.  
 
 Examples:
+
 ```c#
 W.QueryComponents.Parallel.For(minChunkSize: 50000, (W.ROEntity ent /* Optional */, ref Position pos, ref Velocity vel, ref Direction dir) => {
     pos.Value += dir.Value * vel.Value;
@@ -268,9 +268,9 @@ W.QueryComponents.Parallel.With(with).For(minChunkSize: 50000, (ref Position pos
 });
 ```
 
+---
 
-
-#### QueryFunction
+### Query Function
 `QueryComponents` allows you to define function structures instead of delegates  
 Can be used for optimization, passing state to a structure, or for passing logic.  
 
@@ -333,6 +333,9 @@ public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, W.IQueryFunction<
     }
 }
 ```
+
+---
+
 
 {: .important }
 For each filtering method `QueryComponents.For()`, `QueryEntities.For()`

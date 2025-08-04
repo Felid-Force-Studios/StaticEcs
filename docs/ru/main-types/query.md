@@ -4,16 +4,16 @@ parent: Основные типы
 nav_order: 12
 ---
 
-## Query
+# Query
 Запросы - механизм позволяющий осуществлять поиск сущностей и их компонентов в мире
 
 ___
 
-### QueryMethods
-Типы позволяющие описать фильтрации по компонентам\тегам\маскам используемые в [QueryEntities](#QueryEntities) и [QueryComponents](#QueryComponents)  
+## Query Methods
+Типы позволяющие описать фильтрации по компонентам\тегам\маскам используемые в [QueryEntities](#query-entities) и [QueryComponents](#query-components)  
 Все типы ниже не требуют явной инициализации, не требуют кеширования, каждый из них занимает 1 байт и может использоваться "на лету"  
 
-#### Компоненты:
+### Компоненты:
 `All` - фильтрует сущности на наличие всех указанных включенных компонентов (перегрузка от 1 до 8)
 ```c#
 All<Position, Direction, Velocity> all = default;
@@ -54,7 +54,7 @@ AnyOnlyDisabled<Position, Direction, Velocity> any = default;
 AnyWithDisabled<Position, Direction, Velocity> any = default;
 ```
 
-#### Теги:
+### Теги:
 `TagAll` - фильтрует сущности на наличие всех указанных тегов (перегрузка от 1 до 8)
 ```c#
 All<Unit, Player> all = default;
@@ -70,7 +70,7 @@ TagNone<Unit, Player> none = default;
 TagAny<Unit, Player> any = default;
 ```
 
-#### Маски:
+### Маски:
 `MaskAll` - фильтрует сущности на наличие всех указанных масок (может использоваться только в составе других методов) (перегрузка от 1 до 8)
 ```c#
 MaskAll<Flammable, Frozen, Visible> all = default;
@@ -88,7 +88,7 @@ MaskAny<Flammable, Frozen, Visible> any = default;
 
 ___
 
-### QueryEntities
+## Query Entities
 Классический поиск сущностей в мире с указанными компонентами\тегами\масками  
 Все способы запросов ниже, не требуют кеширования, аллоцируются на стеке и могут использоваться "на лету"  
 
@@ -161,7 +161,7 @@ foreach (var entity in W.QueryEntities.For(with2)) {
 
 ___
 
-### QueryComponents
+## Query Components
 Оптимизированный поиск сущностей и компонентов в мире с помощью делегатов  
 Данный способ "под капотом" разворачивает циклы и является более удобным и эффективным способом  
 Все способы запросов ниже, не требуют кеширования, аллоцируются на стеке и могут использоваться "на лету"  
@@ -239,7 +239,7 @@ W.QueryComponents.With(with).For((ref Position pos, ref Velocity vel, ref Direct
 
 ```
 
-#### Parallel
+### Parallel
 Существует возможность многопоточной обработки:  
 Важно! Возвращается специальный тип сущности который запрещает все операции такие как (`Add`, `Put` ...), разрешены только `Ref`, `Has` и тд  
 Нельзя в многопоточной обработке создавать, удалять сущности или компоненты, только читать и изменять существующие  
@@ -250,6 +250,7 @@ W.QueryComponents.With(with).For((ref Position pos, ref Velocity vel, ref Direct
 `minChunkSize` - значение определяет минимальное количество потенциальных сущностей после которого функция будет использовать несколько потоков  
   
 Примеры:
+
 ```c#
 W.QueryComponents.Parallel.For(minChunkSize: 50000, (W.ROEntity ent /* Опционально */, ref Position pos, ref Velocity vel, ref Direction dir) => {
     pos.Value += dir.Value * vel.Value;
@@ -268,9 +269,10 @@ W.QueryComponents.Parallel.With(with).For(minChunkSize: 50000, (ref Position pos
 });
 ```
 
+---
 
 
-#### QueryFunction
+### Query Function
 `QueryComponents` позволяет определять структуры функции вместо делегатов  
 Может быть использовано для оптимизации, передачи состояния в структуру или для вынесения логики  
 
@@ -333,6 +335,9 @@ public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, W.IQueryFunction<
     }
 }
 ```
+
+---
+
 
 {: .importantru }
 Для каждого метода фильтрации `QueryComponents.For()`, `QueryEntities.For()`  
