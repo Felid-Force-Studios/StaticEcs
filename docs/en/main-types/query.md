@@ -184,8 +184,10 @@ W.QueryComponents.For(static (W.Entity ent, ref Position pos, ref Velocity vel, 
 ```
 
 
-- To avoid delegate allocations, it is possible to pass any custom data type as the first parameter:
+
+- To avoid delegate allocations, it is possible to pass any custom data type as the first param:
 ```c#
+
 W.QueryComponents.For(deltaTime, static (float dt, W.Entity ent /* Optional */, ref Position pos, ref Velocity vel, ref Direction dir) => {
     pos.Value += dir.Value * vel.Value * dt;
 });
