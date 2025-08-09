@@ -168,7 +168,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void SetSnapshotHandler(
-                Guid guid, byte version, CustomSnapshotDataWriter writer, CustomSnapshotDataReader reader, SnapshotActionType snapshotType = SnapshotActionType.All
+                Guid guid, ushort version, CustomSnapshotDataWriter writer, CustomSnapshotDataReader reader, SnapshotActionType snapshotType = SnapshotActionType.All
             ) {
                 if (Status == WorldStatus.NotCreated) {
                     throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: SetCustomSnapshotDataSerializer, World not created");
@@ -184,7 +184,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void SetSnapshotHandlerEachEntity(
-                Guid guid, byte version, CustomSnapshotEntityDataWriter<WorldType> writer, CustomSnapshotEntityDataReader<WorldType> reader, SnapshotActionType snapshotType = SnapshotActionType.All
+                Guid guid, ushort version, CustomSnapshotEntityDataWriter<WorldType> writer, CustomSnapshotEntityDataReader<WorldType> reader, SnapshotActionType snapshotType = SnapshotActionType.All
             ) {
                 if (Status == WorldStatus.NotCreated) {
                     throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: SetCustomSnapshotEntityDataSerializer, World not created");
