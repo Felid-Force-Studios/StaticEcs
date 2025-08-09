@@ -21,19 +21,27 @@ namespace FFS.Libraries.StaticEcs {
             public static Context Value;
 
             internal Dictionary<Type, Action> contextClearMethods;
+            internal Dictionary<Type, (Func<object> get, Action<object> set)> valuesGetSetRawMethods;
             
             [MethodImpl(AggressiveInlining)]
-            internal void AddClearMethod<T>() {
-                contextClearMethods ??= new Dictionary<Type, Action>();
-                contextClearMethods[typeof(T)] = () => {
-                    Context<T>._value = default;
-                    Context<T>._has = false;
-                };
+            internal void Add<T>(bool clearAfterDestroy) {
+                var type = typeof(T);
+                valuesGetSetRawMethods ??= new Dictionary<Type, (Func<object>, Action<object>)>();
+                valuesGetSetRawMethods[type] = (static () => Context<T>.Get(), static val => Context<T>.Replace((T)val));
+
+                if (clearAfterDestroy) {
+                    contextClearMethods ??= new Dictionary<Type, Action>();
+                    contextClearMethods[type] = () => {
+                        Context<T>._value = default;
+                        Context<T>._has = false;
+                    };
+                }
             }
             
             [MethodImpl(AggressiveInlining)]
-            internal void RemoveClearMethod<T>() {
+            internal void RemoveMethods<T>() {
                 contextClearMethods?.Remove(typeof(T));
+                valuesGetSetRawMethods?.Remove(typeof(T));
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -43,6 +51,7 @@ namespace FFS.Libraries.StaticEcs {
                         action();
                     }
                     contextClearMethods.Clear();
+                    valuesGetSetRawMethods.Clear();
                 }
             }
 
@@ -58,6 +67,10 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
                 return ref Context<T>._value;
             }
+
+            object IContext.GetRaw(Type type) => valuesGetSetRawMethods[type].get();
+
+            void IContext.ReplaceRaw(Type type, object value) => valuesGetSetRawMethods[type].set(value);
 
             [MethodImpl(AggressiveInlining)]
             public readonly ref T GetOrCreate<T>() where T : new() {
@@ -75,6 +88,35 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public readonly void Remove<T>() => Context<T>.Remove();
+
+            [MethodImpl(AggressiveInlining)]
+            public bool HasNamed(string key) =>  NamedContext.Has(key);
+
+            [MethodImpl(AggressiveInlining)]
+            public T GetNamed<T>(string key) => NamedContext.Get<T>(key);
+
+            object IContext.GetRawNamed(string key) => NamedContext._values[key];
+
+            void IContext.ReplaceRawNamed(string key, object value) {
+                if (!NamedContext._values.ContainsValue(key)) {
+                    throw new StaticEcsException($"{key} not exist in container");
+                }
+
+                NamedContext._values[key] = value;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void SetNamed<T>(string key, T value, bool clearOnDestroy) => NamedContext.Set(key, value, clearOnDestroy);
+
+            [MethodImpl(AggressiveInlining)]
+            public void ReplaceNamed<T>(string key, T value) => NamedContext.Replace(key, value);
+
+            [MethodImpl(AggressiveInlining)]
+            public void RemoveNamed(string key) => NamedContext.Remove(key);
+
+            IReadOnlyDictionary<string, object> IContext.GetAllNamedValues() => NamedContext._values;
+
+            IReadOnlyDictionary<Type, (Func<object>, Action<object>)> IContext.GetAllValuesGetSetRawMethods() => valuesGetSetRawMethods;
         }
 
         #if ENABLE_IL2CPP
@@ -98,15 +140,19 @@ namespace FFS.Libraries.StaticEcs {
 
                 _has = true;
                 _value = value;
-                if (clearOnDestroy) {
-                    Context.Value.AddClearMethod<T>();
-                }
+                Context.Value.Add<T>(clearOnDestroy);
             }
 
             [MethodImpl(AggressiveInlining)]
             public static void Replace(T value) {
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (value == null) {
                     throw new StaticEcsException($"{typeof(T).Name} is null, Context<{typeof(WorldType)}>");
+                }
+                #endif
+
+                if (!_has) {
+                    Context.Value.Add<T>(false);
                 }
 
                 _has = true;
@@ -127,7 +173,7 @@ namespace FFS.Libraries.StaticEcs {
             public static void Remove() {
                 _has = false;
                 _value = default;
-                Context.Value.RemoveClearMethod<T>();
+                Context.Value.RemoveMethods<T>();
             }
         }
 
@@ -137,8 +183,8 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppEagerStaticClassConstruction]
         #endif
         public struct NamedContext {
-            private static readonly Dictionary<string, object> _values = new();
-            private static readonly HashSet<string> _clearKeys = new();
+            internal static readonly Dictionary<string, object> _values = new();
+            internal static readonly HashSet<string> _clearKeys = new();
 
             [MethodImpl(AggressiveInlining)]
             public static void Clear() {
@@ -161,11 +207,10 @@ namespace FFS.Libraries.StaticEcs {
                     throw new StaticEcsException($"{typeof(T).Name} is null, NamedContext<{typeof(WorldType)}>");
                 }
 
-                if (_values.ContainsKey(key)) {
+                if (!_values.TryAdd(key, value)) {
                     throw new StaticEcsException($"{typeof(T).Name} already exist in container NamedContext<{typeof(WorldType)}>");
                 }
 
-                _values[key] = value;
                 if (clearOnDestroy) {
                     _clearKeys.Add(key);
                 }
@@ -193,10 +238,32 @@ namespace FFS.Libraries.StaticEcs {
 
         public ref T Get<T>();
 
+        internal object GetRaw(Type type);
+
+        internal void ReplaceRaw(Type type, object value);
+
         public void Set<T>(T value, bool clearOnDestroy);
 
         public void Replace<T>(T value);
 
         public void Remove<T>();
+        
+        public bool HasNamed(string key);
+        
+        public T GetNamed<T>(string key);
+
+        internal object GetRawNamed(string key);
+
+        internal void ReplaceRawNamed(string key, object value);
+
+        public void SetNamed<T>(string key, T value, bool clearOnDestroy);
+
+        public void ReplaceNamed<T>(string key, T value);
+
+        public void RemoveNamed(string key);
+        
+        internal IReadOnlyDictionary<string, object> GetAllNamedValues();
+        
+        internal IReadOnlyDictionary<Type, (Func<object>, Action<object>)> GetAllValuesGetSetRawMethods();
     }
 }
