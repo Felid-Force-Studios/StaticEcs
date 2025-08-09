@@ -34,11 +34,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal void WriteGuids(ref BinaryPackWriter writer) {
                 writer.WriteCollection(0, _poolsCount, (ref BinaryPackWriter w, int i) => {
-                    var guid = Value._pools[i].Guid();
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                    if (guid == Guid.Empty) throw new StaticEcsException($"Component type {Value._pools[i].GetElementType()} guid not registered");
-                    #endif
-                    w.WriteGuid(guid);
+                    w.WriteGuid(Value._pools[i].Guid());
                 });
             }
             
@@ -103,12 +99,17 @@ namespace FFS.Libraries.StaticEcs {
                 internal void Write(ref BinaryPackWriter writer, Entity entity) {
                     ref var components = ref ModuleStandardComponents.Value;
                     
-                    var len = components._poolsCount;
-                    writer.WriteUshort(len);
-                    for (int id = 0; id < len; id++) {
-                        writer.WriteUshort((ushort) id);
-                        components._pools[id].Write(ref writer, entity);
+                    ushort len = 0;
+                    var offset = writer.MakePoint(sizeof(ushort));
+                    for (int id = 0; id < components._poolsCount; id++) {
+                        var pool = components._pools[id];
+                        if (!pool.Guid().Equals(Guid.Empty)) {
+                            writer.WriteUshort((ushort) id);
+                            pool.Write(ref writer, entity);
+                            len++;
+                        }
                     }
+                    writer.WriteUshortAt(offset, len);
                 }
 
                 [MethodImpl(AggressiveInlining)]

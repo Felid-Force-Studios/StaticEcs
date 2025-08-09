@@ -118,21 +118,18 @@ namespace FFS.Libraries.StaticEcs {
                 private Dictionary<Guid, IEventPoolWrapper> _poolByGuid;
                 private Dictionary<Guid, EcsEventDeleteMigrationReader<WorldType>> _deleteMigratorByGuid;
                 private List<(Guid id, uint offset)> _tempDeletedPoolIds;
-                private List<(Guid guid, ushort id)> _tempLoadedPools;
 
                 [MethodImpl(AggressiveInlining)]
                 internal void Create() {
                     _poolByGuid = new Dictionary<Guid, IEventPoolWrapper>();
                     _deleteMigratorByGuid = new Dictionary<Guid, EcsEventDeleteMigrationReader<WorldType>>();
                     _tempDeletedPoolIds = new List<(Guid id, uint offset)>();
-                    _tempLoadedPools = new List<(Guid guid, ushort id)>();
                 }
 
                 [MethodImpl(AggressiveInlining)]
                 internal void Destroy() {
                     _deleteMigratorByGuid = null;
                     _tempDeletedPoolIds = null;
-                    _tempLoadedPools = null;
                     _poolByGuid = null;
                 }
 
@@ -153,36 +150,34 @@ namespace FFS.Libraries.StaticEcs {
                 [MethodImpl(AggressiveInlining)]
                 internal void Write(ref BinaryPackWriter writer) {
                     writer.WriteUshort(_poolsCount);
+                    
+                    ushort len = 0;
+                    var point = writer.MakePoint(sizeof(ushort));
                     for (var i = 0; i < _poolsCount; i++) {
                         var pool = _pools[i];
                         var guid = pool.Guid();
 
-                        #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                        if (!_poolByGuid.ContainsKey(guid)) {
-                            throw new StaticEcsException($"Serializer for event type {pool.GetEventType()} not registered");
+                        if (_poolByGuid.TryGetValue(guid, out var wrapper)) {
+                            writer.WriteGuid(guid);
+                            var offset = writer.MakePoint(sizeof(uint));
+                            wrapper.WriteAll(ref writer);
+                            writer.WriteUintAt(offset, writer.Position - (offset + sizeof(uint)));
+                            len++;
                         }
-                        #endif
-                        writer.WriteGuid(guid);
-                        writer.WriteUshort(pool.DynamicId());
-                        var offset = writer.MakePoint(sizeof(uint));
-                        _poolByGuid[guid].WriteAll(ref writer);
-                        writer.WriteUintAt(offset, writer.Position - (offset + sizeof(uint)));
                     }
+                    writer.WriteUshortAt(point, len);
                 }
 
                 [MethodImpl(AggressiveInlining)]
                 internal void Read(ref BinaryPackReader reader) {
                     _tempDeletedPoolIds.Clear();
-                    _tempLoadedPools.Clear();
                     
                     var poolsCount = reader.ReadUshort();
                     for (var i = 0; i < poolsCount; i++) {
                         var guid = reader.ReadGuid();
-                        var id = reader.ReadUshort();
                         var byteSize = reader.ReadUint();
                         if (_poolByGuid.TryGetValue(guid, out var pool)) {
                             pool.ReadAll(ref reader);
-                            _tempLoadedPools.Add((guid, id));
                         } else {
                             _tempDeletedPoolIds.Add((guid, reader.Position));
                             reader.SkipNext(byteSize);

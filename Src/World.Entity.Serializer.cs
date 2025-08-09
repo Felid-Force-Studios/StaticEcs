@@ -209,6 +209,17 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 [MethodImpl(AggressiveInlining)]
+                public void WriteAllEntities() {
+                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                    if (Destroyed) throw new StaticEcsException($"World<{typeof(WorldType)}>.EntitiesWriter, Method: WriteAllEntities, SnapshotWriter is destroyed");
+                    #endif
+
+                    foreach (var entity in AllEntities()) {
+                        Write(entity);
+                    }
+                }
+
+                [MethodImpl(AggressiveInlining)]
                 public byte[] CreateSnapshot(bool withCustomSnapshotData = true, bool gzip = false) {
                     #if DEBUG || FFS_ECS_ENABLE_DEBUG
                     if (Destroyed) throw new StaticEcsException($"World<{typeof(WorldType)}>.EntitiesWriter, Method: CreateSnapshot, SnapshotWriter is destroyed");

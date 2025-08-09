@@ -35,11 +35,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal void WriteGuids(ref BinaryPackWriter writer) {
                 writer.WriteCollection(0, _poolsCount, (ref BinaryPackWriter w, int i) => {
-                    var guid = Value._pools[i].Guid();
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                    if (guid == Guid.Empty) throw new StaticEcsException($"Component type {Value._pools[i].GetElementType()} guid not registered");
-                    #endif
-                    w.WriteGuid(guid);
+                    w.WriteGuid(Value._pools[i].Guid());
                 });
             }
             
@@ -107,17 +103,22 @@ namespace FFS.Libraries.StaticEcs {
                 [MethodImpl(AggressiveInlining)]
                 internal void Write(ref BinaryPackWriter writer, Entity entity) {
                     ref var components = ref ModuleComponents.Value;
-                    
                     ref var bitMask = ref components.BitMask;
-                    var len = bitMask.LenWithDisabled(entity._id);
-                    writer.WriteUshort(len);
+                    
+                    ushort len = 0;
                     var bufId = bitMask.BorrowBuf();
                     bitMask.CopyWithDisabledToBuffer(entity._id, bufId);
+                    var offset = writer.MakePoint(sizeof(ushort));
                     while (bitMask.GetMinIndexBuffer(bufId, out var id)) {
-                        writer.WriteUshort((ushort) id);
-                        components._pools[id].Write(ref writer, entity);
+                        var pool = components._pools[id];
+                        if (!pool.Guid().Equals(Guid.Empty)) {
+                            writer.WriteUshort((ushort) id);
+                            pool.Write(ref writer, entity);
+                            len++;
+                        }
                         bitMask.DelInBuffer(bufId, (ushort) id);
                     }
+                    writer.WriteUshortAt(offset, len);
                     bitMask.DropBuf();
                 }
 

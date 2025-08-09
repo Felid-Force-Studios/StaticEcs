@@ -561,6 +561,30 @@ W.Serializer.SetEventDeleteMigrator(
     });
 ```
 
+
+- Can components/masks/tags be excluded from serialization?
+
+```csharp
+// When using serialization via the CreateWorldSnapshot method, the full state of the world is saved
+// and there is no possibility to exclude individual components (DEBUG will have an error when calling that the serializer is not registered).
+
+// But when using EntitiesSnapshot there is such a possibility, for this purpose it is necessary not to configure GUID when registering a component/tag/mask/event.
+// When saving entities, all components/tags/masks/events for which GUID is not defined will be skipped during serialization.
+// For example, to preserve the WHOLE world including events and relationships between entities, the following code can be used:
+using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
+entitiesWriter.WriteAllEntities();
+byte[] snapshot = entitiesWriter.CreateSnapshot();
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+byte[] eventsSnapshot = W.Events.CreateSnapshot();
+
+
+// Deserialization:
+var gidStoreSnapshot = BinaryPack.ReadFromBytes<GIDStoreSnapshot>(gidSnapshot);
+InitWorld(gidStoreSnapshot);
+W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: false);
+W.Events.LoadSnapshot(eventsSnapshot);
+```
+
 - Is it possible to reduce the size of serialized data/files?
 
 ```csharp

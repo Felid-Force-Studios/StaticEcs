@@ -561,6 +561,29 @@ W.Serializer.SetEventDeleteMigrator(
     });
 ```
 
+- Можно ли исключить компоненты\маски\теги из сериализации?
+
+```csharp
+// При использовании сериализации через метод CreateWorldSnapshot сохраняется все состояние мира 
+// и нет возможности исключить отдельные компоненты (в DEBUG будет ошибка при вызове что сериализатор не зарегестрирован)
+
+// Но при использовании EntitiesSnapshot такая возможость есть, для этого необходимо не конфигурировать GUID при регистрации компонента\тега\маски\события
+// при сохранении сущностей все компоненты\теги\маски\события для которых не определен GUID будут пропущенны при сериализации
+// Например чтобы сохранить ВЕСЬ мир включая события и отношения между сущностями, может использоваться следующий код:
+using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
+entitiesWriter.WriteAllEntities();
+byte[] snapshot = entitiesWriter.CreateSnapshot();
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+byte[] eventsSnapshot = W.Events.CreateSnapshot();
+
+
+// Десериализация:
+var gidStoreSnapshot = BinaryPack.ReadFromBytes<GIDStoreSnapshot>(gidSnapshot);
+InitWorld(gidStoreSnapshot);
+W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: false);
+W.Events.LoadSnapshot(eventsSnapshot);
+```
+
 - Можно ли уменьшить размер сериализованных данных\файлов?
 
 ```csharp
