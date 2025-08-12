@@ -21,13 +21,15 @@ namespace FFS.Libraries.StaticEcs {
             public static Context Value;
 
             internal Dictionary<Type, Action> contextClearMethods;
-            internal Dictionary<Type, (Func<object> get, Action<object> set)> valuesGetSetRawMethods;
+            internal Dictionary<Type, (Func<object> get, Action<object> set, Action remove)> valuesGetSetRawMethods;
             
             [MethodImpl(AggressiveInlining)]
             internal void Add<T>(bool clearAfterDestroy) {
                 var type = typeof(T);
-                valuesGetSetRawMethods ??= new Dictionary<Type, (Func<object>, Action<object>)>();
-                valuesGetSetRawMethods[type] = (static () => Context<T>.Get(), static val => Context<T>.Replace((T)val));
+                valuesGetSetRawMethods ??= new Dictionary<Type, (Func<object>, Action<object>, Action)>();
+                valuesGetSetRawMethods[type] = (
+                    static () => Context<T>.Get(), static val => Context<T>.Replace((T) val), Context<T>.Remove
+                );
 
                 if (clearAfterDestroy) {
                     contextClearMethods ??= new Dictionary<Type, Action>();
@@ -116,7 +118,7 @@ namespace FFS.Libraries.StaticEcs {
 
             IReadOnlyDictionary<string, object> IContext.GetAllNamedValues() => NamedContext._values;
 
-            IReadOnlyDictionary<Type, (Func<object>, Action<object>)> IContext.GetAllValuesGetSetRawMethods() => valuesGetSetRawMethods;
+            IReadOnlyDictionary<Type, (Func<object>, Action<object>, Action)> IContext.GetAllGetSetRemoveValuesMethods() => valuesGetSetRawMethods;
         }
 
         #if ENABLE_IL2CPP
@@ -264,6 +266,6 @@ namespace FFS.Libraries.StaticEcs {
         
         internal IReadOnlyDictionary<string, object> GetAllNamedValues();
         
-        internal IReadOnlyDictionary<Type, (Func<object>, Action<object>)> GetAllValuesGetSetRawMethods();
+        internal IReadOnlyDictionary<Type, (Func<object>, Action<object>, Action)> GetAllGetSetRemoveValuesMethods();
     }
 }
