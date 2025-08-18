@@ -158,6 +158,17 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
+            internal void IncrementVersion(Entity entity) {
+                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                if (!Has(entity)) throw new StaticEcsException($"[GlobalIdStore] Method: DestroyEntity, Dont have {entity}");
+                #endif
+                ref var gid = ref _globalIdByEntity[entity._id];
+                gid.IncrementVersion();
+
+                _versions[gid.Id()] = gid.Version();
+            }
+
+            [MethodImpl(AggressiveInlining)]
             internal void UnloadEntity(Entity entity) {
                 #if DEBUG || FFS_ECS_ENABLE_DEBUG
                 if (!Has(entity)) throw new StaticEcsException($"[GlobalIdStore] Method: UnloadEntity, Dont have {entity}");

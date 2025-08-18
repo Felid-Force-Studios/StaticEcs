@@ -11,6 +11,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
+    [Serializable]
     public struct EntityStatus : IStandardComponent {
         internal EntityStatusType Value;
 

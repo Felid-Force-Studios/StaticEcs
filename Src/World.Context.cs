@@ -15,6 +15,28 @@ namespace FFS.Libraries.StaticEcs {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+        #endif
+        public readonly struct ContextValue<T> {
+            [MethodImpl(AggressiveInlining)]
+            public static void Set(T value) => Context<T>.Set(value);
+            
+            [MethodImpl(AggressiveInlining)]
+            public static void Replace(T value) => Context<T>.Replace(value);
+            
+            [MethodImpl(AggressiveInlining)]
+            public static void Has() => Context<T>.Has();
+
+            [MethodImpl(AggressiveInlining)]
+            public static ref T Get() => ref Context<T>.Get();
+
+            [MethodImpl(AggressiveInlining)]
+            public static void Remove() => Context<T>.Remove();
+        }
+
+
+        #if ENABLE_IL2CPP
+        [Il2CppSetOption(Option.NullChecks, false)]
+        [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         [Il2CppEagerStaticClassConstruction]
         #endif
         public struct Context : IContext {

@@ -79,6 +79,9 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public bool IsActual() => GIDStore.Value.Has(this);
 
+            [MethodImpl(AggressiveInlining)]
+            public void UpVersion() => GIDStore.Value.IncrementVersion(this);
+
             public string PrettyString {
                 get {
                     var builder = new StringBuilder(128);

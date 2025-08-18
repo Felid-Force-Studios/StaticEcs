@@ -10,6 +10,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
+    [Serializable]
     public struct EntityGID : IEquatable<EntityGID> {
         internal const int IdBits = 24;
         internal const int IdMask = 0xFFFFFF;
