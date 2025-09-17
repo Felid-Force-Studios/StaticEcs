@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using FFS.Libraries.StaticPack;
 #if ENABLE_IL2CPP
@@ -18,12 +18,12 @@ namespace FFS.Libraries.StaticEcs {
         internal uint id;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal EntityGID(uint id, byte version) {
+        public EntityGID(uint id, byte version) {
             this.id = id | ((uint) version << IdBits);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal EntityGID(uint value) {
+        public EntityGID(uint value) {
             id = value;
         }
 
