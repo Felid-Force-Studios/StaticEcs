@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
-#if DEBUG || FFS_ECS_ENABLE_DEBUG
+#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
 using System.Diagnostics;
 #endif
 #if ENABLE_IL2CPP
@@ -30,7 +30,7 @@ namespace FFS.Libraries.StaticEcs {
         internal void Init();
         internal void Destroy();
         
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         internal void Info(List<SystemInfo> res);
 
         internal bool SetActive(int sysIdx, bool active);
@@ -54,7 +54,7 @@ namespace FFS.Libraries.StaticEcs {
             internal struct SW<TSystem>
                 where TSystem : IUpdateSystem {
                 internal TSystem System;
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 internal bool Active;
                 internal float Time;
                 internal Stopwatch stopwatch;
@@ -64,7 +64,7 @@ namespace FFS.Libraries.StaticEcs {
             
                 public SW(TSystem system) {
                     System = system;
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                     Active = true;
                     Time = 0;
                     stopwatch = new Stopwatch();
@@ -75,14 +75,14 @@ namespace FFS.Libraries.StaticEcs {
 
                 [MethodImpl(AggressiveInlining)]
                 public void Init() {
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                     if (!Active) {
                         return;
                     }
                     #endif
 
                     if (System is IInitSystem system) {
-                        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                         if (FileLogger != null && FileLogger.Enabled) {
                             FileLogger.Write(OperationType.SystemCallInit, TypeData<TSystem>.Name);
                         }
@@ -95,7 +95,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 [MethodImpl(AggressiveInlining)]
                 public void Run() {
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                     if (!Active) {
                         IncrementSystemIndex();
                         return;
@@ -106,7 +106,7 @@ namespace FFS.Libraries.StaticEcs {
                     stopwatch.Restart();
                     #endif
                     System.Update();
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                     stopwatch.Stop();
                     Time = ((float)stopwatch.ElapsedTicks / Stopwatch.Frequency * 1000 + Time) * 0.5f;
                     #endif
@@ -115,13 +115,13 @@ namespace FFS.Libraries.StaticEcs {
 
                 [MethodImpl(AggressiveInlining)]
                 public void Destroy() {
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                     if (!Active) {
                         return;
                     }
                     #endif
                     if (System is IDestroySystem system) {
-                        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                         if (FileLogger != null && FileLogger.Enabled) {
                             FileLogger.Write(OperationType.SystemCallDestroy, TypeData<TSystem>.Name);
                         }
@@ -131,7 +131,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
                 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 internal SystemInfo Info() {
                     return new SystemInfo {
                         SystemType = typeof(TSystem),
@@ -151,7 +151,7 @@ namespace FFS.Libraries.StaticEcs {
         }
     }
     
-    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
     internal struct SystemInfo {
         public System.Type SystemType;
         public float AvgUpdateTime;

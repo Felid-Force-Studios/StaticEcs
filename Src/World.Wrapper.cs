@@ -20,11 +20,9 @@ namespace FFS.Libraries.StaticEcs {
 
         public IEntity NewEntity<T>(T component) where T : struct, IComponent;
 
-        public uint EntitiesCountWithoutDestroyed();
+        public uint CalculateEntitiesCount();
 
-        public uint EntitiesCount();
-
-        public uint EntitiesCapacity();
+        public uint CalculateEntitiesCapacity();
 
         public void Clear();
 
@@ -37,10 +35,6 @@ namespace FFS.Libraries.StaticEcs {
         public List<IEventPoolWrapper> GetAllEventPools();
         #endif
 
-        internal bool TryGetStandardComponentsRawPool(Type type, out IStandardRawPool pool);
-
-        internal List<IStandardRawPool> GetAllStandardComponentsRawPools();
-
         internal bool TryGetComponentsRawPool(Type type, out IRawComponentPool pool);
 
         internal List<IRawPool> GetAllComponentsRawPools();
@@ -50,12 +44,6 @@ namespace FFS.Libraries.StaticEcs {
         internal bool TryGetTagsRawPool(Type type, out IRawPool pool);
 
         internal List<IRawPool> GetAllTagsRawPools();
-        #endif
-
-        #if !FFS_ECS_DISABLE_MASKS
-        internal bool TryGetMasksRawPool(Type type, out IRawPool pool);
-
-        internal List<IRawPool> GetAllMasksRawPools();
         #endif
     }
 
@@ -71,7 +59,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public bool TryGetEntity(EntityGID gid, out IEntity entity) {
             if (gid.TryUnpack<WorldType>(out var e)) {
-                entity = e;
+                entity = e.Box();
                 return true;
             }
 
@@ -80,22 +68,19 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public IEntity NewEntity(Type componentType) => World<WorldType>.Entity.New(componentType);
+        public IEntity NewEntity(Type componentType) => World<WorldType>.Entity.New(componentType).Box();
 
         [MethodImpl(AggressiveInlining)]
-        public IEntity NewEntity(IComponent component) => World<WorldType>.Entity.New(component);
+        public IEntity NewEntity(IComponent component) => World<WorldType>.Entity.New(component).Box();
 
         [MethodImpl(AggressiveInlining)]
-        public IEntity NewEntity<T>(T component) where T : struct, IComponent => World<WorldType>.Entity.New(component);
+        public IEntity NewEntity<T>(T component) where T : struct, IComponent => World<WorldType>.Entity.New(component).Box();
 
         [MethodImpl(AggressiveInlining)]
-        public uint EntitiesCountWithoutDestroyed() => World<WorldType>.EntitiesCountWithoutDestroyed();
+        public uint CalculateEntitiesCount() => World<WorldType>.CalculateEntitiesCount();
 
         [MethodImpl(AggressiveInlining)]
-        public uint EntitiesCount() => World<WorldType>.EntitiesCount();
-
-        [MethodImpl(AggressiveInlining)]
-        public uint EntitiesCapacity() => World<WorldType>.EntitiesCapacity();
+        public uint CalculateEntitiesCapacity() => World<WorldType>.CalculateEntitiesCapacity();
 
         [MethodImpl(AggressiveInlining)]
         public void Clear() => World<WorldType>.Clear();
@@ -114,20 +99,6 @@ namespace FFS.Libraries.StaticEcs {
             return World<WorldType>.Events.GetAllRawsPools();
         }
         #endif
-
-        bool IWorld.TryGetStandardComponentsRawPool(Type type, out IStandardRawPool pool) {
-            if (World<WorldType>.TryGetStandardComponentsPool(type, out var p)) {
-                pool = p;
-                return true;
-            }
-
-            pool = default;
-            return false;
-        }
-
-        List<IStandardRawPool> IWorld.GetAllStandardComponentsRawPools() {
-            return World<WorldType>.ModuleStandardComponents.Value.GetAllRawsPools();
-        }
 
         bool IWorld.TryGetComponentsRawPool(Type type, out IRawComponentPool pool) {
             if (World<WorldType>.TryGetComponentsPool(type, out var p)) {
@@ -156,22 +127,6 @@ namespace FFS.Libraries.StaticEcs {
 
         List<IRawPool> IWorld.GetAllTagsRawPools() {
             return World<WorldType>.ModuleTags.Value.GetAllRawsPools();
-        }
-        #endif
-
-        #if !FFS_ECS_DISABLE_MASKS
-        bool IWorld.TryGetMasksRawPool(Type type, out IRawPool pool) {
-            if (World<WorldType>.TryGetMasksPool(type, out var p)) {
-                pool = p;
-                return true;
-            }
-
-            pool = default;
-            return false;
-        }
-
-        List<IRawPool> IWorld.GetAllMasksRawPools() {
-            return World<WorldType>.ModuleMasks.Value.GetAllRawsPools();
         }
         #endif
     }

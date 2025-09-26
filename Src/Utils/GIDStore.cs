@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
@@ -27,7 +28,7 @@ namespace FFS.Libraries.StaticEcs {
             // Dynamic data
             private uint[] _entityByGlobalId;
             private EntityGID[] _globalIdByEntity;
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             private byte[] _newEntities;
             #endif
 
@@ -41,21 +42,21 @@ namespace FFS.Libraries.StaticEcs {
                 _globalIdByEntity = new EntityGID[size];
                 _freeIdsCount = snapshot.FreeIdsCount;
                 _nextId = snapshot.NextId;
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 _newEntities = new byte[size];
                 #endif
             }
 
             [MethodImpl(AggressiveInlining)]
-            public GIDStore Create(WorldConfig config) {
-                _freeIds = new EntityGID[128];
-                _versions = new short[config.BaseEntitiesCount];
-                _entityByGlobalId = new uint[config.BaseEntitiesCount];
-                _globalIdByEntity = new EntityGID[config.BaseEntitiesCount];
+            public GIDStore Create(uint baseEntitiesCapacity) {
+                _freeIds = new EntityGID[baseEntitiesCapacity];
+                _versions = new short[baseEntitiesCapacity];
+                _entityByGlobalId = new uint[baseEntitiesCapacity];
+                _globalIdByEntity = new EntityGID[baseEntitiesCapacity];
                 _freeIdsCount = 0;
                 _nextId = 0;
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                _newEntities = new byte[config.BaseEntitiesCount];
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                _newEntities = new byte[baseEntitiesCapacity];
                 #endif
                 return this;
             }
@@ -65,10 +66,10 @@ namespace FFS.Libraries.StaticEcs {
                 Utils.LoopFallbackClear(_freeIds, 0, _freeIdsCount);
                 Utils.LoopFallbackClear(_versions, 0, _nextId);
                 Utils.LoopFallbackClear(_entityByGlobalId, 0, _nextId);
-                Utils.LoopFallbackClear(_globalIdByEntity, 0, (int) Entity.entitiesCount);
+                Utils.LoopFallbackClear(_globalIdByEntity, 0, (int) Entities.Value.entityIdSeq);
                 _freeIdsCount = 0;
                 _nextId = 0;
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 Utils.LoopFallbackClear(_newEntities, 0, _nextId);
                 #endif
             }
@@ -81,14 +82,14 @@ namespace FFS.Libraries.StaticEcs {
                 _versions = default;
                 _freeIdsCount = default;
                 _nextId = default;
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 _newEntities = default;
                 #endif
             }
 
             [MethodImpl(AggressiveInlining)]
             public EntityGID Get(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!Has(entity)) throw new StaticEcsException($"[GlobalIdStore] Method: Get, Dont have {entity}");
                 #endif
                 return _globalIdByEntity[entity._id];
@@ -98,30 +99,30 @@ namespace FFS.Libraries.StaticEcs {
             public bool Has(Entity entity) => !_globalIdByEntity[entity._id].IsEmpty();
 
             [MethodImpl(AggressiveInlining)]
-            internal void New(Entity entity) {
+            internal void New(uint eid) {
                 var gid = _freeIdsCount > 0
                     ? _freeIds[--_freeIdsCount]
                     : new EntityGID((uint) _nextId++, 1);
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                Set(entity, gid, true);
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                Set(eid, gid, true);
                 #else
-                Set(entity, gid);
+                Set(eid, gid);
                 #endif
             }
 
             [MethodImpl(AggressiveInlining)]
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            internal void Set(Entity entity, EntityGID gid, bool asNew) {
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            internal void Set(uint eid, EntityGID gid, bool asNew) {
                 #else
-            internal void Set(Entity entity, EntityGID gid) {
+            internal void Set(uint eid, EntityGID gid) {
                 #endif
                 var id = gid.Id();
                 if (id >= _entityByGlobalId.Length) {
                     Resize(id);
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (Has(entity)) throw new StaticEcsException($"[GlobalIdStore] Method: Set, Already have {entity}");
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (Has(new(eid))) throw new StaticEcsException($"[GlobalIdStore] Method: Set, Already have {eid}");
                 if (_versions[id] > 0 && _versions[id] != gid.Version()) throw new StaticEcsException($"[GlobalIdStore] Method: Set, Already have {gid}");
                 if (!asNew && _newEntities[id] == 1)
                     throw new StaticEcsException($"[GlobalIdStore] Method: Set, ({gid}) was used to create a new entity," +
@@ -132,26 +133,21 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
 
                 _versions[id] = gid.Version();
-                _entityByGlobalId[id] = entity._id + 1;
-                _globalIdByEntity[entity._id] = gid;
+                _entityByGlobalId[id] = eid + 1;
+                _globalIdByEntity[eid] = gid;
             }
 
             [MethodImpl(AggressiveInlining)]
             internal void DestroyEntity(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!Has(entity)) throw new StaticEcsException($"[GlobalIdStore] Method: DestroyEntity, Dont have {entity}");
                 #endif
-
-                if (_freeIdsCount == _freeIds.Length) {
-                    Array.Resize(ref _freeIds, _freeIds.Length << 1);
-                }
-
                 ref var gid = ref _globalIdByEntity[entity._id];
                 gid.IncrementVersion();
 
-                _freeIds[_freeIdsCount++] = gid;
+                _freeIds[Interlocked.Increment(ref _freeIdsCount) - 1] = gid;
                 _versions[gid.Id()] = (short) -gid.Version();
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 _newEntities[gid.Id()] = 0;
                 #endif
                 gid = default;
@@ -159,7 +155,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal void IncrementVersion(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!Has(entity)) throw new StaticEcsException($"[GlobalIdStore] Method: DestroyEntity, Dont have {entity}");
                 #endif
                 ref var gid = ref _globalIdByEntity[entity._id];
@@ -170,12 +166,12 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal void UnloadEntity(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!Has(entity)) throw new StaticEcsException($"[GlobalIdStore] Method: UnloadEntity, Dont have {entity}");
                 #endif
                 ref var gid = ref _globalIdByEntity[entity._id];
                 _entityByGlobalId[gid.Id()] = default;
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 _newEntities[gid.Id()] = 0;
                 #endif
                 gid = default;
@@ -183,7 +179,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public Entity GetEntity(EntityGID gid) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsLoaded(gid)) throw new StaticEcsException($"[GlobalIdStore] Method: GetEntity, Dont have id = {gid.Id()}, version = {gid.Version()}");
                 #endif
                 return new Entity(_entityByGlobalId[gid.Id()] - 1);
@@ -227,9 +223,10 @@ namespace FFS.Libraries.StaticEcs {
 
             private void Resize(uint len) {
                 var size = (int) Utils.CalculateSize(len + 1);
+                Array.Resize(ref _freeIds, size);
                 Array.Resize(ref _entityByGlobalId, size);
                 Array.Resize(ref _versions, size);
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 Array.Resize(ref _newEntities, size);
                 #endif
             }
@@ -245,11 +242,11 @@ namespace FFS.Libraries.StaticEcs {
                 writer.WriteInt(_freeIdsCount);
                 writer.WriteInt(_freeIds.Length);
                 writer.WriteInt(_versions.Length);
-                writer.WriteInt((int) Entity.entitiesCapacity);
+                writer.WriteInt((int) CalculateEntitiesCapacity());
                 writer.WriteArrayUnmanaged(_freeIds, 0, _freeIdsCount);
                 writer.WriteArrayUnmanaged(_versions, 0, _nextId);
                 writer.WriteArrayUnmanaged(_entityByGlobalId, 0, _nextId);
-                writer.WriteArrayUnmanaged(_globalIdByEntity, 0, (int) Entity.entitiesCount);
+                writer.WriteArrayUnmanaged(_globalIdByEntity, 0, (int) Entities.Value.entityIdSeq);
             }
 
             [MethodImpl(AggressiveInlining)]

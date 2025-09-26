@@ -16,8 +16,7 @@ namespace FFS.Libraries.StaticEcs {
             OneDirectionalDeleteStrategy onDeleteStrategy = OneDirectionalDeleteStrategy.Default,
             CopyStrategy onCopyStrategy = CopyStrategy.Default,
             IComponentConfig<T, WorldType> config = null,
-            bool disableRelationCheck = false,
-            uint basePoolCapacity = 128
+            bool disableRelationCheck = false
         )
             where T : struct, IEntityLinkComponent<T> {
             if (Status != WorldStatus.Created) {
@@ -25,7 +24,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             config ??= DefaultComponentConfig<T, WorldType>.Default;
-            ModuleComponents.Value.RegisterToOneRelationType(basePoolCapacity, config, onDeleteStrategy, onCopyStrategy, disableRelationCheck);
+            ModuleComponents.Value.RegisterToOneRelationType(config, onDeleteStrategy, onCopyStrategy, disableRelationCheck);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -34,15 +33,14 @@ namespace FFS.Libraries.StaticEcs {
             OneDirectionalDeleteStrategy deleteStrategy = OneDirectionalDeleteStrategy.Default,
             CopyStrategy copyStrategy = CopyStrategy.Default,
             IComponentConfig<T, WorldType> config = null,
-            bool disableRelationsCheckDebug = false,
-            uint basePoolCapacity = 128
+            bool disableRelationsCheckDebug = false
         ) where T : struct, IEntityLinksComponent<T> {
             if (Status != WorldStatus.Created) {
                 throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: RegisterToManyRelationType<{typeof(T)}>, World not created");
             }
 
             config ??= DefaultComponentConfig<T, WorldType>.Default;
-            ModuleComponents.Value.RegisterToManyRelationType(defaultComponentCapacity, basePoolCapacity, config, deleteStrategy, copyStrategy, disableRelationsCheckDebug);
+            ModuleComponents.Value.RegisterToManyRelationType(defaultComponentCapacity, config, deleteStrategy, copyStrategy, disableRelationsCheckDebug);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -53,8 +51,7 @@ namespace FFS.Libraries.StaticEcs {
             CopyStrategy rightCopyStrategy = CopyStrategy.Default,
             IComponentConfig<L, WorldType> leftConfig = null,
             IComponentConfig<R, WorldType> rightConfig = null,
-            bool disableRelationsCheckLeftDebug = false, bool disableRelationsCheckRightDebug = false,
-            uint basePoolCapacity = 128
+            bool disableRelationsCheckLeftDebug = false, bool disableRelationsCheckRightDebug = false
         )
             where L : struct, IEntityLinkComponent<L>
             where R : struct, IEntityLinkComponent<R> {
@@ -64,7 +61,7 @@ namespace FFS.Libraries.StaticEcs {
 
             leftConfig ??= DefaultComponentConfig<L, WorldType>.Default;
             rightConfig ??= DefaultComponentConfig<R, WorldType>.Default;
-            ModuleComponents.Value.RegisterOneToOneRelationType(basePoolCapacity, leftConfig, rightConfig, leftDeleteStrategy, rightDeleteStrategy, leftCopyStrategy, rightCopyStrategy, disableRelationsCheckLeftDebug, disableRelationsCheckRightDebug);
+            ModuleComponents.Value.RegisterOneToOneRelationType(leftConfig, rightConfig, leftDeleteStrategy, rightDeleteStrategy, leftCopyStrategy, rightCopyStrategy, disableRelationsCheckLeftDebug, disableRelationsCheckRightDebug);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -76,8 +73,7 @@ namespace FFS.Libraries.StaticEcs {
             CopyStrategy rightCopyStrategy = CopyStrategy.Default,
             IComponentConfig<O, WorldType> leftConfig = null,
             IComponentConfig<M, WorldType> rightConfig = null,
-            bool disableRelationsCheckLeftDebug = false, bool disableRelationsCheckRightDebug = false,
-            uint basePoolCapacity = 128
+            bool disableRelationsCheckLeftDebug = false, bool disableRelationsCheckRightDebug = false
         )
             where O : struct, IEntityLinkComponent<O>
             where M : struct, IEntityLinksComponent<M> {
@@ -87,7 +83,7 @@ namespace FFS.Libraries.StaticEcs {
 
             leftConfig ??= DefaultComponentConfig<O, WorldType>.Default;
             rightConfig ??= DefaultComponentConfig<M, WorldType>.Default;
-            ModuleComponents.Value.RegisterOneToManyRelationType(defaultComponentCapacity, basePoolCapacity, leftConfig, rightConfig, leftDeleteStrategy, rightDeleteStrategy,
+            ModuleComponents.Value.RegisterOneToManyRelationType(defaultComponentCapacity, leftConfig, rightConfig, leftDeleteStrategy, rightDeleteStrategy,
                                                                  leftCopyStrategy, rightCopyStrategy, disableRelationsCheckLeftDebug, disableRelationsCheckRightDebug);
         }
 
@@ -100,8 +96,7 @@ namespace FFS.Libraries.StaticEcs {
             CopyStrategy rightCopyStrategy = CopyStrategy.Default,
             IComponentConfig<L, WorldType> leftConfig = null,
             IComponentConfig<R, WorldType> rightConfig = null,
-            bool disableRelationsCheckLeftDebug = false, bool disableRelationsCheckRightDebug = false,
-            uint basePoolCapacity = 128
+            bool disableRelationsCheckLeftDebug = false, bool disableRelationsCheckRightDebug = false
         )
             where L : struct, IEntityLinksComponent<L>
             where R : struct, IEntityLinksComponent<R> {
@@ -111,7 +106,7 @@ namespace FFS.Libraries.StaticEcs {
 
             leftConfig ??= DefaultComponentConfig<L, WorldType>.Default;
             rightConfig ??= DefaultComponentConfig<R, WorldType>.Default;
-            ModuleComponents.Value.RegisterManyToManyRelationType(defaultComponentCapacity, basePoolCapacity, leftConfig, rightConfig, leftDeleteStrategy, rightDeleteStrategy,
+            ModuleComponents.Value.RegisterManyToManyRelationType(defaultComponentCapacity, leftConfig, rightConfig, leftDeleteStrategy, rightDeleteStrategy,
                                                                   leftCopyStrategy, rightCopyStrategy, disableRelationsCheckLeftDebug, disableRelationsCheckRightDebug);
         }
     }

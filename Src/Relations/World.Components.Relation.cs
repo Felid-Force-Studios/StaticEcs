@@ -163,13 +163,16 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
         
+        public delegate void EntityOnAddLinkAction(Entity a, Entity b);
+        public delegate void EntityOnDeleteLinkAction(Entity a, EntityGID b);
+        
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
         internal struct LinkManyHandlers<T> where T : struct, IEntityLinksComponent<T> {
-            internal Action<Entity, Entity> OnAddLinkItem;
-            internal Action<Entity, EntityGID> OnDeleteLinkItem;
+            internal EntityOnAddLinkAction OnAddLinkItem;
+            internal EntityOnDeleteLinkAction OnDeleteLinkItem;
         }
         
         #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
@@ -184,13 +187,13 @@ namespace FFS.Libraries.StaticEcs {
         #endif
         internal struct DestroyEntityLoopMultiAccess<T> where T : struct, IEntityLinksComponent<T> {
             internal readonly Stack<(int, int)> Ranges;
-            internal readonly Stack<Entity> ForDelete;
+            internal readonly Stack<uint> ForDelete;
             internal bool Active;
 
             public DestroyEntityLoopMultiAccess(bool active) {
                 Active = active;
                 Ranges = new Stack<(int, int)>(64);
-                ForDelete = new Stack<Entity>(64);
+                ForDelete = new Stack<uint>(64);
             }
 
             public void DeepDestroy(ref T component) {
@@ -212,13 +215,13 @@ namespace FFS.Libraries.StaticEcs {
                                     Ranges.Push(((int, int)) (targets.offset, targets.count));
                                 }
 
-                                ForDelete.Push(e);
+                                ForDelete.Push(e._id);
                             }
                         }
                     }
 
                     while (ForDelete.Count > 0) {
-                        ForDelete.Pop().Destroy();
+                        new Entity(ForDelete.Pop()).Destroy();
                     }
 
                     Active = false;
@@ -247,13 +250,13 @@ namespace FFS.Libraries.StaticEcs {
                                             Ranges.Push(((int, int)) (targets.offset, targets.count));
                                         }
 
-                                        ForDelete.Push(e);
+                                        ForDelete.Push(e._id);
                                     }
                                 }
                             }
 
                             while (ForDelete.Count > 0) {
-                                ForDelete.Pop().Destroy();
+                                new Entity(ForDelete.Pop()).Destroy();
                             }
                         }
                     } 

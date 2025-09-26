@@ -13,13 +13,13 @@ namespace FFS.Libraries.StaticEcs {
     public abstract partial class World<WorldType> {
 
         [MethodImpl(AggressiveInlining)]
-        public static void RegisterMultiComponentType<T, V>(ushort defaultComponentCapacity, IComponentConfig<T, WorldType> config = null, uint basePoolCapacity = 128)
+        public static void RegisterMultiComponentType<T, V>(ushort defaultComponentCapacity, IComponentConfig<T, WorldType> config = null)
             where T : struct, IMultiComponent<T, V> where V : struct {
             if (Status != WorldStatus.Created) {
                 throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: RegisterMultiComponentType<{typeof(T)}, {typeof(V)}>, World not created");
             }
             config ??= DefaultComponentConfig<T, WorldType>.Default;
-            ModuleComponents.Value.RegisterMultiComponentType<T, V>(defaultComponentCapacity, basePoolCapacity, config);
+            ModuleComponents.Value.RegisterMultiComponentType<T, V>(defaultComponentCapacity, config);
         }
         
         #if ENABLE_IL2CPP
@@ -30,12 +30,11 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal void RegisterMultiComponentType<T, V>(
                 ushort defaultComponentCapacity,
-                uint capacity, 
                 IComponentConfig<T, WorldType> config
             ) where T : struct, IMultiComponent<T, V> where V : struct {
                 if (Components<T>.Value.IsRegistered()) throw new StaticEcsException($"Component {typeof(T)} already registered");
 
-                RegisterMultiComponentsData<V>(defaultComponentCapacity, capacity);
+                RegisterMultiComponentsData<V>(defaultComponentCapacity);
 
                 var actualConfig = new ValueComponentConfig<T, WorldType>(config);
 
@@ -80,17 +79,16 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 RegisterComponentType(
-                    capacity: capacity,
                     config : actualConfig
                 );
             }
             
-            private static void RegisterMultiComponentsData<T>(ushort defaultComponentCapacity, uint capacity) where T : struct {
+            private static void RegisterMultiComponentsData<T>(ushort defaultComponentCapacity) where T : struct {
                 if (!Context<MultiComponents<T>>.Has()) {
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                    Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity, capacity, MTStatus));
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                    Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity, MTStatus));
                     #else
-                    Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity, capacity));
+                    Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity));
                     #endif
                 }
             }

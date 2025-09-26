@@ -17,18 +17,18 @@ namespace FFS.Libraries.StaticEcs {
         internal partial struct ModuleComponents {
             [MethodImpl(AggressiveInlining)]
             internal void RegisterToManyRelationType<T>(
-                ushort defaultComponentCapacity, uint capacity,
+                ushort defaultComponentCapacity,
                 IComponentConfig<T, WorldType> config,
                 OneDirectionalDeleteStrategy deleteStrategy = OneDirectionalDeleteStrategy.Default,
                 CopyStrategy copyStrategy = CopyStrategy.Default,
                 bool disableRelationsCheckDebug = false
             ) where T : struct, IEntityLinksComponent<T> {
                 ValidateComponentRegistration<T>();
-                RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity, capacity);
+                RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity);
                 
                 Context.Value.GetOrCreate<LinkManyHandlers<T>>();
                 
-                #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
                 if (!disableRelationsCheckDebug) {
                     Context.Value.Get<LinkManyHandlers<T>>().OnAddLinkItem = CheckManyRelation<T>;
                 }
@@ -43,7 +43,6 @@ namespace FFS.Libraries.StaticEcs {
                 };
 
                 RegisterComponentType(
-                    capacity: capacity,
                     actualConfig
                 );
                 return;

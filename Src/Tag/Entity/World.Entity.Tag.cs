@@ -65,9 +65,9 @@ namespace FFS.Libraries.StaticEcs {
 
             #region SET
             [MethodImpl(AggressiveInlining)]
-            public void SetTag<C>()
+            public bool SetTag<C>()
                 where C : struct, ITag {
-                Tags<C>.Value.Set(this);
+                return Tags<C>.Value.Set(this);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -113,83 +113,43 @@ namespace FFS.Libraries.StaticEcs {
                 Tags<C4>.Value.Set(this);
                 Tags<C5>.Value.Set(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
-            public void ToggleTag<C1>()
+            public bool ToggleTag<C1>()
                 where C1 : struct, ITag {
-                if (Tags<C1>.Value.Has(this)) {
-                    Tags<C1>.Value.Delete(this);
-                } else {
-                    Tags<C1>.Value.Set(this);
-                }
+                return Tags<C1>.Value.Toggle(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void ToggleTag<C1, C2>()
                 where C1 : struct, ITag
                 where C2 : struct, ITag {
-                if (Tags<C1>.Value.Has(this)) {
-                    Tags<C1>.Value.Delete(this);
-                } else {
-                    Tags<C1>.Value.Set(this);
-                }
-
-                if (Tags<C2>.Value.Has(this)) {
-                    Tags<C2>.Value.Delete(this);
-                } else {
-                    Tags<C2>.Value.Set(this);
-                }
+                Tags<C1>.Value.Toggle(this);
+                Tags<C2>.Value.Toggle(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void ToggleTag<C1, C2, C3>()
                 where C1 : struct, ITag
                 where C2 : struct, ITag
                 where C3 : struct, ITag {
-                if (Tags<C1>.Value.Has(this)) {
-                    Tags<C1>.Value.Delete(this);
-                } else {
-                    Tags<C1>.Value.Set(this);
-                }
-
-                if (Tags<C2>.Value.Has(this)) {
-                    Tags<C2>.Value.Delete(this);
-                } else {
-                    Tags<C2>.Value.Set(this);
-                }
-
-                if (Tags<C3>.Value.Has(this)) {
-                    Tags<C3>.Value.Delete(this);
-                } else {
-                    Tags<C3>.Value.Set(this);
-                }
+                Tags<C1>.Value.Toggle(this);
+                Tags<C2>.Value.Toggle(this);
+                Tags<C3>.Value.Toggle(this);
             }
 
             [MethodImpl(AggressiveInlining)]
             public void ApplyTag<C>(bool state)
                 where C : struct, ITag {
-                if (state) {
-                    Tags<C>.Value.Set(this);
-                } else {
-                    Tags<C>.Value.TryDelete(this);
-                }
+                Tags<C>.Value.Apply(this, state);
             }
 
             [MethodImpl(AggressiveInlining)]
             public void ApplyTag<C1, C2>(bool stateC1, bool stateC2)
                 where C1 : struct, ITag
                 where C2 : struct, ITag {
-                if (stateC1) {
-                    Tags<C1>.Value.Set(this);
-                } else {
-                    Tags<C1>.Value.TryDelete(this);
-                }
-
-                if (stateC2) {
-                    Tags<C2>.Value.Set(this);
-                } else {
-                    Tags<C2>.Value.TryDelete(this);
-                }
+                Tags<C1>.Value.Apply(this, stateC1);
+                Tags<C2>.Value.Apply(this, stateC2);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -197,30 +157,16 @@ namespace FFS.Libraries.StaticEcs {
                 where C1 : struct, ITag
                 where C2 : struct, ITag
                 where C3 : struct, ITag {
-                if (stateC1) {
-                    Tags<C1>.Value.Set(this);
-                } else {
-                    Tags<C1>.Value.TryDelete(this);
-                }
-
-                if (stateC2) {
-                    Tags<C2>.Value.Set(this);
-                } else {
-                    Tags<C2>.Value.TryDelete(this);
-                }
-
-                if (stateC3) {
-                    Tags<C3>.Value.Set(this);
-                } else {
-                    Tags<C3>.Value.TryDelete(this);
-                }
+                Tags<C1>.Value.Apply(this, stateC1);
+                Tags<C2>.Value.Apply(this, stateC2);
+                Tags<C3>.Value.Apply(this, stateC3);
             }
             #endregion
 
             #region DELETE
             [MethodImpl(AggressiveInlining)]
-            public void DeleteTag<C>() where C : struct, ITag {
-                Tags<C>.Value.Delete(this);
+            public bool DeleteTag<C>() where C : struct, ITag {
+                return Tags<C>.Value.Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -266,71 +212,67 @@ namespace FFS.Libraries.StaticEcs {
                 Tags<C4>.Value.Delete(this);
                 Tags<C5>.Value.Delete(this);
             }
-            
+            #endregion
+
+            #region COPY
             [MethodImpl(AggressiveInlining)]
-            public bool TryDeleteTag<C>() where C : struct, ITag {
-                return Tags<C>.Value.TryDelete(this);
+            public void CopyTagsTo<C1>(Entity target)
+                where C1 : struct, ITag {
+                Tags<C1>.Value.Copy(this, target);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool TryDeleteTag<C1, C2>()
+            public void CopyTagsTo<C1, C2>(Entity target)
                 where C1 : struct, ITag
                 where C2 : struct, ITag {
-                var delC1 = Tags<C1>.Value.TryDelete(this);
-                var delC2 = Tags<C2>.Value.TryDelete(this);
-                return delC1 && delC2;
+                Tags<C1>.Value.Copy(this, target);
+                Tags<C2>.Value.Copy(this, target);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool TryDeleteTag<C1, C2, C3>()
+            public void CopyTagsTo<C1, C2, C3>(Entity target)
                 where C1 : struct, ITag
                 where C2 : struct, ITag
                 where C3 : struct, ITag {
-                var delC1 = Tags<C1>.Value.TryDelete(this);
-                var delC2 = Tags<C2>.Value.TryDelete(this);
-                var delC3 = Tags<C3>.Value.TryDelete(this);
-
-                return delC1 && delC2 && delC3;
+                Tags<C1>.Value.Copy(this, target);
+                Tags<C2>.Value.Copy(this, target);
+                Tags<C3>.Value.Copy(this, target);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool TryDeleteTag<C1, C2, C3, C4>()
+            public void CopyTagsTo<C1, C2, C3, C4>(Entity target)
                 where C1 : struct, ITag
                 where C2 : struct, ITag
                 where C3 : struct, ITag
                 where C4 : struct, ITag {
-                var delC1 = Tags<C1>.Value.TryDelete(this);
-                var delC2 = Tags<C2>.Value.TryDelete(this);
-                var delC3 = Tags<C3>.Value.TryDelete(this);
-                var delC4 = Tags<C4>.Value.TryDelete(this);
-
-                return delC1 && delC2 && delC3 && delC4;
+                Tags<C1>.Value.Copy(this, target);
+                Tags<C2>.Value.Copy(this, target);
+                Tags<C3>.Value.Copy(this, target);
+                Tags<C4>.Value.Copy(this, target);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool TryDeleteTag<C1, C2, C3, C4, C5>()
+            public void CopyTagsTo<C1, C2, C3, C4, C5>(Entity target)
                 where C1 : struct, ITag
                 where C2 : struct, ITag
                 where C3 : struct, ITag
                 where C4 : struct, ITag
                 where C5 : struct, ITag {
-                var delC1 = Tags<C1>.Value.TryDelete(this);
-                var delC2 = Tags<C2>.Value.TryDelete(this);
-                var delC3 = Tags<C3>.Value.TryDelete(this);
-                var delC4 = Tags<C4>.Value.TryDelete(this);
-                var delC5 = Tags<C5>.Value.TryDelete(this);
-
-                return delC1 && delC2 && delC3 && delC4 && delC5;
+                Tags<C1>.Value.Copy(this, target);
+                Tags<C2>.Value.Copy(this, target);
+                Tags<C3>.Value.Copy(this, target);
+                Tags<C4>.Value.Copy(this, target);
+                Tags<C5>.Value.Copy(this, target);
             }
             #endregion
-            
+
             #region MOVE
             [MethodImpl(AggressiveInlining)]
             public void MoveTagsTo<C1>(Entity target)
                 where C1 : struct, ITag {
                 Tags<C1>.Value.Move(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void MoveTagsTo<C1, C2>(Entity target)
                 where C1 : struct, ITag
@@ -338,7 +280,7 @@ namespace FFS.Libraries.StaticEcs {
                 Tags<C1>.Value.Move(this, target);
                 Tags<C2>.Value.Move(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void MoveTagsTo<C1, C2, C3>(Entity target)
                 where C1 : struct, ITag
@@ -348,7 +290,7 @@ namespace FFS.Libraries.StaticEcs {
                 Tags<C2>.Value.Move(this, target);
                 Tags<C3>.Value.Move(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void MoveTagsTo<C1, C2, C3, C4>(Entity target)
                 where C1 : struct, ITag
@@ -360,7 +302,7 @@ namespace FFS.Libraries.StaticEcs {
                 Tags<C3>.Value.Move(this, target);
                 Tags<C4>.Value.Move(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void MoveTagsTo<C1, C2, C3, C4, C5>(Entity target)
                 where C1 : struct, ITag
@@ -376,28 +318,23 @@ namespace FFS.Libraries.StaticEcs {
             }
             #endregion
             #endregion
-            
+
             #region BY_RAW_TYPE
             [MethodImpl(AggressiveInlining)]
             public bool HasAllOfTags(Type tagType) {
                 return ModuleTags.Value.GetPool(tagType).Has(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void SetTag(Type tagType) {
                 ModuleTags.Value.GetPool(tagType).Set(this);
             }
-            
-            [MethodImpl(AggressiveInlining)]
-            public bool TryDeleteTag(Type tagType) {
-                return ModuleTags.Value.GetPool(tagType).TryDelete(this);
-            }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void DeleteTag(Type tagType) {
                 ModuleTags.Value.GetPool(tagType).Delete(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void MoveTagsTo(Type tagType, Entity target) {
                 ModuleTags.Value.GetPool(tagType).Move(this, target);
@@ -405,7 +342,7 @@ namespace FFS.Libraries.StaticEcs {
             #endregion
         }
     }
-    
+
     public partial interface IEntity {
         public int TagsCount();
 
@@ -415,18 +352,24 @@ namespace FFS.Libraries.StaticEcs {
 
         public void SetTag<C>() where C : struct, ITag;
 
-        public bool TryDeleteTag<C>() where C : struct, ITag;
-
         public void DeleteTag<C>() where C : struct, ITag;
 
         public bool HasAllOfTags(Type tagType);
 
         public void SetTag(Type tagType);
 
-        public bool TryDeleteTag(Type tagType);
-
         public void DeleteTag(Type tagType);
+    }
 
+    public partial class BoxedEntity<WorldType> {
+        public int TagsCount() => new World<WorldType>.Entity(_entity).TagsCount();
+        public void GetAllTags(List<ITag> result) => new World<WorldType>.Entity(_entity).GetAllTags(result);
+        public bool HasAllOfTags<C>() where C : struct, ITag => new World<WorldType>.Entity(_entity).HasAllOfTags<C>();
+        public void SetTag<C>() where C : struct, ITag => new World<WorldType>.Entity(_entity).SetTag<C>();
+        public void DeleteTag<C>() where C : struct, ITag => new World<WorldType>.Entity(_entity).DeleteTag<C>();
+        public bool HasAllOfTags(Type tagType) => new World<WorldType>.Entity(_entity).HasAllOfTags(tagType);
+        public void SetTag(Type tagType) => new World<WorldType>.Entity(_entity).SetTag(tagType);
+        public void DeleteTag(Type tagType) => new World<WorldType>.Entity(_entity).DeleteTag(tagType);
     }
 }
 #endif

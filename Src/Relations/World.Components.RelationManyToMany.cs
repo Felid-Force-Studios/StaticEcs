@@ -18,7 +18,6 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal void RegisterManyToManyRelationType<L, R>(
                 ushort defaultComponentCapacity,
-                uint capacity,
                 IComponentConfig<L, WorldType> leftConfig,
                 IComponentConfig<R, WorldType> rightConfig,
                 BiDirectionalDeleteStrategy leftDeleteStrategy = BiDirectionalDeleteStrategy.Default,
@@ -31,9 +30,9 @@ namespace FFS.Libraries.StaticEcs {
                 where R : struct, IEntityLinksComponent<R> {
                 
                 ValidateComponentRegistration<L>();
-                RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity, capacity);
+                RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity);
 
-                #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
                 CyclicCheck<L>.Value = !disableRelationsCheckLeftDebug;
                 #endif
                 AddItemsHandlers<L, R>(leftDeleteStrategy);
@@ -47,14 +46,13 @@ namespace FFS.Libraries.StaticEcs {
                 };
 
                 RegisterComponentType(
-                    capacity: capacity,
                     actualConfigLeft
                 );
 
                 ValidateComponentRegistration<R>();
-                RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity, capacity);
+                RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity);
 
-                #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
                 CyclicCheck<R>.Value = !disableRelationsCheckRightDebug;
                 #endif
                 AddItemsHandlers<R, L>(rightDeleteStrategy);
@@ -68,7 +66,6 @@ namespace FFS.Libraries.StaticEcs {
                 };
 
                 RegisterComponentType(
-                    capacity: capacity,
                     actualConfigRight
                 );
 
@@ -86,7 +83,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 
                 static void SetAnotherLink<Current, Another>(Entity e, Entity link) where Current : struct, IEntityLinksComponent<Current> where Another : struct, IEntityLinksComponent<Another> {
-                    #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                    #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
                     if (CyclicCheck<Current>.Value) {
                         CheckManyRelation<Current>(e, link);
                     }

@@ -81,13 +81,13 @@ namespace FFS.Libraries.StaticEcs {
                 internal void Write(ref BinaryPackWriter writer) {
                     ref var components = ref ModuleComponents.Value;
                     
-                    components.BitMask.WriteWithDisabled(ref writer, Entity.entitiesCount);
+                    components._bitMask.Write(ref writer, Entities.Value.nextActiveChunkIdx);
                     writer.WriteUshort(components._poolsCount);
                     for (var i = 0; i < components._poolsCount; i++) {
                         var pool = components._pools[i];
                         var guid = pool.Guid();
 
-                        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                         if (!_poolByGuid.ContainsKey(guid)) {
                             throw new StaticEcsException($"Serializer for component type {pool.GetElementType()} not registered");
                         }
@@ -101,25 +101,67 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 [MethodImpl(AggressiveInlining)]
+                internal void Read(ref BinaryPackReader reader) {
+                    _tempDeletedPoolIds.Clear();
+                    _tempLoadedPools.Clear();
+                    
+                    ref var components = ref ModuleComponents.Value;
+
+                    components._bitMask.Read(ref reader);
+                    var poolsCount = reader.ReadUshort();
+                    for (var i = 0; i < poolsCount; i++) {
+                        var guid = reader.ReadGuid();
+                        var id = reader.ReadUshort();
+                        var byteSize = reader.ReadUint();
+                        if (_poolByGuid.TryGetValue(guid, out var pool)) {
+                            pool.ReadAll(ref reader);
+                            _tempLoadedPools.Add((guid, id));
+                        } else {
+                            _tempDeletedPoolIds.Add((guid, reader.Position));
+                            components._bitMask.DelRange(0, Entities.Value.entityIdSeq, id);
+                            reader.SkipNext(byteSize);
+                        }
+                    }
+
+                    Migration(ref components);
+                    
+                    foreach (var (id, offset) in _tempDeletedPoolIds) {
+                        if (_deleteMigratorByGuid.TryGetValue(id, out var migration)) {
+                            var pReader = reader.AsReader(offset);
+                            pReader.DeleteAllComponentMigration(migration);
+                        }
+                    }
+
+                    for (int i = 0; i < components._poolsCount; i++) {
+                        components._pools[i].UpdateBitMask(components._bitMask);
+                    }
+                }
+
+                [MethodImpl(AggressiveInlining)]
                 internal void Write(ref BinaryPackWriter writer, Entity entity) {
                     ref var components = ref ModuleComponents.Value;
-                    ref var bitMask = ref components.BitMask;
+                    ref var bitMask = ref components._bitMask;
                     
                     ushort len = 0;
-                    var bufId = bitMask.BorrowBuf();
-                    bitMask.CopyWithDisabledToBuffer(entity._id, bufId);
-                    var offset = writer.MakePoint(sizeof(ushort));
-                    while (bitMask.GetMinIndexBuffer(bufId, out var id)) {
-                        var pool = components._pools[id];
-                        if (!pool.Guid().Equals(Guid.Empty)) {
-                            writer.WriteUshort((ushort) id);
-                            pool.Write(ref writer, entity);
-                            len++;
+                    var point = writer.MakePoint(sizeof(ushort));
+                    
+                    var maskLen = bitMask.MaskLen;
+                    var masks = bitMask.Chunk(entity._id);
+                    var start = (entity._id & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen;
+                    for (ushort i = 0; i < maskLen; i++) {
+                        var mask = masks[start + i];
+                        var offset = i << Const.LONG_SHIFT;
+                        while (mask > 0) {
+                            var id = Utils.PopLsb(ref mask) + offset;
+                            var pool = components._pools[id];
+                            if (!pool.Guid().Equals(Guid.Empty)) {
+                                writer.WriteUshort((ushort) id);
+                                pool.Write(ref writer, entity);
+                                len++;
+                            }
                         }
-                        bitMask.DelInBuffer(bufId, (ushort) id);
                     }
-                    writer.WriteUshortAt(offset, len);
-                    bitMask.DropBuf();
+                    writer.WriteUshortAt(point, len);
                 }
 
                 [MethodImpl(AggressiveInlining)]
@@ -142,51 +184,20 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal void Read(ref BinaryPackReader reader) {
-                    _tempDeletedPoolIds.Clear();
-                    _tempLoadedPools.Clear();
-                    
-                    ref var components = ref ModuleComponents.Value;
-
-                    components.BitMask.ReadWithDisabled(ref reader);
-                    var poolsCount = reader.ReadUshort();
-                    for (var i = 0; i < poolsCount; i++) {
-                        var guid = reader.ReadGuid();
-                        var id = reader.ReadUshort();
-                        var byteSize = reader.ReadUint();
-                        if (_poolByGuid.TryGetValue(guid, out var pool)) {
-                            pool.ReadAll(ref reader);
-                            _tempLoadedPools.Add((guid, id));
-                        } else {
-                            _tempDeletedPoolIds.Add((guid, reader.Position));
-                            components.BitMask.DelRangeWithDisabled(0, Entity.entitiesCount, id);
-                            reader.SkipNext(byteSize);
-                        }
-                    }
-
-                    Migration(ref components);
-                    
-                    foreach (var (id, offset) in _tempDeletedPoolIds) {
-                        if (_deleteMigratorByGuid.TryGetValue(id, out var migration)) {
-                            var pReader = reader.AsReader(offset);
-                            pReader.DeleteAllComponentMigration(migration);
-                        }
-                    }
-                }
-
-                [MethodImpl(AggressiveInlining)]
                 private void Migration(ref ModuleComponents value) {
                     if (HasMigration(ref value)) {
-                        var bitMap = value.BitMask.CopyBitMapToArrayPool();
-                        var bitMapDisabled = value.BitMask.CopyDisabledBitMapToArrayPool();
-                        value.BitMask.Clear();
+                        var bitMap = value._bitMask.CopyBitMapToArrayPool();
+                        value._bitMask.Clear();
                         
                         for (var i = 0; i < value._poolsCount; i++) {
-                            MigrateLoadedPool(value._pools[i], i, ref value, bitMap, bitMapDisabled);
+                            MigrateLoadedPool(value._pools[i], i, ref value, bitMap);
                         }
-                        
-                        ArrayPool<ulong>.Shared.Return(bitMap);
-                        ArrayPool<ulong>.Shared.Return(bitMapDisabled);
+
+                        for (var i = 0; i < value._bitMask.chunks.Length; i++) {
+                            ArrayPool<ulong>.Shared.Return(bitMap[i]);
+                        }
+
+                        ArrayPool<ulong[]>.Shared.Return(bitMap);
                     }
                 }
 
@@ -205,10 +216,10 @@ namespace FFS.Libraries.StaticEcs {
                     return false;
                 }
 
-                private void MigrateLoadedPool(IComponentsWrapper pool, int poolId, ref ModuleComponents components, ulong[] bitMap, ulong[] bitMapDisabled) {
+                private void MigrateLoadedPool(IComponentsWrapper pool, int poolId, ref ModuleComponents components, ulong[][] bitMap) {
                     foreach (var (guid, id) in _tempLoadedPools) {
                         if (pool.Guid() == guid) {
-                            components.BitMask.MigrateWithDisabled(0, Entity.entitiesCount, id, (ushort) poolId, bitMap, bitMapDisabled);
+                            components._bitMask.Migrate(0, Entities.Value.entityIdSeq, id, (ushort) poolId, bitMap);
                             return;
                         }
                     }

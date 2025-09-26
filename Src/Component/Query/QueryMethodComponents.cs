@@ -12,69 +12,33 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    internal struct AllTypes<TComponents> : IPrimaryQueryMethod, ISealedQueryMethod where TComponents : struct, IComponentTypes {
-        private BitMask _bitMask;
-        private byte _incBufId;
-        public TComponents _all;
-
-        [MethodImpl(AggressiveInlining)]
-        public AllTypes(TComponents all) {
-            _all = all;
-            _bitMask = null;
-            _incBufId = 0;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _all.SetMinData<WorldType>(ref minCount, ref entities);
-            _all.SetBitMask<WorldType>(_incBufId);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _all.Block<WorldType>(1);
-            #endif
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAll(entityId, _incBufId);
-        }
-
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
-        [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _all.Block<WorldType>(-1);
-            _bitMask.DropBuf();
-        }
-        #endif
-    }
-
-    #if ENABLE_IL2CPP
-    [Il2CppSetOption(Option.NullChecks, false)]
-    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-    #endif
-    public struct All<C1> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct All<C1> : IQueryMethod
         where C1 : struct, IComponent {
-        private uint[] m1;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) == 0;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -83,34 +47,39 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct All<C1, C2> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct All<C1, C2> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) == 0 && (m2[entityId] & Const.EmptyAndDisabledComponentMask) == 0;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -119,40 +88,45 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct All<C1, C2, C3> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct All<C1, C2, C3> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
-        private uint[] m3;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
-            m3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) == 0 && (m2[entityId] & Const.EmptyAndDisabledComponentMask) == 0 && (m3[entityId] & Const.EmptyAndDisabledComponentMask) == 0;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -161,49 +135,51 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct All<C1, C2, C3, C4> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct All<C1, C2, C3, C4> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
-        private uint[] m3;
-        private uint[] m4;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(1);
-            World<WorldType>.Components<C4>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
-            m3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId();
-            m4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) == 0
-                   && (m2[entityId] & Const.EmptyAndDisabledComponentMask) == 0
-                   && (m3[entityId] & Const.EmptyAndDisabledComponentMask) == 0
-                   && (m4[entityId] & Const.EmptyAndDisabledComponentMask) == 0;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C4>.Value.AddBlocker(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -212,36 +188,57 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct All<C1, C2, C3, C4, C5> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct All<C1, C2, C3, C4, C5> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -250,37 +247,63 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct All<C1, C2, C3, C4, C5, C6> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct All<C1, C2, C3, C4, C5, C6> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent
         where C6 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5, C6> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _types.Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -289,7 +312,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct All<C1, C2, C3, C4, C5, C6, C7> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct All<C1, C2, C3, C4, C5, C6, C7> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -297,30 +320,61 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IComponent
         where C6 : struct, IComponent
         where C7 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5, C6, C7> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C7>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _types.Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C7>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C7>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C7>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -329,7 +383,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct All<C1, C2, C3, C4, C5, C6, C7, C8> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct All<C1, C2, C3, C4, C5, C6, C7, C8> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -338,30 +392,66 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IComponent
         where C7 : struct, IComponent
         where C8 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5, C6, C7, C8> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C8>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C7>.Value.EMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C8>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _types.Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C7>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C8>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C7>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C8>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C7>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C8>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -372,69 +462,33 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    internal struct AllOnlyDisabledTypes<TComponents> : IPrimaryQueryMethod, ISealedQueryMethod where TComponents : struct, IComponentTypes {
-        private BitMask _bitMask;
-        private byte _incBufId;
-        public TComponents _all;
-
-        [MethodImpl(AggressiveInlining)]
-        public AllOnlyDisabledTypes(TComponents all) {
-            _all = all;
-            _bitMask = null;
-            _incBufId = 0;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _all.SetMinData<WorldType>(ref minCount, ref entities);
-            _all.SetBitMask<WorldType>(_incBufId);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _all.Block<WorldType>(1);
-            #endif
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllOnlyDisabled(entityId, _incBufId);
-        }
-
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
-        [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _all.Block<WorldType>(-1);
-            _bitMask.DropBuf();
-        }
-        #endif
-    }
-
-    #if ENABLE_IL2CPP
-    [Il2CppSetOption(Option.NullChecks, false)]
-    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-    #endif
-    public struct AllOnlyDisabled<C1> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllOnlyDisabled<C1> : IQueryMethod
         where C1 : struct, IComponent {
-        private uint[] m1;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -443,34 +497,39 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllOnlyDisabled<C1, C2> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllOnlyDisabled<C1, C2> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask && (m2[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -479,41 +538,45 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllOnlyDisabled<C1, C2, C3> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllOnlyDisabled<C1, C2, C3> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
-        private uint[] m3;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
-            m3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask && (m2[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask &&
-                   (m3[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -522,49 +585,51 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllOnlyDisabled<C1, C2, C3, C4> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllOnlyDisabled<C1, C2, C3, C4> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
-        private uint[] m3;
-        private uint[] m4;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(1);
-            World<WorldType>.Components<C4>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
-            m3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId();
-            m4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
-                   && (m2[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
-                   && (m3[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask
-                   && (m4[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C4>.Value.AddBlocker(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -573,36 +638,57 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllOnlyDisabled<C1, C2, C3, C4, C5> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllOnlyDisabled<C1, C2, C3, C4, C5> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllOnlyDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _types.Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -611,37 +697,63 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllOnlyDisabled<C1, C2, C3, C4, C5, C6> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllOnlyDisabled<C1, C2, C3, C4, C5, C6> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent
         where C6 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5, C6> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllOnlyDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C6>.Value.DMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-           _types.Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -650,7 +762,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllOnlyDisabled<C1, C2, C3, C4, C5, C6, C7> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllOnlyDisabled<C1, C2, C3, C4, C5, C6, C7> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -658,30 +770,61 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IComponent
         where C6 : struct, IComponent
         where C7 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5, C6, C7> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllOnlyDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C6>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C7>.Value.DMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _types.Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C7>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C7>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C7>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -690,7 +833,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllOnlyDisabled<C1, C2, C3, C4, C5, C6, C7, C8> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllOnlyDisabled<C1, C2, C3, C4, C5, C6, C7, C8> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -699,30 +842,66 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IComponent
         where C7 : struct, IComponent
         where C8 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5, C6, C7, C8> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C8>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllOnlyDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C6>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C7>.Value.DMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C8>.Value.DMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _types.Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C7>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C8>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C7>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C8>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C7>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C8>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -733,39 +912,33 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    internal struct AllWithDisabledTypes<TComponents> : IPrimaryQueryMethod, ISealedQueryMethod where TComponents : struct, IComponentTypes {
-        private BitMask _bitMask;
-        private byte _incBufId;
-        public TComponents _all;
+    public struct AllWithDisabled<C1> : IQueryMethod
+        where C1 : struct, IComponent {
 
         [MethodImpl(AggressiveInlining)]
-        public AllWithDisabledTypes(TComponents all) {
-            _all = all;
-            _bitMask = null;
-            _incBufId = 0;
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _all.SetMinData<WorldType>(ref minCount, ref entities);
-            _all.SetBitMask<WorldType>(_incBufId);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _all.Block<WorldType>(1);
-            #endif
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllWithDisabled(entityId, _incBufId);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        #if DEBUG || FFS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _all.Block<WorldType>(-1);
-            _bitMask.DropBuf();
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
         }
         #endif
     }
@@ -774,195 +947,198 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllWithDisabled<C1> : IPrimaryQueryMethod, ISealedQueryMethod
-        where C1 : struct, IComponent {
-        private uint[] m1;
-
-        [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyComponentMask) == 0;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            #endif
-        }
-    }
-
-    #if ENABLE_IL2CPP
-    [Il2CppSetOption(Option.NullChecks, false)]
-    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-    #endif
-    public struct AllWithDisabled<C1, C2> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllWithDisabled<C1, C2> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyComponentMask) == 0 && (m2[entityId] & Const.EmptyComponentMask) == 0;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            #endif
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+        }
+        #endif
     }
 
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllWithDisabled<C1, C2, C3> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllWithDisabled<C1, C2, C3> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
-        private uint[] m3;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
-            m3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyComponentMask) == 0 && (m2[entityId] & Const.EmptyComponentMask) == 0 && (m3[entityId] & Const.EmptyComponentMask) == 0;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(-1);
-            #endif
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
+        }
+        #endif
     }
 
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllWithDisabled<C1, C2, C3, C4> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllWithDisabled<C1, C2, C3, C4> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
-        private uint[] m3;
-        private uint[] m4;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            World<WorldType>.Components<C1>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C2>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C3>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            World<WorldType>.Components<C4>.Value.SetDataIfCountLess(ref minCount, ref entities);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(1);
-            World<WorldType>.Components<C4>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
-            m3 = World<WorldType>.Components<C3>.Value.GetDataIdxByEntityId();
-            m4 = World<WorldType>.Components<C4>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyComponentMask) == 0
-                   && (m2[entityId] & Const.EmptyComponentMask) == 0
-                   && (m3[entityId] & Const.EmptyComponentMask) == 0
-                   && (m4[entityId] & Const.EmptyComponentMask) == 0;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C3>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C4>.Value.AddBlocker(-1);
-            #endif
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
+            World<WorldType>.Components<C4>.Value.IncQDelete(data);
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+            World<WorldType>.Components<C4>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
+            World<WorldType>.Components<C4>.Value.BlockDelete(val);
+        }
+        #endif
     }
 
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllWithDisabled<C1, C2, C3, C4, C5> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllWithDisabled<C1, C2, C3, C4, C5> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _types.Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
+            World<WorldType>.Components<C4>.Value.IncQDelete(data);
+            World<WorldType>.Components<C5>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+            World<WorldType>.Components<C4>.Value.DecQDelete();
+            World<WorldType>.Components<C5>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
+            World<WorldType>.Components<C4>.Value.BlockDelete(val);
+            World<WorldType>.Components<C5>.Value.BlockDelete(val);
         }
         #endif
     }
@@ -971,37 +1147,63 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllWithDisabled<C1, C2, C3, C4, C5, C6> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllWithDisabled<C1, C2, C3, C4, C5, C6> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent
         where C6 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5, C6> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _types.Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
+            World<WorldType>.Components<C4>.Value.IncQDelete(data);
+            World<WorldType>.Components<C5>.Value.IncQDelete(data);
+            World<WorldType>.Components<C6>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+            World<WorldType>.Components<C4>.Value.DecQDelete();
+            World<WorldType>.Components<C5>.Value.DecQDelete();
+            World<WorldType>.Components<C6>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
+            World<WorldType>.Components<C4>.Value.BlockDelete(val);
+            World<WorldType>.Components<C5>.Value.BlockDelete(val);
+            World<WorldType>.Components<C6>.Value.BlockDelete(val);
         }
         #endif
     }
@@ -1010,7 +1212,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllWithDisabled<C1, C2, C3, C4, C5, C6, C7> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllWithDisabled<C1, C2, C3, C4, C5, C6, C7> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -1018,30 +1220,61 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IComponent
         where C6 : struct, IComponent
         where C7 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5, C6, C7> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C7>.Value.AMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _types.Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
+            World<WorldType>.Components<C4>.Value.IncQDelete(data);
+            World<WorldType>.Components<C5>.Value.IncQDelete(data);
+            World<WorldType>.Components<C6>.Value.IncQDelete(data);
+            World<WorldType>.Components<C7>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+            World<WorldType>.Components<C4>.Value.DecQDelete();
+            World<WorldType>.Components<C5>.Value.DecQDelete();
+            World<WorldType>.Components<C6>.Value.DecQDelete();
+            World<WorldType>.Components<C7>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
+            World<WorldType>.Components<C4>.Value.BlockDelete(val);
+            World<WorldType>.Components<C5>.Value.BlockDelete(val);
+            World<WorldType>.Components<C6>.Value.BlockDelete(val);
+            World<WorldType>.Components<C7>.Value.BlockDelete(val);
         }
         #endif
     }
@@ -1050,7 +1283,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AllWithDisabled<C1, C2, C3, C4, C5, C6, C7, C8> : IPrimaryQueryMethod, ISealedQueryMethod
+    public struct AllWithDisabled<C1, C2, C3, C4, C5, C6, C7, C8> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -1059,30 +1292,66 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IComponent
         where C7 : struct, IComponent
         where C8 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
-        private Types<C1, C2, C3, C4, C5, C6, C7, C8> _types;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _types.SetMinData<WorldType>(ref minCount, ref entities);
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _types.Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks
+                         & World<WorldType>.Components<C8>.Value.chunks[chunkIdx].notEmptyBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAllWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C7>.Value.AMask(chunkIdx, blockIdx)
+                            & World<WorldType>.Components<C8>.Value.AMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _types.Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
+            World<WorldType>.Components<C4>.Value.IncQDelete(data);
+            World<WorldType>.Components<C5>.Value.IncQDelete(data);
+            World<WorldType>.Components<C6>.Value.IncQDelete(data);
+            World<WorldType>.Components<C7>.Value.IncQDelete(data);
+            World<WorldType>.Components<C8>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+            World<WorldType>.Components<C4>.Value.DecQDelete();
+            World<WorldType>.Components<C5>.Value.DecQDelete();
+            World<WorldType>.Components<C6>.Value.DecQDelete();
+            World<WorldType>.Components<C7>.Value.DecQDelete();
+            World<WorldType>.Components<C8>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
+            World<WorldType>.Components<C4>.Value.BlockDelete(val);
+            World<WorldType>.Components<C5>.Value.BlockDelete(val);
+            World<WorldType>.Components<C6>.Value.BlockDelete(val);
+            World<WorldType>.Components<C7>.Value.BlockDelete(val);
+            World<WorldType>.Components<C8>.Value.BlockDelete(val);
         }
         #endif
     }
@@ -1093,39 +1362,33 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    internal struct NoneTypes<TComponents> : ISealedQueryMethod
-        where TComponents : struct, IComponentTypes {
-        private BitMask _bitMask;
-        private byte _incBufId;
-        public TComponents _exc;
+    public struct None<C1> : IQueryMethod
+        where C1 : struct, IComponent {
 
         [MethodImpl(AggressiveInlining)]
-        public NoneTypes(TComponents exc) {
-            _exc = exc;
-            _bitMask = null;
-            _incBufId = 0;
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _exc.SetBitMask<WorldType>(_incBufId);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _exc.Block<WorldType>(1);
-            #endif
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAny(entityId, _incBufId);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAddEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAddEnable();
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        #if DEBUG || FFS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _exc.Block<WorldType>(-1);
-            _bitMask.DropBuf();
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
         }
         #endif
     }
@@ -1134,95 +1397,86 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1> : ISealedQueryMethod
-        where C1 : struct, IComponent {
-        private uint[] m1;
-
-        [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) > 0;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            #endif
-        }
-    }
-
-    #if ENABLE_IL2CPP
-    [Il2CppSetOption(Option.NullChecks, false)]
-    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-    #endif
-    public struct None<C1, C2> : ISealedQueryMethod
+    public struct None<C1, C2> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) > 0 && (m2[entityId] & Const.EmptyAndDisabledComponentMask) > 0;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            #endif
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQAddEnable(data);
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAddEnable();
+            World<WorldType>.Components<C2>.Value.DecQAddEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockAddEnable(val);
+        }
+        #endif
     }
 
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3> : ISealedQueryMethod
+    public struct None<C1, C2, C3> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQAddEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAddEnable();
+            World<WorldType>.Components<C2>.Value.DecQAddEnable();
+            World<WorldType>.Components<C3>.Value.DecQAddEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockAddEnable(val);
         }
         #endif
     }
@@ -1231,33 +1485,51 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3, C4> : ISealedQueryMethod
+    public struct None<C1, C2, C3, C4> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C4>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQAddEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAddEnable();
+            World<WorldType>.Components<C2>.Value.DecQAddEnable();
+            World<WorldType>.Components<C3>.Value.DecQAddEnable();
+            World<WorldType>.Components<C4>.Value.DecQAddEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockAddEnable(val);
         }
         #endif
     }
@@ -1267,34 +1539,57 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3, C4, C5> : ISealedQueryMethod
+    public struct None<C1, C2, C3, C4, C5> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C4>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C5>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQAddEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAddEnable();
+            World<WorldType>.Components<C2>.Value.DecQAddEnable();
+            World<WorldType>.Components<C3>.Value.DecQAddEnable();
+            World<WorldType>.Components<C4>.Value.DecQAddEnable();
+            World<WorldType>.Components<C5>.Value.DecQAddEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockAddEnable(val);
         }
         #endif
     }
@@ -1303,35 +1598,63 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3, C4, C5, C6> : ISealedQueryMethod
+    public struct None<C1, C2, C3, C4, C5, C6> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent
         where C6 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C4>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C5>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C6>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C6>.Value.IncQAddEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAddEnable();
+            World<WorldType>.Components<C2>.Value.DecQAddEnable();
+            World<WorldType>.Components<C3>.Value.DecQAddEnable();
+            World<WorldType>.Components<C4>.Value.DecQAddEnable();
+            World<WorldType>.Components<C5>.Value.DecQAddEnable();
+            World<WorldType>.Components<C6>.Value.DecQAddEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C6>.Value.BlockAddEnable(val);
         }
         #endif
     }
@@ -1340,7 +1663,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3, C4, C5, C6, C7> : ISealedQueryMethod
+    public struct None<C1, C2, C3, C4, C5, C6, C7> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -1348,28 +1671,61 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IComponent
         where C6 : struct, IComponent
         where C7 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6, C7>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C4>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C5>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C6>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C7>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C7>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6, C7>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C6>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C7>.Value.IncQAddEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAddEnable();
+            World<WorldType>.Components<C2>.Value.DecQAddEnable();
+            World<WorldType>.Components<C3>.Value.DecQAddEnable();
+            World<WorldType>.Components<C4>.Value.DecQAddEnable();
+            World<WorldType>.Components<C5>.Value.DecQAddEnable();
+            World<WorldType>.Components<C6>.Value.DecQAddEnable();
+            World<WorldType>.Components<C7>.Value.DecQAddEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C6>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C7>.Value.BlockAddEnable(val);
         }
         #endif
     }
@@ -1378,7 +1734,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct None<C1, C2, C3, C4, C5, C6, C7, C8> : ISealedQueryMethod
+    public struct None<C1, C2, C3, C4, C5, C6, C7, C8> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -1387,28 +1743,66 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IComponent
         where C7 : struct, IComponent
         where C8 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6, C7, C8>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C4>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C5>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C6>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C7>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C8>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C7>.Value.EMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C8>.Value.EMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6, C7, C8>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C6>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C7>.Value.IncQAddEnable(data);
+            World<WorldType>.Components<C8>.Value.IncQAddEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAddEnable();
+            World<WorldType>.Components<C2>.Value.DecQAddEnable();
+            World<WorldType>.Components<C3>.Value.DecQAddEnable();
+            World<WorldType>.Components<C4>.Value.DecQAddEnable();
+            World<WorldType>.Components<C5>.Value.DecQAddEnable();
+            World<WorldType>.Components<C6>.Value.DecQAddEnable();
+            World<WorldType>.Components<C7>.Value.DecQAddEnable();
+            World<WorldType>.Components<C8>.Value.DecQAddEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C6>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C7>.Value.BlockAddEnable(val);
+            World<WorldType>.Components<C8>.Value.BlockAddEnable(val);
         }
         #endif
     }
@@ -1419,39 +1813,33 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    internal struct NoneWithDisabledTypes<TComponents> : ISealedQueryMethod
-        where TComponents : struct, IComponentTypes {
-        private BitMask _bitMask;
-        private byte _incBufId;
-        public TComponents _exc;
+    public struct NoneWithDisabled<C1> : IQueryMethod
+        where C1 : struct, IComponent {
 
         [MethodImpl(AggressiveInlining)]
-        public NoneWithDisabledTypes(TComponents exc) {
-            _exc = exc;
-            _bitMask = null;
-            _incBufId = 0;
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _exc.SetBitMask<WorldType>(_incBufId);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _exc.Block<WorldType>(1);
-            #endif
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyWithDisabled(entityId, _incBufId);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAdd(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAdd();
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        #if DEBUG || FFS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _exc.Block<WorldType>(-1);
-            _bitMask.DropBuf();
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAdd(val);
         }
         #endif
     }
@@ -1460,95 +1848,86 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct NoneWithDisabled<C1> : ISealedQueryMethod
-        where C1 : struct, IComponent {
-        private uint[] m1;
-
-        [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyComponentMask) == Const.EmptyComponentMask;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            #endif
-        }
-    }
-
-    #if ENABLE_IL2CPP
-    [Il2CppSetOption(Option.NullChecks, false)]
-    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-    #endif
-    public struct NoneWithDisabled<C1, C2> : ISealedQueryMethod
+    public struct NoneWithDisabled<C1, C2> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyComponentMask) == Const.EmptyComponentMask && (m2[entityId] & Const.EmptyComponentMask) == Const.EmptyComponentMask;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            #endif
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAdd(data);
+            World<WorldType>.Components<C2>.Value.IncQAdd(data);
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAdd();
+            World<WorldType>.Components<C2>.Value.DecQAdd();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAdd(val);
+            World<WorldType>.Components<C2>.Value.BlockAdd(val);
+        }
+        #endif
     }
 
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct NoneWithDisabled<C1, C2, C3> : ISealedQueryMethod
+    public struct NoneWithDisabled<C1, C2, C3> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAdd(data);
+            World<WorldType>.Components<C2>.Value.IncQAdd(data);
+            World<WorldType>.Components<C3>.Value.IncQAdd(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAdd();
+            World<WorldType>.Components<C2>.Value.DecQAdd();
+            World<WorldType>.Components<C3>.Value.DecQAdd();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAdd(val);
+            World<WorldType>.Components<C2>.Value.BlockAdd(val);
+            World<WorldType>.Components<C3>.Value.BlockAdd(val);
         }
         #endif
     }
@@ -1557,33 +1936,51 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct NoneWithDisabled<C1, C2, C3, C4> : ISealedQueryMethod
+    public struct NoneWithDisabled<C1, C2, C3, C4> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C4>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAdd(data);
+            World<WorldType>.Components<C2>.Value.IncQAdd(data);
+            World<WorldType>.Components<C3>.Value.IncQAdd(data);
+            World<WorldType>.Components<C4>.Value.IncQAdd(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAdd();
+            World<WorldType>.Components<C2>.Value.DecQAdd();
+            World<WorldType>.Components<C3>.Value.DecQAdd();
+            World<WorldType>.Components<C4>.Value.DecQAdd();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAdd(val);
+            World<WorldType>.Components<C2>.Value.BlockAdd(val);
+            World<WorldType>.Components<C3>.Value.BlockAdd(val);
+            World<WorldType>.Components<C4>.Value.BlockAdd(val);
         }
         #endif
     }
@@ -1593,34 +1990,57 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct NoneWithDisabled<C1, C2, C3, C4, C5> : ISealedQueryMethod
+    public struct NoneWithDisabled<C1, C2, C3, C4, C5> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C4>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C5>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAdd(data);
+            World<WorldType>.Components<C2>.Value.IncQAdd(data);
+            World<WorldType>.Components<C3>.Value.IncQAdd(data);
+            World<WorldType>.Components<C4>.Value.IncQAdd(data);
+            World<WorldType>.Components<C5>.Value.IncQAdd(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAdd();
+            World<WorldType>.Components<C2>.Value.DecQAdd();
+            World<WorldType>.Components<C3>.Value.DecQAdd();
+            World<WorldType>.Components<C4>.Value.DecQAdd();
+            World<WorldType>.Components<C5>.Value.DecQAdd();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAdd(val);
+            World<WorldType>.Components<C2>.Value.BlockAdd(val);
+            World<WorldType>.Components<C3>.Value.BlockAdd(val);
+            World<WorldType>.Components<C4>.Value.BlockAdd(val);
+            World<WorldType>.Components<C5>.Value.BlockAdd(val);
         }
         #endif
     }
@@ -1629,35 +2049,63 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct NoneWithDisabled<C1, C2, C3, C4, C5, C6> : ISealedQueryMethod
+    public struct NoneWithDisabled<C1, C2, C3, C4, C5, C6> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent
         where C6 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C4>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C5>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C6>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAdd(data);
+            World<WorldType>.Components<C2>.Value.IncQAdd(data);
+            World<WorldType>.Components<C3>.Value.IncQAdd(data);
+            World<WorldType>.Components<C4>.Value.IncQAdd(data);
+            World<WorldType>.Components<C5>.Value.IncQAdd(data);
+            World<WorldType>.Components<C6>.Value.IncQAdd(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAdd();
+            World<WorldType>.Components<C2>.Value.DecQAdd();
+            World<WorldType>.Components<C3>.Value.DecQAdd();
+            World<WorldType>.Components<C4>.Value.DecQAdd();
+            World<WorldType>.Components<C5>.Value.DecQAdd();
+            World<WorldType>.Components<C6>.Value.DecQAdd();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAdd(val);
+            World<WorldType>.Components<C2>.Value.BlockAdd(val);
+            World<WorldType>.Components<C3>.Value.BlockAdd(val);
+            World<WorldType>.Components<C4>.Value.BlockAdd(val);
+            World<WorldType>.Components<C5>.Value.BlockAdd(val);
+            World<WorldType>.Components<C6>.Value.BlockAdd(val);
         }
         #endif
     }
@@ -1666,7 +2114,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct NoneWithDisabled<C1, C2, C3, C4, C5, C6, C7> : ISealedQueryMethod
+    public struct NoneWithDisabled<C1, C2, C3, C4, C5, C6, C7> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -1674,28 +2122,61 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IComponent
         where C6 : struct, IComponent
         where C7 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6, C7>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C4>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C5>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C6>.Value.chunks[chunkIdx].fullBlocks
+                         & ~World<WorldType>.Components<C7>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx)
+                            & ~World<WorldType>.Components<C7>.Value.AMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6, C7>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAdd(data);
+            World<WorldType>.Components<C2>.Value.IncQAdd(data);
+            World<WorldType>.Components<C3>.Value.IncQAdd(data);
+            World<WorldType>.Components<C4>.Value.IncQAdd(data);
+            World<WorldType>.Components<C5>.Value.IncQAdd(data);
+            World<WorldType>.Components<C6>.Value.IncQAdd(data);
+            World<WorldType>.Components<C7>.Value.IncQAdd(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAdd();
+            World<WorldType>.Components<C2>.Value.DecQAdd();
+            World<WorldType>.Components<C3>.Value.DecQAdd();
+            World<WorldType>.Components<C4>.Value.DecQAdd();
+            World<WorldType>.Components<C5>.Value.DecQAdd();
+            World<WorldType>.Components<C6>.Value.DecQAdd();
+            World<WorldType>.Components<C7>.Value.DecQAdd();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAdd(val);
+            World<WorldType>.Components<C2>.Value.BlockAdd(val);
+            World<WorldType>.Components<C3>.Value.BlockAdd(val);
+            World<WorldType>.Components<C4>.Value.BlockAdd(val);
+            World<WorldType>.Components<C5>.Value.BlockAdd(val);
+            World<WorldType>.Components<C6>.Value.BlockAdd(val);
+            World<WorldType>.Components<C7>.Value.BlockAdd(val);
         }
         #endif
     }
@@ -1704,7 +2185,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct NoneWithDisabled<C1, C2, C3, C4, C5, C6, C7, C8> : ISealedQueryMethod
+    public struct NoneWithDisabled<C1, C2, C3, C4, C5, C6, C7, C8> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -1713,28 +2194,66 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IComponent
         where C7 : struct, IComponent
         where C8 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6, C7, C8>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= ~World<WorldType>.Components<C1>.Value.chunks[chunkIdx].fullBlocks
+                           & ~World<WorldType>.Components<C2>.Value.chunks[chunkIdx].fullBlocks
+                           & ~World<WorldType>.Components<C3>.Value.chunks[chunkIdx].fullBlocks
+                           & ~World<WorldType>.Components<C4>.Value.chunks[chunkIdx].fullBlocks
+                           & ~World<WorldType>.Components<C5>.Value.chunks[chunkIdx].fullBlocks
+                           & ~World<WorldType>.Components<C6>.Value.chunks[chunkIdx].fullBlocks
+                           & ~World<WorldType>.Components<C7>.Value.chunks[chunkIdx].fullBlocks
+                           & ~World<WorldType>.Components<C8>.Value.chunks[chunkIdx].fullBlocks;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.NotHasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= ~World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                              & ~World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                              & ~World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                              & ~World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                              & ~World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx)
+                              & ~World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx)
+                              & ~World<WorldType>.Components<C7>.Value.AMask(chunkIdx, blockIdx)
+                              & ~World<WorldType>.Components<C8>.Value.AMask(chunkIdx, blockIdx);
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6, C7, C8>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.IncQAdd(data);
+            World<WorldType>.Components<C2>.Value.IncQAdd(data);
+            World<WorldType>.Components<C3>.Value.IncQAdd(data);
+            World<WorldType>.Components<C4>.Value.IncQAdd(data);
+            World<WorldType>.Components<C5>.Value.IncQAdd(data);
+            World<WorldType>.Components<C6>.Value.IncQAdd(data);
+            World<WorldType>.Components<C7>.Value.IncQAdd(data);
+            World<WorldType>.Components<C8>.Value.IncQAdd(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQAdd();
+            World<WorldType>.Components<C2>.Value.DecQAdd();
+            World<WorldType>.Components<C3>.Value.DecQAdd();
+            World<WorldType>.Components<C4>.Value.DecQAdd();
+            World<WorldType>.Components<C5>.Value.DecQAdd();
+            World<WorldType>.Components<C6>.Value.DecQAdd();
+            World<WorldType>.Components<C7>.Value.DecQAdd();
+            World<WorldType>.Components<C8>.Value.DecQAdd();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockAdd(val);
+            World<WorldType>.Components<C2>.Value.BlockAdd(val);
+            World<WorldType>.Components<C3>.Value.BlockAdd(val);
+            World<WorldType>.Components<C4>.Value.BlockAdd(val);
+            World<WorldType>.Components<C5>.Value.BlockAdd(val);
+            World<WorldType>.Components<C6>.Value.BlockAdd(val);
+            World<WorldType>.Components<C7>.Value.BlockAdd(val);
+            World<WorldType>.Components<C8>.Value.BlockAdd(val);
         }
         #endif
     }
@@ -1745,38 +2264,51 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    internal struct AnyTypes<TComponents> : ISealedQueryMethod where TComponents : struct, IComponentTypes {
-        private BitMask _bitMask;
-        private byte _incBufId;
-        public TComponents _any;
+    public struct Any<C1, C2> : IQueryMethod
+        where C1 : struct, IComponent
+        where C2 : struct, IComponent {
 
         [MethodImpl(AggressiveInlining)]
-        public AnyTypes(TComponents any) {
-            _any = any;
-            _bitMask = null;
-            _incBufId = 0;
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _any.SetBitMask<WorldType>(_incBufId);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _any.Block<WorldType>(1);
-            #endif
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx));
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAny(entityId, _incBufId);
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _any.Block<WorldType>(-1);
-            _bitMask.DropBuf();
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -1785,66 +2317,59 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2> : ISealedQueryMethod
-        where C1 : struct, IComponent
-        where C2 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
-
-        [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) == 0 || (m2[entityId] & Const.EmptyAndDisabledComponentMask) == 0;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            #endif
-        }
-    }
-
-    #if ENABLE_IL2CPP
-    [Il2CppSetOption(Option.NullChecks, false)]
-    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-    #endif
-    public struct Any<C1, C2, C3> : ISealedQueryMethod
+    public struct Any<C1, C2, C3> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -1853,33 +2378,66 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2, C3, C4> : ISealedQueryMethod
+    public struct Any<C1, C2, C3, C4> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -1889,34 +2447,73 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2, C3, C4, C5> : ISealedQueryMethod
+    public struct Any<C1, C2, C3, C4, C5> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -1925,35 +2522,80 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2, C3, C4, C5, C6> : ISealedQueryMethod
+    public struct Any<C1, C2, C3, C4, C5, C6> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent
         where C6 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -1962,7 +2604,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2, C3, C4, C5, C6, C7> : ISealedQueryMethod
+    public struct Any<C1, C2, C3, C4, C5, C6, C7> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -1970,28 +2612,79 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IComponent
         where C6 : struct, IComponent
         where C7 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6, C7>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C7>.Value.EMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C7>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6, C7>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C7>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C7>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C7>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -2000,7 +2693,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct Any<C1, C2, C3, C4, C5, C6, C7, C8> : ISealedQueryMethod
+    public struct Any<C1, C2, C3, C4, C5, C6, C7, C8> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -2009,28 +2702,85 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IComponent
         where C7 : struct, IComponent
         where C8 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6, C7, C8>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C8>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C7>.Value.EMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C8>.Value.EMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C6>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C7>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C8>.Value.EMask(chunkIdx, blockIdx) & eMask) != 0
+                   ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6, C7, C8>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C7>.Value.IncQDeleteDisable(data);
+            World<WorldType>.Components<C8>.Value.IncQDeleteDisable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C7>.Value.DecQDeleteDisable();
+            World<WorldType>.Components<C8>.Value.DecQDeleteDisable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C7>.Value.BlockDeleteDisable(val);
+            World<WorldType>.Components<C8>.Value.BlockDeleteDisable(val);
         }
         #endif
     }
@@ -2041,38 +2791,52 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    internal struct AnyOnlyDisabledTypes<TComponents> : ISealedQueryMethod where TComponents : struct, IComponentTypes {
-        private BitMask _bitMask;
-        private byte _incBufId;
-        public TComponents _any;
+    public struct AnyOnlyDisabled<C1, C2> : IQueryMethod
+        where C1 : struct, IComponent
+        where C2 : struct, IComponent {
 
         [MethodImpl(AggressiveInlining)]
-        public AnyOnlyDisabledTypes(TComponents any) {
-            _any = any;
-            _bitMask = null;
-            _incBufId = 0;
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _any.SetBitMask<WorldType>(_incBufId);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _any.Block<WorldType>(1);
-            #endif
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyOnlyDisabled(entityId, _incBufId);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        #if DEBUG || FFS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _any.Block<WorldType>(-1);
-            _bitMask.DropBuf();
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -2081,66 +2845,59 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyOnlyDisabled<C1, C2> : ISealedQueryMethod
-        where C1 : struct, IComponent
-        where C2 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
-
-        [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask || (m2[entityId] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            #endif
-        }
-    }
-
-    #if ENABLE_IL2CPP
-    [Il2CppSetOption(Option.NullChecks, false)]
-    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-    #endif
-    public struct AnyOnlyDisabled<C1, C2, C3> : ISealedQueryMethod
+    public struct AnyOnlyDisabled<C1, C2, C3> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyOnlyDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -2149,33 +2906,66 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyOnlyDisabled<C1, C2, C3, C4> : ISealedQueryMethod
+    public struct AnyOnlyDisabled<C1, C2, C3, C4> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyOnlyDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -2185,34 +2975,73 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyOnlyDisabled<C1, C2, C3, C4, C5> : ISealedQueryMethod
+    public struct AnyOnlyDisabled<C1, C2, C3, C4, C5> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyOnlyDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -2221,35 +3050,80 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyOnlyDisabled<C1, C2, C3, C4, C5, C6> : ISealedQueryMethod
+    public struct AnyOnlyDisabled<C1, C2, C3, C4, C5, C6> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent
         where C6 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyOnlyDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C6>.Value.DMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C6>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -2258,7 +3132,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyOnlyDisabled<C1, C2, C3, C4, C5, C6, C7> : ISealedQueryMethod
+    public struct AnyOnlyDisabled<C1, C2, C3, C4, C5, C6, C7> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -2266,28 +3140,79 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IComponent
         where C6 : struct, IComponent
         where C7 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6, C7>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyOnlyDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C6>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C7>.Value.DMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C6>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C7>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6, C7>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C7>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C7>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C7>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -2296,7 +3221,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyOnlyDisabled<C1, C2, C3, C4, C5, C6, C7, C8> : ISealedQueryMethod
+    public struct AnyOnlyDisabled<C1, C2, C3, C4, C5, C6, C7, C8> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -2305,28 +3230,85 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IComponent
         where C7 : struct, IComponent
         where C8 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6, C7, C8>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C8>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyOnlyDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C6>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C7>.Value.DMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C8>.Value.DMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C6>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C7>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C8>.Value.DMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6, C7, C8>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C2>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C3>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C4>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C5>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C6>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C7>.Value.IncQDeleteEnable(data);
+            World<WorldType>.Components<C8>.Value.IncQDeleteEnable(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C5>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C6>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C7>.Value.DecQDeleteEnable();
+            World<WorldType>.Components<C8>.Value.DecQDeleteEnable();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C2>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C3>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C4>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C5>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C6>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C7>.Value.BlockDeleteEnable(val);
+            World<WorldType>.Components<C8>.Value.BlockDeleteEnable(val);
         }
         #endif
     }
@@ -2337,38 +3319,52 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    internal struct AnyWithDisabledTypes<TComponents> : ISealedQueryMethod where TComponents : struct, IComponentTypes {
-        private BitMask _bitMask;
-        private byte _incBufId;
-        public TComponents _any;
+    public struct AnyWithDisabled<C1, C2> : IQueryMethod
+        where C1 : struct, IComponent
+        where C2 : struct, IComponent {
 
         [MethodImpl(AggressiveInlining)]
-        public AnyWithDisabledTypes(TComponents any) {
-            _any = any;
-            _bitMask = null;
-            _incBufId = 0;
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            _incBufId = _bitMask.BorrowBuf();
-            _any.SetBitMask<WorldType>(_incBufId);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            _any.Block<WorldType>(1);
-            #endif
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyWithDisabled(entityId, _incBufId);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        #if DEBUG || FFS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            _any.Block<WorldType>(-1);
-            _bitMask.DropBuf();
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
         }
         #endif
     }
@@ -2377,66 +3373,59 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyWithDisabled<C1, C2> : ISealedQueryMethod
-        where C1 : struct, IComponent
-        where C2 : struct, IComponent {
-        private uint[] m1;
-        private uint[] m2;
-
-        [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(1);
-            #endif
-            m1 = World<WorldType>.Components<C1>.Value.GetDataIdxByEntityId();
-            m2 = World<WorldType>.Components<C2>.Value.GetDataIdxByEntityId();
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return (m1[entityId] & Const.EmptyComponentMask) == 0 || (m2[entityId] & Const.EmptyComponentMask) == 0;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            World<WorldType>.Components<C1>.Value.AddBlocker(-1);
-            World<WorldType>.Components<C2>.Value.AddBlocker(-1);
-            #endif
-        }
-    }
-
-    #if ENABLE_IL2CPP
-    [Il2CppSetOption(Option.NullChecks, false)]
-    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-    #endif
-    public struct AnyWithDisabled<C1, C2, C3> : ISealedQueryMethod
+    public struct AnyWithDisabled<C1, C2, C3> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
         }
         #endif
     }
@@ -2445,33 +3434,66 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyWithDisabled<C1, C2, C3, C4> : ISealedQueryMethod
+    public struct AnyWithDisabled<C1, C2, C3, C4> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
+            World<WorldType>.Components<C4>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+            World<WorldType>.Components<C4>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
+            World<WorldType>.Components<C4>.Value.BlockDelete(val);
         }
         #endif
     }
@@ -2481,34 +3503,73 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyWithDisabled<C1, C2, C3, C4, C5> : ISealedQueryMethod
+    public struct AnyWithDisabled<C1, C2, C3, C4, C5> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
+            World<WorldType>.Components<C4>.Value.IncQDelete(data);
+            World<WorldType>.Components<C5>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+            World<WorldType>.Components<C4>.Value.DecQDelete();
+            World<WorldType>.Components<C5>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
+            World<WorldType>.Components<C4>.Value.BlockDelete(val);
+            World<WorldType>.Components<C5>.Value.BlockDelete(val);
         }
         #endif
     }
@@ -2517,35 +3578,80 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyWithDisabled<C1, C2, C3, C4, C5, C6> : ISealedQueryMethod
+    public struct AnyWithDisabled<C1, C2, C3, C4, C5, C6> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
         where C4 : struct, IComponent
         where C5 : struct, IComponent
         where C6 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
+            World<WorldType>.Components<C4>.Value.IncQDelete(data);
+            World<WorldType>.Components<C5>.Value.IncQDelete(data);
+            World<WorldType>.Components<C6>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+            World<WorldType>.Components<C4>.Value.DecQDelete();
+            World<WorldType>.Components<C5>.Value.DecQDelete();
+            World<WorldType>.Components<C6>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
+            World<WorldType>.Components<C4>.Value.BlockDelete(val);
+            World<WorldType>.Components<C5>.Value.BlockDelete(val);
+            World<WorldType>.Components<C6>.Value.BlockDelete(val);
         }
         #endif
     }
@@ -2554,7 +3660,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyWithDisabled<C1, C2, C3, C4, C5, C6, C7> : ISealedQueryMethod
+    public struct AnyWithDisabled<C1, C2, C3, C4, C5, C6, C7> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -2562,28 +3668,79 @@ namespace FFS.Libraries.StaticEcs {
         where C5 : struct, IComponent
         where C6 : struct, IComponent
         where C7 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6, C7>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C7>.Value.AMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C7>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6, C7>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
+            World<WorldType>.Components<C4>.Value.IncQDelete(data);
+            World<WorldType>.Components<C5>.Value.IncQDelete(data);
+            World<WorldType>.Components<C6>.Value.IncQDelete(data);
+            World<WorldType>.Components<C7>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+            World<WorldType>.Components<C4>.Value.DecQDelete();
+            World<WorldType>.Components<C5>.Value.DecQDelete();
+            World<WorldType>.Components<C6>.Value.DecQDelete();
+            World<WorldType>.Components<C7>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
+            World<WorldType>.Components<C4>.Value.BlockDelete(val);
+            World<WorldType>.Components<C5>.Value.BlockDelete(val);
+            World<WorldType>.Components<C6>.Value.BlockDelete(val);
+            World<WorldType>.Components<C7>.Value.BlockDelete(val);
         }
         #endif
     }
@@ -2592,7 +3749,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
-    public struct AnyWithDisabled<C1, C2, C3, C4, C5, C6, C7, C8> : ISealedQueryMethod
+    public struct AnyWithDisabled<C1, C2, C3, C4, C5, C6, C7, C8> : IQueryMethod
         where C1 : struct, IComponent
         where C2 : struct, IComponent
         where C3 : struct, IComponent
@@ -2601,28 +3758,85 @@ namespace FFS.Libraries.StaticEcs {
         where C6 : struct, IComponent
         where C7 : struct, IComponent
         where C8 : struct, IComponent {
-        private BitMask _bitMask;
-        private uint _bufId;
-        private ushort _count;
 
         [MethodImpl(AggressiveInlining)]
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType {
-            _bitMask = World<WorldType>.ModuleComponents.Value.BitMask;
-            World<WorldType>.ModuleComponents.MaskCache<Types<C1, C2, C3, C4, C5, C6, C7, C8>>.Cache.This(out _bufId, out _count);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            default(Types<C1, C2, C3, C4, C5, C6, C7, C8>).Block<WorldType>(1);
-            #endif
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType {
+            chunkMask &= (World<WorldType>.Components<C1>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C2>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C3>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C4>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C5>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C6>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C7>.Value.chunks[chunkIdx].notEmptyBlocks
+                          | World<WorldType>.Components<C8>.Value.chunks[chunkIdx].notEmptyBlocks);
         }
 
         [MethodImpl(AggressiveInlining)]
-        public bool CheckEntity(uint entityId) {
-            return _bitMask.HasAnyWithDisabledIndexed(entityId, _bufId, _count);
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType {
+            entitiesMask &= (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C7>.Value.AMask(chunkIdx, blockIdx)
+                             | World<WorldType>.Components<C8>.Value.AMask(chunkIdx, blockIdx));
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckEntity<WorldType>(uint chunkIdx, int blockIdx, int blockEntityIdx) where WorldType : struct, IWorldType {
+            var eMask = 1UL << blockEntityIdx;
+            return (World<WorldType>.Components<C1>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0 
+                   || (World<WorldType>.Components<C2>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C3>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C4>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C5>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C6>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C7>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                   || (World<WorldType>.Components<C8>.Value.AMask(chunkIdx, blockIdx) & eMask) != 0
+                ;
         }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
         [MethodImpl(AggressiveInlining)]
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType {
-            default(Types<C1, C2, C3, C4, C5, C6, C7, C8>).Block<WorldType>(-1);
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType {
+            data.OnCacheUpdate = static (cache, chunkIdx, blockIdx, blockEntityIdx) => {
+                if (!CheckEntity<WorldType>(chunkIdx, blockIdx, blockEntityIdx)) {
+                    cache[(chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT ) + blockIdx].EntitiesMask &= ~(1UL << blockEntityIdx);
+                }
+            };
+            World<WorldType>.Components<C1>.Value.IncQDelete(data);
+            World<WorldType>.Components<C2>.Value.IncQDelete(data);
+            World<WorldType>.Components<C3>.Value.IncQDelete(data);
+            World<WorldType>.Components<C4>.Value.IncQDelete(data);
+            World<WorldType>.Components<C5>.Value.IncQDelete(data);
+            World<WorldType>.Components<C6>.Value.IncQDelete(data);
+            World<WorldType>.Components<C7>.Value.IncQDelete(data);
+            World<WorldType>.Components<C8>.Value.IncQDelete(data);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.DecQDelete();
+            World<WorldType>.Components<C2>.Value.DecQDelete();
+            World<WorldType>.Components<C3>.Value.DecQDelete();
+            World<WorldType>.Components<C4>.Value.DecQDelete();
+            World<WorldType>.Components<C5>.Value.DecQDelete();
+            World<WorldType>.Components<C6>.Value.DecQDelete();
+            World<WorldType>.Components<C7>.Value.DecQDelete();
+            World<WorldType>.Components<C8>.Value.DecQDelete();
+        }
+
+        #if DEBUG || FFS_ENABLE_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
+            World<WorldType>.Components<C1>.Value.BlockDelete(val);
+            World<WorldType>.Components<C2>.Value.BlockDelete(val);
+            World<WorldType>.Components<C3>.Value.BlockDelete(val);
+            World<WorldType>.Components<C4>.Value.BlockDelete(val);
+            World<WorldType>.Components<C5>.Value.BlockDelete(val);
+            World<WorldType>.Components<C6>.Value.BlockDelete(val);
+            World<WorldType>.Components<C7>.Value.BlockDelete(val);
+            World<WorldType>.Components<C8>.Value.BlockDelete(val);
         }
         #endif
     }

@@ -35,7 +35,7 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             public static void CreateSnapshot(ref BinaryPackWriter writer) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Event, Method: CreateSnapshot, World not initialized");
                 #endif
                 Serializer.Value.Write(ref writer);
@@ -43,7 +43,7 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             public static byte[] CreateSnapshot(uint byteSizeHint = 512, bool gzip = false) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Event, Method: CreateSnapshot, World not initialized");
                 #endif
                 var writer = BinaryPackWriter.CreateFromPool(byteSizeHint);
@@ -55,7 +55,7 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             public static void CreateSnapshot(ref byte[] result, bool gzip = false) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Event, Method: CreateSnapshot, World not initialized");
                 #endif
                 var writer = BinaryPackWriter.CreateFromPool((uint) result.Length);
@@ -66,7 +66,7 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             public static void CreateSnapshot(string filePath, bool gzip = false, bool flushToDisk = false, uint byteSizeHint = 512) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Event, Method: CreateSnapshot, World not initialized");
                 #endif
                 var writer = BinaryPackWriter.CreateFromPool(byteSizeHint);
@@ -77,7 +77,7 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             public static void LoadSnapshot(BinaryPackReader reader) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Event, Method: LoadSnapshot, World not initialized");
                 #endif
                 Serializer.Value.Read(ref reader);
@@ -85,7 +85,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void LoadSnapshot(byte[] snapshot, bool gzip = false) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Event, Method: LoadSnapshot, World not initialized");
                 #endif
                 if (gzip) {
@@ -102,7 +102,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void LoadSnapshot(string worldSnapshotFilePath, bool gzip = false, uint byteSizeHint = 512) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Event, Method: LoadSnapshot, World not initialized");
                 #endif
                 var writer = BinaryPackWriter.CreateFromPool(byteSizeHint);

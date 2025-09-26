@@ -23,25 +23,28 @@ namespace FFS.Libraries.StaticEcs {
             
         [MethodImpl(AggressiveInlining)]
         public void MarkAsReadAll() {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (_id < 0) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.MarkAsReadAll ] receiver is deleted");
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            if (_id < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.MarkAsReadAll ] receiver is deleted");
+            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.MarkAsReadAl ] this operation is not supported in multithreaded mode");
             #endif
             World<WorldType>.Events.Pool<T>.Value.MarkAsReadAll(_id);
         }
             
         [MethodImpl(AggressiveInlining)]
         public void SuppressAll() {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (_id < 0) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.SuppressAll ] receiver is deleted");
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            if (_id < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.SuppressAll ] receiver is deleted");
+            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.SuppressAll ] this operation is not supported in multithreaded mode");
             #endif
             World<WorldType>.Events.Pool<T>.Value.ClearEvents(_id);
         }
 
         [MethodImpl(AggressiveInlining)]
         public World<WorldType>.EventIterator<T> GetEnumerator() {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (_id < 0) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] receiver is deleted");
-            if (World<WorldType>.Events.Pool<T>.Value.IsBlocked()) throw new StaticEcsException($"[ Ecs<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] event pool is blocked");
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            if (_id < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] receiver is deleted");
+            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] this operation is not supported in multithreaded mode");
+            if (World<WorldType>.Events.Pool<T>.Value.IsBlocked()) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.GetEnumerator ] event pool is blocked");
             #endif
             return new World<WorldType>.EventIterator<T>(_id);
         }
@@ -64,7 +67,7 @@ namespace FFS.Libraries.StaticEcs {
             internal EventIterator(int id) {
                 _id = id;
                 _current = new Event<T>(-1);
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 Events.Pool<T>.Value.AddBlocker(1);
                 #endif
             }
@@ -81,7 +84,7 @@ namespace FFS.Libraries.StaticEcs {
                 if (_current._idx >= 0) {
                     Events.Pool<T>.Value.MarkAsRead(_current._idx);
                 }
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 Events.Pool<T>.Value.AddBlocker(-1);
                 #endif
             }

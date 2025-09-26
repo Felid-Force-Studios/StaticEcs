@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Threading;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -6,8 +7,22 @@ using Unity.IL2CPP.CompilerServices;
 
 namespace FFS.Libraries.StaticEcs {
     
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, false)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
     public abstract class AbstractParallelTask {
         public abstract void Run(uint from, uint to);
+    }
+    
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, false)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
+    internal unsafe struct Job {
+        internal byte Count;
+        internal fixed ulong Masks[Const.JOB_SIZE];
+        internal fixed uint GlobalBlockIdx[Const.JOB_SIZE];
     }
     
     #if ENABLE_IL2CPP
@@ -20,8 +35,14 @@ namespace FFS.Libraries.StaticEcs {
         private static AbstractParallelTask _task;
         private static int _threadsCount;
         private static volatile bool _disposing;
-
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        private static ConcurrentQueue<(Exception, string)> _exceptions;
+        #endif
+        
         internal static void Create(WorldConfig cfg) {
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            _exceptions = new();
+            #endif
             if (cfg.ParallelQueryType == ParallelQueryType.Disabled) {
                 _threadsCount = -1;
                 return;
@@ -52,12 +73,13 @@ namespace FFS.Libraries.StaticEcs {
                     worker.WorkDone.Dispose();
                     worker.HasWork.Dispose();
                     if (!worker.Thread.Join(10000)) {
-                        #if DEBUG || FFS_ECS_ENABLE_DEBUG
                         throw new StaticEcsException("One of the workers didn't finish in 10 seconds");
-                        #endif
                     }
                 }
 
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                _exceptions = null;
+                #endif
                 _workers = null;
                 _threadsCount = -1;
                 _task = default;
@@ -65,7 +87,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         public static void Run(AbstractParallelTask task, uint count, uint chunkSize, uint workersLimit) {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (_task != null) {
                 throw new StaticEcsException("The current task is not completed, multiple calls are not supported");
             }
@@ -108,32 +130,47 @@ namespace FFS.Libraries.StaticEcs {
             for (uint i = 0, iMax = workersCount - 1; i < iMax; i++) {
                 _workers[i].WorkDone.WaitOne();
             }
+            
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            var error = string.Empty;
+            while (!_exceptions.IsEmpty) {
+                if (_exceptions.TryDequeue(out var exData)) {
+                    error += $"{exData.Item2}: {exData.Item1.Message}, {exData.Item1.StackTrace}\n";
+                }
+            }
+
+            if (error.Length > 0) {
+                throw new StaticEcsException(error);
+            }
+            #endif
 
             _task = default;
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             World<WorldType>.MultiThreadActive = false;
             #endif
         }
 
         static void ThreadFunction(object raw) {
-            try {
-                ref var worker = ref _workers[(int) raw];
-                while (!_disposing) {
+            ref var worker = ref _workers[(int) raw];
+            while (!_disposing) {
+                try {
                     worker.HasWork.WaitOne();
                     if (_disposing) {
                         break;
                     }
+
                     worker.HasWork.Reset();
                     _task.Run(worker.FromIndex, worker.BeforeIndex);
                     worker.WorkDone.Set();
                 }
-            }
-            catch (Exception ex) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (ex is not ThreadAbortException) {
-                    throw;
+                catch (Exception ex) {
+                    worker.WorkDone.Set();
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                    if (ex is not ThreadAbortException) {
+                        _exceptions.Enqueue((ex, Thread.CurrentThread.Name));
+                    }
+                    #endif
                 }
-                #endif
             }
         }
 

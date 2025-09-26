@@ -1,35 +1,18 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace FFS.Libraries.StaticEcs {
+﻿namespace FFS.Libraries.StaticEcs {
     
     public interface IQueryMethod {
-        public void SetData<WorldType>(ref uint minCount, ref uint[] entities) where WorldType : struct, IWorldType;
+        public void CheckChunk<WorldType>(ref ulong chunkMask, uint chunkIdx) where WorldType : struct, IWorldType;
         
-        public bool CheckEntity(uint entityId);
-
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
-        public void Dispose<WorldType>() where WorldType : struct, IWorldType;
+        public void CheckEntities<WorldType>(ref ulong entitiesMask, uint chunkIdx, int blockIdx) where WorldType : struct, IWorldType;
+        
+        public void IncQ<WorldType>(QueryData data) where WorldType : struct, IWorldType;
+        
+        public void DecQ<WorldType>() where WorldType : struct, IWorldType;
+        
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType;
         #endif
     }
-    
-    public static class Extension {
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool CheckOne<WorldType>(this IQueryMethod method, World<WorldType>.Entity entity) where WorldType : struct, IWorldType {
-            var count = uint.MaxValue;
-            uint[] entities = null;
-            method.SetData<WorldType>(ref count, ref entities);
-            var checkEntity = method.CheckEntity(entity._id);
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            method.Dispose<WorldType>();
-            #endif
-            return checkEntity;
-        }
-    }
-    
-    public interface IPrimaryQueryMethod : IQueryMethod { }
-    
-    public interface ISealedQueryMethod : IQueryMethod { }
 
     public enum EntityStatusType : byte {
         Enabled = 0,

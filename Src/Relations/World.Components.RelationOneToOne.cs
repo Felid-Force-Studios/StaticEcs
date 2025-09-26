@@ -17,7 +17,6 @@ namespace FFS.Libraries.StaticEcs {
         internal partial struct ModuleComponents {
             [MethodImpl(AggressiveInlining)]
             internal void RegisterOneToOneRelationType<L, R>(
-                uint capacity,
                 IComponentConfig<L, WorldType> leftConfig,
                 IComponentConfig<R, WorldType> rightConfig,
                 BiDirectionalDeleteStrategy leftDeleteStrategy = BiDirectionalDeleteStrategy.Default,
@@ -31,7 +30,7 @@ namespace FFS.Libraries.StaticEcs {
                 ValidateComponentRegistration<L>();
                 ValidateComponentRegistration<R>();
                 
-                #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
                 CyclicCheck<L>.Value = !disableRelationsCheckLeftDebug && typeof(L) != typeof(R);
                 #endif
                 
@@ -44,10 +43,9 @@ namespace FFS.Libraries.StaticEcs {
                 };
 
                 RegisterComponentType(
-                    capacity: capacity,
                     actualConfigLeft
                 );
-                Components<L>.Value.AddWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
+                Components<L>.Value.addWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
                 
 
                 if (Components<R>.Value.IsRegistered()) {
@@ -55,7 +53,7 @@ namespace FFS.Libraries.StaticEcs {
                     return;
                 }
                 
-                #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
                 CyclicCheck<R>.Value = !disableRelationsCheckRightDebug;
                 #endif
                 
@@ -68,10 +66,9 @@ namespace FFS.Libraries.StaticEcs {
                 };
 
                 RegisterComponentType(
-                    capacity: capacity,
                     actualConfigRight
                 );
-                Components<R>.Value.AddWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
+                Components<R>.Value.addWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
                 return;
 
                 static OnComponentHandler<A> OnPutHandler<A, B>(OnComponentHandler<A> handler, bool disableRelationsCheck)
@@ -89,7 +86,7 @@ namespace FFS.Libraries.StaticEcs {
 
                     [MethodImpl(AggressiveInlining)]
                     static void SetAnotherLink(Entity e, ref A component) {
-                        #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                        #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
                         if (CyclicCheck<A>.Value) {
                             CheckOneRelation(e, ref component);
                         }

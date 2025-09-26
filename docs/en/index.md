@@ -4,14 +4,16 @@ has_toc: false
 parent: Main page
 ---
 
-![Version](https://img.shields.io/badge/version-1.0.25-blue.svg?style=for-the-badge)  
+![Version](https://img.shields.io/badge/version-1.1.preview-blue.svg?style=for-the-badge)
 
 ___
 
-### 🚀 **[Benchmarks](../Benchmark.md)** 🚀
+### 🚀 **[Benchmarks](https://gist.github.com/blackbone/6d254a684cf580441bf58690ad9485c3)** 🚀
 ### ⚙️ **[Unity module](https://github.com/Felid-Force-Studios/StaticEcs-Unity)** ⚙️
 
-# Static ECS - C# Entity component system framework
+### ❗️ **[Guide for migrating from version 1.0.x to 1.1.x](migrationguide.md)** ❗️
+
+# Static ECS - C# Binary Entity component system framework
 - Lightweight
 - Performance
 - No allocations
@@ -22,46 +24,40 @@ ___
 - Powerful query engine
 - No boilerplate
 - Compatible with Unity and other C# engines
-
-{: .note-title }
-> Limitations and Features:
-> - Not thread safe
+- Compatible with Native AOT
 
 ## Table of Contents
 * [Contacts](#contacts)
 * [Installation](#installation)
 * [Concept](#concept)
 * [Quick start](#quick-start)
-* [Main types](maintypes.md)
-    * [Entity](main-types/entity.md)
-    * [Entity global ID](main-types/gid.md)
-    * [Component](main-types/component.md)
-    * [StandardComponent](main-types/standardcomponent.md)
-    * [MultiComponent](main-types/multicomponent.md)
-    * [Tag](main-types/tag.md)
-    * [Mask](main-types/mask.md)
-    * [World](main-types/world.md)
-    * [Systems](main-types/systems.md)
-    * [Context](main-types/context.md)
-    * [Query](main-types/query.md)
-* [Additional features](additionalfeatures.md)
-    * [Component configurators](additional-features/configs.md)
-    * [Events](additional-features/events.md)
-    * [Relations](additional-features/relations.md)
-    * [Serialization](additional-features/serialization.md)
-    * [Compiler directives](additional-features/compilerdirectives.md)
+* [Features](features.md)
+    * [Entity](features/entity.md)
+    * [Entity global ID](features/gid.md)
+    * [Component](features/component.md)
+    * [Tag](features/tag.md)
+    * [MultiComponent](features/multicomponent.md)
+    * [Relations](features/relations.md)
+    * [World](features/world.md)
+    * [Systems](features/systems.md)
+    * [Context](features/context.md)
+    * [Query](features/query.md)
+    * [Events](features/events.md)
+    * [Component configurators](features/configs.md)
+    * [Serialization](features/serialization.md)
+    * [Compiler directives](features/compilerdirectives.md)
 * [Performance](performance.md)
-* [Live templates](livetemplates.md)
 * [Unity integration](unityintegrations.md)
 * [FAQ](faq.md)
 * [License](#license)
 
 
 # Contacts
+* [felid.force.studios@gmail.com](mailto:felid.force.studios@gmail.com)
 * [Telegram](https://t.me/felid_force_studios)
 
 # Installation
-The library has a dependency on [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) for binary serialization, StaticPack must also be installed
+The library has a dependency on [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) `1.0.3` for binary serialization, StaticPack must also be installed
 * ### As source code
   From the release page or as an archive from the branch. In the `master` branch there is a stable tested version
 * ### Installation for Unity
@@ -79,7 +75,9 @@ The library has a dependency on [StaticPack](https://github.com/Felid-Force-Stud
 > - Multi-world creation, strict typing, ~zero-cost abstractions
 > - Serialization system
 > - System of entity relations
-> - Based on a sparse-set architecture, the core is inspired by a series of libraries from Leopotam
+> - Multithreaded processing
+> - Low memory usage
+> - Based on Bitmap architecture, no archetypes, no sparse-sets
 > - The framework was created for the needs of a private project and put out in open-source.
 
 # Quick start
@@ -105,12 +103,12 @@ public struct Velocity : IComponent { public float Value; }
 // Define systems
 public readonly struct VelocitySystem : IUpdateSystem {
     public void Update() {
-        foreach (var entity in W.QueryEntities.For<All<Position, Velocity>>()) {
-            entity.Ref<Position>().Value *= entity.Ref<Velocity>().Value;
+        foreach (var entity in W.QueryEntities.For<All<Position, Velocity, Direction>>()) {
+            entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
         }
         
         // Or
-        W.QueryComponents.For((ref Position pos, ref Velocity vel, ref Direction dir) => {
+        W.Query.For((ref Position pos, ref Velocity vel, ref Direction dir) => {
             pos.Value += dir.Value * vel.Value;
         });
     }
@@ -139,9 +137,10 @@ public class Program {
         // Creating entity
         var entity = W.Entity.New(
             new Velocity { Value = 1f },
-            new Position { Value = Vector3.Zero }
+            new Position { Value = Vector3.Zero },
             new Direction { Value = Vector3.UnitX }
         );
+        
         // Update all systems - called in every frame
         Systems.Update();
         // Destroying systems

@@ -73,7 +73,7 @@ namespace FFS.Libraries.StaticEcs {
                     s25.Destroy(); s26.Destroy(); s27.Destroy(); s28.Destroy(); s29.Destroy(); s30.Destroy(); s31.Destroy(); s32.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
@@ -140,7 +140,7 @@ namespace FFS.Libraries.StaticEcs {
                     s17.Destroy(); s18.Destroy(); s19.Destroy(); s20.Destroy(); s21.Destroy(); s22.Destroy(); s23.Destroy(); s24.Destroy(); 
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
@@ -196,7 +196,7 @@ namespace FFS.Libraries.StaticEcs {
                     s09.Destroy(); s10.Destroy(); s11.Destroy(); s12.Destroy(); s13.Destroy(); s14.Destroy(); s15.Destroy(); s16.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
@@ -250,7 +250,7 @@ namespace FFS.Libraries.StaticEcs {
                     s09.Destroy(); s10.Destroy(); s11.Destroy(); s12.Destroy(); s13.Destroy(); s14.Destroy(); s15.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
@@ -304,7 +304,7 @@ namespace FFS.Libraries.StaticEcs {
                     s09.Destroy(); s10.Destroy(); s11.Destroy(); s12.Destroy(); s13.Destroy(); s14.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
@@ -358,7 +358,7 @@ namespace FFS.Libraries.StaticEcs {
                     s09.Destroy(); s10.Destroy(); s11.Destroy(); s12.Destroy(); s13.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
@@ -412,7 +412,7 @@ namespace FFS.Libraries.StaticEcs {
                     s09.Destroy(); s10.Destroy(); s11.Destroy(); s12.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
@@ -466,7 +466,7 @@ namespace FFS.Libraries.StaticEcs {
                     s09.Destroy(); s10.Destroy(); s11.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
@@ -520,7 +520,7 @@ namespace FFS.Libraries.StaticEcs {
                     s09.Destroy(); s10.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
@@ -574,7 +574,7 @@ namespace FFS.Libraries.StaticEcs {
                     s09.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
@@ -618,7 +618,7 @@ namespace FFS.Libraries.StaticEcs {
                     s01.Destroy(); s02.Destroy(); s03.Destroy(); s04.Destroy(); s05.Destroy(); s06.Destroy(); s07.Destroy(); s08.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info()); res.Add(s08.Info());
@@ -660,7 +660,7 @@ namespace FFS.Libraries.StaticEcs {
                     s01.Destroy(); s02.Destroy(); s03.Destroy(); s04.Destroy(); s05.Destroy(); s06.Destroy(); s07.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info()); res.Add(s07.Info());
@@ -702,7 +702,7 @@ namespace FFS.Libraries.StaticEcs {
                     s01.Destroy(); s02.Destroy(); s03.Destroy(); s04.Destroy(); s05.Destroy(); s06.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info()); res.Add(s06.Info());
@@ -744,7 +744,7 @@ namespace FFS.Libraries.StaticEcs {
                     s01.Destroy(); s02.Destroy(); s03.Destroy(); s04.Destroy(); s05.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info()); res.Add(s05.Info());
@@ -786,7 +786,7 @@ namespace FFS.Libraries.StaticEcs {
                     s01.Destroy(); s02.Destroy(); s03.Destroy(); s04.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info()); res.Add(s04.Info());
@@ -828,7 +828,7 @@ namespace FFS.Libraries.StaticEcs {
                     s01.Destroy(); s02.Destroy(); s03.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info()); res.Add(s03.Info());
@@ -870,7 +870,7 @@ namespace FFS.Libraries.StaticEcs {
                     s01.Destroy(); s02.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info()); res.Add(s02.Info());
@@ -912,7 +912,7 @@ namespace FFS.Libraries.StaticEcs {
                     s01.Destroy();
                 }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 void ISystemsBatch.Info(List<SystemInfo> res) {
                     res.Clear();
                     res.Add(s01.Info());

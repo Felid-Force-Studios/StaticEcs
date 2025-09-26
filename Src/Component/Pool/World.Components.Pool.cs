@@ -1,18 +1,95 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
 
 namespace FFS.Libraries.StaticEcs {
+
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, false)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
+    [StructLayout(LayoutKind.Explicit)]
+    public struct ComponentsChunk {
+        [FieldOffset(0)] internal ulong notEmptyBlocks;
+        [FieldOffset(0)] private long notEmptyBlocksSigned;
+        [FieldOffset(8)] internal ulong fullBlocks;
+        [FieldOffset(8)] private long fullBlocksSigned;
+        [FieldOffset(72)] internal ulong[] entities;
+        [FieldOffset(80)] internal ulong[] disabledEntities;
+        [FieldOffset(88)] internal ulong[] bitmask;
+
+        [MethodImpl(AggressiveInlining)]
+        public void SetNotEmptyBit(byte index) {
+            var mask = 1UL << index;
+            #if NET6_0_OR_GREATER
+            Interlocked.Or(ref notEmptyBlocksSigned, (long) mask);
+            #else
+            long orig, newVal;
+            do {
+                orig = notEmptyBlocksSigned;
+                newVal = orig | (long) mask;
+            } while (Interlocked.CompareExchange(ref notEmptyBlocksSigned, newVal, orig) != orig);
+            #endif
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public ulong ClearNotEmptyBit(byte index) {
+            var mask = ~(1UL << index);
+            #if NET6_0_OR_GREATER
+            return (ulong) Interlocked.And(ref notEmptyBlocksSigned, (long) mask);
+            #else
+            long orig, newVal;
+            do {
+                orig = notEmptyBlocksSigned;
+                newVal = orig & (long) mask;
+            } while (Interlocked.CompareExchange(ref notEmptyBlocksSigned, newVal, orig) != orig);
+
+            return (ulong) newVal;
+            #endif
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public void SetFullBit(byte index) {
+            var mask = 1UL << index;
+            #if NET6_0_OR_GREATER
+            Interlocked.Or(ref fullBlocksSigned, (long) mask);
+            #else
+            long orig, newVal;
+            do {
+                orig = fullBlocksSigned;
+                newVal = orig | (long) mask;
+            } while (Interlocked.CompareExchange(ref fullBlocksSigned, newVal, orig) != orig);
+            #endif
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public void ClearFullBit(byte index) {
+            var mask = ~(1UL << index);
+            #if NET6_0_OR_GREATER
+            Interlocked.And(ref fullBlocksSigned, (long) mask);
+            #else
+            long orig, newVal;
+            do {
+                orig = fullBlocksSigned;
+                newVal = orig & (long) mask;
+            } while (Interlocked.CompareExchange(ref fullBlocksSigned, newVal, orig) != orig);
+            #endif
+        }
+    }
+    
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
     public abstract partial class World<WorldType> {
+        
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
@@ -21,186 +98,298 @@ namespace FFS.Libraries.StaticEcs {
         public partial struct Components<T> where T : struct, IComponent {
             public static Components<T> Value;
             
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
             internal List<IComponentsDebugEventListener> debugEventListeners;
             #endif
             
+            internal string addWithoutValueError;
             internal OnComponentHandler<T> onAddHandler;
             internal OnComponentHandler<T> onPutHandler;
             internal OnComponentHandler<T> onDeleteHandler;
             internal OnCopyHandler<T> onCopyHandler;
+            internal ulong[] dataMaskCache;
+            internal T[][] data;
+            internal T[][] dataPool;
+            internal ComponentsChunk[] chunks;
+            private QueryData[] _queriesToUpdateOnDelete;
+            private QueryData[] _queriesToUpdateOnAdd;
+            private QueryData[] _queriesToUpdateOnDisable;
+            private QueryData[] _queriesToUpdateOnEnable;
             
-            private uint[] _entities;
-            private T[] _data;
-            private uint[] _dataIdxByEntityId;
-            private BitMask _bitMask;
-            private uint _componentsCount;
+            internal long dataPoolCount;
             internal ushort id;
-            private bool _registered;
+            internal ushort maskLen;
+            internal ulong idMask;
+            internal ulong idMaskInv;
+            internal ushort idDiv;
             private bool _copyable;
+            private bool _clearable;
+            private byte _queriesToUpdateOnDeleteCount;
+            private byte _queriesToUpdateOnAddCount;
+            private byte _queriesToUpdateOnDisableCount;
+            private byte _queriesToUpdateOnEnableCount;
 
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            private int _blockers;
-            private int _blockersAdd;
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            private int _blockerDelete;
+            private int _blockerAdd;
+            private int _blockerDisable;
+            private int _blockerEnable;
             #endif
-            internal string AddWithoutValueError;
+            
+            private bool _registered;
 
             #region PUBLIC
             [MethodImpl(AggressiveInlining)]
             public ref T Ref(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Ref, World not initialized");
                 if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Ref, Component type not registered");
                 if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Ref, cannot access Entity ID - {id} from deleted entity");
                 if (!Has(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Ref, ID - {entity._id} is missing on an entity");
                 #endif
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-                ref var val = ref _data[_dataIdxByEntityId[entity._id] & Const.DisabledComponentMaskInv];
+                var eid = entity._id;
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                ref var val = ref data[eid >> Const.DATA_SHIFT][eid & Const.DATA_ENTITY_MASK];
                 foreach (var listener in debugEventListeners) {
                     listener.OnComponentRef(entity, ref val);
                 }
                 return ref val;
                 #else
-                return ref _data[_dataIdxByEntityId[entity._id] & Const.DisabledComponentMaskInv];
+                return ref data[eid >> Const.DATA_SHIFT][eid & Const.DATA_ENTITY_MASK];
                 #endif
+                
             }
 
             [MethodImpl(AggressiveInlining)]
             public ref T Add(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Add, World not initialized");
                 if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, Component type not registered");
                 if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, cannot access Entity ID - {id} from deleted entity");
                 if (Has(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, ID - {entity._id} is already on an entity");
-                if (IsBlocked()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, component pool cannot be changed, it is in read-only mode due to multiple accesses");
-                if (IsBlockedAdd()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, component pool cannot be changed, it is in read-only mode due to multiple accesses");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, this operation is not supported in multithreaded mode");
-                if (AddWithoutValueError != null) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, {AddWithoutValueError}");
+                if (addWithoutValueError != null) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, {addWithoutValueError}");
+                if (_blockerAdd > 0 && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, pool is blocked, use QueryMode.Flexible");
+                if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, pool is blocked, it is forbidden to modify a non-current entity in a parallel query");
                 #endif
-
-                if (_entities.Length == _componentsCount) {
-                    ResizeData(_componentsCount << 1);
-                }
 
                 var eid = entity._id;
-                _entities[_componentsCount] = eid;
-                _dataIdxByEntityId[eid] = _componentsCount;
-
-                _bitMask.Set(eid, id);
+                var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
+                var dataIdx = (ushort) (eid >> Const.DATA_SHIFT);
+                var dataEIdx = (ushort) (eid & Const.DATA_ENTITY_MASK);
+                var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
                 
-                ref var data = ref _data[_componentsCount];
-                _componentsCount++;
-                onAddHandler?.Invoke(entity, ref data);
+                ref var chunk = ref chunks[chunkIdx];
+                ref var entitiesMask = ref chunk.entities[blockIdx];
+                
+                if (entitiesMask == 0) {
+                    chunk.SetNotEmptyBit(blockIdx);
+                    if (data[dataIdx] == null) {
+                        var count = Interlocked.Decrement(ref dataPoolCount);
+                        if (count >= 0) {
+                            data[dataIdx] = dataPool[count];
+                        } else {
+                            Interlocked.Increment(ref dataPoolCount);    
+                            data[dataIdx] = new T[Const.DATA_BLOCK_SIZE];
+                        }
+                    }
+                }
+                entitiesMask |= 1UL << blockEntityIdx;
+                if (entitiesMask == ulong.MaxValue) {
+                    chunk.SetFullBit(blockIdx);
+                }
+                
+                onAddHandler?.Invoke(entity, ref data[dataIdx][dataEIdx]);
+                chunk.bitmask[(eid & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen + idDiv] |= idMask;
+                
+                for (uint i = 0; i < _queriesToUpdateOnAddCount; i++) {
+                    _queriesToUpdateOnAdd[i].Update(~(1UL << blockEntityIdx), eid);
+                }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
                 foreach (var listener in debugEventListeners) {
-                    listener.OnComponentAdd(entity, ref data);
+                    listener.OnComponentAdd(entity, ref data[dataIdx][dataEIdx]);
                 }
                 #endif
                 
-                return ref data;
+                
+                return ref data[dataIdx][dataEIdx];
             }
-            
+
             [MethodImpl(AggressiveInlining)]
-            public ref T Add(Entity entity, T val) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            public ref T Add(Entity entity, T component) {
+             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Add, World not initialized");
                 if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, Component type not registered");
                 if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, cannot access Entity ID - {id} from deleted entity");
                 if (Has(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, ID - {entity._id} is already on an entity");
-                if (IsBlocked()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, component pool cannot be changed, it is in read-only mode due to multiple accesses");
-                if (IsBlockedAdd()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, component pool cannot be changed, it is in read-only mode due to multiple accesses");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, this operation is not supported in multithreaded mode");
+                if (_blockerAdd > 0 && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, pool is blocked, use QueryMode.Flexible");
+                if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, pool is blocked, it is forbidden to modify a non-current entity in a parallel query");
                 #endif
-
-                if (_entities.Length == _componentsCount) {
-                    ResizeData(_componentsCount << 1);
-                }
 
                 var eid = entity._id;
-                _entities[_componentsCount] = eid;
-                _dataIdxByEntityId[eid] = _componentsCount;
-
-                _bitMask.Set(eid, id);
+                var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
+                var dataIdx = (ushort) (eid >> Const.DATA_SHIFT);
+                var dataEIdx = (ushort) (eid & Const.DATA_ENTITY_MASK);
+                var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
                 
-                ref var data = ref _data[_componentsCount];
-                data = val;
-                _componentsCount++;
-                onAddHandler?.Invoke(entity, ref data);
+                ref var chunk = ref chunks[chunkIdx];
+                ref var entitiesMask = ref chunk.entities[blockIdx];
+                
+                if (entitiesMask == 0) {
+                    chunk.SetNotEmptyBit(blockIdx);
+                    if (data[dataIdx] == null) {
+                        var count = Interlocked.Decrement(ref dataPoolCount);
+                        if (count >= 0) {
+                            data[dataIdx] = dataPool[count];
+                        } else {
+                            Interlocked.Increment(ref dataPoolCount);    
+                            data[dataIdx] = new T[Const.DATA_BLOCK_SIZE];
+                        }
+                    }
+                }
+                entitiesMask |= 1UL << blockEntityIdx;
+                if (entitiesMask == ulong.MaxValue) {
+                    chunk.SetFullBit(blockIdx);
+                }
+                
+                ref var val = ref data[dataIdx][dataEIdx];
+                val = component;
+                onAddHandler?.Invoke(entity, ref val);
+                chunk.bitmask[(eid & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen + idDiv] |= idMask;
+                
+                for (uint i = 0; i < _queriesToUpdateOnAddCount; i++) {
+                    _queriesToUpdateOnAdd[i].Update(~(1UL << blockEntityIdx), eid);
+                }
 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
                 foreach (var listener in debugEventListeners) {
-                    listener.OnComponentAdd(entity, ref data);
+                    listener.OnComponentAdd(entity, ref val);
                 }
                 #endif
-                return ref data;
+                
+                return ref val;
             }
 
             [MethodImpl(AggressiveInlining)]
             internal void AddInternal(Entity entity, T component) {
-                if (_entities.Length == _componentsCount) {
-                    ResizeData(_componentsCount << 1);
-                }
+             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Add, World not initialized");
+                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, Component type not registered");
+                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, cannot access Entity ID - {id} from deleted entity");
+                if (Has(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, ID - {entity._id} is already on an entity");
+                if (_blockerAdd > 0 && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, pool is blocked, use QueryMode.Flexible");
+                if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Add, pool is blocked, it is forbidden to modify a non-current entity in a parallel query");
+                #endif
 
                 var eid = entity._id;
-                _entities[_componentsCount] = eid;
-                _dataIdxByEntityId[eid] = _componentsCount;
-
-                _bitMask.Set(eid, id);
-
-                ref var data = ref _data[_componentsCount];
-                data = component;
-                _componentsCount++;
+                var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
+                var dataIdx = (ushort) (eid >> Const.DATA_SHIFT);
+                var dataEIdx = (ushort) (eid & Const.DATA_ENTITY_MASK);
+                var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
                 
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                ref var chunk = ref chunks[chunkIdx];
+                ref var entitiesMask = ref chunk.entities[blockIdx];
+                
+                if (entitiesMask == 0) {
+                    chunk.SetNotEmptyBit(blockIdx);
+                    if (data[dataIdx] == null) {
+                        var count = Interlocked.Decrement(ref dataPoolCount);
+                        if (count >= 0) {
+                            data[dataIdx] = dataPool[count];
+                        } else {
+                            Interlocked.Increment(ref dataPoolCount);    
+                            data[dataIdx] = new T[Const.DATA_BLOCK_SIZE];
+                        }
+                    }
+                }
+                entitiesMask |= 1UL << blockEntityIdx;
+                if (entitiesMask == ulong.MaxValue) {
+                    chunk.SetFullBit(blockIdx);
+                }
+                
+                ref var val = ref data[dataIdx][dataEIdx];
+                val = component;
+                chunk.bitmask[(eid & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen + idDiv] |= idMask;
+                
+                for (uint i = 0; i < _queriesToUpdateOnAddCount; i++) {
+                    _queriesToUpdateOnAdd[i].Update(~(1UL << blockEntityIdx), eid);
+                }
+
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
                 foreach (var listener in debugEventListeners) {
-                    listener.OnComponentAdd(entity, ref data);
+                    listener.OnComponentAdd(entity, ref val);
                 }
                 #endif
+                
             }
 
             [MethodImpl(AggressiveInlining)]
             public void Put(Entity entity, T component) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Put, World not initialized");
                 if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Put, Component type not registered");
                 if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Put, cannot access ID - {id} from deleted entity");
-                if (IsBlocked()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Put, component pool cannot be changed, it is in read-only mode due to multiple accesses");
-                if (IsBlockedAdd()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Put, component pool cannot be changed, it is in read-only mode due to multiple accesses");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Put, this operation is not supported in multithreaded mode");
+                if (_blockerAdd > 0 && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Put, pool is blocked, use QueryMode.Flexible");
+                if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Put, pool is blocked, it is forbidden to modify a non-current entity in a parallel query");
                 #endif
+                
                 var eid = entity._id;
-                ref var dataId = ref _dataIdxByEntityId[eid];
-                if (dataId != Const.EmptyComponentMask) {
-                    ref var data = ref _data[dataId & Const.DisabledComponentMaskInv];
-                    data = component;
-                    onPutHandler?.Invoke(entity, ref data);
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
+                var dataIdx = (ushort) (eid >> Const.DATA_SHIFT);
+                var dataEIdx = (ushort) (eid & Const.DATA_ENTITY_MASK);
+                var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
+                
+                ref var chunk = ref chunks[chunkIdx];
+                ref var entitiesMask = ref chunk.entities[blockIdx];
+                
+                if ((entitiesMask & (1UL << blockEntityIdx)) != 0) {
+                    ref var val = ref data[dataIdx][dataEIdx];
+                    val = component;
+                    onPutHandler?.Invoke(entity, ref val);
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
                     foreach (var listener in debugEventListeners) {
-                        listener.OnComponentPut(entity, ref data);
+                        listener.OnComponentPut(entity, ref val);
                     }
                     #endif
                     return;
                 }
-
-                if (_entities.Length == _componentsCount) {
-                    ResizeData(_componentsCount << 1);
+                
+                if (entitiesMask == 0) {
+                    chunk.SetNotEmptyBit(blockIdx);
+                    if (data[dataIdx] == null) {
+                        var count = Interlocked.Decrement(ref dataPoolCount);
+                        if (count >= 0) {
+                            data[dataIdx] = dataPool[count];
+                        } else {
+                            Interlocked.Increment(ref dataPoolCount);    
+                            data[dataIdx] = new T[Const.DATA_BLOCK_SIZE];
+                        }
+                    }
                 }
-
-                _entities[_componentsCount] = eid;
-                dataId = _componentsCount;
-                _componentsCount++;
-
-                _bitMask.Set(eid, id);
-                ref var val = ref _data[dataId];
-                val = component;
-                onPutHandler?.Invoke(entity, ref val);
-
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+                entitiesMask |= 1UL << blockEntityIdx;
+                if (entitiesMask == ulong.MaxValue) {
+                    chunk.SetFullBit(blockIdx);
+                }
+                
+                ref var newVal = ref data[dataIdx][dataEIdx];
+                newVal = component;
+                onPutHandler?.Invoke(entity, ref newVal);
+                chunk.bitmask[(eid & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen + idDiv] |= idMask;
+                
+                for (uint i = 0; i < _queriesToUpdateOnAddCount; i++) {
+                    _queriesToUpdateOnAdd[i].Update(~(1UL << blockEntityIdx), eid);
+                }
+                
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
                 foreach (var listener in debugEventListeners) {
-                    listener.OnComponentPut(entity, ref val);
+                    listener.OnComponentPut(entity, ref newVal);
                 }
                 #endif
+                
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -220,74 +409,144 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public bool Has(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Has, World not initialized");
                 if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Has, Component type not registered");
                 if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Has, cannot access ID - {id} from deleted entity");
                 #endif
-                return _dataIdxByEntityId[entity._id] != Const.EmptyComponentMask;
+                var eid = entity._id;
+                var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
+                var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
+                return (chunks[chunkIdx].entities[blockIdx] & (1UL << blockEntityIdx)) != 0;
             }
             
             [MethodImpl(AggressiveInlining)]
             public bool HasDisabled(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: HasDisabled, World not initialized");
                 if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: HasDisabled, Component type not registered");
                 if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: HasDisabled, cannot access ID - {id} from deleted entity");
                 #endif
-                return (_dataIdxByEntityId[entity._id] & Const.EmptyAndDisabledComponentMask) == Const.DisabledComponentMask;
+                var eid = entity._id;
+                var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
+                var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
+                return (chunks[chunkIdx].disabledEntities[blockIdx] & (1UL << blockEntityIdx)) != 0;
             }
             
             [MethodImpl(AggressiveInlining)]
             public bool HasEnabled(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: HasEnabled, World not initialized");
-                if (!_registered) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: HasEnabled, Component type not registered");
-                if (!entity.IsActual()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: HasEnabled, cannot access ID - {id} from deleted entity");
+                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: HasEnabled, Component type not registered");
+                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: HasEnabled, cannot access ID - {id} from deleted entity");
                 #endif
-                return (_dataIdxByEntityId[entity._id] & Const.EmptyAndDisabledComponentMask) == 0;
+                var eid = entity._id;
+                var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
+                var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
+                return (chunks[chunkIdx].entities[blockIdx] & ~chunks[chunkIdx].disabledEntities[blockIdx] & (1UL << blockEntityIdx)) != 0;
             }
             
             [MethodImpl(AggressiveInlining)]
             public void Disable(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Disable, World not initialized");
-                if (!_registered) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Disable, Component type not registered");
-                if (!entity.IsActual()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Disable, cannot access ID - {id} from deleted entity");
-                if (!Has(entity)) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Disable, ID - {entity._id} is missing on an entity");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Disable: Disable, this operation is not supported in multithreaded mode");
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Disable, World not initialized");
+                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Disable, Component type not registered");
+                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Disable, cannot access ID - {id} from deleted entity");
+                if (!Has(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Disable, ID - {entity._id} is missing on an entity");
+                if (_blockerDisable > 0 && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Disable, pool is blocked, use QueryMode.Flexible");
+                if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Disable, pool is blocked, it is forbidden to modify a non-current entity in a parallel query");
                 #endif
-                _dataIdxByEntityId[entity._id] |= Const.DisabledComponentMask;
-                _bitMask.MoveToDisabled(entity._id, id);
+                var eid = entity._id;
+                var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
+                var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
+                chunks[chunkIdx].disabledEntities[blockIdx] |= 1UL << blockEntityIdx;
+                for (uint i = 0; i < _queriesToUpdateOnDisableCount; i++) {
+                    _queriesToUpdateOnDisable[i].Update(~(1UL << blockEntityIdx), eid);
+                }
             }
             
             [MethodImpl(AggressiveInlining)]
             public void Enable(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Enable, World not initialized");
-                if (!_registered) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Enable, Component type not registered");
-                if (!entity.IsActual()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Enable, cannot access ID - {id} from deleted entity");
-                if (!Has(entity)) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Enable, ID - {entity._id} is missing on an entity");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Enable, this operation is not supported in multithreaded mode");
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Enable, World not initialized");
+                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Enable, Component type not registered");
+                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Enable, cannot access ID - {id} from deleted entity");
+                if (!Has(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Enable, ID - {entity._id} is missing on an entity");
+                if (_blockerEnable > 0 && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Enable, pool is blocked, use QueryMode.Flexible");
+                if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Enable, pool is blocked, it is forbidden to modify a non-current entity in a parallel query");
                 #endif
-                _dataIdxByEntityId[entity._id] &= Const.DisabledComponentMaskInv;
-                _bitMask.MoveToEnabled(entity._id, id);
+                var eid = entity._id;
+                var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
+                var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
+                var invMask = ~(1UL << blockEntityIdx);
+                chunks[chunkIdx].disabledEntities[blockIdx] &= invMask;
+                for (uint i = 0; i < _queriesToUpdateOnEnableCount; i++) {
+                    _queriesToUpdateOnEnable[i].Update(~(1UL << blockEntityIdx), eid);
+                }
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void Delete(Entity entity) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Delete, World not initialized");
-                if (!_registered) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Delete, Component type not registered");
-                if (!entity.IsActual()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Delete, cannot access ID - {id} from deleted entity");
-                if (!Has(entity)) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Delete, cannot access ID - {id} component not added");
-                if (IsBlocked()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Delete,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Delete, this operation is not supported in multithreaded mode");
+            public void Delete(Entity entity, bool deleteMask = true) {
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Delete, World not initialized");
+                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Delete, Component type not registered");
+                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Delete, cannot access ID - {id} from deleted entity");
+                if (!Has(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Delete, cannot access ID - {id} component not added");
+                if (_blockerDelete > 0 && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Delete, pool is blocked, use QueryMode.Flexible");
+                if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Delete, pool is blocked, it is forbidden to modify a non-current entity in a parallel query");
                 #endif
-                _bitMask.DelWithDisabled(entity._id, id);
-                DeleteInternalWithoutMask(entity);
+                var eid = entity._id;
+                var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
+                var dataIdx = (ushort) (eid >> Const.DATA_SHIFT);
+                var dataEIdx = (ushort) (eid & Const.DATA_ENTITY_MASK);
+                var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
+                var blockEntityInvMask = ~(1UL << blockEntityIdx);
+                
+                ref var chunk = ref chunks[chunkIdx];
+
+                if (deleteMask) {
+                    chunk.bitmask[(eid & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen + idDiv] &= idMaskInv;
+                }
+                
+                ref var entitiesMask = ref chunk.entities[blockIdx];
+                
+                if (entitiesMask == ulong.MaxValue) {
+                    chunk.ClearFullBit(blockIdx);
+                }
+                entitiesMask &= blockEntityInvMask;
+                chunk.disabledEntities[blockIdx] &= blockEntityInvMask;
+
+                if (onDeleteHandler != null) {
+                    onDeleteHandler(entity, ref data[dataIdx][dataEIdx]);
+                } else if (_clearable) {
+                    data[dataIdx][dataEIdx] = default;
+                }
+                
+                if (entitiesMask == 0) {
+                    if ((chunk.ClearNotEmptyBit(blockIdx) & dataMaskCache[dataIdx & Const.DATA_BLOCK_MASK]) == 0UL) {
+                        dataPool[Interlocked.Increment(ref dataPoolCount) - 1] = data[dataIdx];
+                        data[dataIdx] = null;
+                    }
+                }
+                
+                for (uint i = 0; i < _queriesToUpdateOnDeleteCount; i++) {
+                    _queriesToUpdateOnDelete[i].Update(blockEntityInvMask, eid);
+                }
+ 
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                foreach (var listener in debugEventListeners) {
+                    listener.OnComponentDelete(entity, ref data[dataIdx][dataEIdx]);
+                }
+                #endif
+                
                 #if FFS_ECS_LIFECYCLE_ENTITY
-                if (_bitMask.IsEmptyWithDisabled(entity._id)) {
+                if (_bitMask.IsEmpty(entity._id)) {
                     World.DestroyEntity(entity);
                 }
                 #endif
@@ -305,13 +564,11 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public void Copy(Entity src, Entity dst) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Copy, World not initialized");
-                if (!_registered) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Copy, Component type not registered");
-                if (!src.IsActual()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
-                if (!dst.IsActual()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
-                if (IsBlocked()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Copy,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Copy, this operation is not supported in multithreaded mode");
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Copy, World not initialized");
+                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Copy, Component type not registered");
+                if (!src.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
+                if (!dst.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
                 #endif
 
                 if (_copyable) {
@@ -329,13 +586,11 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             public bool TryCopy(Entity src, Entity dst) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}> Method: TryCopy, World not initialized");
-                if (!_registered) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: TryCopy, Component type not registered");
-                if (!src.IsActual()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: TryCopy, cannot access ID - {id} from deleted entity");
-                if (!dst.IsActual()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: TryCopy, cannot access ID - {id} from deleted entity");
-                if (IsBlocked()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: TryCopy,  component pool cannot be changed, it is in read-only mode due to multiple accesses");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: TryCopy, this operation is not supported in multithreaded mode");
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}> Method: TryCopy, World not initialized");
+                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: TryCopy, Component type not registered");
+                if (!src.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: TryCopy, cannot access ID - {id} from deleted entity");
+                if (!dst.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: TryCopy, cannot access ID - {id} from deleted entity");
                 #endif
 
                 if (Has(src)) {
@@ -357,15 +612,6 @@ namespace FFS.Libraries.StaticEcs {
                 TryCopy(src, dst);
                 return TryDelete(src);
             }
-
-            [MethodImpl(AggressiveInlining)]
-            public uint Count() {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Count, World not initialized");
-                if (!_registered) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Count, Component type not registered");
-                #endif
-                return _componentsCount;
-            }
             
             [MethodImpl(AggressiveInlining)]
             public bool IsRegistered() {
@@ -373,125 +619,129 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             [MethodImpl(AggressiveInlining)]
-            public T[] Data() {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}> Method: Data, World not initialized");
-                if (!_registered) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: Data, Component type not registered");
-                #endif
-                return _data;
+            public uint CalculateCount() {
+                var count = 0;
+                for (var i = 0; i < chunks.Length; i++) {
+                    ref var chunk = ref chunks[i];
+                    var notEmptyBlocks = chunk.notEmptyBlocks;
+                    while (notEmptyBlocks > 0) {
+                        var blockIdx = Utils.PopLsb(ref notEmptyBlocks);
+                        count += chunk.entities[blockIdx].PopCnt();
+                    }
+                }
+
+                return (uint) count;
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public int CalculateCapacity() {
+                var count = 0;
+                for (var i = 0; i < data.Length; i++) {
+                    if (data[i] != null) {
+                        count++;
+                    }
+                }
+
+                count += (int) dataPoolCount;
+
+                return count * Const.DATA_BLOCK_SIZE;
             }
             #endregion
 
             #region INTERNAL
             [MethodImpl(AggressiveInlining)]
-            internal ref T RefInternal(Entity entity) {
-                return ref _data[_dataIdxByEntityId[entity._id] & Const.DisabledComponentMaskInv];
+            internal void UpdateBitMask(BitMask bitMask) {
+                for (var i = 0; i < bitMask.chunks.Length; i++) {
+                    chunks[i].bitmask = bitMask.chunks[i];
+                }
+
+                maskLen = bitMask.maskLen;
             }
             
-            internal void Create(ushort componentId, BitMask bitMask, uint entitiesCapacity,
-                                 IComponentConfig<T, WorldType> config,
-                                 uint baseCapacity = 128) {
-                _bitMask = bitMask;
-                id = componentId;
-                _entities = new uint[baseCapacity];
-                _data = new T[baseCapacity];
-                _componentsCount = 0;
-                _dataIdxByEntityId = new uint[entitiesCapacity];
-                for (uint i = 0; i < _dataIdxByEntityId.Length; i++) {
-                    _dataIdxByEntityId[i] = Const.EmptyComponentMask;
+            [MethodImpl(AggressiveInlining)]
+            internal ref T RefInternal(Entity entity) {
+                var eid = entity._id;
+                return ref data[eid >> Const.DATA_SHIFT][eid & Const.DATA_ENTITY_MASK];
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal void Create(ushort componentId, uint entitiesCapacity, IComponentConfig<T, WorldType> config) {
+                SetDynamicId(componentId);
+                var chunkCount = entitiesCapacity >> Const.ENTITIES_IN_CHUNK_SHIFT;
+                chunks = new ComponentsChunk[chunkCount];
+                for (var i = 0; i < chunkCount; i++) {
+                    chunks[i].entities = new ulong[Const.BLOCK_IN_CHUNK];
+                    chunks[i].disabledEntities = new ulong[Const.BLOCK_IN_CHUNK];
                 }
+                data = new T[entitiesCapacity >> Const.DATA_SHIFT][];
+                dataPool =  new T[data.Length][];
+                dataMaskCache = Const.DataMasks;
+                dataPoolCount = 0;
                 onAddHandler = config.OnAdd();
                 onPutHandler = config.OnPut();
                 onDeleteHandler = config.OnDelete();
                 onCopyHandler = config.OnCopy();
                 _copyable = config.IsCopyable();
+                _clearable = config.IsClearable();
                 Serializer.Value.Create(config);
+                _queriesToUpdateOnDeleteCount = 0;
+                _queriesToUpdateOnAddCount = 0;
+                _queriesToUpdateOnDisableCount = 0;
+                _queriesToUpdateOnEnableCount = 0;
+                _queriesToUpdateOnDelete = new QueryData[Const.MAX_NESTED_QUERY];
+                _queriesToUpdateOnAdd = new QueryData[Const.MAX_NESTED_QUERY];
+                _queriesToUpdateOnDisable = new QueryData[Const.MAX_NESTED_QUERY];
+                _queriesToUpdateOnEnable = new QueryData[Const.MAX_NESTED_QUERY];
                 _registered = true;
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                _blockerDelete = 0;
+                _blockerAdd = 0;
+                _blockerDisable = 0;
+                _blockerEnable = 0;
+                #endif
             }
 
             [MethodImpl(AggressiveInlining)]
             internal ushort DynamicId() {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (Status < WorldStatus.Created) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: DynamicId, World not created");
-                if (!_registered) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: DynamicId, Component type not registered");
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (Status < WorldStatus.Created) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: DynamicId, World not created");
+                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: DynamicId, Component type not registered");
                 #endif
                 return id;
             }
 
             [MethodImpl(AggressiveInlining)]
+            internal void SetDynamicId(ushort val) {
+                id = val;
+                idDiv = (ushort) (id >> Const.LONG_SHIFT);
+                idMask = 1UL << (id & Const.LONG_OFFSET_MASK);
+                idMaskInv = ~idMask;
+            }
+
+            [MethodImpl(AggressiveInlining)]
             internal Guid Guid() {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (Status < WorldStatus.Created) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: DynamicId, World not created");
-                if (!_registered) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: DynamicId, Component type not registered");
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (Status < WorldStatus.Created) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: DynamicId, World not created");
+                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: DynamicId, Component type not registered");
                 #endif
                 return Serializer.Value.guid;
             }
             
             [MethodImpl(AggressiveInlining)]
-            internal void DeleteInternalWithoutMask(Entity entity) {
-                _componentsCount--;
-                ref var idxRef = ref _dataIdxByEntityId[entity._id];
-                var idx = idxRef & Const.DisabledComponentMaskInv;
-                idxRef = Const.EmptyComponentMask;
-
-                if (idx < _componentsCount) {
-                    var lastEntity = _entities[_componentsCount];
-                    _entities[idx] = lastEntity;
-                    ref var lastEntityIdx = ref _dataIdxByEntityId[lastEntity];
-                    lastEntityIdx = idx | (lastEntityIdx & Const.DisabledComponentMask);
-                    ref var a = ref _data[_componentsCount];
-                    ref var b = ref _data[idx];
-                    var temp = a;
-                    a = b;
-                    b = temp;
-                    idx = _componentsCount;
-                }
-
-                ref var data = ref _data[idx];
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-                foreach (var listener in debugEventListeners) {
-                    listener.OnComponentDelete(entity, ref data);
-                }
-                #endif
+            internal void Resize(uint entitiesCapacity) {
+                var chunkCount = entitiesCapacity >> Const.ENTITIES_IN_CHUNK_SHIFT;
+                var dataCount = entitiesCapacity >> Const.DATA_SHIFT;
                 
-                if (onDeleteHandler == null) {
-                    data = default;
-                } else {
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                    AddBlockerAdd(1);
-                    #endif
-                    onDeleteHandler(entity, ref data);
-                    #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                    AddBlockerAdd(-1);
-                    #endif
+                if (chunks.Length < chunkCount) {
+                    var old = chunks.Length;
+                    Array.Resize(ref chunks, (int) chunkCount);
+                    for (var i = old; i < chunkCount; i++) {
+                        chunks[i].entities = new ulong[Const.BLOCK_IN_CHUNK];
+                        chunks[i].disabledEntities = new ulong[Const.BLOCK_IN_CHUNK];
+                    }
                 }
-            }
-            
-            [MethodImpl(AggressiveInlining)]
-            internal uint[] GetDataIdxByEntityId() {
-                return _dataIdxByEntityId;
-            }
-            
-            [MethodImpl(AggressiveInlining)]
-            internal void Resize(uint cap) {
-                var lastLength = (uint) _dataIdxByEntityId.Length;
-                Array.Resize(ref _dataIdxByEntityId, (int) cap);
-                for (var i = lastLength; i < cap; i++) {
-                    _dataIdxByEntityId[i] = Const.EmptyComponentMask;
-                }
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            internal void SetDataIfCountLess(ref uint count, ref uint[] entities) {
-                if (_componentsCount < count) {
-                    count = _componentsCount;
-                    entities = _entities;
-                }
-            }
-            
-            [MethodImpl(AggressiveInlining)]
-            internal uint[] EntitiesData() {
-                return _entities;
+                Array.Resize(ref data, (int) dataCount);
+                Array.Resize(ref dataPool, (int) dataCount);
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -504,7 +754,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 builder.Append(typeof(T).Name);
                 builder.Append(" ( ");
-                builder.Append(_data[_dataIdxByEntityId[entity._id] & Const.DisabledComponentMaskInv].ToString());
+                builder.Append(RefInternal(entity));
                 builder.AppendLine(" )");
             }
 
@@ -514,84 +764,162 @@ namespace FFS.Libraries.StaticEcs {
                 onPutHandler = null;
                 onDeleteHandler = null;
                 onCopyHandler = null;
-                _entities = null;
-                _data = null;
-                _dataIdxByEntityId = null;
-                _bitMask = null;
-                _componentsCount = 0;
+                chunks = null;
+                dataMaskCache = null;
+                data = null;
+                dataPool = null;
+                dataPoolCount = 0;
                 id = 0;
+                maskLen = 0;
+                idMask = 0;
+                idMaskInv = 0;
+                idDiv = 0;
                 Serializer.Value.Destroy();
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-                debugEventListeners = null;
-                #endif
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                _blockers = 0;
-                _blockersAdd = 0;
-                #endif
-                AddWithoutValueError = default;
+                addWithoutValueError = null;
                 _copyable = false;
+                _clearable = false;
+                _queriesToUpdateOnDeleteCount = 0;
+                _queriesToUpdateOnAddCount = 0;
+                _queriesToUpdateOnDisableCount = 0;
+                _queriesToUpdateOnEnableCount = 0;
+                _queriesToUpdateOnDelete = null;
+                _queriesToUpdateOnAdd = null;
+                _queriesToUpdateOnDisable = null;
+                _queriesToUpdateOnEnable = null;
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                debugEventListeners = null;
+                _blockerDelete = 0;
+                _blockerAdd = 0;
+                _blockerDisable = 0;
+                _blockerEnable = 0;
+                #endif
                 _registered = false;
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal void EnsureSize(uint size) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (Status < WorldStatus.Created) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: EnsureSize, World not created");
-                if (!_registered) throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: EnsureSize, Component type not registered");
-                #endif
-                if (_componentsCount + size >= _entities.Length) {
-                    ResizeData(Utils.CalculateSize(_componentsCount + size));
-                }
-            }
-
-            [MethodImpl(NoInlining)]
-            private void ResizeData(uint newSize) {
-                Array.Resize(ref _entities, (int) newSize);
-                Array.Resize(ref _data, (int) newSize);
-            }
-
-            [MethodImpl(AggressiveInlining)]
             internal void Clear() {
-                if (onDeleteHandler != null) {
-                    for (var i = 0; i < _componentsCount; i++) {
-                        onDeleteHandler(Entity.FromIdx(_entities[i]), ref _data[i]);
+                for (var i = 0; i < data.Length; i++) {
+                    var components = data[i];
+                    if (components != null) {
+                        Array.Clear(components, 0, components.Length);
                     }
-                } else {
-                    Utils.LoopFallbackClear(_data, 0, (int) _componentsCount);
-                } 
-                Utils.LoopFallbackClear(_entities, 0, (int) _componentsCount);
+                }
                 
-                for (uint i = 0; i < _componentsCount; i++) {
-                    _dataIdxByEntityId[i] = Const.EmptyComponentMask;
+                for (var i = 0; i < dataPoolCount; i++) {
+                    Array.Clear(dataPool[i], 0, dataPool[i].Length);
                 }
-                _componentsCount = 0;
-            }
-            
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            [MethodImpl(AggressiveInlining)]
-            internal void AddBlocker(int amount) {
-                _blockers += amount;
-                if (_blockers < 0) {
-                    throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: AddBlocker, incorrect pool user balance when attempting to release");
+                for (var i = 0; i < chunks.Length; i++) {
+                    ref var chunk = ref chunks[i];
+                    Array.Clear(chunk.entities,  0, chunk.entities.Length);
+                    Array.Clear(chunk.disabledEntities,  0, chunk.disabledEntities.Length);
+                    chunk.notEmptyBlocks = 0;
+                    chunk.fullBlocks = 0;
                 }
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            internal bool IsBlocked() {
-                return _blockers > 1;
             }
             
             [MethodImpl(AggressiveInlining)]
-            internal void AddBlockerAdd(int amount) {
-                _blockersAdd += amount;
-                if (_blockersAdd < 0) {
-                    throw new StaticEcsException($"Ecs<{typeof(WorldType)}>.Components<{typeof(T)}>, Method: AddBlockerAdd, incorrect pool user balance when attempting to release");
-                }
+            internal ref ComponentsChunk Chunk(uint chunkIdx) {
+                return ref chunks[chunkIdx];
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal ulong EMask(uint chunkIdx, int blockIdx) {
+                return chunks[chunkIdx].entities[blockIdx] & ~chunks[chunkIdx].disabledEntities[blockIdx];
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal ulong DMask(uint chunkIdx, int blockIdx) {
+                return chunks[chunkIdx].disabledEntities[blockIdx];
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal ulong AMask(uint chunkIdx, int blockIdx) {
+                return chunks[chunkIdx].entities[blockIdx];
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal bool IsBlockedAdd() {
-                return _blockersAdd > 1;
+            internal void IncQDelete(QueryData qData) {
+                _queriesToUpdateOnDelete[_queriesToUpdateOnDeleteCount++] = qData;
+            }
+
+            internal void DecQDelete() {
+                _queriesToUpdateOnDelete[--_queriesToUpdateOnDeleteCount] = default;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal void IncQDeleteDisable(QueryData qData) {
+                _queriesToUpdateOnDelete[_queriesToUpdateOnDeleteCount++] = qData;
+                _queriesToUpdateOnDisable[_queriesToUpdateOnDisableCount++] = qData;
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal void DecQDeleteDisable() {
+                _queriesToUpdateOnDelete[--_queriesToUpdateOnDeleteCount] = default;
+                _queriesToUpdateOnDisable[--_queriesToUpdateOnDisableCount] = default;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal void IncQDeleteEnable(QueryData qData) {
+                _queriesToUpdateOnDelete[_queriesToUpdateOnDeleteCount++] = qData;
+                _queriesToUpdateOnEnable[_queriesToUpdateOnEnableCount++] = qData;
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal void DecQDeleteEnable() {
+                _queriesToUpdateOnDelete[--_queriesToUpdateOnDeleteCount] = default;
+                _queriesToUpdateOnEnable[--_queriesToUpdateOnEnableCount] = default;
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal void IncQAdd(QueryData qData) {
+                _queriesToUpdateOnAdd[_queriesToUpdateOnAddCount++] = qData;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal void DecQAdd() {
+                _queriesToUpdateOnAdd[--_queriesToUpdateOnAddCount] = default;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal void IncQAddEnable(QueryData qData) {
+                _queriesToUpdateOnAdd[_queriesToUpdateOnAddCount++] = qData;
+                _queriesToUpdateOnEnable[_queriesToUpdateOnEnableCount++] = qData;
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal void DecQAddEnable() {
+                _queriesToUpdateOnAdd[--_queriesToUpdateOnAddCount] = default;
+                _queriesToUpdateOnEnable[--_queriesToUpdateOnEnableCount] = default;
+            }
+
+
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            [MethodImpl(AggressiveInlining)]
+            internal void BlockDelete(int val) {
+                _blockerDelete += val;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal void BlockDeleteDisable(int val) {
+                _blockerDelete += val;
+                _blockerDisable += val;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal void BlockDeleteEnable(int val) {
+                _blockerDelete += val;
+                _blockerEnable += val;
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal void BlockAdd(int val) {
+                _blockerAdd += val;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal void BlockAddEnable(int val) {
+                _blockerAdd += val;
+                _blockerEnable += val;
             }
             #endif
             #endregion

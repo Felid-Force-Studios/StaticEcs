@@ -41,8 +41,8 @@ namespace FFS.Libraries.StaticEcs {
             internal static List<Action>[] PreLoadSnapshotCallbacksBySnapshotType;
             internal static List<Action>[] PostCreateSnapshotCallbacksBySnapshotType;
             internal static List<Action>[] PostLoadSnapshotCallbacksTypeBySnapshotType;
-            internal static List<Action<Entity>>[] OnCreateEntitySnapshotActionsBySnapshotType;
-            internal static List<Action<Entity>>[] OnRestoreEntityFromSnapshotActionsBySnapshotType;
+            internal static List<QueryFunctionWithEntity<WorldType>>[] OnCreateEntitySnapshotActionsBySnapshotType;
+            internal static List<QueryFunctionWithEntity<WorldType>>[] OnRestoreEntityFromSnapshotActionsBySnapshotType;
 
             [MethodImpl(AggressiveInlining)]
             internal static void Create() {
@@ -55,8 +55,8 @@ namespace FFS.Libraries.StaticEcs {
                 PreLoadSnapshotCallbacksBySnapshotType = new List<Action>[snapshotActionTypeLength];
                 PostCreateSnapshotCallbacksBySnapshotType = new List<Action>[snapshotActionTypeLength];
                 PostLoadSnapshotCallbacksTypeBySnapshotType = new List<Action>[snapshotActionTypeLength];
-                OnCreateEntitySnapshotActionsBySnapshotType = new List<Action<Entity>>[snapshotActionTypeLength];
-                OnRestoreEntityFromSnapshotActionsBySnapshotType = new List<Action<Entity>>[snapshotActionTypeLength];
+                OnCreateEntitySnapshotActionsBySnapshotType = new List<QueryFunctionWithEntity<WorldType>>[snapshotActionTypeLength];
+                OnRestoreEntityFromSnapshotActionsBySnapshotType = new List<QueryFunctionWithEntity<WorldType>>[snapshotActionTypeLength];
 
                 for (var i = 0; i < snapshotActionTypeLength; i++) {
                     PreCreateSnapshotCallbacksBySnapshotType[i] = new();
@@ -139,7 +139,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void RegisterPostCreateSnapshotEachEntityCallback(Action<Entity> action, SnapshotActionType snapshotType = SnapshotActionType.All) {
+            public static void RegisterPostCreateSnapshotEachEntityCallback(QueryFunctionWithEntity<WorldType> action, SnapshotActionType snapshotType = SnapshotActionType.All) {
                 if (Status == WorldStatus.NotCreated) {
                     throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: RegisterPostCreateSnapshotEachEntityCallback, World not created");
                 }
@@ -153,7 +153,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void RegisterPostLoadSnapshotEachEntityCallback(Action<Entity> action, SnapshotActionType snapshotType = SnapshotActionType.All) {
+            public static void RegisterPostLoadSnapshotEachEntityCallback(QueryFunctionWithEntity<WorldType> action, SnapshotActionType snapshotType = SnapshotActionType.All) {
                 if (Status == WorldStatus.NotCreated) {
                     throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: OnRestoreFromSnapshot, World not created");
                 }
@@ -237,7 +237,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void CreateWorldSnapshot(ref BinaryPackWriter writer, bool withCustomSnapshotData = true) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: WriteToBytes, World not initialized");
                 #endif
                 Write(ref writer, withCustomSnapshotData);
@@ -245,7 +245,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void CreateWorldSnapshot(ref BinaryPackWriter writer, string filePath, bool withCustomSnapshotData = true, bool gzip = false, bool flushToDisk = false) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: WriteToFile, World not initialized");
                 #endif
                 Write(ref writer, withCustomSnapshotData);
@@ -254,7 +254,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void LoadWorldSnapshot(BinaryPackReader reader) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: ReadFromBytes, World not initialized");
                 #endif
                 Read(ref reader);
@@ -262,7 +262,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void LoadWorldSnapshot(byte[] snapshot, bool gzip = false) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: ReadFromBytes, World not initialized");
                 #endif
                 if (gzip) {
@@ -279,7 +279,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void LoadWorldSnapshot(string worldSnapshotFilePath, bool gzip = false, uint byteSizeHint = 16384) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: ReadFromFile, World not initialized");
                 #endif
                 var writer = BinaryPackWriter.CreateFromPool(byteSizeHint);
@@ -327,13 +327,7 @@ namespace FFS.Libraries.StaticEcs {
                     writer.WriteGuid(key);
                     writer.WriteUshort(version);
                     var point = writer.MakePoint(sizeof(uint));
-                    for (var i = Entity.entitiesCount; i > 0; i--) {
-                        var entity = Entity.FromIdx(i - 1);
-                        if (GIDStore.Value.Has(entity)) {
-                            snapshotDataEntityWriter(ref writer, entity);
-                        }
-                    }
-
+                    QueryEntities.For(EntityStatusType.Any).WriteEntitySnapshotData(ref writer, snapshotDataEntityWriter);
                     writer.WriteUintAt(point, writer.Position - (point + sizeof(uint)));
                 }
             }
@@ -348,12 +342,7 @@ namespace FFS.Libraries.StaticEcs {
                     var version = reader.ReadUshort();
                     var byteSize = reader.ReadUint();
                     if (serializers.TryGetValue(key, out var val)) {
-                        for (var j = Entity.entitiesCount; j > 0; j--) {
-                            var entity = Entity.FromIdx(j - 1);
-                            if (GIDStore.Value.Has(entity)) {
-                                val.reader(ref reader, entity, version);
-                            }
-                        }
+                        QueryEntities.For(EntityStatusType.Any).ReadEntitySnapshotData(ref reader, val.reader, version);
                     } else {
                         reader.SkipNext(byteSize);
                     }
@@ -367,14 +356,10 @@ namespace FFS.Libraries.StaticEcs {
                     actions[i]();
                 }
                 
-                Entity.Write(ref writer);
-                ModuleStandardComponents.Serializer.Value.Write(ref writer);
+                Entities.Value.Write(ref writer);
                 ModuleComponents.Serializer.Value.Write(ref writer);
                 #if !FFS_ECS_DISABLE_TAGS
                 ModuleTags.Serializer.Value.Write(ref writer);
-                #endif
-                #if !FFS_ECS_DISABLE_MASKS
-                ModuleMasks.Serializer.Value.Write(ref writer);
                 #endif
                 #if !FFS_ECS_DISABLE_EVENTS
                 Events.Serializer.Value.Write(ref writer);
@@ -393,16 +378,13 @@ namespace FFS.Libraries.StaticEcs {
                     actions[i]();
                 }
 
-                var entityActions = OnCreateEntitySnapshotActionsBySnapshotType[(int) SnapshotActionType.World];
-                if (entityActions.Count > 0) {
-                    for (var i = Entity.entitiesCount; i > 0; i--) {
-                        var entity = Entity.FromIdx(i - 1);
-                        if (GIDStore.Value.Has(entity)) {
-                            for (var j = 0; j < entityActions.Count; j++) {
-                                entityActions[j](entity);
-                            }
+                if (OnCreateEntitySnapshotActionsBySnapshotType[(int) SnapshotActionType.World].Count > 0) {
+                    Query.For(entity => {
+                        var entActions = OnCreateEntitySnapshotActionsBySnapshotType[(int) SnapshotActionType.World];
+                        for (var j = 0; j < entActions.Count; j++) {
+                            entActions[j](entity);
                         }
-                    }
+                    }, EntityStatusType.Any);
                 }
             }
 
@@ -416,14 +398,10 @@ namespace FFS.Libraries.StaticEcs {
                     actions[i]();
                 }
 
-                Entity.Read(ref reader);
-                ModuleStandardComponents.Serializer.Value.Read(ref reader);
+                Entities.Value.Read(ref reader);
                 ModuleComponents.Serializer.Value.Read(ref reader);
                 #if !FFS_ECS_DISABLE_TAGS
                 ModuleTags.Serializer.Value.Read(ref reader);
-                #endif
-                #if !FFS_ECS_DISABLE_MASKS
-                ModuleMasks.Serializer.Value.Read(ref reader);
                 #endif
                 #if !FFS_ECS_DISABLE_EVENTS
                 Events.Serializer.Value.Read(ref reader);
@@ -437,19 +415,14 @@ namespace FFS.Libraries.StaticEcs {
                     actions[i]();
                 }
 
-                var entityActions = OnRestoreEntityFromSnapshotActionsBySnapshotType[(int) SnapshotActionType.World];
-                if (entityActions.Count > 0) {
-                    for (var i = Entity.entitiesCount; i > 0; i--) {
-                        var entity = Entity.FromIdx(i - 1);
-                        if (GIDStore.Value.Has(entity)) {
-                            for (var j = 0; j < entityActions.Count; j++) {
-                                entityActions[j](entity);
-                            }
+                if (OnRestoreEntityFromSnapshotActionsBySnapshotType[(int) SnapshotActionType.World].Count > 0) {
+                    Query.For(entity => {
+                        var entActions = OnRestoreEntityFromSnapshotActionsBySnapshotType[(int) SnapshotActionType.World];
+                        for (var j = 0; j < entActions.Count; j++) {
+                            entActions[j](entity);
                         }
-                    }
+                    }, EntityStatusType.Any);
                 }
-
-                IncrementRuntimeVersion();
             }
         }
     }

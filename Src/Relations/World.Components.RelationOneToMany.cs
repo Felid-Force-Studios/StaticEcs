@@ -18,7 +18,6 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal void RegisterOneToManyRelationType<O, M>(
                 ushort defaultComponentCapacity,
-                uint capacity,
                 IComponentConfig<O, WorldType> leftConfig,
                 IComponentConfig<M, WorldType> rightConfig,
                 BiDirectionalDeleteStrategy leftDeleteStrategy = BiDirectionalDeleteStrategy.Default,
@@ -40,10 +39,9 @@ namespace FFS.Libraries.StaticEcs {
                 };
 
                 RegisterComponentType(
-                    capacity: capacity,
                     actualConfigLeft
                 );
-                Components<O>.Value.AddWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
+                Components<O>.Value.addWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
 
                 ValidateComponentRegistration<M>();
 
@@ -56,7 +54,7 @@ namespace FFS.Libraries.StaticEcs {
                     Context.Value.Get<LinkManyHandlers<M>>().OnDeleteLinkItem = DeleteLeftLink;
                 }
 
-                RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity, capacity);
+                RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity);
                 
                 var actualConfigRight = new ValueComponentConfig<M, WorldType>(rightConfig) {
                     OnPutHandler = OnAddManyHandler(rightConfig.OnPut(), disableRelationsCheckRightDebug),
@@ -67,7 +65,6 @@ namespace FFS.Libraries.StaticEcs {
                 };
 
                 RegisterComponentType(
-                    capacity: capacity,
                     actualConfigRight
                 );
 

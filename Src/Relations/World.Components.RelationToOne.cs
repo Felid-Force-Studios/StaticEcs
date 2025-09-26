@@ -17,7 +17,6 @@ namespace FFS.Libraries.StaticEcs {
         internal partial struct ModuleComponents {
             [MethodImpl(AggressiveInlining)]
             internal void RegisterToOneRelationType<T>(
-                uint capacity,
                 IComponentConfig<T, WorldType> config,
                 OneDirectionalDeleteStrategy onDeleteStrategy = OneDirectionalDeleteStrategy.Default,
                 CopyStrategy onCopyStrategy = CopyStrategy.Default,
@@ -34,14 +33,13 @@ namespace FFS.Libraries.StaticEcs {
                 };
 
                 RegisterComponentType(
-                    capacity: capacity,
                     actualConfig
                 );
-                Components<T>.Value.AddWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
+                Components<T>.Value.addWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
                 return;
 
                 static OnComponentHandler<T> OnPutHandler(OnComponentHandler<T> handler, bool disableRelationsCheck) {
-                    #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                    #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
                     if (!disableRelationsCheck) {
                         if (handler != null) {
                             return (Entity entity, ref T component) => {

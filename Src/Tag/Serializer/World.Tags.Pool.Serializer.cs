@@ -45,32 +45,32 @@ namespace FFS.Libraries.StaticEcs {
 
                 [MethodImpl(AggressiveInlining)]
                 internal void WriteAll(ref BinaryPackWriter writer, ref Tags<T> pool) {
-                    writer.WriteUint(pool._tagCount);
-                    writer.WriteInt(pool._entities.Length);
-                    writer.WriteInt(pool._dataIdxByEntityId.Length);
-                    writer.WriteArrayUnmanaged(pool._entities, 0, (int) pool._tagCount);
-                    writer.WriteArrayUnmanaged(pool._dataIdxByEntityId, 0, (int) Entity.entitiesCount);
+                    writer.WriteInt(pool.chunks.Length);
+                    writer.WriteInt(Entities.Value.nextActiveChunkIdx);
+                    for (var i = 0; i < Entities.Value.nextActiveChunkIdx; i++) {
+                        ref var chunk = ref pool.chunks[i];
+                        writer.WriteUlong(chunk.notEmptyBlocks);
+                        writer.WriteUlong(chunk.fullBlocks);
+                        writer.WriteArrayUnmanaged(chunk.entities);
+                    }
                 }
 
                 [MethodImpl(AggressiveInlining)]
                 internal void ReadAll(ref BinaryPackReader reader, ref Tags<T> pool) {
-                    pool._tagCount = reader.ReadUint();
+                    var chunkCapacity = reader.ReadInt();
+                    var chunkCount = reader.ReadInt();
 
-                    var dataCapacity = reader.ReadInt();
-                    if (pool._entities == null || dataCapacity > pool._entities.Length) {
-                        pool._entities = new uint[dataCapacity];
+                    pool.chunks ??= new TagsChunk[chunkCapacity];
+                    if (pool.chunks.Length < chunkCapacity) {
+                        Array.Resize(ref pool.chunks, chunkCapacity);
                     }
-
-                    var entitiesCapacity = reader.ReadInt();
-                    if (pool._dataIdxByEntityId == null || entitiesCapacity > pool._dataIdxByEntityId.Length) {
-                        pool._dataIdxByEntityId = new uint[entitiesCapacity];
-                        for (uint i = 0; i < entitiesCapacity; i++) {
-                            pool._dataIdxByEntityId[i] = Const.EmptyComponentMask;
-                        }
+                    
+                    for (uint i = 0; i < chunkCount; i++) {
+                        ref var chunk = ref pool.chunks[i];
+                        chunk.notEmptyBlocks =  reader.ReadUlong();
+                        chunk.fullBlocks =  reader.ReadUlong();
+                        reader.ReadArrayUnmanaged(ref chunk.entities);
                     }
-
-                    reader.ReadArrayUnmanaged(ref pool._entities);
-                    reader.ReadArrayUnmanaged(ref pool._dataIdxByEntityId);
                 }
             }
         }
@@ -81,25 +81,66 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         internal static void DeleteAllTagMigration<WorldType>(this ref BinaryPackReader reader, EcsTagDeleteMigrationReader<WorldType> migration) 
             where WorldType : struct, IWorldType {
-            reader.SkipNext(sizeof(ushort)); // ID
-            var componentsCount = reader.ReadUint();
+            var chunkCapacity = reader.ReadInt();
+            var chunkCount = reader.ReadInt();
 
-            var dataCapacity = reader.ReadInt();
-            var entitiesCapacity = reader.ReadInt();
+            var chunks = ArrayPool<TagsChunk>.Shared.Rent(chunkCapacity);
+            for (uint i = 0; i < chunkCount; i++) {
+                ref var chunk = ref chunks[i];
+                chunk.notEmptyBlocks = reader.ReadUlong();
+                chunk.fullBlocks = reader.ReadUlong();
+                chunk.entities = ArrayPool<ulong>.Shared.Rent(Const.BLOCK_IN_CHUNK);
+                reader.ReadArrayUnmanaged(ref chunk.entities);
+            }
 
-            var entities = ArrayPool<uint>.Shared.Rent(dataCapacity);
-            var dataIdxByEntityId = ArrayPool<uint>.Shared.Rent(entitiesCapacity);
+            #if NET6_0_OR_GREATER
+            ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
+            #else
+            var deBruijn = Utils.DeBruijn;
+            #endif
+            var entity = new World<WorldType>.Entity();
+            ref var eid = ref entity._id;
+            for (var chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
+                ref var chunk = ref chunks[chunkIdx];
+                var chunkMask = chunk.notEmptyBlocks;
 
-            reader.ReadArrayUnmanaged(ref entities);
-            reader.ReadArrayUnmanaged(ref dataIdxByEntityId);
-            reader.SkipArrayHeaders();
-            for (var i = 0; i < componentsCount; i++) {
-                var entity = entities[i];
-                migration(new World<WorldType>.Entity(entity));
+                while (chunkMask > 0) {
+                    var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
+                    chunkMask &= chunkMask - 1;
+                    var entitiesMask = chunk.entities[blockIdx];
+
+                    if (entitiesMask > 0) {
+                        var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
+                        var blockEntity = (uint) (globalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT);
+
+                        var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
+                        var end = Utils.ApproximateMSB(entitiesMask);
+                        var total = Utils.PopCnt(entitiesMask);
+                        if (total >= (end - idx) >> 1) {
+                            for (; idx < end; idx++) {
+                                if ((entitiesMask & (1UL << idx)) > 0) {
+                                    eid = blockEntity + idx;
+                                    migration(entity);
+                                }
+                            }
+                        } else {
+                            do {
+                                eid = blockEntity + idx;
+                                migration(entity);
+                                entitiesMask &= entitiesMask - 1UL;
+                                idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
+                            } while (entitiesMask > 0);
+                        }
+                    }
+                }
             }
             
-            ArrayPool<uint>.Shared.Return(entities);
-            ArrayPool<uint>.Shared.Return(dataIdxByEntityId);
+            for (uint i = 0; i < chunkCount; i++) {
+                ref var chunk = ref chunks[i];
+                ArrayPool<ulong>.Shared.Return(chunk.entities, true);
+            }
+            
+            ArrayPool<TagsChunk>.Shared.Return(chunks, true);
         }
     }
 }

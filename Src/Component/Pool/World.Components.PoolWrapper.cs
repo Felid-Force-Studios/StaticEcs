@@ -8,8 +8,29 @@ using Unity.IL2CPP.CompilerServices;
 #endif
 
 namespace FFS.Libraries.StaticEcs {
-    
-    public interface IRawPool : IStandardRawPool {
+    public interface IRawPool {
+        public ushort DynamicId();
+
+        internal void SetDynamicId(ushort id);
+
+        public Guid Guid();
+
+        internal Type GetElementType();
+
+        internal object GetRaw(uint entity);
+
+        internal void PutRaw(uint entity, object value);
+
+        internal void Copy(uint srcEntity, uint dstEntity);
+
+        internal int CalculateCapacity();
+
+        public uint CalculateCount();
+        
+        internal void WriteAll(ref BinaryPackWriter writer);
+
+        internal void ReadAll(ref BinaryPackReader reader);
+        
         internal bool Has(uint entity);
 
         internal void Add(uint entity);
@@ -30,6 +51,14 @@ namespace FFS.Libraries.StaticEcs {
         internal void Enable(uint entity);
 
         internal void Disable(uint entity);
+            
+        internal ref ComponentsChunk Chunk(uint chunkIdx);
+
+        internal ulong EMask(uint chunkIdx, int blockIdx);
+            
+        internal ulong DMask(uint chunkIdx, int blockIdx);
+            
+        internal ulong AMask(uint chunkIdx, int blockIdx);
     }
     
     
@@ -74,8 +103,6 @@ namespace FFS.Libraries.StaticEcs {
             public bool Is<C>() where C : struct, IComponent;
 
             public bool TryCast<C>(out ComponentsWrapper<C> wrapper) where C : struct, IComponent;
-            
-            internal uint[] EntitiesData();
 
             internal void Resize(uint cap);
             
@@ -83,21 +110,15 @@ namespace FFS.Libraries.StaticEcs {
 
             internal void Destroy();
 
-            internal void SetDataIfCountLess(ref uint count, ref uint[] entities);
-
             internal void ToStringComponent(StringBuilder builder, Entity entity);
 
             internal void Clear();
-
-            internal void EnsureSize(uint size);
         
             void Write(ref BinaryPackWriter writer, Entity entity);
 
             void Read(ref BinaryPackReader reader, Entity entity);
 
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            internal void AddBlocker(int val);
-            #endif
+            internal void UpdateBitMask(BitMask bitMask);
         }
 
         #if ENABLE_IL2CPP
@@ -114,7 +135,7 @@ namespace FFS.Libraries.StaticEcs {
             public ushort DynamicId() => Components<T>.Value.DynamicId();
 
             [MethodImpl(AggressiveInlining)]
-            void IStandardRawPool.SetDynamicId(ushort id) => Components<T>.Value.id = id;
+            void IRawPool.SetDynamicId(ushort id) => Components<T>.Value.SetDynamicId(id);
 
             [MethodImpl(AggressiveInlining)]
             internal ref T Ref(Entity entity) => ref Components<T>.Value.Ref(entity);
@@ -159,9 +180,6 @@ namespace FFS.Libraries.StaticEcs {
             public void Delete(Entity entity) => Components<T>.Value.Delete(entity);
 
             [MethodImpl(AggressiveInlining)]
-            public T[] Data() => Components<T>.Value.Data();
-
-            [MethodImpl(AggressiveInlining)]
             public void Copy(Entity srcEntity, Entity dstEntity) => Components<T>.Value.Copy(srcEntity, dstEntity);
 
             [MethodImpl(AggressiveInlining)]
@@ -174,13 +192,13 @@ namespace FFS.Libraries.StaticEcs {
             public bool TryMove(Entity srcEntity, Entity dstEntity) => Components<T>.Value.TryMove(srcEntity, dstEntity);
 
             [MethodImpl(AggressiveInlining)]
-            Type IStandardRawPool.GetElementType() => typeof(T);
+            Type IRawPool.GetElementType() => typeof(T);
 
             [MethodImpl(AggressiveInlining)]
-            object IStandardRawPool.GetRaw(uint entity) => Components<T>.Value.RefInternal(new Entity(entity));
+            object IRawPool.GetRaw(uint entity) => Components<T>.Value.RefInternal(new Entity(entity));
 
             [MethodImpl(AggressiveInlining)]
-            void IStandardRawPool.PutRaw(uint entity, object value) => Components<T>.Value.Put(new Entity(entity), (T) value);
+            void IRawPool.PutRaw(uint entity, object value) => Components<T>.Value.Put(new Entity(entity), (T) value);
 
             [MethodImpl(AggressiveInlining)]
             bool IRawPool.Has(uint entity) => Components<T>.Value.Has(new Entity(entity));
@@ -195,26 +213,16 @@ namespace FFS.Libraries.StaticEcs {
             void IRawPool.Delete(uint entity) => Components<T>.Value.Delete(new Entity(entity));
 
             [MethodImpl(AggressiveInlining)]
-            void IStandardRawPool.Copy(uint srcEntity, uint dstEntity) => Components<T>.Value.Copy(new Entity(srcEntity), new Entity(dstEntity));
+            void IRawPool.Copy(uint srcEntity, uint dstEntity) => Components<T>.Value.Copy(new Entity(srcEntity), new Entity(dstEntity));
 
             [MethodImpl(AggressiveInlining)]
             void IRawPool.Move(uint entity, uint target) => Components<T>.Value.Move(new Entity(entity), new Entity(target));
 
             [MethodImpl(AggressiveInlining)]
-            uint IStandardRawPool.Capacity() => (uint) Components<T>.Value.EntitiesData().Length;
+            int IRawPool.CalculateCapacity() => Components<T>.Value.CalculateCapacity();
 
             [MethodImpl(AggressiveInlining)]
-            public uint Count() => Components<T>.Value.Count();
-
-            [MethodImpl(AggressiveInlining)]
-            void IStandardRawPool.WriteAll(ref BinaryPackWriter writer) {
-                Components<T>.Serializer.Value.WriteAll(ref writer, ref Components<T>.Value);
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            void IStandardRawPool.ReadAll(ref BinaryPackReader reader) {
-                Components<T>.Serializer.Value.ReadAll(ref reader, ref Components<T>.Value);
-            }
+            public uint CalculateCount() => Components<T>.Value.CalculateCount();
 
             [MethodImpl(AggressiveInlining)]
             public bool Is<C>() where C : struct, IComponent => Components<C>.Value.id == Components<T>.Value.id;
@@ -223,43 +231,46 @@ namespace FFS.Libraries.StaticEcs {
             public bool TryCast<C>(out ComponentsWrapper<C> wrapper) where C : struct, IComponent => Components<C>.Value.id == Components<T>.Value.id;
 
             [MethodImpl(AggressiveInlining)]
-            uint[] IComponentsWrapper.EntitiesData() => Components<T>.Value.EntitiesData();
-
-            [MethodImpl(AggressiveInlining)]
             void IComponentsWrapper.ToStringComponent(StringBuilder builder, Entity entity) => Components<T>.Value.ToStringComponent(builder, entity);
-
-            [MethodImpl(AggressiveInlining)]
-            void IComponentsWrapper.SetDataIfCountLess(ref uint count, ref uint[] entities) => Components<T>.Value.SetDataIfCountLess(ref count, ref entities);
 
             [MethodImpl(AggressiveInlining)]
             void IComponentsWrapper.Resize(uint cap) => Components<T>.Value.Resize(cap);
 
             [MethodImpl(AggressiveInlining)]
-            void IComponentsWrapper.DeleteInternalWithoutMask(Entity entity) => Components<T>.Value.DeleteInternalWithoutMask(entity);
+            void IComponentsWrapper.DeleteInternalWithoutMask(Entity entity) => Components<T>.Value.Delete(entity, false);
 
             [MethodImpl(AggressiveInlining)]
             void IComponentsWrapper.Destroy() => Components<T>.Value.Destroy();
 
             [MethodImpl(AggressiveInlining)]
-            void IComponentsWrapper.EnsureSize(uint size) => Components<T>.Value.EnsureSize(size);
+            public void Write(ref BinaryPackWriter writer, Entity entity) => Components<T>.Serializer.Value.Write(ref writer, ref Components<T>.Value, entity);
 
             [MethodImpl(AggressiveInlining)]
-            public void Write(ref BinaryPackWriter writer, Entity entity) {
-                Components<T>.Serializer.Value.Write(ref writer, ref Components<T>.Value, entity);
-            }
+            public void Read(ref BinaryPackReader reader, Entity entity) => Components<T>.Serializer.Value.Read(ref reader, ref Components<T>.Value, entity);
 
             [MethodImpl(AggressiveInlining)]
-            public void Read(ref BinaryPackReader reader, Entity entity) {
-                Components<T>.Serializer.Value.Read(ref reader, ref Components<T>.Value, entity);
-            }
+            void IComponentsWrapper.UpdateBitMask(BitMask bitMask) => Components<T>.Value.UpdateBitMask(bitMask);
+
+            [MethodImpl(AggressiveInlining)]
+            ref ComponentsChunk IRawComponentPool.Chunk(uint chunkIdx) => ref Components<T>.Value.Chunk(chunkIdx);
+            
+            [MethodImpl(AggressiveInlining)]
+            ulong IRawComponentPool.EMask(uint chunkIdx, int blockIdx) => Components<T>.Value.EMask(chunkIdx, blockIdx);
+            
+            [MethodImpl(AggressiveInlining)]
+            ulong IRawComponentPool.DMask(uint chunkIdx, int blockIdx) => Components<T>.Value.DMask(chunkIdx, blockIdx);
+            
+            [MethodImpl(AggressiveInlining)]
+            ulong IRawComponentPool.AMask(uint chunkIdx, int blockIdx) => Components<T>.Value.AMask(chunkIdx, blockIdx);
+
+            [MethodImpl(AggressiveInlining)]
+            void IRawPool.WriteAll(ref BinaryPackWriter writer) => Components<T>.Serializer.Value.WriteAll(ref writer, ref Components<T>.Value);
+
+            [MethodImpl(AggressiveInlining)]
+            void IRawPool.ReadAll(ref BinaryPackReader reader) => Components<T>.Serializer.Value.ReadAll(ref reader, ref Components<T>.Value);
 
             [MethodImpl(AggressiveInlining)]
             void IComponentsWrapper.Clear() => Components<T>.Value.Clear();
-
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            [MethodImpl(AggressiveInlining)]
-            void IComponentsWrapper.AddBlocker(int val) => Components<T>.Value.AddBlocker(val);
-            #endif
             
             [MethodImpl(AggressiveInlining)]
             bool IRawComponentPool.HasDisabled(uint entity) => Components<T>.Value.HasDisabled(new Entity(entity));

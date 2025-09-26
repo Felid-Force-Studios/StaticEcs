@@ -1,80 +1,38 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
-using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
 
 namespace FFS.Libraries.StaticEcs {
+    
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
     public abstract partial class World<WorldType> {
 
-        [MethodImpl(AggressiveInlining)]
-        public static uint EntitiesCount() {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: EntitiesCount, World not initialized");
-            #endif
-            return Entity.entitiesCount;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public static uint EntitiesCountWithoutDestroyed() {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: EntitiesCountWithoutDestroyed, World not initialized");
-            #endif
-            return Entity.entitiesCount - Entity.deletedEntitiesCount;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public static uint EntitiesCapacity() {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
-            if (Status == WorldStatus.NotCreated) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: GetEntitiesCapacity, World not initialized");
-            #endif
-            return Entity.entitiesCapacity;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public static EntitiesIterator<WorldType> AllEntities() {
-            return new EntitiesIterator<WorldType>(Entity.entitiesCount);
-        }
-
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         [Il2CppEagerStaticClassConstruction]
         #endif
-        public readonly partial struct Entity : IEquatable<Entity>, IEntity {
-            internal static Entity[] deletedEntities;
-            internal static uint deletedEntitiesCount;
-            internal static uint entitiesCapacity;
-            internal static uint entitiesCount;
-
-            internal readonly uint _id;
+        public partial struct Entity : IEquatable<Entity> {
+            internal uint _id;
 
             [MethodImpl(AggressiveInlining)]
-            internal Entity(uint id) {
-                _id = id;
-            }
+            internal Entity(uint id) => _id = id;
 
             [MethodImpl(AggressiveInlining)]
             public static Entity FromIdx(uint idx) => new(idx);
 
             [MethodImpl(AggressiveInlining)]
+            public BoxedEntity<WorldType> Box() => new (this);
+
+            [MethodImpl(AggressiveInlining)]
             public EntityGID Gid() => GIDStore.Value.Get(this);
-
-            uint IEntity.GetId() => _id;
-
-            [MethodImpl(AggressiveInlining)]
-            Type IEntity.WorldTypeType() => typeof(WorldType);
-
-            [MethodImpl(AggressiveInlining)]
-            IWorld IEntity.World() => Worlds.Get(typeof(WorldType));
 
             [MethodImpl(AggressiveInlining)]
             public bool IsActual() => GIDStore.Value.Has(this);
@@ -84,7 +42,7 @@ namespace FFS.Libraries.StaticEcs {
 
             public string PrettyString {
                 get {
-                    var builder = new StringBuilder(128);
+                    var builder = new StringBuilder(256);
                     builder.Append("Entity ID: ");
                     builder.Append(_id);
                     builder.Append(" GID: ");
@@ -92,50 +50,45 @@ namespace FFS.Libraries.StaticEcs {
                     builder.Append(gid.Id());
                     builder.Append(" Version: ");
                     builder.Append(gid.Version());
+                    if (IsDisabled()) {
+                        builder.Append(" [Disabled]");
+                    }
                     builder.AppendLine();
-                    ModuleStandardComponents.Value.ToPrettyStringEntity(builder, this);
-                    ModuleComponents.Value.ToPrettyStringEntity(builder, this, true);
+                    ModuleComponents.Value.ToPrettyStringEntity(builder, this);
                     #if !FFS_ECS_DISABLE_TAGS
                     ModuleTags.Value.ToPrettyStringEntity(builder, this);
-                    #endif
-                    #if !FFS_ECS_DISABLE_MASKS
-                    ModuleMasks.Value.ToPrettyStringEntity(builder, this);
                     #endif
                     return builder.ToString();
                 }
             }
 
             [MethodImpl(AggressiveInlining)]
-            public Entity Clone(bool withDisabled = true) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            public Entity Clone() {
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CloneEntity, World not initialized");
                 #endif
 
                 var dstEntity = New();
-                CopyTo(dstEntity, withDisabled);
+                CopyTo(dstEntity);
 
                 return dstEntity;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void CopyTo(Entity dstEntity, bool withDisabled = true) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            public void CopyTo(Entity dstEntity) {
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CopyEntityData, World not initialized");
                 #endif
 
-                ModuleComponents.Value.CopyEntity(this, dstEntity, withDisabled);
-                ModuleStandardComponents.Value.CopyEntity(this, dstEntity);
+                ModuleComponents.Value.CopyEntity(this, dstEntity);
                 #if !FFS_ECS_DISABLE_TAGS
                 ModuleTags.Value.CopyEntity(this, dstEntity);
-                #endif
-                #if !FFS_ECS_DISABLE_MASKS
-                ModuleMasks.Value.CopyEntity(this, dstEntity);
                 #endif
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void MoveTo(Entity dstEntity, bool withDisabled = true) {
-                CopyTo(dstEntity, withDisabled);
+            public void MoveTo(Entity dstEntity) {
+                CopyTo(dstEntity);
                 Destroy();
             }
 
@@ -151,35 +104,76 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static implicit operator EntityGID(Entity e) => e.Gid();
+            
+            [MethodImpl(AggressiveInlining)]
+            public bool IsDisabled() {
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity Method: IsDisabled, World not initialized");
+                if (!IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: IsDisabled, cannot call for deleted entity");
+                #endif
+                var chunkIdx = _id >> Const.ENTITIES_IN_CHUNK_SHIFT;
+                var chunkEntityIdx = (ushort) (_id & Const.ENTITIES_IN_CHUNK_OFFSET_MASK);
+                var blockIdx = chunkEntityIdx >> Const.ENTITIES_IN_BLOCK_SHIFT;
+                var blockEntityIdx = chunkEntityIdx & Const.ENTITIES_IN_BLOCK_OFFSET_MASK;
+                return (Entities.Value.chunks[chunkIdx].disabledEntities[blockIdx] & (1UL << blockEntityIdx)) != 0;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public bool IsEnabled() {
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity Method: IsEnabled, World not initialized");
+                if (!IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: IsEnabled, cannot call for deleted entity");
+                #endif
+                var chunkIdx = _id >> Const.ENTITIES_IN_CHUNK_SHIFT;
+                var chunkEntityIdx = (ushort) (_id & Const.ENTITIES_IN_CHUNK_OFFSET_MASK);
+                var blockIdx = chunkEntityIdx >> Const.ENTITIES_IN_BLOCK_SHIFT;
+                var blockEntityIdx = chunkEntityIdx & Const.ENTITIES_IN_BLOCK_OFFSET_MASK;
+                return (Entities.Value.chunks[chunkIdx].disabledEntities[blockIdx] & (1UL << blockEntityIdx)) == 0;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void Disable() {
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity Method: Disable, World not initialized");
+                if (!IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Disable, cannot call for deleted entity");
+                if (Entities.Value._blockerDisable > 0 && CurrentQuery.IsNotCurrentEntity(this)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Disable, is blocked, use QueryMode.Flexible");
+                if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(this)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Disable, is blocked, it is forbidden to modify a non-current entity in a parallel query");
+                #endif
+                var chunkIdx = _id >> Const.ENTITIES_IN_CHUNK_SHIFT;
+                var chunkEntityIdx = (ushort) (_id & Const.ENTITIES_IN_CHUNK_OFFSET_MASK);
+                var blockIdx = chunkEntityIdx >> Const.ENTITIES_IN_BLOCK_SHIFT;
+                var blockEntityIdx = chunkEntityIdx & Const.ENTITIES_IN_BLOCK_OFFSET_MASK;
+                Entities.Value.chunks[chunkIdx].disabledEntities[blockIdx] |= 1UL << blockEntityIdx;
+                for (uint i = 0; i < Entities.Value.queriesToUpdateOnDisableCount; i++) {
+                    Entities.Value.queriesToUpdateOnDisable[i].Update(~(1UL << blockEntityIdx), _id);
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public void Enable() {
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity Method: Enable, World not initialized");
+                if (!IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Enable, cannot call for deleted entity");
+                if (Entities.Value._blockerEnable > 0 && CurrentQuery.IsNotCurrentEntity(this)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Enable, is blocked, use QueryMode.Flexible");
+                if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(this)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Enable, is blocked, it is forbidden to modify a non-current entity in a parallel query");
+                #endif
+                var chunkIdx = _id >> Const.ENTITIES_IN_CHUNK_SHIFT;
+                var chunkEntityIdx = (ushort) (_id & Const.ENTITIES_IN_CHUNK_OFFSET_MASK);
+                var blockIdx = chunkEntityIdx >> Const.ENTITIES_IN_BLOCK_SHIFT;
+                var blockEntityIdx = chunkEntityIdx & Const.ENTITIES_IN_BLOCK_OFFSET_MASK;
+                Entities.Value.chunks[chunkIdx].disabledEntities[blockIdx] &= ~(1UL << blockEntityIdx);
+                for (uint i = 0; i < Entities.Value.queriesToUpdateOnEnableCount; i++) {
+                    Entities.Value.queriesToUpdateOnEnable[i].Update(~(1UL << blockEntityIdx), _id);
+                }
+            }
 
             [MethodImpl(AggressiveInlining)]
             public void Destroy() {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: DestroyEntity, World not initialized");
-                if (!IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: DestroyEntity, Entity already destroyed");
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity Method: Destroy, World not initialized");
+                if (!IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Destroy, cannot call for deleted entity");
                 #endif
-                #if !FFS_ECS_DISABLE_TAGS
-                ModuleTags.Value.DestroyEntity(this);
-                #endif
-                #if !FFS_ECS_DISABLE_MASKS
-                ModuleMasks.Value.DestroyEntity(this);
-                #endif
-                ModuleComponents.Value.DestroyEntity(this);
-                ModuleStandardComponents.Value.DestroyEntity(this);
-                GIDStore.Value.DestroyEntity(this);
-                StandardComponents<EntityStatus>.Value.RefInternal(this).Value = EntityStatusType.Enabled;
-                if (deletedEntitiesCount == deletedEntities.Length) {
-                    Array.Resize(ref deletedEntities, (int) (deletedEntitiesCount << 1));
-                }
-
-                deletedEntities[deletedEntitiesCount++] = this;
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-                if (_debugEventListeners != null) {
-                    foreach (var listener in _debugEventListeners) {
-                        listener.OnEntityDestroyed(this);
-                    }
-                }
-                #endif
+                Entities.Value.DestroyEntity(this);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -190,95 +184,29 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            bool IEntity.TryAsEntityOf<WT>(out World<WT>.Entity entity) {
-                if (typeof(WT) == typeof(WorldType)) {
-                    entity = new World<WT>.Entity(_id);
-                    return true;
-                }
-                
-                entity = default;
-                return false;
-            }
+            public bool Equals(Entity entity) => _id == entity._id;
+
+            [MethodImpl(AggressiveInlining)]
+            public override bool Equals(object obj) => throw new StaticEcsException("Entity` Equals object` not allowed!");
+
+            [MethodImpl(AggressiveInlining)]
+            public override int GetHashCode() => (int) _id;
+
+            public override string ToString() => $"Entity ID: {_id}";
+            
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || !FFS_ECS_LIFECYCLE_ENTITY
+            [MethodImpl(AggressiveInlining)]
+            public static Entity New() => new(Entities.Value.CreateEntity());
+            #endif
             
             [MethodImpl(AggressiveInlining)]
-            World<WT>.Entity IEntity.AsEntityOf<WT>() {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (typeof(WT) != typeof(WorldType)) throw new StaticEcsException($"Invalid cast: expected World<{typeof(WorldType).Name}>, got World<{typeof(WT).Name}>.");
-                #endif
-                
-                return new World<WT>.Entity(_id);
-            }
-
+            public static Entity New(EntityGID gid) => new(Entities.Value.CreateEntity(gid));
+            
             #region NEW_BY_TYPE_SINGLE
             [MethodImpl(AggressiveInlining)]
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG || !FFS_ECS_LIFECYCLE_ENTITY
-            public static Entity New() {
-            #else
-            internal static Entity New() {
-            #endif
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CreateEntity, World not initialized");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CreateEntity, this operation is not supported in multithreaded mode");
-                #endif
-                var entity = CreateEntity();
-                GIDStore.Value.New(entity);
-                ModuleStandardComponents.Value.InitEntity(entity);
-
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-                if (_debugEventListeners != null) {
-                    foreach (var listener in _debugEventListeners) {
-                        listener.OnEntityCreated(entity);
-                    }
-                }
-                #endif
-                return entity;
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public static Entity New(EntityGID gid) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CreateEntity, World not initialized");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CreateEntity, this operation is not supported in multithreaded mode");
-                #endif
-                var entity = CreateEntity();
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                GIDStore.Value.Set(entity, gid, false);
-                #else
-                GIDStore.Value.Set(entity, gid);
-                #endif
-                ModuleStandardComponents.Value.InitEntity(entity);
-
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-                if (_debugEventListeners != null) {
-                    foreach (var listener in _debugEventListeners) {
-                        listener.OnEntityCreated(entity);
-                    }
-                }
-                #endif
-                return entity;
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            private static Entity CreateEntity() {
-                Entity entity;
-                if (deletedEntitiesCount > 0) {
-                    entity = deletedEntities[--deletedEntitiesCount];
-                } else {
-                    entity = new Entity(entitiesCount);
-                    if (entitiesCount == entitiesCapacity) {
-                        ResizeEntities(entitiesCapacity << 1);
-                    }
-
-                    entitiesCount++;
-                }
-
-                return entity;
-            }
-
-            [MethodImpl(AggressiveInlining)]
             public static Entity New<C1>() where C1 : struct, IComponent {
-                var entity = New();
-                entity.Add<C1>();
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Add(entity);
                 return entity;
             }
 
@@ -286,8 +214,9 @@ namespace FFS.Libraries.StaticEcs {
             public static Entity New<C1, C2>()
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
-                var entity = New();
-                entity.Add<C1, C2>();
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Add(entity);
+                Components<C2>.Value.Add(entity);
                 return entity;
             }
 
@@ -296,8 +225,10 @@ namespace FFS.Libraries.StaticEcs {
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent {
-                var entity = New();
-                entity.Add<C1, C2, C3>();
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Add(entity);
+                Components<C2>.Value.Add(entity);
+                Components<C3>.Value.Add(entity);
                 return entity;
             }
 
@@ -307,8 +238,11 @@ namespace FFS.Libraries.StaticEcs {
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent {
-                var entity = New();
-                entity.Add<C1, C2, C3, C4>();
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Add(entity);
+                Components<C2>.Value.Add(entity);
+                Components<C3>.Value.Add(entity);
+                Components<C4>.Value.Add(entity);
                 return entity;
             }
 
@@ -319,17 +253,21 @@ namespace FFS.Libraries.StaticEcs {
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent
                 where C5 : struct, IComponent {
-                var entity = New();
-                entity.Add<C1, C2, C3, C4, C5>();
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Add(entity);
+                Components<C2>.Value.Add(entity);
+                Components<C3>.Value.Add(entity);
+                Components<C4>.Value.Add(entity);
+                Components<C5>.Value.Add(entity);
                 return entity;
             }
             #endregion
-
+            
             #region NEW_BY_VALUE_SINGLE
             [MethodImpl(AggressiveInlining)]
             public static Entity New<C1>(C1 component) where C1 : struct, IComponent {
-                var entity = New();
-                entity.Put(component);
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Put(entity, component);
                 return entity;
             }
 
@@ -337,8 +275,9 @@ namespace FFS.Libraries.StaticEcs {
             public static Entity New<C1, C2>(C1 comp1, C2 comp2)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
-                var entity = New();
-                entity.Put(comp1, comp2);
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Put(entity, comp1);
+                Components<C2>.Value.Put(entity, comp2);
                 return entity;
             }
 
@@ -347,8 +286,10 @@ namespace FFS.Libraries.StaticEcs {
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent {
-                var entity = New();
-                entity.Put(comp1, comp2, comp3);
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Put(entity, comp1);
+                Components<C2>.Value.Put(entity, comp2);
+                Components<C3>.Value.Put(entity, comp3);
                 return entity;
             }
 
@@ -358,8 +299,11 @@ namespace FFS.Libraries.StaticEcs {
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent {
-                var entity = New();
-                entity.Put(comp1, comp2, comp3, comp4);
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Put(entity, comp1);
+                Components<C2>.Value.Put(entity, comp2);
+                Components<C3>.Value.Put(entity, comp3);
+                Components<C4>.Value.Put(entity, comp4);
                 return entity;
             }
 
@@ -370,8 +314,12 @@ namespace FFS.Libraries.StaticEcs {
                 where C3 : struct, IComponent
                 where C4 : struct, IComponent
                 where C5 : struct, IComponent {
-                var entity = New();
-                entity.Put(comp1, comp2, comp3, comp4, comp5);
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Put(entity, comp1);
+                Components<C2>.Value.Put(entity, comp2);
+                Components<C3>.Value.Put(entity, comp3);
+                Components<C4>.Value.Put(entity, comp4);
+                Components<C5>.Value.Put(entity, comp5);
                 return entity;
             }
             
@@ -383,9 +331,13 @@ namespace FFS.Libraries.StaticEcs {
                 where C4 : struct, IComponent
                 where C5 : struct, IComponent
                 where C6 : struct, IComponent {
-                var entity = New();
-                entity.Put(comp1, comp2, comp3, comp4, comp5);
-                entity.Put(comp6);
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Put(entity, comp1);
+                Components<C2>.Value.Put(entity, comp2);
+                Components<C3>.Value.Put(entity, comp3);
+                Components<C4>.Value.Put(entity, comp4);
+                Components<C5>.Value.Put(entity, comp5);
+                Components<C6>.Value.Put(entity, comp6);
                 return entity;
             }
             
@@ -398,9 +350,14 @@ namespace FFS.Libraries.StaticEcs {
                 where C5 : struct, IComponent
                 where C6 : struct, IComponent
                 where C7 : struct, IComponent {
-                var entity = New();
-                entity.Put(comp1, comp2, comp3, comp4, comp5);
-                entity.Put(comp6, comp7);
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Put(entity, comp1);
+                Components<C2>.Value.Put(entity, comp2);
+                Components<C3>.Value.Put(entity, comp3);
+                Components<C4>.Value.Put(entity, comp4);
+                Components<C5>.Value.Put(entity, comp5);
+                Components<C6>.Value.Put(entity, comp6);
+                Components<C7>.Value.Put(entity, comp7);
                 return entity;
             }
 
@@ -414,85 +371,121 @@ namespace FFS.Libraries.StaticEcs {
                 where C6 : struct, IComponent
                 where C7 : struct, IComponent
                 where C8 : struct, IComponent {
-                var entity = New();
-                entity.Put(comp1, comp2, comp3, comp4, comp5);
-                entity.Put(comp6, comp7, comp8);
+                var entity = new Entity(Entities.Value.CreateEntity());
+                Components<C1>.Value.Put(entity, comp1);
+                Components<C2>.Value.Put(entity, comp2);
+                Components<C3>.Value.Put(entity, comp3);
+                Components<C4>.Value.Put(entity, comp4);
+                Components<C5>.Value.Put(entity, comp5);
+                Components<C6>.Value.Put(entity, comp6);
+                Components<C7>.Value.Put(entity, comp7);
+                Components<C8>.Value.Put(entity, comp8);
                 return entity;
             }
             #endregion
-
-            #region NEW_BY_RAW_TYPE
-            [MethodImpl(AggressiveInlining)]
-            public static Entity New(Type componentType) {
-                var entity = New();
-                GetComponentsPool(componentType).Add(entity);
-                return entity;
-            }
-
-            [MethodImpl(AggressiveInlining)]
-            public static Entity New(IComponent component) {
-                var entity = New();
-                GetComponentsPool(component.GetType()).PutRaw(entity, component);
-                return entity;
-            }
-            #endregion
-
+            
             #region NEW_BY_TYPE_BATCH
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG || !FFS_ECS_LIFECYCLE_ENTITY
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || !FFS_ECS_LIFECYCLE_ENTITY
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes(uint count, Action<Entity> onCreate = null) {
-                foreach (var entity in CreateEntitiesInternal(count)) {
-                    onCreate?.Invoke(entity);
+            public static void NewOnes(uint count, QueryFunctionWithEntity<WorldType> onCreate) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
+                    onCreate(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
             #endif
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1>(uint count, Action<Entity> onCreate = null) where C1 : struct, IComponent {
+            public static void NewOnes<C1>(uint count, QueryFunctionWithEntity<WorldType> onCreate = null) where C1 : struct, IComponent {
                 ref var components1 = ref Components<C1>.Value;
-                components1.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2>(uint count, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2>(uint count, QueryFunctionWithEntity<WorldType> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
                 ref var components1 = ref Components<C1>.Value;
                 ref var components2 = ref Components<C2>.Value;
-                components1.EnsureSize(count);
-                components2.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity);
                     components2.Add(entity);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3>(uint count, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3>(uint count, QueryFunctionWithEntity<WorldType> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent {
                 ref var components1 = ref Components<C1>.Value;
                 ref var components2 = ref Components<C2>.Value;
                 ref var components3 = ref Components<C3>.Value;
-                components1.EnsureSize(count);
-                components2.EnsureSize(count);
-                components3.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity);
                     components2.Add(entity);
                     components3.Add(entity);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3, C4>(uint count, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3, C4>(uint count, QueryFunctionWithEntity<WorldType> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -501,21 +494,30 @@ namespace FFS.Libraries.StaticEcs {
                 ref var components2 = ref Components<C2>.Value;
                 ref var components3 = ref Components<C3>.Value;
                 ref var components4 = ref Components<C4>.Value;
-                components1.EnsureSize(count);
-                components2.EnsureSize(count);
-                components3.EnsureSize(count);
-                components4.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity);
                     components2.Add(entity);
                     components3.Add(entity);
                     components4.Add(entity);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3, C4, C5>(uint count, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3, C4, C5>(uint count, QueryFunctionWithEntity<WorldType> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -526,67 +528,108 @@ namespace FFS.Libraries.StaticEcs {
                 ref var components3 = ref Components<C3>.Value;
                 ref var components4 = ref Components<C4>.Value;
                 ref var components5 = ref Components<C5>.Value;
-                components1.EnsureSize(count);
-                components2.EnsureSize(count);
-                components3.EnsureSize(count);
-                components4.EnsureSize(count);
-                components5.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity);
                     components2.Add(entity);
                     components3.Add(entity);
                     components4.Add(entity);
                     components5.Add(entity);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1>(uint count, C1 c1, Action<Entity> onCreate = null) where C1 : struct, IComponent {
+            public static void NewOnes<C1>(uint count, C1 c1, QueryFunctionWithEntity<WorldType> onCreate = null) where C1 : struct, IComponent {
                 ref var components1 = ref Components<C1>.Value;
-                components1.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity, c1);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2>(uint count, C1 c1, C2 c2, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2>(uint count, C1 c1, C2 c2, QueryFunctionWithEntity<WorldType> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
                 ref var components1 = ref Components<C1>.Value;
                 ref var components2 = ref Components<C2>.Value;
-                components1.EnsureSize(count);
-                components2.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity, c1);
                     components2.Add(entity, c2);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3>(uint count, C1 c1, C2 c2, C3 c3, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3>(uint count, C1 c1, C2 c2, C3 c3, QueryFunctionWithEntity<WorldType> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent {
                 ref var components1 = ref Components<C1>.Value;
                 ref var components2 = ref Components<C2>.Value;
                 ref var components3 = ref Components<C3>.Value;
-                components1.EnsureSize(count);
-                components2.EnsureSize(count);
-                components3.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity, c1);
                     components2.Add(entity, c2);
                     components3.Add(entity, c3);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3, C4>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3, C4>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, QueryFunctionWithEntity<WorldType> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -595,21 +638,30 @@ namespace FFS.Libraries.StaticEcs {
                 ref var components2 = ref Components<C2>.Value;
                 ref var components3 = ref Components<C3>.Value;
                 ref var components4 = ref Components<C4>.Value;
-                components1.EnsureSize(count);
-                components2.EnsureSize(count);
-                components3.EnsureSize(count);
-                components4.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity, c1);
                     components2.Add(entity, c2);
                     components3.Add(entity, c3);
                     components4.Add(entity, c4);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3, C4, C5>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, C5 c5, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3, C4, C5>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, C5 c5, QueryFunctionWithEntity<WorldType> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -620,23 +672,31 @@ namespace FFS.Libraries.StaticEcs {
                 ref var components3 = ref Components<C3>.Value;
                 ref var components4 = ref Components<C4>.Value;
                 ref var components5 = ref Components<C5>.Value;
-                components1.EnsureSize(count);
-                components2.EnsureSize(count);
-                components3.EnsureSize(count);
-                components4.EnsureSize(count);
-                components5.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity, c1);
                     components2.Add(entity, c2);
                     components3.Add(entity, c3);
                     components4.Add(entity, c4);
                     components5.Add(entity, c5);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3, C4, C5, C6>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, C5 c5, C6 c6, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3, C4, C5, C6>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, C5 c5, C6 c6, QueryFunctionWithEntity<WorldType> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -649,13 +709,14 @@ namespace FFS.Libraries.StaticEcs {
                 ref var components4 = ref Components<C4>.Value;
                 ref var components5 = ref Components<C5>.Value;
                 ref var components6 = ref Components<C6>.Value;
-                components1.EnsureSize(count);
-                components2.EnsureSize(count);
-                components3.EnsureSize(count);
-                components4.EnsureSize(count);
-                components5.EnsureSize(count);
-                components6.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity, c1);
                     components2.Add(entity, c2);
                     components3.Add(entity, c3);
@@ -663,11 +724,17 @@ namespace FFS.Libraries.StaticEcs {
                     components5.Add(entity, c5);
                     components6.Add(entity, c6);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3, C4, C5, C6, C7>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, C5 c5, C6 c6, C7 c7, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3, C4, C5, C6, C7>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, C5 c5, C6 c6, C7 c7, QueryFunctionWithEntity<WorldType> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -682,14 +749,14 @@ namespace FFS.Libraries.StaticEcs {
                 ref var components5 = ref Components<C5>.Value;
                 ref var components6 = ref Components<C6>.Value;
                 ref var components7 = ref Components<C7>.Value;
-                components1.EnsureSize(count);
-                components2.EnsureSize(count);
-                components3.EnsureSize(count);
-                components4.EnsureSize(count);
-                components5.EnsureSize(count);
-                components6.EnsureSize(count);
-                components7.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity, c1);
                     components2.Add(entity, c2);
                     components3.Add(entity, c3);
@@ -698,11 +765,17 @@ namespace FFS.Libraries.StaticEcs {
                     components6.Add(entity, c6);
                     components7.Add(entity, c7);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
-
+            
             [MethodImpl(AggressiveInlining)]
-            public static void NewOnes<C1, C2, C3, C4, C5, C6, C7, C8>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, C5 c5, C6 c6, C7 c7, C8 c8, Action<Entity> onCreate = null)
+            public static void NewOnes<C1, C2, C3, C4, C5, C6, C7, C8>(uint count, C1 c1, C2 c2, C3 c3, C4 c4, C5 c5, C6 c6, C7 c7, C8 c8, QueryFunctionWithEntity<WorldType> onCreate = null)
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent
                 where C3 : struct, IComponent
@@ -719,15 +792,14 @@ namespace FFS.Libraries.StaticEcs {
                 ref var components6 = ref Components<C6>.Value;
                 ref var components7 = ref Components<C7>.Value;
                 ref var components8 = ref Components<C8>.Value;
-                components1.EnsureSize(count);
-                components2.EnsureSize(count);
-                components3.EnsureSize(count);
-                components4.EnsureSize(count);
-                components5.EnsureSize(count);
-                components6.EnsureSize(count);
-                components7.EnsureSize(count);
-                components8.EnsureSize(count);
-                foreach (var entity in CreateEntitiesInternal(count)) {
+                ref var entities = ref Entities.Value;
+
+                var entity = new Entity();
+                ref var eid = ref entity._id;
+                while (count > 0) {
+                    count--;
+                    eid = entities.CreateEntityInternal();
+                    GIDStore.Value.New(eid);
                     components1.Add(entity, c1);
                     components2.Add(entity, c2);
                     components3.Add(entity, c3);
@@ -737,151 +809,31 @@ namespace FFS.Libraries.StaticEcs {
                     components7.Add(entity, c7);
                     components8.Add(entity, c8);
                     onCreate?.Invoke(entity);
+
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                    if (_debugEventListeners != null) {
+                        foreach (var val in _debugEventListeners) val.OnEntityCreated(entity);
+                    }
+                    #endif
                 }
             }
             #endregion
 
+            #region NEW_BY_RAW_TYPE
             [MethodImpl(AggressiveInlining)]
-            public bool Equals(Entity entity) => _id == entity._id;
-
-            [MethodImpl(AggressiveInlining)]
-            public override bool Equals(object obj) => throw new StaticEcsException("Entity` Equals object` not allowed!");
-
-            [MethodImpl(AggressiveInlining)]
-            public override int GetHashCode() => (int) _id;
-
-            public override string ToString() => $"Entity ID: {_id}";
-
-            internal static void CreateEntities() {
-                entitiesCapacity = cfg.BaseEntitiesCount;
-                deletedEntities = new Entity[cfg.BaseDeletedEntitiesCount];
-                entitiesCount = 0;
-                deletedEntitiesCount = 0;
-                GIDStore.Value.Create(cfg);
-            }
-
-            internal static void InitializeEntities(ref GIDStore globalIdStore) {
-                GIDStore.Value = globalIdStore;
-            }
-
-            internal static void DestroyEntities() {
-                for (var i = entitiesCount; i > 0; i--) {
-                    var entity = FromIdx(i - 1);
-                    if (GIDStore.Value.Has(entity)) {
-                        entity.Destroy();
-                    }
-                }
-
-                deletedEntities = null;
-                entitiesCount = 0;
-                entitiesCapacity = 0;
-                deletedEntitiesCount = 0;
-                GIDStore.Value.Destroy();
-            }
-
-            internal static void ClearEntities() {
-                GIDStore.Value.Clear();
-                Array.Clear(deletedEntities, 0, deletedEntities.Length);
-                entitiesCount = 0;
-                deletedEntitiesCount = 0;
+            public static Entity New(Type componentType) {
+                var entity = Entities.Value.CreateEntity();
+                GetComponentsPool(componentType).Add(entity);
+                return new Entity(entity);
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal static CreateEntityEnumerator CreateEntitiesInternal(uint count) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CreateEntities, World not initialized");
-                if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CreateEntities, this operation is not supported in multithreaded mode");
-                #endif
-                int newEntitiesCount = (int) (count + 1 - (entitiesCapacity - entitiesCount + deletedEntitiesCount));
-                if (newEntitiesCount > 0) {
-                    ResizeEntities(Utils.CalculateSize((uint) (entitiesCapacity + newEntitiesCount)));
-                }
-
-                return new CreateEntityEnumerator(count);
+            public static Entity New(IComponent component) {
+                var entity = Entities.Value.CreateEntity();
+                GetComponentsPool(component.GetType()).PutRaw(entity, component);
+                return new Entity(entity);
             }
-
-            private static void ResizeEntities(uint size) {
-                entitiesCapacity = size;
-                GIDStore.Value.ResizeEntities(entitiesCapacity);
-                ModuleComponents.Value.Resize(entitiesCapacity);
-                ModuleStandardComponents.Value.Resize(entitiesCapacity);
-                #if !FFS_ECS_DISABLE_TAGS
-                ModuleTags.Value.Resize(entitiesCapacity);
-                #endif
-                #if !FFS_ECS_DISABLE_MASKS
-                ModuleMasks.Value.Resize(entitiesCapacity);
-                #endif
-
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-                if (_debugEventListeners != null) {
-                    foreach (var listener in _debugEventListeners) {
-                        listener.OnWorldResized(entitiesCapacity);
-                    }
-                }
-                #endif
-            }
-
-            internal struct CreateEntityEnumerator {
-                private uint count;
-                private Entity entity;
-
-                [MethodImpl(AggressiveInlining)]
-                public CreateEntityEnumerator(uint count) {
-                    this.count = count;
-                    entity = default;
-                }
-
-                public readonly Entity Current {
-                    [MethodImpl(AggressiveInlining)] get => entity;
-                }
-
-                [MethodImpl(AggressiveInlining)]
-                public bool MoveNext() {
-                    if (count > 0) {
-                        count--;
-                        if (deletedEntitiesCount <= 0) {
-                            entity = new Entity(entitiesCount);
-                            GIDStore.Value.New(entity);
-                            entitiesCount++;
-                        } else {
-                            entity = deletedEntities[--deletedEntitiesCount];
-                            GIDStore.Value.New(entity);
-                        }
-                        #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-                        if (_debugEventListeners != null) {
-                            foreach (var listener in _debugEventListeners) {
-                                listener.OnEntityCreated(entity);
-                            }
-                        }
-                        #endif
-                        ModuleStandardComponents.Value.InitEntity(entity);
-                        return true;
-                    }
-
-                    return false;
-                }
-
-                [MethodImpl(AggressiveInlining)]
-                public readonly CreateEntityEnumerator GetEnumerator() => this;
-            }
-            
-            [MethodImpl(AggressiveInlining)]
-            internal static void Write(ref BinaryPackWriter writer) {
-                writer.WriteUint(entitiesCapacity);
-                writer.WriteUint(entitiesCount);
-                writer.WriteUint(deletedEntitiesCount);
-                writer.WriteArrayUnmanaged(deletedEntities, 0, (int) deletedEntitiesCount);
-                GIDStore.Value.Write(ref writer);
-            }
-                
-            [MethodImpl(AggressiveInlining)]
-            internal static void Read(ref BinaryPackReader reader) {
-                entitiesCapacity = reader.ReadUint();
-                entitiesCount = reader.ReadUint();
-                deletedEntitiesCount = reader.ReadUint();
-                reader.ReadArrayUnmanaged(ref deletedEntities);
-                GIDStore.Value.Read(ref reader);
-            }
+            #endregion
         }
     }
 
@@ -895,6 +847,14 @@ namespace FFS.Libraries.StaticEcs {
         public EntityGID Gid();
 
         public bool IsActual();
+        
+        public bool IsEnabled();
+        
+        public bool IsDisabled();
+        
+        public void Enable();
+        
+        public void Disable();
 
         public void Destroy();
 
@@ -904,54 +864,52 @@ namespace FFS.Libraries.StaticEcs {
         
         public World<WorldType>.Entity AsEntityOf<WorldType>() where WorldType : struct, IWorldType;
     }
-    
-    
 
-    #if ENABLE_IL2CPP
-    [Il2CppSetOption (Option.NullChecks, false)]
-    [Il2CppSetOption (Option.ArrayBoundsChecks, false)]
-    #endif
-    public ref struct EntitiesIterator<WorldType> where WorldType : struct, IWorldType {
-        private World<WorldType>.Entity _current;
-        private uint _count;
-
-        [MethodImpl(AggressiveInlining)]
-        public EntitiesIterator(uint count) {
-            _current = default;
-            _count = count;
+    public partial class BoxedEntity<WorldType> : IEntity where WorldType : struct, IWorldType {
+        private readonly uint _entity;
+        
+        public BoxedEntity(World<WorldType>.Entity entity) {
+            _entity = entity._id;
         }
 
-        public readonly World<WorldType>.Entity Current {
-            [MethodImpl(AggressiveInlining)] get => _current;
-        }
+        public uint GetId() => _entity;
 
-        [MethodImpl(AggressiveInlining)]
-        public bool MoveNext() {
-            while (true) {
-                if (_count == 0) {
-                    return false;
-                }
+        public Type WorldTypeType() => typeof(WorldType);
 
-                _count--;
-                _current = World<WorldType>.Entity.FromIdx(_count);
-
-                if (_current.IsActual()) {
-                    return true;
-                }
+        public IWorld World() => Worlds.Get(typeof(WorldType));
+        
+        public EntityGID Gid() => new World<WorldType>.Entity(_entity).Gid();
+        
+        public bool IsActual() => new World<WorldType>.Entity(_entity).IsActual();
+        
+        public bool IsEnabled() => new World<WorldType>.Entity(_entity).IsEnabled();
+        
+        public bool IsDisabled() => new World<WorldType>.Entity(_entity).IsDisabled();
+        
+        public void Enable() => new World<WorldType>.Entity(_entity).Enable();
+        
+        public void Disable() => new World<WorldType>.Entity(_entity).Disable();
+        
+        public void Destroy() => new World<WorldType>.Entity(_entity).Destroy();
+        
+        public void TryDestroy() => new World<WorldType>.Entity(_entity).TryDestroy();
+        
+        public bool TryAsEntityOf<WT>(out World<WT>.Entity entity) where WT : struct, IWorldType {
+            if (typeof(WT) == typeof(WorldType)) {
+                entity = new World<WT>.Entity(_entity);
+                return true;
             }
+                
+            entity = default;
+            return false;
         }
-
-        [MethodImpl(AggressiveInlining)]
-        public readonly EntitiesIterator<WorldType> GetEnumerator() => this;
-
-        [MethodImpl(AggressiveInlining)]
-        public List<World<WorldType>.Entity> ToList() {
-            var entities = new List<World<WorldType>.Entity>();
-            while (MoveNext()) {
-                entities.Add(_current);
-            }
-
-            return entities;
+        
+        public World<WT>.Entity AsEntityOf<WT>() where WT : struct, IWorldType {
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            if (typeof(WT) != typeof(WorldType)) throw new StaticEcsException($"Invalid cast: expected World<{typeof(WorldType).Name}>, got World<{typeof(WT).Name}>.");
+            #endif
+                
+            return new World<WT>.Entity(_entity);
         }
-    }
+    } 
 }

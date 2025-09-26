@@ -1,5 +1,4 @@
-﻿#if !FFS_ECS_DISABLE_MASKS
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -15,7 +14,7 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
-        public readonly partial struct Entity {
+        public partial struct Entity {
             
             [MethodImpl(AggressiveInlining)]
             public ref L SetLink<L>(EntityGID link) where L : struct, IEntityLinkComponent<L> {
@@ -123,24 +122,24 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public ref L SetLinks<L>(Entity link1) where L : struct, IEntityLinksComponent<L> {
+            public ref L SetLinks<L>(EntityGID link1) where L : struct, IEntityLinksComponent<L> {
                 ref var component = ref Components<L>.Value.TryAdd(this);
                 ref var multi = ref component.RefValue(ref component).multi;
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (multi.Contains(link1)) throw new StaticEcsException($"Link {link1} already contains in relations type {typeof(L)}, for {this}");
                 #endif
                 
                 multi.Add(link1);
-                Context.Value.Get<LinkManyHandlers<L>>().OnAddLinkItem?.Invoke(this, link1);
+                Context.Value.Get<LinkManyHandlers<L>>().OnAddLinkItem?.Invoke(this, link1.Unpack<WorldType>());
                 
                 return ref component;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public ref L SetLinks<L>(Entity link1, Entity link2) where L : struct, IEntityLinksComponent<L> {
+            public ref L SetLinks<L>(EntityGID link1, EntityGID link2) where L : struct, IEntityLinksComponent<L> {
                 ref var component = ref Components<L>.Value.TryAdd(this);
                 ref var multi = ref component.RefValue(ref component).multi;
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (multi.Contains(link1)) throw new StaticEcsException($"Link {link1} already contains in relations type {typeof(L)}, for {this}");
                 multi.Add(link1);
                 if (multi.Contains(link2)) throw new StaticEcsException($"Link {link2} already contains in relations type {typeof(L)}, for {this}");
@@ -150,18 +149,18 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
                 var handler = Context.Value.Get<LinkManyHandlers<L>>().OnAddLinkItem;
                 if (handler != null) {
-                    handler(this, link1);
-                    handler(this, link2);
+                    handler(this, link1.Unpack<WorldType>());
+                    handler(this, link2.Unpack<WorldType>());
                 }
                 
                 return ref component;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public ref L SetLinks<L>(Entity link1, Entity link2, Entity link3) where L : struct, IEntityLinksComponent<L> {
+            public ref L SetLinks<L>(EntityGID link1, EntityGID link2, EntityGID link3) where L : struct, IEntityLinksComponent<L> {
                 ref var component = ref Components<L>.Value.TryAdd(this);
                 ref var multi = ref component.RefValue(ref component).multi;
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (multi.Contains(link1)) throw new StaticEcsException($"Link {link1} already contains in relations type {typeof(L)}, for {this}");
                 multi.Add(link1);
                 if (multi.Contains(link2)) throw new StaticEcsException($"Link {link2} already contains in relations type {typeof(L)}, for {this}");
@@ -173,19 +172,19 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
                 var handler = Context.Value.Get<LinkManyHandlers<L>>().OnAddLinkItem;
                 if (handler != null) {
-                    handler(this, link1);
-                    handler(this, link2);
-                    handler(this, link3);
+                    handler(this, link1.Unpack<WorldType>());
+                    handler(this, link2.Unpack<WorldType>());
+                    handler(this, link3.Unpack<WorldType>());
                 }
                 
                 return ref component;
             }
 
             [MethodImpl(AggressiveInlining)]
-            public ref L SetLinks<L>(Entity link1, Entity link2, Entity link3, Entity link4) where L : struct, IEntityLinksComponent<L> {
+            public ref L SetLinks<L>(EntityGID link1, EntityGID link2, EntityGID link3, EntityGID link4) where L : struct, IEntityLinksComponent<L> {
                 ref var component = ref Components<L>.Value.TryAdd(this);
                 ref var multi = ref component.RefValue(ref component).multi;
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (multi.Contains(link1)) throw new StaticEcsException($"Link {link1} already contains in relations type {typeof(L)}, for {this}");
                 multi.Add(link1);
                 if (multi.Contains(link2)) throw new StaticEcsException($"Link {link2} already contains in relations type {typeof(L)}, for {this}");
@@ -199,10 +198,10 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
                 var handler = Context.Value.Get<LinkManyHandlers<L>>().OnAddLinkItem;
                 if (handler != null) {
-                    handler(this, link1);
-                    handler(this, link2);
-                    handler(this, link3);
-                    handler(this, link4);
+                    handler(this, link1.Unpack<WorldType>());
+                    handler(this, link2.Unpack<WorldType>());
+                    handler(this, link3.Unpack<WorldType>());
+                    handler(this, link4.Unpack<WorldType>());
                 }
                 
                 return ref component;
@@ -211,4 +210,3 @@ namespace FFS.Libraries.StaticEcs {
         }
     }
 }
-#endif

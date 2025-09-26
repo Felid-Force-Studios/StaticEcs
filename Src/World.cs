@@ -16,15 +16,14 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppEagerStaticClassConstruction]
     #endif
     public abstract partial class World<WorldType> {
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
         internal static List<IWorldDebugEventListener> _debugEventListeners;
         #endif
 
         internal static WorldConfig cfg;
-        internal static ushort runtimeVersion;
         public static WorldStatus Status { get; private set; }
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         internal static bool GidStoreLoaded;
         internal static MultiThreadStatus MTStatus = new();
         internal static bool MultiThreadActive {
@@ -38,35 +37,32 @@ namespace FFS.Libraries.StaticEcs {
                 throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Create, World already created");
             }
             cfg = config;
-            Entity.CreateEntities();
+            cfg.Normalize();
+            
+            Entities.Value.Create(cfg.baseEntitiesCapacity);
             ModuleComponents.Value.Create(cfg.BaseComponentTypesCount);
-            ModuleStandardComponents.Value.Create(cfg.BaseStandardComponentTypesCount);
             #if !FFS_ECS_DISABLE_TAGS
             ModuleTags.Value.Create(cfg.BaseTagTypesCount);
             #endif
-            #if !FFS_ECS_DISABLE_MASKS
-            ModuleMasks.Value.Create(cfg.BaseMaskTypesCount);
-            #endif
             Serializer.Create();
             Status = WorldStatus.Created;
+            CurrentQuery.QueryDataCount = 0;
 
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             MultiThreadActive = false;
             GidStoreLoaded = false;
+            CurrentQuery.QueryMode = 0;
             #endif
             
             #if !FFS_ECS_DISABLE_EVENTS
             Events.Create();
             #endif
-            IncrementRuntimeVersion();
             
             BinaryPack.RegisterWithCollections<EntityGID, UnmanagedPackArrayStrategy<EntityGID>>(EntityGIDSerializer.WriteEntityGID, EntityGIDSerializer.ReadEntityGID);
 
             if (!BinaryPack.IsRegistered<GIDStoreSnapshot>()) {
                 BinaryPack.Register(GIDStoreSnapshot.Write, GIDStoreSnapshot.Read);
             }
-            
-            ModuleStandardComponents.Value.RegisterComponentType(new EntityStatusConfig<WorldType>(), false);
         }
 
         public static void Initialize() {
@@ -74,14 +70,14 @@ namespace FFS.Libraries.StaticEcs {
                 throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Create, World not created");
             }
 
-            Initialize(new GIDStore().Create(cfg));
+            Initialize(new GIDStore().Create(cfg.baseEntitiesCapacity));
         }
 
         public static void Initialize(GIDStoreSnapshot gidStoreSnapshot) {
             if (Status != WorldStatus.Created) {
                 throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Create, World not created");
             }
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             GidStoreLoaded = true;
             #endif
             Initialize(new GIDStore(gidStoreSnapshot));
@@ -92,20 +88,16 @@ namespace FFS.Libraries.StaticEcs {
                 throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Create, World not created");
             }
 
-            Entity.InitializeEntities(ref gidStore);
+            Entities.Value.Initialize(ref gidStore);
             ModuleComponents.Value.Initialize();
-            ModuleStandardComponents.Value.Initialize();
             #if !FFS_ECS_DISABLE_TAGS
             ModuleTags.Value.Initialize();
-            #endif
-            #if !FFS_ECS_DISABLE_MASKS
-            ModuleMasks.Value.Initialize();
             #endif
             Worlds.Set(typeof(WorldType), new WorldWrapper<WorldType>());
             ParallelRunner<WorldType>.Create(cfg);
             
             Status = WorldStatus.Initialized;
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
             if (_debugEventListeners != null) {
                 foreach (var listener in _debugEventListeners) {
                     listener.OnWorldInitialized();
@@ -116,7 +108,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public static void Destroy() {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Destroy, World not initialized");
             #endif
             
@@ -124,7 +116,7 @@ namespace FFS.Libraries.StaticEcs {
             Events.Destroy();
             #endif
 
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
             if (_debugEventListeners != null) {
                 for (var i = _debugEventListeners.Count - 1; i >= 0; i--) {
                     var listener = _debugEventListeners[i];
@@ -135,14 +127,10 @@ namespace FFS.Libraries.StaticEcs {
             _debugEventListeners = null;
             #endif
 
-            Entity.DestroyEntities();
+            Entities.Value.Destroy();
             ModuleComponents.Value.Destroy();
-            ModuleStandardComponents.Value.Destroy();
             #if !FFS_ECS_DISABLE_TAGS
             ModuleTags.Value.Destroy();
-            #endif
-            #if !FFS_ECS_DISABLE_MASKS
-            ModuleMasks.Value.Destroy();
             #endif
 
             Status = WorldStatus.NotCreated;
@@ -153,7 +141,7 @@ namespace FFS.Libraries.StaticEcs {
             Context.Value.Clear();
             NamedContext.Clear();
             Serializer.Destroy();
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             MultiThreadActive = false;
             FileLogger?.Disable();
             FileLogger = default;
@@ -163,52 +151,33 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public static void DestroyAllEntities() {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: DestroyAllEntities, World not initialized");
             #endif
-            for (var i = Entity.entitiesCount; i > 0; i--) {
-                var entity = Entity.FromIdx(i - 1);
-                if (GIDStore.Value.Has(entity)) {
-                    entity.Destroy();
-                }
-            }
+            Query.For(ent => ent.Destroy(), EntityStatusType.Any, QueryMode.Flexible);
         }
         
         [MethodImpl(AggressiveInlining)]
         public static void Clear() {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Clear, World not initialized");
             #endif
 
             ModuleComponents.Value.Clear();
-            ModuleStandardComponents.Value.Clear();
             #if !FFS_ECS_DISABLE_TAGS
             ModuleTags.Value.Clear();
             #endif
-            #if !FFS_ECS_DISABLE_MASKS
-            ModuleMasks.Value.Clear();
-            #endif
-            Entity.ClearEntities();
+            Entities.Value.Clear();
             
             #if !FFS_ECS_DISABLE_EVENTS
             Events.Clear();
             #endif
-            IncrementRuntimeVersion();
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        private static void IncrementRuntimeVersion() {
-            if (runtimeVersion == ushort.MaxValue) {
-                runtimeVersion = 1;
-            } else {
-                runtimeVersion++;
-            }
         }
 
         [MethodImpl(AggressiveInlining)]
         public static bool IsWorldInitialized() => Status == WorldStatus.Initialized;
 
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
         [MethodImpl(AggressiveInlining)]
         public static void AddWorldDebugEventListener(IWorldDebugEventListener listener) {
             _debugEventListeners ??= new List<IWorldDebugEventListener>();
@@ -261,27 +230,25 @@ namespace FFS.Libraries.StaticEcs {
     }
 
     public struct WorldConfig {
-        public uint BaseEntitiesCount;
-        public uint BaseDeletedEntitiesCount;
-        public uint BaseStandardComponentTypesCount;
+        public uint baseEntitiesCapacity;
         public uint BaseComponentTypesCount;
-        public uint BaseMaskTypesCount;
         public uint BaseTagTypesCount;
-        public uint BaseEventPoolCount;
         public ParallelQueryType ParallelQueryType;
         public uint CustomThreadCount;
+        public bool DefaultQueryModeStrict;
 
-        public static WorldConfig Default() =>
-            new() {
-                BaseEntitiesCount = 256,
-                BaseDeletedEntitiesCount = 256,
-                BaseStandardComponentTypesCount = 4,
+        public static WorldConfig Default() => new() {
+                baseEntitiesCapacity = Const.ENTITIES_IN_CHUNK,
                 BaseComponentTypesCount = 64,
-                BaseMaskTypesCount = 64,
                 BaseTagTypesCount = 64,
-                BaseEventPoolCount = 32,
-                ParallelQueryType = ParallelQueryType.Disabled
+                ParallelQueryType = ParallelQueryType.Disabled,
+                CustomThreadCount = 1,
+                DefaultQueryModeStrict = true
             };
+        
+        internal void Normalize() {
+            baseEntitiesCapacity.NormalizeThis(Const.ENTITIES_IN_CHUNK);
+        }
     }
     
     public enum ParallelQueryType {
@@ -290,7 +257,7 @@ namespace FFS.Libraries.StaticEcs {
         CustomThreadsCount
     }
     
-    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
     internal class MultiThreadStatus {
         public bool Active;
     }

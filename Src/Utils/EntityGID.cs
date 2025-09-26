@@ -18,14 +18,24 @@ namespace FFS.Libraries.StaticEcs {
         internal uint id;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal EntityGID(uint id, byte version) {
+        public EntityGID(uint id, byte version) {
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            if (version == 0) throw new StaticEcsException("EntityGID version 0 is unsupported.");
+            if (id >= IdMask) throw new StaticEcsException("EntityGID id is invalid.");
+            #endif
             this.id = id | ((uint) version << IdBits);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal EntityGID(uint value) {
-            id = value;
+        public EntityGID(uint rawValue) {
+            id = rawValue;
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            if (Version() == 0) throw new StaticEcsException("EntityGID version 0 is unsupported.");
+            #endif
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly uint Raw() => id;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly uint Id() => id & IdMask;
@@ -79,7 +89,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override string ToString() {
-            #if DEBUG || FFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             return Utils.EntityGidToString(this);
             #endif
             return $"GID {Id()} : Version {Version()}";

@@ -84,7 +84,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public readonly ref T Get<T>() {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!Context<T>._has) {
                     throw new StaticEcsException($"Context<{typeof(WorldType)}> for {typeof(T)} undefined");
                 }
@@ -169,7 +169,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void Replace(T value) {
-                #if DEBUG || FFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (value == null) {
                     throw new StaticEcsException($"{typeof(T).Name} is null, Context<{typeof(WorldType)}>");
                 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Text;
 using static System.Runtime.CompilerServices.MethodImplOptions;
@@ -11,43 +12,160 @@ using Unity.IL2CPP.CompilerServices;
 [assembly: InternalsVisibleTo("FFS.StaticEcs.Unity")]
 [assembly: InternalsVisibleTo("FFS.StaticEcs.Unity.Editor")]
 
-internal class StaticEcsException : Exception {
-    public StaticEcsException() { }
-
-    public StaticEcsException(string message) : base(message) { }
-
-    public StaticEcsException(string message, Exception inner) : base(message, inner) { }
-}
 
 namespace FFS.Libraries.StaticEcs {
     
-    public static class Const {
-        internal const uint EmptyComponentMask = 1u << 31;
-        internal const uint EmptyComponentMaskInv = ~EmptyComponentMask;
-        internal const uint DisabledComponentMask = 1u << 30;
-        internal const uint DisabledComponentMaskInv = ~DisabledComponentMask;
-        internal const uint EmptyAndDisabledComponentMask = EmptyComponentMask | DisabledComponentMask;
-        internal const uint EmptyAndDisabledComponentMaskInv = ~EmptyAndDisabledComponentMask;
+    internal class StaticEcsException : Exception {
+        public StaticEcsException() { }
+
+        public StaticEcsException(string message) : base(message) { }
+
+        public StaticEcsException(string message, Exception inner) : base(message, inner) { }
+    }
+    
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption (Option.NullChecks, false)]
+    [Il2CppSetOption (Option.ArrayBoundsChecks, false)]
+    [Il2CppEagerStaticClassConstruction]
+    #endif
+    internal static class Const {
+        internal const int BITS_PER_LONG = 64;
+        internal const int LONG_SHIFT = 6;
+        internal const int LONG_OFFSET_MASK = BITS_PER_LONG - 1;
+        
+        internal const int ENTITIES_IN_BLOCK = BITS_PER_LONG;
+        internal const int ENTITIES_IN_BLOCK_SHIFT = LONG_SHIFT;
+        internal const int ENTITIES_IN_BLOCK_OFFSET_MASK = ENTITIES_IN_BLOCK - 1;
+        
+        internal const int BLOCK_IN_CHUNK = 64;
+        internal const int BLOCK_IN_CHUNK_SHIFT = 6;
+        internal const int BLOCK_IN_CHUNK_OFFSET_MASK = BLOCK_IN_CHUNK - 1;
+        
+        internal const int ENTITIES_IN_CHUNK = ENTITIES_IN_BLOCK * BLOCK_IN_CHUNK;
+        internal const int ENTITIES_IN_CHUNK_SHIFT = ENTITIES_IN_BLOCK_SHIFT + BLOCK_IN_CHUNK_SHIFT;
+        internal const int ENTITIES_IN_CHUNK_OFFSET_MASK = ENTITIES_IN_CHUNK - 1;
+
+        #if FFS_ECS_LARGE_WORLDS
+        internal const int DATA_BLOCK_SIZE = 4096;
+        internal const int DATA_BLOCK_SIZE_FOR_THREADS = 4096;
+        internal const int DATA_BLOCK_IN_CHUNK_FOR_THREADS = 1;
+        internal const int DATA_QUERY_SHIFT_FOR_THREADS = 6;
+        internal const int JOB_SIZE = 64;
+        internal const int DATA_SHIFT = 12;
+        #else
+        internal const int DATA_BLOCK_SIZE = 256;
+        internal const int DATA_BLOCK_SIZE_FOR_THREADS = 512;
+        internal const int DATA_BLOCK_IN_CHUNK_FOR_THREADS = 8;
+        internal const int DATA_QUERY_SHIFT_FOR_THREADS = 3;
+        internal const int JOB_SIZE = 8;
+        internal const int DATA_SHIFT = 8;
+        #endif
+        internal const int DATA_ENTITY_MASK = DATA_BLOCK_SIZE - 1;
+        internal const int DATA_QUERY_SHIFT = DATA_SHIFT - BLOCK_IN_CHUNK_SHIFT;
+        internal const int DATA_BLOCK_MASK = ENTITIES_IN_CHUNK / DATA_BLOCK_SIZE - 1;
+        internal const int DATA_BLOCKS_IN_CHUNK = ENTITIES_IN_CHUNK / DATA_BLOCK_SIZE;
+        
+        internal const int MAX_NESTED_QUERY = 4;
+        
+        internal static readonly ulong[] DataMasks = CreateDataMasks();
+
+        internal static ulong[] CreateDataMasks() {
+            var masks = new ulong[ENTITIES_IN_CHUNK / DATA_BLOCK_SIZE];
+            const int range = DATA_BLOCK_SIZE / BLOCK_IN_CHUNK;
+            const ulong baseMask = range == 64 
+                ? ulong.MaxValue 
+                : (1UL << range) - 1;
+            for (var i = 0; i < masks.Length; i++) {
+                masks[i] = baseMask << (i * range);
+            }
+
+            return masks;
+        }
     }
 
     #if ENABLE_IL2CPP
     [Il2CppSetOption (Option.NullChecks, false)]
     [Il2CppSetOption (Option.ArrayBoundsChecks, false)]
+    [Il2CppEagerStaticClassConstruction]
     #endif
     public static class Utils {
-        #if DEBUG || FFS_ECS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         public static Func<EntityGID, string> EntityGidToString = gid => $"GID {gid.Id()} : Version {gid.Version()}";
         #endif
-        
-        internal static ushort CalculateMaskLen(ushort count) {
-            var len = (ushort) (count >> 6);
-            if (count - (len << 6) != 0) {
-                len++;
-            }
 
-            return len;
+        public static readonly byte[] DeBruijn = {
+            0, 1, 17, 2, 18, 50, 3, 57, 47, 19, 22, 51, 29, 4, 33, 58,
+            15, 48, 20, 27, 25, 23, 52, 41, 54, 30, 38, 5, 43, 34, 59, 8,
+            63, 16, 49, 56, 46, 21, 28, 32, 14, 26, 24, 40, 53, 37, 42, 7,
+            62, 55, 45, 31, 13, 39, 36, 6, 61, 44, 12, 35, 60, 11, 10, 9,
+        };
+        
+        [MethodImpl(AggressiveInlining)]
+        public static int ApproximateMSB(this ulong value) {
+            return value >= 0x100000000UL 
+                ? value >= 0x1000000000000UL 
+                    ? 64 
+                    : 48 
+                : value >= 0x10000UL 
+                    ? 32 
+                    : 16;
         }
 
+        #region MATH
+        
+        [MethodImpl(AggressiveInlining)]
+        public static bool CheckBitDensity(this ulong x, out int idx, out int end) {
+            idx = DeBruijn[(int) (((x & (ulong) -(long) x) * 0x37E84A99DAE458FUL) >> 58)];
+            end = ApproximateMSB(x);
+            var total = PopCnt(x);
+            var half = (end - idx) >> 1;
+            return total >= half;
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public static int PopCnt(this ulong x) {
+            x -= (x >> 1) & 0x5555555555555555UL;
+            x = (x & 0x3333333333333333UL) + ((x >> 2) & 0x3333333333333333UL);
+            x = (x + (x >> 4)) & 0x0F0F0F0F0F0F0F0FUL;
+            return (int)((x * 0x0101010101010101UL) >> 56);
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        internal static int PopLsb(ref ulong v) {
+            var val = DeBruijn[(int) (((v & (ulong) -(long) v) * 0x37E84A99DAE458FUL) >> 58)];
+            v &= v - 1;
+            return val;
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        internal static int Lsb(ulong v) {
+            return DeBruijn[(int) (((v & (ulong) -(long) v) * 0x37E84A99DAE458FUL) >> 58)];
+        }
+        #endregion
+        
+
+        
+        [MethodImpl(AggressiveInlining)]
+        internal static void SetBitAtomic(this ref long mask, int bitIndex) {
+            var bit = 1UL << bitIndex;
+            long oldValue, newValue;
+            do {
+                oldValue = mask;
+                newValue = (long)((ulong)oldValue | bit);
+            }
+            while (Interlocked.CompareExchange(ref mask, newValue, oldValue) != oldValue);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        internal static void ClearBitAtomic(this ref long mask, int bitIndex) {
+            var bitMask = ~(1UL << bitIndex);
+            long oldValue, newValue;
+            do {
+                oldValue = mask;
+                newValue = (long)((ulong)oldValue & bitMask);
+            }
+            while (Interlocked.CompareExchange(ref mask, newValue, oldValue) != oldValue);
+        }
 
         [MethodImpl(AggressiveInlining)]
         public static uint CalculateSize(uint value) {
@@ -65,6 +183,18 @@ namespace FFS.Libraries.StaticEcs {
             u++;
 
             return u;
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public static void NormalizeThis(this ref uint value, uint min) {
+            var minMinusOne = min - 1;
+            value = (Math.Max(value, min) + minMinusOne) & ~minMinusOne;
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public static ushort Normalize(this ushort value, ushort min) {
+            var minMinusOne = min - 1;
+            return (ushort) ((Math.Max(value, min) + minMinusOne) & ~minMinusOne);
         }
         
         [MethodImpl(AggressiveInlining)]
@@ -109,7 +239,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             var genericArguments = type.GetGenericArguments();
-            var typeName = type.FullName!.Substring(0, type.FullName.IndexOf('`')); // Убираем суффикс `1, `2 и т.д.
+            var typeName = type.FullName!.Substring(0, type.FullName.IndexOf('`'));
             var genericArgs = string.Join(", ", Array.ConvertAll(genericArguments, GetGenericName));
 
             return $"{typeName}<{genericArgs}>";
@@ -118,7 +248,7 @@ namespace FFS.Libraries.StaticEcs {
 
     public interface Stateless { }
     
-    #if DEBUG || FFS_ECS_ENABLE_DEBUG
+    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
@@ -233,14 +363,11 @@ namespace FFS.Libraries.StaticEcs {
                                                 #if !FFS_ECS_DISABLE_TAGS
                                                 , World<WorldType>.ITagDebugEventListener
                                                 #endif
-                                                #if !FFS_ECS_DISABLE_MASKS
-                                                , World<WorldType>.IMaskDebugEventListener
-                                                #endif
                                                 #if !FFS_ECS_DISABLE_EVENTS
                                                 , World<WorldType>.IEventsDebugEventListener
                                               #endif
         where WorldType : struct, IWorldType {
-        internal static readonly World<WorldType>.Entity EmptyEntity = World<WorldType>.Entity.FromIdx(uint.MaxValue);
+        internal static readonly uint EmptyEntity = uint.MaxValue;
 
         internal readonly string LogsFilePath;
         internal readonly DateTime DateTime;
@@ -285,9 +412,6 @@ namespace FFS.Libraries.StaticEcs {
                 #if !FFS_ECS_DISABLE_TAGS
                 World<WorldType>.AddTagDebugEventListener(this);
                 #endif
-                #if !FFS_ECS_DISABLE_MASKS
-                World<WorldType>.AddMaskDebugEventListener(this);
-                #endif
                 #if !FFS_ECS_DISABLE_EVENTS
                 World<WorldType>.Events.AddEventsDebugEventListener(this);
                 #endif
@@ -301,9 +425,6 @@ namespace FFS.Libraries.StaticEcs {
                 World<WorldType>.RemoveComponentsDebugEventListener(this);
                 #if !FFS_ECS_DISABLE_TAGS
                 World<WorldType>.RemoveTagDebugEventListener(this);
-                #endif
-                #if !FFS_ECS_DISABLE_MASKS
-                World<WorldType>.RemoveMaskDebugEventListener(this);
                 #endif
                 #if !FFS_ECS_DISABLE_EVENTS
                 World<WorldType>.Events.RemoveEventsDebugEventListener(this);
@@ -346,7 +467,7 @@ namespace FFS.Libraries.StaticEcs {
         public void OnWorldResized(uint capacity) { }
         
         public void Write(OperationType operation, string type) {
-            Write(EmptyEntity, operation, type);
+            Write(new World<WorldType>.Entity(EmptyEntity), operation, type);
         }
 
         public void Write(World<WorldType>.Entity entity, OperationType operation, string type) {
@@ -423,28 +544,18 @@ namespace FFS.Libraries.StaticEcs {
             Write(entity, OperationType.TagDelete, TypeData<T>.Name);
         }
         #endif
-        
-        #if !FFS_ECS_DISABLE_MASKS
-        public void OnMaskSet<T>(World<WorldType>.Entity entity) where T : struct, IMask {
-            Write(entity, OperationType.MaskSet, TypeData<T>.Name);
-        }
-
-        public void OnMaskDelete<T>(World<WorldType>.Entity entity) where T : struct, IMask {
-            Write(entity, OperationType.MaskDelete, TypeData<T>.Name);
-        }
-        #endif
 
         #if !FFS_ECS_DISABLE_EVENTS
         public void OnEventSent<T>(World<WorldType>.Event<T> value) where T : struct, IEvent {
-            Write(EmptyEntity, OperationType.EventAdd, TypeData<T>.Name);
+            Write(new World<WorldType>.Entity(EmptyEntity), OperationType.EventAdd, TypeData<T>.Name);
         }
 
         public void OnEventReadAll<T>(World<WorldType>.Event<T> value) where T : struct, IEvent {
-            Write(EmptyEntity, OperationType.EventDelete, TypeData<T>.Name);
+            Write(new World<WorldType>.Entity(EmptyEntity), OperationType.EventDelete, TypeData<T>.Name);
         }
 
         public void OnEventSuppress<T>(World<WorldType>.Event<T> value) where T : struct, IEvent {
-            Write(EmptyEntity, OperationType.EventDelete, TypeData<T>.Name);
+            Write(new World<WorldType>.Entity(EmptyEntity), OperationType.EventDelete, TypeData<T>.Name);
         }
         #endif
     }

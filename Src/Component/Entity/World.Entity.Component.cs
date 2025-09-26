@@ -16,13 +16,12 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
-        public readonly partial struct Entity {
+        public partial struct Entity {
+            [MethodImpl(AggressiveInlining)]
+            public int ComponentsCount() => ModuleComponents.Value.ComponentsCount(this);
 
             [MethodImpl(AggressiveInlining)]
-            public int ComponentsCount(bool withDisabled = true) => ModuleComponents.Value.ComponentsCount(this, withDisabled);
-
-            [MethodImpl(AggressiveInlining)]
-            public void GetAllComponents(List<IComponent> result, bool withDisabled = true) => ModuleComponents.Value.GetAllComponents(this, result, withDisabled);
+            public void GetAllComponents(List<IComponent> result) => ModuleComponents.Value.GetAllComponents(this, result);
 
             #region BY_TYPE
             #region REF
@@ -68,20 +67,20 @@ namespace FFS.Libraries.StaticEcs {
                 where C3 : struct, IComponent {
                 return Components<C1>.Value.Has(this) || Components<C2>.Value.Has(this) || Components<C3>.Value.Has(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool HasDisabledAllOf<C1>()
                 where C1 : struct, IComponent {
                 return Components<C1>.Value.HasDisabled(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool HasDisabledAllOf<C1, C2>()
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
                 return Components<C1>.Value.HasDisabled(this) && Components<C2>.Value.HasDisabled(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool HasDisabledAllOf<C1, C2, C3>()
                 where C1 : struct, IComponent
@@ -89,14 +88,14 @@ namespace FFS.Libraries.StaticEcs {
                 where C3 : struct, IComponent {
                 return Components<C1>.Value.HasDisabled(this) && Components<C2>.Value.HasDisabled(this) && Components<C3>.Value.HasDisabled(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool HasDisabledAnyOf<C1, C2>()
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
                 return Components<C1>.Value.HasDisabled(this) || Components<C2>.Value.HasDisabled(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool HasDisabledAnyOf<C1, C2, C3>()
                 where C1 : struct, IComponent
@@ -104,20 +103,20 @@ namespace FFS.Libraries.StaticEcs {
                 where C3 : struct, IComponent {
                 return Components<C1>.Value.HasDisabled(this) || Components<C2>.Value.HasDisabled(this) || Components<C3>.Value.HasDisabled(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool HasEnabledAllOf<C1>()
                 where C1 : struct, IComponent {
                 return Components<C1>.Value.HasEnabled(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool HasEnabledAllOf<C1, C2>()
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
                 return Components<C1>.Value.HasEnabled(this) && Components<C2>.Value.HasEnabled(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool HasEnabledAllOf<C1, C2, C3>()
                 where C1 : struct, IComponent
@@ -125,14 +124,14 @@ namespace FFS.Libraries.StaticEcs {
                 where C3 : struct, IComponent {
                 return Components<C1>.Value.HasEnabled(this) && Components<C2>.Value.HasEnabled(this) && Components<C3>.Value.HasEnabled(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool HasEnabledAnyOf<C1, C2>()
                 where C1 : struct, IComponent
                 where C2 : struct, IComponent {
                 return Components<C1>.Value.HasEnabled(this) || Components<C2>.Value.HasEnabled(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool HasEnabledAnyOf<C1, C2, C3>()
                 where C1 : struct, IComponent
@@ -141,14 +140,14 @@ namespace FFS.Libraries.StaticEcs {
                 return Components<C1>.Value.HasEnabled(this) || Components<C2>.Value.HasEnabled(this) || Components<C3>.Value.HasEnabled(this);
             }
             #endregion
-            
+
             #region DISABLE
             [MethodImpl(AggressiveInlining)]
             public void Disable<C>()
                 where C : struct, IComponent {
                 Components<C>.Value.Disable(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void Disable<C1, C2>()
                 where C1 : struct, IComponent
@@ -174,7 +173,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C : struct, IComponent {
                 Components<C>.Value.Enable(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void Enable<C1, C2>()
                 where C1 : struct, IComponent
@@ -193,7 +192,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C3>.Value.Enable(this);
             }
             #endregion
-            
+
             #region ADD
             [MethodImpl(AggressiveInlining)]
             public ref C Add<C>()
@@ -244,13 +243,13 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C4>.Value.Add(this);
                 Components<C5>.Value.Add(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void Add<C1>(C1 c1)
                 where C1 : struct, IComponent {
                 Components<C1>.Value.Add(this, c1);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void Add<C1, C2>(C1 c1, C2 c2)
                 where C1 : struct, IComponent
@@ -258,7 +257,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C1>.Value.Add(this, c1);
                 Components<C2>.Value.Add(this, c2);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void Add<C1, C2, C3>(C1 c1, C2 c2, C3 c3)
                 where C1 : struct, IComponent
@@ -268,7 +267,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C2>.Value.Add(this, c2);
                 Components<C3>.Value.Add(this, c3);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void Add<C1, C2, C3, C4>(C1 c1, C2 c2, C3 c3, C4 c4)
                 where C1 : struct, IComponent
@@ -280,7 +279,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C3>.Value.Add(this, c3);
                 Components<C4>.Value.Add(this, c4);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void Add<C1, C2, C3, C4, C5>(C1 c1, C2 c2, C3 c3, C4 c4, C5 c5)
                 where C1 : struct, IComponent
@@ -294,7 +293,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C4>.Value.Add(this, c4);
                 Components<C5>.Value.Add(this, c5);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public ref C TryAdd<C>()
                 where C : struct, IComponent {
@@ -344,7 +343,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C4>.Value.TryAdd(this);
                 Components<C5>.Value.TryAdd(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public ref C TryAdd<C>(out bool added)
                 where C : struct, IComponent {
@@ -383,7 +382,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C4>.Value.TryAdd(this, out var added4);
                 added = added1 || added2 || added3 || added4;
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void TryAdd<C1, C2, C3, C4, C5>(out bool added)
                 where C1 : struct, IComponent
@@ -501,7 +500,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C4>.Value.Delete(this);
                 Components<C5>.Value.Delete(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool TryDelete<C>() where C : struct, IComponent {
                 return Components<C>.Value.TryDelete(this);
@@ -565,7 +564,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C1 : struct, IComponent {
                 Components<C1>.Value.Copy(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void CopyComponentsTo<C1, C2>(Entity target)
                 where C1 : struct, IComponent
@@ -573,7 +572,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C1>.Value.Copy(this, target);
                 Components<C2>.Value.Copy(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void CopyComponentsTo<C1, C2, C3>(Entity target)
                 where C1 : struct, IComponent
@@ -583,7 +582,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C2>.Value.Copy(this, target);
                 Components<C3>.Value.Copy(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void CopyComponentsTo<C1, C2, C3, C4>(Entity target)
                 where C1 : struct, IComponent
@@ -595,7 +594,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C3>.Value.Copy(this, target);
                 Components<C4>.Value.Copy(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void CopyComponentsTo<C1, C2, C3, C4, C5>(Entity target)
                 where C1 : struct, IComponent
@@ -609,13 +608,13 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C4>.Value.Copy(this, target);
                 Components<C5>.Value.Copy(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool TryCopyComponentsTo<C1>(Entity target)
                 where C1 : struct, IComponent {
                 return Components<C1>.Value.TryCopy(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool TryCopyComponentsTo<C1, C2>(Entity target)
                 where C1 : struct, IComponent
@@ -624,7 +623,7 @@ namespace FFS.Libraries.StaticEcs {
                 var copied2 = Components<C2>.Value.TryCopy(this, target);
                 return copied1 && copied2;
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool TryCopyComponentsTo<C1, C2, C3>(Entity target)
                 where C1 : struct, IComponent
@@ -635,7 +634,7 @@ namespace FFS.Libraries.StaticEcs {
                 var copied3 = Components<C3>.Value.TryCopy(this, target);
                 return copied1 && copied2 && copied3;
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool TryCopyComponentsTo<C1, C2, C3, C4>(Entity target)
                 where C1 : struct, IComponent
@@ -648,7 +647,7 @@ namespace FFS.Libraries.StaticEcs {
                 var copied4 = Components<C4>.Value.TryCopy(this, target);
                 return copied1 && copied2 && copied3 && copied4;
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool TryCopyComponentsTo<C1, C2, C3, C4, C5>(Entity target)
                 where C1 : struct, IComponent
@@ -664,14 +663,14 @@ namespace FFS.Libraries.StaticEcs {
                 return copied1 && copied2 && copied3 && copied4 && copied5;
             }
             #endregion
-            
+
             #region MOVE
             [MethodImpl(AggressiveInlining)]
             public void MoveComponentsTo<C1>(Entity target)
                 where C1 : struct, IComponent {
                 Components<C1>.Value.Move(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void MoveComponentsTo<C1, C2>(Entity target)
                 where C1 : struct, IComponent
@@ -679,7 +678,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C1>.Value.Move(this, target);
                 Components<C2>.Value.Move(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void MoveComponentsTo<C1, C2, C3>(Entity target)
                 where C1 : struct, IComponent
@@ -689,7 +688,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C2>.Value.Move(this, target);
                 Components<C3>.Value.Move(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void MoveComponentsTo<C1, C2, C3, C4>(Entity target)
                 where C1 : struct, IComponent
@@ -701,7 +700,7 @@ namespace FFS.Libraries.StaticEcs {
                 Components<C3>.Value.Move(this, target);
                 Components<C4>.Value.Move(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void MoveComponentsTo<C1, C2, C3, C4, C5>(Entity target)
                 where C1 : struct, IComponent
@@ -721,7 +720,7 @@ namespace FFS.Libraries.StaticEcs {
                 where C1 : struct, IComponent {
                 return Components<C1>.Value.TryMove(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool TryMoveComponentsTo<C1, C2>(Entity target)
                 where C1 : struct, IComponent
@@ -730,7 +729,7 @@ namespace FFS.Libraries.StaticEcs {
                 var moved2 = Components<C2>.Value.TryMove(this, target);
                 return moved1 && moved2;
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool TryMoveComponentsTo<C1, C2, C3>(Entity target)
                 where C1 : struct, IComponent
@@ -741,7 +740,7 @@ namespace FFS.Libraries.StaticEcs {
                 var moved3 = Components<C3>.Value.TryMove(this, target);
                 return moved1 && moved2 && moved3;
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool TryMoveComponentsTo<C1, C2, C3, C4>(Entity target)
                 where C1 : struct, IComponent
@@ -754,7 +753,7 @@ namespace FFS.Libraries.StaticEcs {
                 var moved4 = Components<C4>.Value.TryMove(this, target);
                 return moved1 && moved2 && moved3 && moved4;
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool TryMoveComponentsTo<C1, C2, C3, C4, C5>(Entity target)
                 where C1 : struct, IComponent
@@ -771,23 +770,23 @@ namespace FFS.Libraries.StaticEcs {
             }
             #endregion
             #endregion
-            
+
             #region BY_RAW_TYPE
             [MethodImpl(AggressiveInlining)]
             public bool HasAllOf(Type componentType) {
                 return ModuleComponents.Value.GetPool(componentType).Has(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void Add(Type componentType) {
                 ModuleComponents.Value.GetPool(componentType).Add(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public IComponent GetRaw(Type componentType) {
-               return ModuleComponents.Value.GetPool(componentType).GetRaw(this);
+                return ModuleComponents.Value.GetPool(componentType).GetRaw(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void PutRaw(IComponent component) {
                 ModuleComponents.Value.GetPool(component.GetType()).PutRaw(this, component);
@@ -797,27 +796,27 @@ namespace FFS.Libraries.StaticEcs {
             public void TryAdd(Type componentType) {
                 ModuleComponents.Value.GetPool(componentType).TryAdd(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void TryAdd(Type componentType, out bool added) {
                 ModuleComponents.Value.GetPool(componentType).TryAdd(this, out added);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public bool TryDelete(Type componentType) {
                 return ModuleComponents.Value.GetPool(componentType).TryDelete(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void Delete(Type componentType) {
                 ModuleComponents.Value.GetPool(componentType).Delete(this);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void CopyComponentsTo(Type componentType, Entity target) {
                 ModuleComponents.Value.GetPool(componentType).Copy(this, target);
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             public void MoveComponentsTo(Type componentType, Entity target) {
                 ModuleComponents.Value.GetPool(componentType).Move(this, target);
@@ -825,22 +824,22 @@ namespace FFS.Libraries.StaticEcs {
             #endregion
         }
     }
-    
-    public partial interface IEntity {
-        public int ComponentsCount(bool withDisabled = true);
 
-        public void GetAllComponents(List<IComponent> result, bool withDisabled = true);
+    public partial interface IEntity {
+        public int ComponentsCount();
+
+        public void GetAllComponents(List<IComponent> result);
 
         public ref C Ref<C>() where C : struct, IComponent;
-        
+
         public bool HasAllOf<C>() where C : struct, IComponent;
-        
+
         public bool HasDisabledAllOf<C>() where C : struct, IComponent;
-        
+
         public bool HasEnabledAllOf<C>() where C : struct, IComponent;
 
         public ref C Add<C>() where C : struct, IComponent;
-        
+
         public void Add<C>(C component) where C : struct, IComponent;
 
         public void Put<C>(C component) where C : struct, IComponent;
@@ -850,11 +849,11 @@ namespace FFS.Libraries.StaticEcs {
         public void Enable<C>() where C : struct, IComponent;
 
         public ref C TryAdd<C>() where C : struct, IComponent;
-        
+
         public ref C TryAdd<C>(out bool added) where C : struct, IComponent;
 
         public bool TryDelete<C>() where C : struct, IComponent;
-        
+
         public void Delete<C>() where C : struct, IComponent;
 
         public bool HasAllOf(Type componentType);
@@ -870,7 +869,33 @@ namespace FFS.Libraries.StaticEcs {
         public void TryAdd(Type componentType, out bool added);
 
         public bool TryDelete(Type componentType);
-        
+
         public void Delete(Type componentType);
+    }
+
+    public partial class BoxedEntity<WorldType> {
+        public int ComponentsCount() => new World<WorldType>.Entity(_entity).ComponentsCount();
+        public void GetAllComponents(List<IComponent> result) => new World<WorldType>.Entity(_entity).GetAllComponents(result);
+        public ref C Ref<C>() where C : struct, IComponent => ref new World<WorldType>.Entity(_entity).Ref<C>();
+        public bool HasAllOf<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).HasAllOf<C>();
+        public bool HasDisabledAllOf<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).HasDisabledAllOf<C>();
+        public bool HasEnabledAllOf<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).HasEnabledAllOf<C>();
+        public ref C Add<C>() where C : struct, IComponent => ref new World<WorldType>.Entity(_entity).Add<C>();
+        public void Add<C>(C component) where C : struct, IComponent => new World<WorldType>.Entity(_entity).Add(component);
+        public void Put<C>(C component) where C : struct, IComponent => new World<WorldType>.Entity(_entity).Put(component);
+        public void Disable<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).Disable<C>();
+        public void Enable<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).Enable<C>();
+        public ref C TryAdd<C>() where C : struct, IComponent => ref new World<WorldType>.Entity(_entity).TryAdd<C>();
+        public ref C TryAdd<C>(out bool added) where C : struct, IComponent => ref new World<WorldType>.Entity(_entity).TryAdd<C>(out added);
+        public bool TryDelete<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).TryDelete<C>();
+        public void Delete<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).Delete<C>();
+        public bool HasAllOf(Type componentType) => new World<WorldType>.Entity(_entity).HasAllOf(componentType);
+        public void Add(Type componentType) => new World<WorldType>.Entity(_entity).Add(componentType);
+        public IComponent GetRaw(Type componentType) => new World<WorldType>.Entity(_entity).GetRaw(componentType);
+        public void PutRaw(IComponent component) => new World<WorldType>.Entity(_entity).PutRaw(component);
+        public void TryAdd(Type componentType) => new World<WorldType>.Entity(_entity).TryAdd(componentType);
+        public void TryAdd(Type componentType, out bool added) => new World<WorldType>.Entity(_entity).TryAdd(componentType, out added);
+        public bool TryDelete(Type componentType) => new World<WorldType>.Entity(_entity).TryDelete(componentType);
+        public void Delete(Type componentType) => new World<WorldType>.Entity(_entity).Delete(componentType);
     }
 }
