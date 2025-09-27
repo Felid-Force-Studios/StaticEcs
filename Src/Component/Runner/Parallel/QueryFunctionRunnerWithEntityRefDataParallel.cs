@@ -30,6 +30,7 @@ namespace FFS.Libraries.StaticEcs {
             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
+            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
@@ -191,6 +192,7 @@ namespace FFS.Libraries.StaticEcs {
             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
+            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
@@ -389,6 +391,7 @@ namespace FFS.Libraries.StaticEcs {
             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
+            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
@@ -598,6 +601,7 @@ namespace FFS.Libraries.StaticEcs {
             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
+            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
@@ -818,6 +822,7 @@ namespace FFS.Libraries.StaticEcs {
             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
+            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
@@ -1049,6 +1054,7 @@ namespace FFS.Libraries.StaticEcs {
             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
+            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
@@ -1292,6 +1298,7 @@ namespace FFS.Libraries.StaticEcs {
             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
+            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
@@ -1546,6 +1553,7 @@ namespace FFS.Libraries.StaticEcs {
             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
+            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
@@ -1811,6 +1819,7 @@ namespace FFS.Libraries.StaticEcs {
             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
+            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 

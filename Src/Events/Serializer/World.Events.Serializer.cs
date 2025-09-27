@@ -149,8 +149,6 @@ namespace FFS.Libraries.StaticEcs {
 
                 [MethodImpl(AggressiveInlining)]
                 internal void Write(ref BinaryPackWriter writer) {
-                    writer.WriteUshort(_poolsCount);
-                    
                     ushort len = 0;
                     var point = writer.MakePoint(sizeof(ushort));
                     for (var i = 0; i < _poolsCount; i++) {

@@ -142,8 +142,8 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Clear() {
-            for (var i = 0; i < chunks.Length; i++) {
+        public void Clear(int nextChunk) {
+            for (var i = 0; i < nextChunk; i++) {
                 Array.Clear(chunks[i], 0, Const.ENTITIES_IN_CHUNK);
             }
         }
@@ -162,10 +162,15 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Write(ref BinaryPackWriter writer, int nextActiveChunkIdx) {
+        public void Write(ref BinaryPackWriter writer, int nextActiveChunkIdx, bool empty) {
             writer.WriteUshort(maskLen);
             writer.WriteInt(chunks.Length);
             writer.WriteInt(nextActiveChunkIdx);
+            writer.WriteBool(empty);
+            if (empty) {
+                return;
+            }
+            
             for (var i = 0; i < nextActiveChunkIdx; i++) {
                 writer.WriteArrayUnmanaged(chunks[i]);
             }
@@ -179,6 +184,10 @@ namespace FFS.Libraries.StaticEcs {
             chunks ??= new ulong[capacity][];
             if (chunks.Length < capacity) {
                 Array.Resize(ref chunks, capacity);
+            }
+            var empty = reader.ReadBool();
+            if (empty) {
+                return;
             }
 
             for (var i = 0; i < count; i++) {

@@ -254,7 +254,7 @@ namespace FFS.Libraries.StaticEcs {
                     _pools[i].Clear();
                 }
 
-                _bitMask.Clear();
+                _bitMask.Clear(Entities.Value.nextActiveChunkIdx);
             }
 
             internal void Destroy() {

@@ -229,6 +229,14 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
+            public static void CreateWorldSnapshot(ref byte[] result, bool withCustomSnapshotData = true, bool gzip = false) {
+                var writer = BinaryPackWriter.CreateFromPool(1024 * 16);
+                Write(ref writer, withCustomSnapshotData);
+                writer.CopyToBytes(ref result, gzip);
+                writer.Dispose();
+            }
+
+            [MethodImpl(AggressiveInlining)]
             public static void CreateWorldSnapshot(string filePath, bool withCustomSnapshotData = true, bool gzip = false, bool flushToDisk = false) {
                 var writer = BinaryPackWriter.CreateFromPool(1024 * 16);
                 CreateWorldSnapshot(ref writer, filePath, withCustomSnapshotData, gzip, flushToDisk);
@@ -253,15 +261,15 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void LoadWorldSnapshot(BinaryPackReader reader) {
+            public static void LoadWorldSnapshot(BinaryPackReader reader, OnLoadWorldAction loadWorldAction = OnLoadWorldAction.DestroyAllEntitiesAndClearWorld) {
                 #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: ReadFromBytes, World not initialized");
                 #endif
-                Read(ref reader);
+                Read(ref reader, loadWorldAction);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void LoadWorldSnapshot(byte[] snapshot, bool gzip = false) {
+            public static void LoadWorldSnapshot(byte[] snapshot, bool gzip = false, OnLoadWorldAction loadWorldAction = OnLoadWorldAction.DestroyAllEntitiesAndClearWorld) {
                 #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: ReadFromBytes, World not initialized");
                 #endif
@@ -269,23 +277,23 @@ namespace FFS.Libraries.StaticEcs {
                     var writer = BinaryPackWriter.CreateFromPool((uint) (snapshot.Length * 2));
                     writer.WriteGzipData(snapshot);
                     var reader = writer.AsReader();
-                    Read(ref reader);
+                    Read(ref reader, loadWorldAction);
                     writer.Dispose();
                 } else {
                     var reader = new BinaryPackReader(snapshot, (uint) snapshot.Length, 0);
-                    Read(ref reader);
+                    Read(ref reader, loadWorldAction);
                 }
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void LoadWorldSnapshot(string worldSnapshotFilePath, bool gzip = false, uint byteSizeHint = 16384) {
+            public static void LoadWorldSnapshot(string worldSnapshotFilePath, bool gzip = false, uint byteSizeHint = 16384, OnLoadWorldAction loadWorldAction = OnLoadWorldAction.DestroyAllEntitiesAndClearWorld) {
                 #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: ReadFromFile, World not initialized");
                 #endif
                 var writer = BinaryPackWriter.CreateFromPool(byteSizeHint);
                 writer.WriteFromFile(worldSnapshotFilePath, gzip);
                 var reader = writer.AsReader();
-                Read(ref reader);
+                Read(ref reader, loadWorldAction);
                 writer.Dispose();
             }
 
@@ -389,9 +397,15 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            private static void Read(ref BinaryPackReader reader) {
-                DestroyAllEntities();
-                Events.Clear();
+            private static void Read(ref BinaryPackReader reader, OnLoadWorldAction loadWorldAction) {
+                if (loadWorldAction == OnLoadWorldAction.DestroyAllEntitiesAndClearWorld) {
+                    DestroyAllEntities();
+                    #if !FFS_ECS_DISABLE_EVENTS
+                    Events.Clear();
+                    #endif
+                } else if (loadWorldAction == OnLoadWorldAction.ClearWorld) {
+                    Clear();
+                }
                 
                 var actions = PreLoadSnapshotCallbacksBySnapshotType[(int) SnapshotActionType.World];
                 for (var i = 0; i < actions.Count; i++) {
@@ -425,5 +439,10 @@ namespace FFS.Libraries.StaticEcs {
                 }
             }
         }
+    }
+    
+    public enum OnLoadWorldAction {
+        DestroyAllEntitiesAndClearWorld,
+        ClearWorld
     }
 }

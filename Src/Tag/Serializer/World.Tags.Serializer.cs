@@ -80,8 +80,8 @@ namespace FFS.Libraries.StaticEcs {
                 [MethodImpl(AggressiveInlining)]
                 internal void Write(ref BinaryPackWriter writer) {
                     ref var tags = ref ModuleTags.Value;
+                    tags._bitMask.Write(ref writer, Entities.Value.nextActiveChunkIdx, tags._poolsCount == 0);
                     
-                    tags._bitMask.Write(ref writer, Entities.Value.nextActiveChunkIdx);
                     writer.WriteUshort(tags._poolsCount);
                     for (var i = 0; i < tags._poolsCount; i++) {
                         var pool = tags._pools[i];
@@ -104,9 +104,8 @@ namespace FFS.Libraries.StaticEcs {
                 internal void Read(ref BinaryPackReader reader) {
                     _tempDeletedPoolIds.Clear();
                     _tempLoadedPools.Clear();
-                    
                     ref var components = ref ModuleTags.Value;
-
+                    
                     components._bitMask.Read(ref reader);
                     var poolsCount = reader.ReadUshort();
                     for (var i = 0; i < poolsCount; i++) {
@@ -181,7 +180,7 @@ namespace FFS.Libraries.StaticEcs {
                     
                     if (HasMigration(ref value)) {
                         var bitMap = value._bitMask.CopyBitMapToArrayPool();
-                        value._bitMask.Clear();
+                        value._bitMask.Clear(Entities.Value.nextActiveChunkIdx);
                         
                         for (var i = 0; i < value._poolsCount; i++) {
                             MigrateLoaded(value._pools[i], i, ref value, bitMap);

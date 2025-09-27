@@ -798,16 +798,29 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal void Clear() {
-                for (var i = 0; i < data.Length; i++) {
-                    var components = data[i];
-                    if (components != null) {
-                        Array.Clear(components, 0, components.Length);
+                if (_clearable) {
+                    for (var i = 0; i < dataPoolCount; i++) {
+                        Array.Clear(dataPool[i], 0, dataPool[i].Length);
+                    }
+                    
+                    for (var i = 0; i < data.Length; i++) {
+                        ref var components = ref data[i];
+                        if (components != null) {
+                            Array.Clear(components, 0, components.Length);
+                            dataPool[dataPoolCount++] = components;
+                            components = null;
+                        }
+                    }
+                } else {
+                    for (var i = 0; i < data.Length; i++) {
+                        ref var components = ref data[i];
+                        if (components != null) {
+                            dataPool[dataPoolCount++] = components;
+                            components = null;
+                        }
                     }
                 }
-                
-                for (var i = 0; i < dataPoolCount; i++) {
-                    Array.Clear(dataPool[i], 0, dataPool[i].Length);
-                }
+
                 for (var i = 0; i < chunks.Length; i++) {
                     ref var chunk = ref chunks[i];
                     Array.Clear(chunk.entities,  0, chunk.entities.Length);

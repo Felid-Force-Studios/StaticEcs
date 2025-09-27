@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
@@ -74,7 +75,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                     writer.WriteBool(_readWriteArrayStrategy.IsUnmanaged());
                     if (_readWriteArrayStrategy.IsUnmanaged()) {
-                        var dataCount = pool.data.Length;
+                        var dataCount = Entities.Value.nextActiveChunkIdx * Const.DATA_BLOCKS_IN_CHUNK;
                         var offset = writer.MakePoint(sizeof(uint));
                         uint len = 0;
                         for (var idx = 0; idx < dataCount; idx++) {
@@ -177,15 +178,24 @@ namespace FFS.Libraries.StaticEcs {
                         
                         for (uint j = 0; j < dataCount; j++) {
                             var idx = reader.ReadInt();
+                            ref var components = ref pool.data[idx];
+                            if (components == null) {
+                                var count = Interlocked.Decrement(ref pool.dataPoolCount);
+                                if (count >= 0) {
+                                    components = pool.dataPool[count];
+                                } else {
+                                    Interlocked.Increment(ref pool.dataPoolCount);    
+                                    components = new T[Const.DATA_BLOCK_SIZE];
+                                }
+                            }
+                            
                             if (version == oldVersion) {
-                                _readWriteArrayStrategy.ReadArray(ref reader, ref pool.data[idx]);
+                                _readWriteArrayStrategy.ReadArray(ref reader, ref components);
                             } else {
-                                pool.data[idx] ??= new T[Const.DATA_BLOCK_SIZE];
                                 _ = reader.ReadNullFlag();
                                 var count = reader.ReadInt();
                                 var byteSize = reader.ReadUint();
                                 var oneSize = byteSize / count; 
-                                var components = pool.data[idx];
                                 var dataEntity = (uint) (idx * Const.DATA_BLOCK_SIZE);
                                 var entity = new Entity(dataEntity);
                                 ref var eid = ref entity._id;

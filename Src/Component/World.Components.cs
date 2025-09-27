@@ -256,7 +256,7 @@ namespace FFS.Libraries.StaticEcs {
                 for (var i = 0; i < _poolsCount; i++) {
                     _pools[i].Clear();
                 }
-                _bitMask.Clear();
+                _bitMask.Clear(Entities.Value.nextActiveChunkIdx);
             }
 
             [MethodImpl(AggressiveInlining)]

@@ -969,7 +969,7 @@ namespace FFS.Libraries.StaticEcs {
                 
                 #region BY_RUNNER
                 [MethodImpl(AggressiveInlining)]
-                public void For<R>(
+                public static void For<R>(
                     uint minEntitiesPerThread, R runner = default, EntityStatusType entities = EntityStatusType.Enabled, uint workersLimit = 0)
                     where R : struct, IQueryFunction {
                     Context.Value.GetOrCreate<QueryFunctionRunnerWithEntityFunctionParallel<R, WorldType, WithNothing>>()
@@ -977,7 +977,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<R>(
+                public static void For<R>(
                     uint minEntitiesPerThread, ref R runner, EntityStatusType entities = EntityStatusType.Enabled, uint workersLimit = 0)
                     where R : struct, IQueryFunction {
                     Context.Value.GetOrCreate<QueryFunctionRunnerWithEntityFunctionParallel<R, WorldType, WithNothing>>()
@@ -985,7 +985,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, R>(
+                public static void For<C1, R>(
                     uint minEntitiesPerThread, R runner = default, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where R : struct, IQueryFunction<C1> {
@@ -994,7 +994,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, R>(
+                public static void For<C1, R>(
                     uint minEntitiesPerThread, ref R runner, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where R : struct, IQueryFunction<C1> {
@@ -1003,7 +1003,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, R>(
+                public static void For<C1, C2, R>(
                     uint minEntitiesPerThread, R runner = default, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1013,7 +1013,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, R>(
+                public static void For<C1, C2, R>(
                     uint minEntitiesPerThread, ref R runner, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1023,7 +1023,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, R>(
+                public static void For<C1, C2, C3, R>(
                     uint minEntitiesPerThread, R runner = default, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1034,7 +1034,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, R>(
+                public static void For<C1, C2, C3, R>(
                     uint minEntitiesPerThread, ref R runner, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1045,7 +1045,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, C4, R>(
+                public static void For<C1, C2, C3, C4, R>(
                     uint minEntitiesPerThread, R runner = default, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1057,7 +1057,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, C4, R>(
+                public static void For<C1, C2, C3, C4, R>(
                     uint minEntitiesPerThread, ref R runner, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1069,7 +1069,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, C4, C5, R>(
+                public static void For<C1, C2, C3, C4, C5, R>(
                     uint minEntitiesPerThread, R runner = default, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1082,7 +1082,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, C4, C5, R>(
+                public static void For<C1, C2, C3, C4, C5, R>(
                     uint minEntitiesPerThread, ref R runner, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1095,7 +1095,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, C4, C5, C6, R>(
+                public static void For<C1, C2, C3, C4, C5, C6, R>(
                     uint minEntitiesPerThread, R runner = default, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1109,7 +1109,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, C4, C5, C6, R>(
+                public static void For<C1, C2, C3, C4, C5, C6, R>(
                     uint minEntitiesPerThread, ref R runner, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1123,7 +1123,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, C4, C5, C6, C7, R>(
+                public static void For<C1, C2, C3, C4, C5, C6, C7, R>(
                     uint minEntitiesPerThread, R runner = default, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1138,7 +1138,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, C4, C5, C6, C7, R>(
+                public static void For<C1, C2, C3, C4, C5, C6, C7, R>(
                     uint minEntitiesPerThread, ref R runner, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1153,7 +1153,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, C4, C5, C6, C7, C8, R>(
+                public static void For<C1, C2, C3, C4, C5, C6, C7, C8, R>(
                     uint minEntitiesPerThread, R runner = default, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
@@ -1169,7 +1169,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             
                 [MethodImpl(AggressiveInlining)]
-                public void For<C1, C2, C3, C4, C5, C6, C7, C8, R>(
+                public static void For<C1, C2, C3, C4, C5, C6, C7, C8, R>(
                     uint minEntitiesPerThread, ref R runner, EntityStatusType entities = EntityStatusType.Enabled, ComponentStatus components = ComponentStatus.Enabled, uint workersLimit = 0)
                     where C1 : struct, IComponent
                     where C2 : struct, IComponent
