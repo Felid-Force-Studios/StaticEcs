@@ -247,11 +247,7 @@ namespace FFS.Libraries.StaticEcs {
                 if (MultiThreadActive) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CreateEntity, this operation is not supported in multithreaded mode");
                 #endif
                 var entity = CreateEntityInternal();
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-                GIDStore.Value.Set(entity, gid, false);
-                #else
                 GIDStore.Value.Set(entity, gid);
-                #endif
 
                 #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
                 if (_debugEventListeners != null) {

@@ -30,6 +30,7 @@ namespace FFS.Libraries.StaticEcs {
             private EntityGID[] _globalIdByEntity;
             #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             private byte[] _newEntities;
+            private bool _slave;
             #endif
 
             [MethodImpl(AggressiveInlining)]
@@ -44,6 +45,7 @@ namespace FFS.Libraries.StaticEcs {
                 _nextId = snapshot.NextId;
                 #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 _newEntities = new byte[size];
+                _slave = false;
                 #endif
             }
 
@@ -57,6 +59,7 @@ namespace FFS.Libraries.StaticEcs {
                 _nextId = 0;
                 #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 _newEntities = new byte[baseEntitiesCapacity];
+                _slave = false;
                 #endif
                 return this;
             }
@@ -71,6 +74,7 @@ namespace FFS.Libraries.StaticEcs {
                 _nextId = 0;
                 #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 Utils.LoopFallbackClear(_newEntities, 0, _nextId);
+                _slave = false;
                 #endif
             }
 
@@ -84,6 +88,7 @@ namespace FFS.Libraries.StaticEcs {
                 _nextId = default;
                 #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 _newEntities = default;
+                _slave = default;
                 #endif
             }
 
@@ -100,21 +105,36 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal void New(uint eid) {
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (_slave) throw new StaticEcsException("Unable to create a new GID identifier if there was previously created a GID with a value of");
+                #endif
                 var gid = _freeIdsCount > 0
                     ? _freeIds[--_freeIdsCount]
                     : new EntityGID((uint) _nextId++, 1);
+
+                var id = gid.Id();
+                if (id >= _entityByGlobalId.Length) {
+                    Resize(id);
+                }
+
                 #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-                Set(eid, gid, true);
-                #else
-                Set(eid, gid);
+                if (Has(new(eid))) throw new StaticEcsException($"[GlobalIdStore] Method: Set, Already have {eid}");
+                if (_versions[id] > 0 && _versions[id] != gid.Version()) throw new StaticEcsException($"[GlobalIdStore] Method: Set, Already have {gid}");
+                _newEntities[id] = 1;
                 #endif
+
+                _versions[id] = gid.Version();
+                _entityByGlobalId[id] = eid + 1;
+                _globalIdByEntity[eid] = gid;
             }
 
             [MethodImpl(AggressiveInlining)]
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            internal void Set(uint eid, EntityGID gid, bool asNew) {
-                #else
             internal void Set(uint eid, EntityGID gid) {
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                if (!_slave) {
+                    if (_nextId != 0) throw new StaticEcsException("Unable to create a GID identifier with a specific value if a new GID with an automatic value was previously created");
+                    _slave = true;
+                }
                 #endif
                 var id = gid.Id();
                 if (id >= _entityByGlobalId.Length) {
@@ -124,12 +144,9 @@ namespace FFS.Libraries.StaticEcs {
                 #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 if (Has(new(eid))) throw new StaticEcsException($"[GlobalIdStore] Method: Set, Already have {eid}");
                 if (_versions[id] > 0 && _versions[id] != gid.Version()) throw new StaticEcsException($"[GlobalIdStore] Method: Set, Already have {gid}");
-                if (!asNew && _newEntities[id] == 1)
+                if (_newEntities[id] == 1)
                     throw new StaticEcsException($"[GlobalIdStore] Method: Set, ({gid}) was used to create a new entity," +
                                                  $" initialize the world using the saved GlobalIdStore or create/load entity as new");
-                if (asNew) {
-                    _newEntities[id] = 1;
-                }
                 #endif
 
                 _versions[id] = gid.Version();
