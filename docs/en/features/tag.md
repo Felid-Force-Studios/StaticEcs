@@ -20,11 +20,11 @@ ___
 Requires registration in the world between creation and initialization
 
 ```c#
-World.Create(WorldConfig.Default());
+W.Create(WorldConfig.Default());
 //...
-World.RegisterTagType<Unit>();
+W.RegisterTagType<Unit>();
 //...
-World.Initialize();
+W.Initialize();
 ```
 
 ___

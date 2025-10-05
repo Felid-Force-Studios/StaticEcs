@@ -23,11 +23,11 @@ ___
 Requires registration in the world between creation and initialization
 
 ```c#
-World.Create(WorldConfig.Default());
+W.Create(WorldConfig.Default());
 //...
-World.Events.RegisterEventType<WeatherChanged>()
+W.Events.RegisterEventType<WeatherChanged>()
 //...
-World.Initialize();
+W.Initialize();
 ```
 
 ___
@@ -35,16 +35,16 @@ ___
 #### Creation and basic operations:
 ```c#
 // The event system will be created when World.Create is called and destroyed when World.Destroy is called
-World.Create(WorldConfig.Default());
-World.Initialize();
+W.Create(WorldConfig.Default());
+W.Initialize();
 //...
 
 // Before sending an event, the receiver of the event must be registered, otherwise the event will not be sent.
 // Receiver can be registered after calling World.Create (e.g. in the Init method of the system).
-var weatherChangedEventReceiver = World.Events.RegisterEventReceiver<WeatherChanged>();
+var weatherChangedEventReceiver = W.Events.RegisterEventReceiver<WeatherChanged>();
 
 // Deleting an event receiver
-World.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
+W.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
 
 // Important! The lifecycle of an event: the event will be deleted in two cases:
 // 1) when it's been read by all registered receivers.
@@ -52,10 +52,10 @@ World.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
 // So it is important that all registered listeners read the events or the event is suppressed by any listener so that there is no accumulation of them
 
 // Sending an event
-World.Events.Send(new WeatherChanged { WeatherType = WeatherType.Sunny });
+W.Events.Send(new WeatherChanged { WeatherType = WeatherType.Sunny });
 
 // Sending default event value
-World.Events.Send<WeatherChanged>();
+W.Events.Send<WeatherChanged>();
 
 // Receiving events
 foreach (var weatherEvent in weatherChangedEventReceiver) {

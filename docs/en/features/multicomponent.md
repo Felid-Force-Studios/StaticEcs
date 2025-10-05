@@ -35,12 +35,12 @@ public struct Item {
     public string Value;
 }
 
-World.Create(WorldConfig.Default());
+W.Create(WorldConfig.Default());
 //...
 // where defaultComponentCapacity is the minimum capacity of the multicomponent, with a power of two, in the range of 4 to 32768 (4, 8, 16, 32 ...)
-World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
+W.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
 //...
-World.Initialize();
+W.Initialize();
 ```
 
 Second - Use a custom implementation `IMultiComponent<T>`
@@ -63,19 +63,19 @@ public struct Inventory : IMultiComponent<Inventory, Item> {
     public ref Multi<Item> RefValue(ref Inventory component) => ref component.Items;
 }
 
-World.Create(WorldConfig.Default());
+W.Create(WorldConfig.Default());
 //...
 // instead of Multi<Item> specify custom Inventory component
 // where defaultComponentCapacity is the minimum capacity of the multicomponent, with a power of two, in the range of 4 to 32768 (4, 8, 16, 32 ...)
-World.RegisterMultiComponentType<Inventory, Item>(defaultComponentCapacity: 4); 
+W.RegisterMultiComponentType<Inventory, Item>(defaultComponentCapacity: 4); 
 //...
-World.Initialize();
+W.Initialize();
 ```
 ___
 
 #### Basic operations:
 ```c#
-World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
+W.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
 
 // When adding a multi-component, the defaultComponentCapacity will be defaultComponentCapacity, as elements are added, it will expand as the elements are added 
 // Adding a multicomponent like a simple component

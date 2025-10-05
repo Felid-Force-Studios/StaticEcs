@@ -33,7 +33,7 @@ bool loaded = gid.IsLoaded<WT>();                             // Check if an ent
 bool status = gid.TryUnpack<WT>(out var unpackedEntity);      // Trying to get an active entity
 var unpacked = gid.Unpack<WT>();                              // It's not safe to get an active entity
 
-World.Entity.New(someGid);                                    // An entity can be created with a custom identifier
+W.Entity.New(someGid);                                    // An entity can be created with a custom identifier
 
 EntityGID gid2 = entity.Pack();
 bool equals = gid.Equals(gid2);                               // Verify the identity of the identifiers

@@ -65,7 +65,7 @@ ___
 public struct SystemsType : ISystemsType { }
 
 // Определяем тип-алиас для удобного доступа к системам
-public abstract class Systems : World.Systems<SystemsType> { }
+public abstract class Systems : W.Systems<SystemsType> { }
 
 // Здесь будет созданны структуры для систем
 Systems.Create();

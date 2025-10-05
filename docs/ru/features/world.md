@@ -52,12 +52,12 @@ var entity = Entity.New<Position>();
 ```c#
 public struct WT : IWorldType { }
 
-public abstract class World : World<WT> { }
+public abstract class W : World<WT> { }
 
-World.Create(WorldConfig.Default());
-World.CalculateEntitiesCount();
+W.Create(WorldConfig.Default());
+W.CalculateEntitiesCount();
 
-var entity = World.Entity.New<Position>();
+var entity = W.Entity.New<Position>();
 ```
 
 ___
@@ -71,9 +71,9 @@ public struct WT : IWorldType { }
 public abstract class World : World<WT> { }
 
 // Создание мира с дефолтной конфигурацие
-World.Create(WorldConfig.Default());
+W.Create(WorldConfig.Default());
 // Или кастомной
-World.Create(new() {
+W.Create(new() {
             // Базовая емкость для сущностей при создания мира
             baseEntitiesCapacity = 4096,                        
             // Базовый размер всех разновидностей типов компонентов (количество типов компонент)
@@ -89,23 +89,23 @@ World.Create(new() {
             DefaultQueryModeStrict = true
         });
 
-World.Entity.    // Доступ к сущности для MainWorldType (ID мира)
-World.Context.   // Доступ к контексту для MainWorldType (ID мира)
-World.Components.// Доступ к компонентам для MainWorldType (ID мира)
-World.Tags.      // Доступ к тегам для MainWorldType (ID мира)
+W.Entity.    // Доступ к сущности для MainWorldType (ID мира)
+W.Context.   // Доступ к контексту для MainWorldType (ID мира)
+W.Components.// Доступ к компонентам для MainWorldType (ID мира)
+W.Tags.      // Доступ к тегам для MainWorldType (ID мира)
 
 // Инициализация мира
-World.Initialize();
+W.Initialize();
 
 // Уничтожение и очистка данных мира
-World.Destroy();
+W.Destroy();
 
 // true если мир инициализирован
-bool initialized = World.IsInitialized();
+bool initialized = W.IsInitialized();
 
 // количество активных сущностей в мире
-int entitiesCount = World.CalculateEntitiesCount();
+int entitiesCount = W.CalculateEntitiesCount();
 
 // текущая емкость для сущностей
-int entitiesCapacity = World.CalculateEntitiesCapacity();
+int entitiesCapacity = W.CalculateEntitiesCapacity();
 ```

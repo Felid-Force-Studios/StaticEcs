@@ -53,12 +53,12 @@ This is the method that will be used everywhere in the examples
 ```c#
 public struct WT : IWorldType { }
 
-public abstract class World : World<WT> { }
+public abstract class W : World<WT> { }
 
-World.Create(WorldConfig.Default());
-World.CalculateEntitiesCount();
+W.Create(WorldConfig.Default());
+W.CalculateEntitiesCount();
 
-var entity = World.Entity.New<Position>();
+var entity = W.Entity.New<Position>();
 ```
 
 ___
@@ -72,9 +72,9 @@ public struct WT : IWorldType { }
 public abstract class World : World<WT> { }
 
 // Creating a world with a default configuration
-World.Create(WorldConfig.Default());
+W.Create(WorldConfig.Default());
 // Or a custom one
-World.Create(new() {
+W.Create(new() {
             // Base capacity for entities when creating a world
             baseEntitiesCapacity = 4096,                        
             // Base size of all component types (number of component types)
@@ -90,23 +90,23 @@ World.Create(new() {
             DefaultQueryModeStrict = true
         });
 
-World.Entity.    // Entity access for MainWorldType (world ID)
-World.Context.   // Access to context for MainWorldType (world ID)
-World.Components.// Access to components for MainWorldType (world ID)
-World.Tags.      // Access to tags for MainWorldType (world ID)
+W.Entity.    // Entity access for MainWorldType (world ID)
+W.Context.   // Access to context for MainWorldType (world ID)
+W.Components.// Access to components for MainWorldType (world ID)
+W.Tags.      // Access to tags for MainWorldType (world ID)
 
 // Initialization of the world
-World.Initialize();
+W.Initialize();
 
 // Destroying and deleting the world's data
-World.Destroy();
+W.Destroy();
 
 // true if the world is initialized
-bool initialized = World.IsInitialized();
+bool initialized = W.IsInitialized();
 
 // the number of active entities in the world
-int entitiesCount = World.CalculateEntitiesCount();
+int entitiesCount = W.CalculateEntitiesCount();
 
 // current capacity for entities
-int entitiesCapacity = World.CalculateEntitiesCapacity();
+int entitiesCapacity = W.CalculateEntitiesCapacity();
 ```

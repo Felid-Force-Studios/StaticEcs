@@ -18,17 +18,17 @@ public class UserService2 { }
 // Adding necessary objects to the context, it is not necessary to add objects to the context before initialization, new data can also be added in the process of systems operation
 // It is important to remember that if the context is used in Init systems, the data should be passed there before World.Initialize() or before the call in the call chain of a particular Init system. 
 // Important! The context can store strictly 1 object of 1 type - an error will occur if the Set method is set repeatedly of the same type.
-World.Context<UserService1>.Set(new UserService1(), clearOnDestroy: true);
-World.Context<UserService2>.Set(new UserService2());
+W.Context<UserService1>.Set(new UserService1(), clearOnDestroy: true);
+W.Context<UserService2>.Set(new UserService2());
 
 // If Replace is called, the specified type will be set or replaced without error
-World.Context<UserService2>.Replace(new UserService2());
+W.Context<UserService2>.Replace(new UserService2());
 
 // Check if there is a value of this type in the context
-bool has = World.Context<UserService2>.Has();
+bool has = W.Context<UserService2>.Has();
 
 // Remove the value from the context
-World.Context<UserService2>.Remove();
+W.Context<UserService2>.Remove();
 
-// Important! context will be cleared when World.Destroy() is called; if clearOnDestroy true was specified when set to
+// Important! context will be cleared when W.Destroy() is called; if clearOnDestroy true was specified when set to
 ```

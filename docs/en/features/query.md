@@ -320,7 +320,7 @@ public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, W.IQueryFunction<
     > with;
     
     public void Init() {
-        _userService1 = World.Context<UserService1>.Get();
+        _userService1 = W.Context<UserService1>.Get();
     }
     
    public void Update() {
@@ -380,7 +380,7 @@ you can specify filtering by entity status, for example:
 ```c#
 W.QueryEntities.For<All<Position>>(entities: EntityStatusType.Disabled)
     
-World.Query.For<Position>((World.Entity entity, ref Position position) => {
+W.Query.For<Position>((W.Entity entity, ref Position position) => {
     position.Val *= velocity.Val;
 }, entities: EntityStatusType.Disabled);
 ```

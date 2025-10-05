@@ -20,11 +20,11 @@ ___
 Требуется регистрация в мире между созданием и инициализацией
 
 ```c#
-World.Create(WorldConfig.Default());
+W.Create(WorldConfig.Default());
 //...
-World.RegisterTagType<Unit>();
+W.RegisterTagType<Unit>();
 //...
-World.Initialize();
+W.Initialize();
 ```
 
 ___

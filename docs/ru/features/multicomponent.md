@@ -36,12 +36,12 @@ public struct Item {
     public string Value;
 }
 
-World.Create(WorldConfig.Default());
+W.Create(WorldConfig.Default());
 //...
 // где defaultComponentCapacity - минимальная вместительность мультикомпонента, со степенью двойки, в диапазоне от 4 до 32768  (4, 8, 16, 32 ...)
-World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
+W.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
 //...
-World.Initialize();
+W.Initialize();
 ```
 
 Второй - Использовать кастомную реализация `IMultiComponent<T>`
@@ -64,19 +64,19 @@ public struct Inventory : IMultiComponent<Inventory, Item> {
     public ref Multi<Item> RefValue(ref Inventory component) => ref component.Items;
 }
 
-World.Create(WorldConfig.Default());
+W.Create(WorldConfig.Default());
 //...
 // вместо Multi<Item> указываем кастомный компонент Inventory
 // где defaultComponentCapacity - минимальная вместительность мультикомпонента, со степенью двойки, в диапазоне от 4 до 32768  (4, 8, 16, 32 ...)
-World.RegisterMultiComponentType<Inventory, Item>(defaultComponentCapacity: 4); 
+W.RegisterMultiComponentType<Inventory, Item>(defaultComponentCapacity: 4); 
 //...
-World.Initialize();
+W.Initialize();
 ```
 ___
 
 #### Основные операции:
 ```c#
-World.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
+W.RegisterMultiComponentType<Multi<Item>, Item>(defaultComponentCapacity: 4); 
 
 // При добавлениие мультикомпонента по умолчанию вместимость будет defaultComponentCapacity, по мере добавления элементов будет расширяться 
 // Добавление мультикомпонента как и обычного компонента

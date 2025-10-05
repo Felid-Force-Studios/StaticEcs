@@ -23,11 +23,11 @@ ___
 Требуется регистрация в мире между созданием и инициализацией
 
 ```c#
-World.Create(WorldConfig.Default());
+W.Create(WorldConfig.Default());
 //...
-World.Events.RegisterEventType<WeatherChanged>()
+W.Events.RegisterEventType<WeatherChanged>()
 //...
-World.Initialize();
+W.Initialize();
 ```
 
 ___
@@ -35,16 +35,16 @@ ___
 #### Создание и базовые операции:
 ```c#
 // Система событий будет создана при вызове World.Create и уничтожена при World.Destroy
-World.Create(WorldConfig.Default());
-World.Initialize();
+W.Create(WorldConfig.Default());
+W.Initialize();
 //...
 
 // Прежде чем отправлять событие следует зарегистрировать слушателя данного события, иначе событие не будет отправлено
 // Слушатель может быть зарегистрирован после выозова World.Create (например в Init методе системы)
-var weatherChangedEventReceiver = World.Events.RegisterEventReceiver<WeatherChanged>();
+var weatherChangedEventReceiver = W.Events.RegisterEventReceiver<WeatherChanged>();
 
 // Удаление слушателя событий
-World.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
+W.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
 
 // Важно! Жизненый цикл события: событие будет удалено в двух случаях:
 // 1) когда оно будет прочитано всеми зарегистрированными слушателями
@@ -52,10 +52,10 @@ World.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
 // Таким образом важно чтобы все зарегистрированные слушатели читали события или событие подавлялось каким либо слушателем, чтобы не было их накопления
 
 // Отправка события
-World.Events.Send(new WeatherChanged { WeatherType = WeatherType.Sunny });
+W.Events.Send(new WeatherChanged { WeatherType = WeatherType.Sunny });
 
 // Отправка дефолтного значения события
-World.Events.Send<WeatherChanged>();
+W.Events.Send<WeatherChanged>();
 
 // Получение событий
 foreach (var weatherEvent in weatherChangedEventReceiver) {
