@@ -35,7 +35,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C1>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -75,7 +75,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -121,7 +121,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -173,7 +173,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -231,7 +231,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C5>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -295,7 +295,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C6>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -365,7 +365,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C7>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -441,7 +441,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C8>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -485,7 +485,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C1>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -525,7 +525,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -571,7 +571,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -623,7 +623,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -681,7 +681,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C5>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -745,7 +745,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C6>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -815,7 +815,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C7>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -891,7 +891,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C8>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -935,7 +935,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C1>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -975,7 +975,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C2>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -1021,7 +1021,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C3>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -1073,7 +1073,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C4>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -1131,7 +1131,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C5>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -1195,7 +1195,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C6>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -1265,7 +1265,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C7>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -1341,7 +1341,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C8>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -1385,7 +1385,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C1>.Value.DecQAddEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
@@ -1425,7 +1425,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C2>.Value.DecQAddEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
@@ -1471,7 +1471,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C3>.Value.DecQAddEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
@@ -1523,7 +1523,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C4>.Value.DecQAddEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
@@ -1582,7 +1582,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C5>.Value.DecQAddEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
@@ -1646,7 +1646,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C6>.Value.DecQAddEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
@@ -1716,7 +1716,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C7>.Value.DecQAddEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
@@ -1792,7 +1792,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C8>.Value.DecQAddEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAddEnable(val);
@@ -1836,7 +1836,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C1>.Value.DecQAdd();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAdd(val);
@@ -1876,7 +1876,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C2>.Value.DecQAdd();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAdd(val);
@@ -1922,7 +1922,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C3>.Value.DecQAdd();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAdd(val);
@@ -1974,7 +1974,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C4>.Value.DecQAdd();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAdd(val);
@@ -2033,7 +2033,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C5>.Value.DecQAdd();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAdd(val);
@@ -2097,7 +2097,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C6>.Value.DecQAdd();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAdd(val);
@@ -2167,7 +2167,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C7>.Value.DecQAdd();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAdd(val);
@@ -2243,7 +2243,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C8>.Value.DecQAdd();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockAdd(val);
@@ -2304,7 +2304,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C2>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -2364,7 +2364,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C3>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -2431,7 +2431,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C4>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -2506,7 +2506,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C5>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -2587,7 +2587,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C6>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -2675,7 +2675,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C7>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -2770,7 +2770,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C8>.Value.DecQDeleteDisable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteDisable(val);
@@ -2832,7 +2832,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C2>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -2892,7 +2892,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C3>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -2959,7 +2959,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C4>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -3034,7 +3034,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C5>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -3115,7 +3115,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C6>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -3203,7 +3203,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C7>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -3298,7 +3298,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C8>.Value.DecQDeleteEnable();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDeleteEnable(val);
@@ -3360,7 +3360,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C2>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -3420,7 +3420,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C3>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -3487,7 +3487,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C4>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -3562,7 +3562,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C5>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -3643,7 +3643,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C6>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -3731,7 +3731,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C7>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);
@@ -3826,7 +3826,7 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Components<C8>.Value.DecQDelete();
         }
 
-        #if DEBUG || FFS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Components<C1>.Value.BlockDelete(val);

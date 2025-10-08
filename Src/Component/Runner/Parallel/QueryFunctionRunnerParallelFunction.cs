@@ -91,7 +91,7 @@ namespace FFS.Libraries.StaticEcs {
                     if (total >= (end - idx) >> 1) {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
-                                #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 eid = blockEntity + idx;
@@ -100,7 +100,7 @@ namespace FFS.Libraries.StaticEcs {
                         }
                     } else {
                         do {
-                            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             eid = blockEntity + idx;
@@ -111,7 +111,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
@@ -275,7 +275,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 eid = blockEntity + idx;
@@ -285,7 +285,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             eid = blockEntity + idx;
@@ -296,7 +296,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
@@ -477,7 +477,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 eid = blockEntity + idx;
@@ -487,7 +487,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             eid = blockEntity + idx;
@@ -498,7 +498,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
@@ -690,7 +690,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 eid = blockEntity + idx;
@@ -700,7 +700,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             eid = blockEntity + idx;
@@ -711,7 +711,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
@@ -914,7 +914,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 eid = blockEntity + idx;
@@ -924,7 +924,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             eid = blockEntity + idx;
@@ -935,7 +935,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
@@ -1149,7 +1149,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 eid = blockEntity + idx;
@@ -1159,7 +1159,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             eid = blockEntity + idx;
@@ -1170,7 +1170,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
@@ -1396,7 +1396,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 eid = blockEntity + idx;
@@ -1406,7 +1406,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             eid = blockEntity + idx;
@@ -1417,7 +1417,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
@@ -1654,7 +1654,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 eid = blockEntity + idx;
@@ -1664,7 +1664,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             eid = blockEntity + idx;
@@ -1675,7 +1675,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
@@ -1923,7 +1923,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 eid = blockEntity + idx;
@@ -1933,7 +1933,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             eid = blockEntity + idx;
@@ -1944,7 +1944,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }

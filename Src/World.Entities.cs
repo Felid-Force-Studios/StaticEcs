@@ -299,7 +299,7 @@ namespace FFS.Libraries.StaticEcs {
                 if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Destroy, World not initialized");
                 if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Destroy, Entity already destroyed");
                 if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Destroy, is blocked, it is forbidden to modify a non-current entity in a parallel query");
-                if (_blockerDisable > 0 && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Destroy, is blocked, use QueryMode.Flexible");
+                if (_blockerDestroy > 0 && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Entity, Method: Destroy, is blocked, use QueryMode.Flexible");
                 #endif
                 
                 #if !FFS_ECS_DISABLE_TAGS

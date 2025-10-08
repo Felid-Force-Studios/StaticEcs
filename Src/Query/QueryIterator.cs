@@ -32,7 +32,7 @@ namespace FFS.Libraries.StaticEcs {
         private bool loopMode;                   //1
         private bool strict;                     //1
         private EntityStatusType _entities;
-        #if DEBUG || EFS_ECS_ENABLE_DEBUG
+        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         private bool disposed; //1
         #endif
 
@@ -48,7 +48,7 @@ namespace FFS.Libraries.StaticEcs {
             qd = default;
             firstGlobalBlockIdx = -1;
             loopMode = false;
-            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             disposed = false;
             #endif
             strict = queryMode == QueryMode.Strict || (queryMode == QueryMode.Default && World<WorldType>.cfg.DefaultQueryModeStrict);
@@ -109,7 +109,7 @@ namespace FFS.Libraries.StaticEcs {
                                 }
                                 World<WorldType>.Entities.Value.IncQDestroy(qd);
                             }
-                            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                             else {
                                 const int b = 1;
                                 _with.BlockQ<WorldType>(b);
@@ -147,7 +147,7 @@ namespace FFS.Libraries.StaticEcs {
                     while (idx < end) {
                         if ((entitiesMask & (1UL << idx++)) > 0) {
                             current._id = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx - 1);
-                            #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                             World<WorldType>.CurrentQuery.SetCurrentEntity(current._id);
                             #endif
                             return true;
@@ -156,7 +156,7 @@ namespace FFS.Libraries.StaticEcs {
                 } else if (entitiesMask > 0) {
                     idx = Utils.PopLsb(ref entitiesMask);
                     current._id = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                    #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                     World<WorldType>.CurrentQuery.SetCurrentEntity(current._id);
                     #endif
                     return true;
@@ -191,7 +191,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                     World<WorldType>.Entities.Value.DecQDestroy();
                 }
-                #if DEBUG || EFS_ECS_ENABLE_DEBUG
+                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
                 else {
                     const int b = -1;
                     _with.BlockQ<WorldType>(b);
