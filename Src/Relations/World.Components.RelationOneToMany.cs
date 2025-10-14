@@ -88,7 +88,7 @@ namespace FFS.Libraries.StaticEcs {
                             val = default;
                         }
 
-                        val.RefValue(ref val) = e.Gid();
+                        val.RefValue(ref val) = gid;
                         Components<O>.Value.onPutHandler?.Invoke(link, ref val);
                         return;
                     }
