@@ -103,7 +103,8 @@ namespace FFS.Libraries.StaticEcs {
                             } else {
                                 link = default;
                             }
-                            
+
+                            link.RefValue(ref link) = gid;
                             Components<B>.Value.onPutHandler?.Invoke(unpacked, ref link);
                             return;
                         }
