@@ -69,6 +69,13 @@ The library has a dependency on [StaticPack](https://github.com/Felid-Force-Stud
 
 
 # Concept
+StaticEcs - a new ECS architecture based on an inverted hierarchical bitmap model.
+Unlike traditional ECS frameworks that rely on archetypes or sparse sets, this design introduces an inverted index structure where each component owns an entity bitmap instead of entities storing component masks.
+A hierarchical aggregation of these bitmaps provides logarithmic-space indexing of entity blocks, enabling O(1) block filtering and efficient parallel iteration through bitwise operations.
+This approach completely removes archetype migration and sparse-set indirection, offering direct SoA-style memory access across millions of entities with minimal cache misses.
+The model achieves up to 64× fewer memory lookups per block and scales linearly with the number of active component sets, making it ideal for large-scale simulations, reactive AI, and open-world environments.
+
+
 > - The main idea of this implementation is static, all data about the world and components are in static classes, which makes it possible to avoid expensive virtual calls and have a convenient API
 > - This framework is focused on maximum ease of use, speed and comfort of code writing without loss of performance
 > - Multi-world creation, strict typing, ~zero-cost abstractions
