@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.1.preview-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.1.0-blue.svg?style=for-the-badge)
 
 ### LANGUAGE
 [RU](./README_RU.md)
@@ -12,7 +12,7 @@ ___
 
 ### ❗️ **[Guide for migrating from version 1.0.x to 1.1.x](https://felid-force-studios.github.io/StaticEcs/en/migrationguide.html)** ❗️
 
-# Static ECS - C# Binary Entity component system framework
+# Static ECS - C# Hierarchical Inverted Bitmap ECS framework
 - Lightweight
 - Performance
 - No allocations
