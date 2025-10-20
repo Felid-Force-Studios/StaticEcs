@@ -169,6 +169,8 @@ namespace FFS.Libraries.StaticEcs {
                     if (ex is not ThreadAbortException) {
                         _exceptions.Enqueue((ex, Thread.CurrentThread.Name));
                     }
+                    #else
+                    _ = ex;
                     #endif
                 }
             }

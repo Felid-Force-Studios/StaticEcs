@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netstandard2.1</TargetFramework>
+        <OutputType>library</OutputType>
+        <TargetFrameworks>net9.0;net8.0;net7.0;net6.0;netstandard2.1</TargetFrameworks>
         <LangVersion>9</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>disable</Nullable>
@@ -10,9 +11,9 @@
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Version>1.1.0</Version>
         <Authors>Felid-Force-Studios</Authors>
-        <Description>C# Entity Component System Framework</Description>
+        <Description>C# Hierarchical Inverted Bitmap ECS framework</Description>
         <Copyright>Felid-Force-Studios</Copyright>
-        <PackageLicenseUrl>https://github.com/Felid-Force-Studios/StaticEcs/blob/master/LICENSE</PackageLicenseUrl>
+        <PackageLicenseUrl>https://github.com/Felid-Force-Studios/StaticEcs/blob/master/LICENSE.md</PackageLicenseUrl>
         <PackageTags>ecs; gamedev; unity; staticecs</PackageTags>
         <RepositoryUrl>https://github.com/Felid-Force-Studios/StaticEcs</RepositoryUrl>
     </PropertyGroup>
@@ -33,10 +34,11 @@
         <Optimize>true</Optimize>
         <OutputPath>bin\Release\</OutputPath>
         <WarningLevel>4</WarningLevel>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
-        <Content Include="README.md"/>
+        <Content Include="README.md" Pack="true" PackagePath=""/>
         <Content Include="README_RU.md"/>
     </ItemGroup>
     <ItemGroup>
@@ -45,7 +47,12 @@
         <None Remove="package.json"/>
         <None Remove="LICENSE.meta"/>
     </ItemGroup>
-    <ItemGroup>
-      <ProjectReference Include="..\StaticPack\StaticPack.csproj" />
+
+    <ItemGroup Condition="'$(IsPackable)' != 'true'">
+        <ProjectReference Include="..\StaticPack\StaticPack.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(IsPackable)' == 'true'">
+        <PackageReference Include="FFS.StaticPack" Version="1.0.3" />
     </ItemGroup>
 </Project>
