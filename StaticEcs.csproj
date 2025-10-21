@@ -6,31 +6,37 @@
         <LangVersion>9</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>disable</Nullable>
-        <AssemblyName>FFS.StaticEcs</AssemblyName>
         <RootNamespace>FFS.Libraries.StaticEcs</RootNamespace>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>1.1.0</Version>
+        <Version>1.1.1</Version>
         <Authors>Felid-Force-Studios</Authors>
         <Description>C# Hierarchical Inverted Bitmap ECS framework</Description>
         <Copyright>Felid-Force-Studios</Copyright>
         <PackageLicenseUrl>https://github.com/Felid-Force-Studios/StaticEcs/blob/master/LICENSE.md</PackageLicenseUrl>
         <PackageTags>ecs; gamedev; unity; staticecs</PackageTags>
         <RepositoryUrl>https://github.com/Felid-Force-Studios/StaticEcs</RepositoryUrl>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+        <PackageId>FFS.StaticEcs.Debug</PackageId>
+        <AssemblyName>FFS.StaticEcs.Debug</AssemblyName>
         <PlatformTarget>AnyCPU</PlatformTarget>
         <DebugSymbols>true</DebugSymbols>
-        <DebugType>full</DebugType>
+        <DebugType>portable</DebugType>
         <Optimize>false</Optimize>
         <OutputPath>bin\Debug\</OutputPath>
         <DefineConstants>FFS_ECS_ENABLE_DEBUG</DefineConstants>
         <WarningLevel>4</WarningLevel>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <PackageId>FFS.StaticEcs</PackageId>
+        <AssemblyName>FFS.StaticEcs</AssemblyName>
         <PlatformTarget>AnyCPU</PlatformTarget>
-        <DebugType>pdbonly</DebugType>
+        <DebugType>portable</DebugType>
         <Optimize>true</Optimize>
         <OutputPath>bin\Release\</OutputPath>
         <WarningLevel>4</WarningLevel>
@@ -48,11 +54,11 @@
         <None Remove="LICENSE.meta"/>
     </ItemGroup>
 
-    <ItemGroup Condition="'$(IsPackable)' != 'true'">
-        <ProjectReference Include="..\StaticPack\StaticPack.csproj" />
+    <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+        <PackageReference Include="FFS.StaticPack.Debug" Version="1.0.5" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(IsPackable)' == 'true'">
-        <PackageReference Include="FFS.StaticPack" Version="1.0.3" />
+    <ItemGroup Condition="'$(Configuration)' == 'Release'">
+        <PackageReference Include="FFS.StaticPack" Version="1.0.5" />
     </ItemGroup>
 </Project>
