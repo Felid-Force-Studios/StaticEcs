@@ -1,4 +1,11 @@
-﻿using System.Runtime.CompilerServices;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -32,7 +39,7 @@ namespace FFS.Libraries.StaticEcs {
                 ValidateComponentRegistration<L>();
                 RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity);
 
-                #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
+                #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                 CyclicCheck<L>.Value = !disableRelationsCheckLeftDebug;
                 #endif
                 AddItemsHandlers<L, R>(leftDeleteStrategy);
@@ -52,7 +59,7 @@ namespace FFS.Libraries.StaticEcs {
                 ValidateComponentRegistration<R>();
                 RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity);
 
-                #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
+                #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                 CyclicCheck<R>.Value = !disableRelationsCheckRightDebug;
                 #endif
                 AddItemsHandlers<R, L>(rightDeleteStrategy);
@@ -83,7 +90,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 
                 static void SetAnotherLink<Current, Another>(Entity e, Entity link) where Current : struct, IEntityLinksComponent<Current> where Another : struct, IEntityLinksComponent<Another> {
-                    #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
+                    #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                     if (CyclicCheck<Current>.Value) {
                         CheckManyRelation<Current>(e, link);
                     }

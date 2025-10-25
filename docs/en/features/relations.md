@@ -215,6 +215,13 @@ ___
 ref Childs childs = ref father.SetLinks<Childs>(sonAlex, sonJack, sonKevin);
 ```
 
+> The `TrySetLinks` method creates or uses an existing component (used for `IEntityLinksComponent` type)  
+> takes from 1-5 `EntityGID` values and returns a reference to the component, in case the value is already set that value will not be added
+
+```csharp
+ref Childs childs = ref father.TrySetLinks<Childs>(sonAlex, sonJack, sonKevin);
+```
+
 ___
 
 - Link Registration (Option 2 on the children's side)
@@ -234,7 +241,7 @@ So it does not matter on which side the link is established, the backlink will b
 By looking at all the entities we can make sure of this  
 
 ```csharp
-foreach (var entity in W.AllEntities()) {
+foreach (var entity in W.Query.Entities()) {
     Console.WriteLine(entity.PrettyString);
 }
 //  Entity ID: 3                   
@@ -325,7 +332,7 @@ entity.HasAllOf<Parent>();
 ```
 
 {: .important }
-It is worth cautioning against changing the values of links manually (not through special methods such as `SetLink`, `SetLinks`, `TryDeleteLink`, `TryDeleteLinks`)  
+It is worth cautioning against changing the values of links manually (not through special methods such as `SetLink`, `TreSetLinks`, `SetLinks`, `TryDeleteLink`, `TryDeleteLinks`)  
 for example, you don't want to do things like this: `entity.Ref<Parent>().Link = someGid;`  
 Because it doesn't automatically manage backlinks and other actions and can lead to broken game logic  
 at the same time nothing prevents from storing additional data in components besides the connection itself
@@ -337,6 +344,6 @@ ___
 > Relationship components can be used in queries like any other components
 
 ```csharp
-W.QueryEntities.For<All<Parent, Childs>>()
+W.Query.Entities<All<Parent, Childs>>()
 // ..
 ```

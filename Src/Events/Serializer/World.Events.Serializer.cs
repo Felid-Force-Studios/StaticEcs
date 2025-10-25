@@ -1,5 +1,4 @@
-﻿#if !FFS_ECS_DISABLE_EVENTS
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FFS.Libraries.StaticPack;
@@ -193,4 +192,3 @@ namespace FFS.Libraries.StaticEcs {
         }
     }
 }
-#endif

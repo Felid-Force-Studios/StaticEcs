@@ -1,6 +1,14 @@
-﻿using System;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
@@ -15,6 +23,8 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     internal class BitMask {
         internal ulong[][] chunks;
+        internal uint[] freeChunks;
+        internal int freeChunksCount;
         internal ushort maskLen;
 
         public ushort MaskLen {
@@ -22,31 +32,46 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        internal void Create(uint entitiesCapacity, ushort maskLen) {
+        internal void Create(uint chunksCapacity, ushort maskLen) {
             this.maskLen = maskLen;
-            chunks = new ulong[entitiesCapacity >> Const.ENTITIES_IN_CHUNK_SHIFT][];
-            for (var i = 0; i < chunks.Length; i++) {
-                chunks[i] = new ulong[Const.ENTITIES_IN_CHUNK * maskLen];
-            }
+            freeChunksCount = 0;
+            freeChunks = new uint[chunksCapacity];
+            chunks = new ulong[chunksCapacity][];
         }
 
         [MethodImpl(AggressiveInlining)]
         internal void Destroy() {
             chunks = null;
+            freeChunks = null;
             maskLen = 0;
+            freeChunksCount = 0;
         }
         
         [MethodImpl(AggressiveInlining)]
-        internal void ResizeBitMap(uint entitiesCapacity) {
-            entitiesCapacity >>= Const.ENTITIES_IN_CHUNK_SHIFT;
-
-            if (chunks.Length < entitiesCapacity) {
-                var old = chunks.Length;
-                Array.Resize(ref chunks, (int) entitiesCapacity);
-                for (var i = old; i < chunks.Length; i++) {
-                    chunks[i] = new ulong[Const.ENTITIES_IN_CHUNK * maskLen];
+        internal void ResizeBitMap(uint chunksCapacity) {
+            Array.Resize(ref freeChunks, (int) chunksCapacity);
+            Array.Resize(ref chunks, (int) chunksCapacity);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void InitChunk(uint chunkIdx) {
+            if (freeChunksCount > 0) {
+                var freeChunkIdx = freeChunks[--freeChunksCount];
+                ref var chunk = ref chunks[freeChunkIdx];
+                chunks[chunkIdx] = chunk;
+                #if FFS_ECS_DEBUG
+                if (freeChunkIdx != chunkIdx) {
+                    chunk = null;
                 }
+                #endif
+            } else {
+                chunks[chunkIdx] = new ulong[Const.ENTITIES_IN_CHUNK * maskLen];
             }
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void FreeChunk(uint chunkIdx) {
+            freeChunks[Interlocked.Increment(ref freeChunksCount) - 1] = chunkIdx;
         }
         
         [MethodImpl(AggressiveInlining)]
@@ -76,30 +101,33 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void DelRange(uint entityIdFrom, uint entityIdTo, ushort poolId) {
+        public void DelInChunk(uint chunkIdx, ushort poolId) {
             var div = (ushort) (poolId >> Const.LONG_SHIFT);
             var rem = (ushort) (poolId & Const.LONG_OFFSET_MASK);
 
-            for (; entityIdFrom < entityIdTo; entityIdFrom++) {
-                var index = (entityIdFrom & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen + div;
-                chunks[entityIdFrom >> Const.ENTITIES_IN_CHUNK_SHIFT][index] &= ~(1UL << rem);
+            var chunk = chunks[chunkIdx];
+
+            for (var i = 0; i < Const.ENTITIES_IN_CHUNK; i++) {
+                var index = i * maskLen + div;
+                chunk[index] &= ~(1UL << rem);
             }
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Migrate(uint entityIdFrom, uint entityIdTo, ushort poolIdFrom, ushort poolIdTo, ulong[][] srcBitMap) {
+        public void MigrateChunk(uint chunkIdx, ushort poolIdFrom, ushort poolIdTo, ulong[] srcBitMap) {
             var divFrom = (ushort) (poolIdFrom >> Const.LONG_SHIFT);
             var remFrom = (ushort) (poolIdFrom & Const.LONG_OFFSET_MASK);
             var divTo = (ushort) (poolIdTo >> Const.LONG_SHIFT);
             var remTo = (ushort) (poolIdTo & Const.LONG_OFFSET_MASK);
-            
-            for (; entityIdFrom < entityIdTo; entityIdFrom++) {
-                var indexFrom = (entityIdFrom & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen + divFrom;
-                var indexTo = (entityIdFrom & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen + divTo;
-                var i = entityIdFrom >> Const.ENTITIES_IN_CHUNK_SHIFT;
-                ref var from = ref srcBitMap[i][indexFrom];
+
+            var chunk = chunks[chunkIdx];
+
+            for (var i = 0; i < Const.ENTITIES_IN_CHUNK; i++) {
+                var indexFrom = i * maskLen + divFrom;
+                var indexTo = i * maskLen + divTo;
+                ref var from = ref srcBitMap[indexFrom];
                 if ((from & (1UL << remFrom)) != 0UL) {
-                    chunks[i][indexTo] |= 1UL << remTo;
+                    chunk[indexTo] |= 1UL << remTo;
                 }
                 
                 from &= ~(1UL << remFrom);
@@ -142,57 +170,27 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public void Clear(int nextChunk) {
-            for (var i = 0; i < nextChunk; i++) {
-                Array.Clear(chunks[i], 0, Const.ENTITIES_IN_CHUNK);
+        public void ClearChunk(uint chunkIdx) {
+            if (chunks[chunkIdx] != null) {
+                Array.Clear(chunks[chunkIdx], 0, Const.ENTITIES_IN_CHUNK);
             }
         }
 
         [MethodImpl(AggressiveInlining)]
-        public ulong[][] CopyBitMapToArrayPool() {
-            var res = ArrayPool<ulong[]>.Shared.Rent(chunks.Length);
-            
-            for (var i = 0; i < chunks.Length; i++) {
-                var val = ArrayPool<ulong>.Shared.Rent(Const.ENTITIES_IN_CHUNK);
-                Array.Copy(chunks[i], val, Const.ENTITIES_IN_CHUNK);
-                res[i] = val;
-            }
-
+        public ulong[] CopyBitMapChunkToArrayPool(uint chunkIdx) {
+            var res = ArrayPool<ulong>.Shared.Rent(Const.ENTITIES_IN_CHUNK);
+            Array.Copy(chunks[chunkIdx], res, Const.ENTITIES_IN_CHUNK);
             return res;
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Write(ref BinaryPackWriter writer, int nextActiveChunkIdx, bool empty) {
-            writer.WriteUshort(maskLen);
-            writer.WriteInt(chunks.Length);
-            writer.WriteInt(nextActiveChunkIdx);
-            writer.WriteBool(empty);
-            if (empty) {
-                return;
-            }
-            
-            for (var i = 0; i < nextActiveChunkIdx; i++) {
-                writer.WriteArrayUnmanaged(chunks[i]);
-            }
+        public void WriteChunk(ref BinaryPackWriter writer, uint chunkIdx) {
+            writer.WriteArrayUnmanaged(chunks[chunkIdx]);
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Read(ref BinaryPackReader reader) {
-            maskLen = reader.ReadUshort();
-            var capacity = reader.ReadInt();
-            var count = reader.ReadInt();
-            chunks ??= new ulong[capacity][];
-            if (chunks.Length < capacity) {
-                Array.Resize(ref chunks, capacity);
-            }
-            var empty = reader.ReadBool();
-            if (empty) {
-                return;
-            }
-
-            for (var i = 0; i < count; i++) {
-                reader.ReadArrayUnmanaged(ref chunks[i]);
-            }
+        public void ReadChunk(ref BinaryPackReader reader, uint chunkIdx) {
+            reader.ReadArrayUnmanaged(ref chunks[chunkIdx]);
         }
     }
 }

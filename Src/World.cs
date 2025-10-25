@@ -1,4 +1,11 @@
-﻿using System;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FFS.Libraries.StaticPack;
@@ -16,177 +23,247 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppEagerStaticClassConstruction]
     #endif
     public abstract partial class World<WorldType> {
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
-        internal static List<IWorldDebugEventListener> _debugEventListeners;
+        #if FFS_ECS_EVENTS
+        private static List<IWorldDebugEventListener> WorldDebugEventListeners;
         #endif
 
-        internal static WorldConfig cfg;
+        internal static WorldConfig config;
         public static WorldStatus Status { get; private set; }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-        internal static bool GidStoreLoaded;
-        internal static MultiThreadStatus MTStatus = new();
-        internal static bool MultiThreadActive {
-            get => MTStatus.Active;
-            set => MTStatus.Active = value;
-        }
+        internal static volatile bool MultiThreadActive;
+
+        #if FFS_ECS_DEBUG
+        internal static MultiThreadStatus MTStatus = new() {
+            Active = static () => MultiThreadActive
+        };
         #endif
 
-        public static void Create(WorldConfig config) {
-            if (Status != WorldStatus.NotCreated) {
-                throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Create, World already created");
-            }
-            cfg = config;
-            cfg.Normalize();
-            
-            Entities.Value.Create(cfg.baseEntitiesCapacity);
-            ModuleComponents.Value.Create(cfg.BaseComponentTypesCount);
-            #if !FFS_ECS_DISABLE_TAGS
-            ModuleTags.Value.Create(cfg.BaseTagTypesCount);
+        public static void Create(WorldConfig worldConfig) {
+            #if FFS_ECS_DEBUG
+            AssertWorldIsNotCreated(WorldTypeName);
             #endif
-            Serializer.Create();
-            Status = WorldStatus.Created;
-            CurrentQuery.QueryDataCount = 0;
 
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            config = worldConfig.Normalize();
+
+            Entities.Value.Create(config.Independent, config.BaseClustersCapacity);
+            ModuleComponents.Value.Create(config.BaseComponentTypesCount);
+            ModuleTags.Value.Create(config.BaseTagTypesCount);
+            Events.Create();
+            Serializer.Create();
+            CurrentQuery.QueryDataCount = 0;
+            ParallelRunner<WorldType>.Create(config.ParallelQueryType, config.CustomThreadCount);
             MultiThreadActive = false;
-            GidStoreLoaded = false;
+
+            #if FFS_ECS_DEBUG
             CurrentQuery.QueryMode = 0;
             #endif
-            
-            #if !FFS_ECS_DISABLE_EVENTS
-            Events.Create();
-            #endif
-            
-            BinaryPack.RegisterWithCollections<EntityGID, UnmanagedPackArrayStrategy<EntityGID>>(EntityGIDSerializer.WriteEntityGID, EntityGIDSerializer.ReadEntityGID);
 
-            if (!BinaryPack.IsRegistered<GIDStoreSnapshot>()) {
-                BinaryPack.Register(GIDStoreSnapshot.Write, GIDStoreSnapshot.Read);
-            }
-        }
-
-        public static void Initialize() {
-            if (Status != WorldStatus.Created) {
-                throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Create, World not created");
+            if (!BinaryPack.IsRegistered<EntityGID>()) {
+                BinaryPack.RegisterWithCollections<EntityGID, UnmanagedPackArrayStrategy<EntityGID>>(EntityGIDSerializer.WriteEntityGID, EntityGIDSerializer.ReadEntityGID);
             }
 
-            Initialize(new GIDStore().Create(cfg.baseEntitiesCapacity));
-        }
-
-        public static void Initialize(GIDStoreSnapshot gidStoreSnapshot) {
-            if (Status != WorldStatus.Created) {
-                throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Create, World not created");
-            }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            GidStoreLoaded = true;
-            #endif
-            Initialize(new GIDStore(gidStoreSnapshot));
-        }
-
-        internal static void Initialize(GIDStore gidStore) {
-            if (Status != WorldStatus.Created) {
-                throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Create, World not created");
+            if (!BinaryPack.IsRegistered<EntityGIDCompact>()) {
+                BinaryPack.RegisterWithCollections<EntityGIDCompact, UnmanagedPackArrayStrategy<EntityGIDCompact>>(EntityGIDSerializer.WriteEntityGIDCompact, EntityGIDSerializer.ReadEntityGIDCompact);
             }
 
-            Entities.Value.Initialize(ref gidStore);
-            ModuleComponents.Value.Initialize();
-            #if !FFS_ECS_DISABLE_TAGS
-            ModuleTags.Value.Initialize();
-            #endif
             Worlds.Set(typeof(WorldType), new WorldWrapper<WorldType>());
-            ParallelRunner<WorldType>.Create(cfg);
+
+            Status = WorldStatus.Created;
+        }
+
+        public static void Initialize(uint baseEntitiesCapacity = Const.ENTITIES_IN_CHUNK * 4) {
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
+            baseEntitiesCapacity.NormalizeThis(Const.ENTITIES_IN_CHUNK);
+            
+            var chunksCapacity = baseEntitiesCapacity >> Const.ENTITIES_IN_CHUNK_SHIFT;
+            Entities.Value.Initialize(chunksCapacity);
+            Entities.Value.RegisterCluster(DEFAULT_CLUSTER);
             
             Status = WorldStatus.Initialized;
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
-            if (_debugEventListeners != null) {
-                foreach (var listener in _debugEventListeners) {
-                    listener.OnWorldInitialized();
-                }
-            }
+
+            #if FFS_ECS_EVENTS
+            OnWorldInitialized();
+            #endif
+        }
+
+        public static void InitializeFromGIDStoreSnapshot(BinaryPackReader reader) {
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
+
+            Serializer.RestoreFromGIDStoreSnapshot(reader);
+            Status = WorldStatus.Initialized;
+
+            #if FFS_ECS_EVENTS
+            OnWorldInitialized();
+            #endif
+        }
+
+        public static void InitializeFromGIDStoreSnapshot(byte[] snapshot, bool gzip = false) {
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
+
+            Serializer.RestoreFromGIDStoreSnapshot(snapshot, gzip);
+            Status = WorldStatus.Initialized;
+
+            #if FFS_ECS_EVENTS
+            OnWorldInitialized();
+            #endif
+        }
+
+        public static void InitializeFromGIDStoreSnapshot(string worldSnapshotFilePath, bool gzip = false, uint byteSizeHint = 0) {
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
+
+            Serializer.RestoreFromGIDStoreSnapshot(worldSnapshotFilePath, gzip, byteSizeHint);
+            Status = WorldStatus.Initialized;
+
+            #if FFS_ECS_EVENTS
+            OnWorldInitialized();
+            #endif
+        }
+
+        public static void InitializeFromWorldSnapshot(BinaryPackReader reader) {
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
+
+            Serializer.LoadWorldSnapshot(reader);
+            Status = WorldStatus.Initialized;
+
+            #if FFS_ECS_EVENTS
+            OnWorldInitialized();
+            #endif
+        }
+
+        public static void InitializeFromWorldSnapshot(byte[] snapshot, bool gzip = false) {
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
+
+            Serializer.LoadWorldSnapshot(snapshot, gzip);
+            Status = WorldStatus.Initialized;
+
+            #if FFS_ECS_EVENTS
+            OnWorldInitialized();
+            #endif
+        }
+
+        public static void InitializeFromWorldSnapshot(string worldSnapshotFilePath, bool gzip = false, uint byteSizeHint = 0) {
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
+
+            Serializer.LoadWorldSnapshot(worldSnapshotFilePath, gzip, byteSizeHint);
+            Status = WorldStatus.Initialized;
+
+            #if FFS_ECS_EVENTS
+            OnWorldInitialized();
             #endif
         }
 
         [MethodImpl(AggressiveInlining)]
         public static void Destroy() {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Destroy, World not initialized");
+            #if FFS_ECS_DEBUG
+            AssertWorldIsInitialized(WorldTypeName);
             #endif
-            
-            #if !FFS_ECS_DISABLE_EVENTS
+
+            #if FFS_ECS_EVENTS
+            OnWorldDestroyed();
+            WorldDebugEventListeners = null;
+            #endif
+
+            DestroyAllEntities();
+
             Events.Destroy();
-            #endif
-
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
-            if (_debugEventListeners != null) {
-                for (var i = _debugEventListeners.Count - 1; i >= 0; i--) {
-                    var listener = _debugEventListeners[i];
-                    listener.OnWorldDestroyed();
-                }
-            }
-
-            _debugEventListeners = null;
-            #endif
-
             Entities.Value.Destroy();
             ModuleComponents.Value.Destroy();
-            #if !FFS_ECS_DISABLE_TAGS
             ModuleTags.Value.Destroy();
-            #endif
 
-            Status = WorldStatus.NotCreated;
-            Worlds.Delete(typeof(WorldType));
-            ParallelRunner<WorldType>.Destroy();
-
-            cfg = default;
+            config = default;
+            MultiThreadActive = false;
             Context.Value.Clear();
             NamedContext.Clear();
             Serializer.Destroy();
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            MultiThreadActive = false;
+            ParallelRunner<WorldType>.Destroy();
+
+            Status = WorldStatus.NotCreated;
+            Worlds.Delete(typeof(WorldType));
+
+            #if FFS_ECS_DEBUG
             FileLogger?.Disable();
             FileLogger = default;
-            GidStoreLoaded = false;
-            #endif
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public static void DestroyAllEntities() {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: DestroyAllEntities, World not initialized");
-            #endif
-            Query.For(ent => ent.Destroy(), EntityStatusType.Any, QueryMode.Flexible);
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public static void Clear() {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: Clear, World not initialized");
-            #endif
-
-            ModuleComponents.Value.Clear();
-            #if !FFS_ECS_DISABLE_TAGS
-            ModuleTags.Value.Clear();
-            #endif
-            Entities.Value.Clear();
-            
-            #if !FFS_ECS_DISABLE_EVENTS
-            Events.Clear();
             #endif
         }
 
         [MethodImpl(AggressiveInlining)]
         public static bool IsWorldInitialized() => Status == WorldStatus.Initialized;
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
         [MethodImpl(AggressiveInlining)]
-        public static void AddWorldDebugEventListener(IWorldDebugEventListener listener) {
-            _debugEventListeners ??= new List<IWorldDebugEventListener>();
-            _debugEventListeners.Add(listener);
+        public static bool IsIndependent() => config.Independent;
+
+        #region DEBUG_EVENTS
+        #if FFS_ECS_EVENTS
+        public partial struct DEBUG {
+            [MethodImpl(AggressiveInlining)]
+            public static void AddWorldDebugEventListener(IWorldDebugEventListener listener) {
+                WorldDebugEventListeners ??= new List<IWorldDebugEventListener>();
+                WorldDebugEventListeners.Add(listener);
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            public static void RemoveWorldDebugEventListener(IWorldDebugEventListener listener) {
+                WorldDebugEventListeners?.Remove(listener);
+            }
         }
 
         [MethodImpl(AggressiveInlining)]
-        public static void RemoveWorldDebugEventListener(IWorldDebugEventListener listener) {
-            _debugEventListeners?.Remove(listener);
+        internal static void OnWorldResized(uint chunksCapacity) {
+            if (WorldDebugEventListeners != null) {
+                for (var i = WorldDebugEventListeners.Count - 1; i >= 0; i--) {
+                    WorldDebugEventListeners[i].OnWorldResized(chunksCapacity);
+                }
+            }
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        internal static void OnWorldDestroyed() {
+            if (WorldDebugEventListeners != null) {
+                for (var i = WorldDebugEventListeners.Count - 1; i >= 0; i--) {
+                    WorldDebugEventListeners[i].OnWorldDestroyed();
+                }
+            }
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        internal static void OnWorldInitialized() {
+            if (WorldDebugEventListeners != null) {
+                for (var i = WorldDebugEventListeners.Count - 1; i >= 0; i--) {
+                    WorldDebugEventListeners[i].OnWorldInitialized();
+                }
+            }
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        internal static void OnEntityCreated(Entity entity) {
+            if (WorldDebugEventListeners != null) {
+                for (var i = WorldDebugEventListeners.Count - 1; i >= 0; i--) {
+                    WorldDebugEventListeners[i].OnEntityCreated(entity);
+                }
+            }
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        internal static void OnEntityDestroyed(Entity entity) {
+            if (WorldDebugEventListeners != null) {
+                for (var i = WorldDebugEventListeners.Count - 1; i >= 0; i--) {
+                    WorldDebugEventListeners[i].OnEntityDestroyed(entity);
+                }
+            }
         }
 
         public interface IWorldDebugEventListener {
@@ -194,9 +271,22 @@ namespace FFS.Libraries.StaticEcs {
             void OnEntityDestroyed(Entity entity);
             void OnWorldInitialized();
             void OnWorldDestroyed();
-            void OnWorldResized(uint capacity);
+            void OnWorldResized(uint chunksCapacity);
         }
         #endif
+        #endregion
+
+        [MethodImpl(AggressiveInlining)]
+        private static void CalculateByteSizeHint(ref uint hint) {
+            if (hint == 0) {
+                hint = CalculateByteSizeHint();
+            }
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        private static uint CalculateByteSizeHint() {
+            return (uint) (Entities.Value.chunks.Length * 10240 * 4);
+        }
     }
 
     #if ENABLE_IL2CPP
@@ -205,22 +295,22 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppEagerStaticClassConstruction]
     #endif
     public static class Worlds {
-        internal static readonly Dictionary<Type, IWorld> _worlds = new();
+        internal static readonly Dictionary<Type, IWorld> WorldsMap = new();
 
         [MethodImpl(AggressiveInlining)]
-        public static IWorld Get(Type WorldTypeType) => _worlds[WorldTypeType];
+        public static IWorld Get(Type WorldTypeType) => WorldsMap[WorldTypeType];
 
         [MethodImpl(AggressiveInlining)]
-        public static bool Has(Type WorldTypeType) => _worlds.ContainsKey(WorldTypeType);
+        public static bool Has(Type WorldTypeType) => WorldsMap.ContainsKey(WorldTypeType);
 
         [MethodImpl(AggressiveInlining)]
-        public static IReadOnlyCollection<IWorld> GetAll() => _worlds.Values;
+        public static IReadOnlyCollection<IWorld> GetAll() => WorldsMap.Values;
 
         [MethodImpl(AggressiveInlining)]
-        internal static void Set(Type WorldTypeType, IWorld world) => _worlds[WorldTypeType] = world;
+        internal static void Set(Type WorldTypeType, IWorld world) => WorldsMap[WorldTypeType] = world;
 
         [MethodImpl(AggressiveInlining)]
-        internal static void Delete(Type WorldTypeType) => _worlds.Remove(WorldTypeType);
+        internal static void Delete(Type WorldTypeType) => WorldsMap.Remove(WorldTypeType);
     }
 
     public enum WorldStatus {
@@ -230,36 +320,50 @@ namespace FFS.Libraries.StaticEcs {
     }
 
     public struct WorldConfig {
-        public uint baseEntitiesCapacity;
         public uint BaseComponentTypesCount;
         public uint BaseTagTypesCount;
         public ParallelQueryType ParallelQueryType;
         public uint CustomThreadCount;
+        public ushort BaseClustersCapacity;
         public bool DefaultQueryModeStrict;
+        public bool Independent;
 
-        public static WorldConfig Default() => new() {
-                baseEntitiesCapacity = Const.ENTITIES_IN_CHUNK,
+        public static WorldConfig Default(bool independent = true) =>
+            new() {
                 BaseComponentTypesCount = 64,
                 BaseTagTypesCount = 64,
                 ParallelQueryType = ParallelQueryType.Disabled,
                 CustomThreadCount = 1,
-                DefaultQueryModeStrict = true
+                BaseClustersCapacity = 16,
+                DefaultQueryModeStrict = true,
+                Independent = independent
             };
-        
-        internal void Normalize() {
-            baseEntitiesCapacity.NormalizeThis(Const.ENTITIES_IN_CHUNK);
+
+        public static WorldConfig MaxThreads(bool independent = true) =>
+            new() {
+                BaseComponentTypesCount = 64,
+                BaseTagTypesCount = 64,
+                BaseClustersCapacity = 16,
+                ParallelQueryType = ParallelQueryType.MaxThreadsCount,
+                DefaultQueryModeStrict = true,
+                Independent = independent
+            };
+
+        internal WorldConfig Normalize() {
+            BaseClustersCapacity = (ushort) Math.Max((uint) 16, BaseClustersCapacity);
+            return this;
         }
     }
-    
+
     public enum ParallelQueryType {
         Disabled,
         MaxThreadsCount,
         CustomThreadsCount
     }
-    
-    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-    internal class MultiThreadStatus {
-        public bool Active;
+
+    #if FFS_ECS_DEBUG
+    internal struct MultiThreadStatus {
+        public Func<bool> Active;
     }
     #endif
 }

@@ -1,4 +1,10 @@
-﻿#if !FFS_ECS_DISABLE_TAGS
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
 using System;
 using System.Buffers;
 using System.Runtime.CompilerServices;
@@ -44,32 +50,26 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal void WriteAll(ref BinaryPackWriter writer, ref Tags<T> pool) {
-                    writer.WriteInt(pool.chunks.Length);
-                    writer.WriteInt(Entities.Value.nextActiveChunkIdx);
-                    for (var i = 0; i < Entities.Value.nextActiveChunkIdx; i++) {
-                        ref var chunk = ref pool.chunks[i];
-                        writer.WriteUlong(chunk.notEmptyBlocks);
+                internal void WriteChunk(ref BinaryPackWriter writer, ref Tags<T> pool, uint chunkIdx) {
+                    ref var chunk = ref pool.chunks[chunkIdx];
+                    writer.WriteUlong(chunk.notEmptyBlocks);
+                    if (chunk.notEmptyBlocks != 0) {
                         writer.WriteUlong(chunk.fullBlocks);
                         writer.WriteArrayUnmanaged(chunk.entities);
                     }
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal void ReadAll(ref BinaryPackReader reader, ref Tags<T> pool) {
-                    var chunkCapacity = reader.ReadInt();
-                    var chunkCount = reader.ReadInt();
-
-                    pool.chunks ??= new TagsChunk[chunkCapacity];
-                    if (pool.chunks.Length < chunkCapacity) {
-                        Array.Resize(ref pool.chunks, chunkCapacity);
-                    }
-                    
-                    for (uint i = 0; i < chunkCount; i++) {
-                        ref var chunk = ref pool.chunks[i];
-                        chunk.notEmptyBlocks =  reader.ReadUlong();
-                        chunk.fullBlocks =  reader.ReadUlong();
+                internal void ReadChunk(ref BinaryPackReader reader, ref Tags<T> pool, uint chunkIdx) {
+                    ref var chunk = ref pool.chunks[chunkIdx];
+                        
+                    chunk.notEmptyBlocks =  reader.ReadUlong();
+                    if (chunk.notEmptyBlocks != 0) {
+                        pool.InitChunkSimple(ref chunk, chunkIdx);
+                        chunk.fullBlocks = reader.ReadUlong();
                         reader.ReadArrayUnmanaged(ref chunk.entities);
+                    } else {
+                        chunk.fullBlocks = 0;
                     }
                 }
             }
@@ -79,39 +79,33 @@ namespace FFS.Libraries.StaticEcs {
     internal static class TagSerializerUtils {
         
         [MethodImpl(AggressiveInlining)]
-        internal static void DeleteAllTagMigration<WorldType>(this ref BinaryPackReader reader, EcsTagDeleteMigrationReader<WorldType> migration) 
+        internal static void DeleteAllTagMigration<WorldType>(this ref BinaryPackReader reader, EcsTagDeleteMigrationReader<WorldType> migration, uint chunkIdx) 
             where WorldType : struct, IWorldType {
-            var chunkCapacity = reader.ReadInt();
-            var chunkCount = reader.ReadInt();
-
-            var chunks = ArrayPool<TagsChunk>.Shared.Rent(chunkCapacity);
-            for (uint i = 0; i < chunkCount; i++) {
-                ref var chunk = ref chunks[i];
-                chunk.notEmptyBlocks = reader.ReadUlong();
-                chunk.fullBlocks = reader.ReadUlong();
-                chunk.entities = ArrayPool<ulong>.Shared.Rent(Const.BLOCK_IN_CHUNK);
-                reader.ReadArrayUnmanaged(ref chunk.entities);
-            }
-
-            #if NET6_0_OR_GREATER
-            ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
-            #else
-            var deBruijn = Utils.DeBruijn;
-            #endif
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity._id;
-            for (var chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
-                ref var chunk = ref chunks[chunkIdx];
-                var chunkMask = chunk.notEmptyBlocks;
-
-                while (chunkMask > 0) {
-                    var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
-                    chunkMask &= chunkMask - 1;
-                    var entitiesMask = chunk.entities[blockIdx];
+            
+            
+            var notEmptyBlocks =  reader.ReadUlong();
+            if (notEmptyBlocks != 0) {
+                var entities = ArrayPool<ulong>.Shared.Rent(Const.BLOCK_IN_CHUNK);
+                
+                reader.ReadUlong(); // fullBlocks
+                reader.ReadArrayUnmanaged(ref entities);
+                
+                #if NET6_0_OR_GREATER
+                ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
+                #else
+                var deBruijn = Utils.DeBruijn;
+                #endif
+                
+                var entity = new World<WorldType>.Entity();
+                ref var eid = ref entity.id;
+                while (notEmptyBlocks > 0) {
+                    var blockIdx = (uint) deBruijn[(int) (((notEmptyBlocks & (ulong) -(long) notEmptyBlocks) * 0x37E84A99DAE458FUL) >> 58)];
+                    notEmptyBlocks &= notEmptyBlocks - 1;
+                    var entitiesMask = entities[blockIdx];
 
                     if (entitiesMask > 0) {
                         var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-                        var blockEntity = (uint) (globalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT);
+                        var blockEntity = (uint) (globalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Const.ENTITY_ID_OFFSET;
 
                         var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                         var end = Utils.ApproximateMSB(entitiesMask);
@@ -133,15 +127,9 @@ namespace FFS.Libraries.StaticEcs {
                         }
                     }
                 }
+                
+                ArrayPool<ulong>.Shared.Return(entities, true);
             }
-            
-            for (uint i = 0; i < chunkCount; i++) {
-                ref var chunk = ref chunks[i];
-                ArrayPool<ulong>.Shared.Return(chunk.entities, true);
-            }
-            
-            ArrayPool<TagsChunk>.Shared.Return(chunks, true);
         }
     }
 }
-#endif

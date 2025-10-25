@@ -216,6 +216,13 @@ ___
 ref Childs childs = ref father.SetLinks<Childs>(sonAlex, sonJack, sonKevin);
 ```
 
+> Метод `TrySetLinks` создает или использует существующий компонент (используется для типа `IEntityLinksComponent`)  
+> принимает от 1-5 `EntityGID` значений и возвращает ссылку на компонент, в случае если значение уже установлена то оно не будет добавлено 
+
+```csharp
+ref Childs childs = ref father.TrySetLinks<Childs>(sonAlex, sonJack, sonKevin);
+```
+
 ___
 
 - Регистрация связи (Вариант 2 со стороны детей)
@@ -235,7 +242,7 @@ ___
 Просмотрев все сущности мы можем убедиться в этом
 
 ```csharp
-foreach (var entity in W.AllEntities()) {
+foreach (var entity in W.Query.Entities()) {
     Console.WriteLine(entity.PrettyString);
 }
 //  Entity ID: 3                   
@@ -326,7 +333,7 @@ entity.HasAllOf<Parent>();
 ```
 
 {: .importantru }
-Стоит предостеречь от изменения значений связей вручную (не через специальные методы такие как `SetLink`, `SetLinks`, `TryDeleteLink`, `TryDeleteLinks`)  
+Стоит предостеречь от изменения значений связей вручную (не через специальные методы такие как `SetLink`, `SetLinks`, `TrySetLinks`, `TryDeleteLink`, `TryDeleteLinks`)  
 например не стоит делать так: `entity.Ref<Parent>().Link = someGid;`  
 потому что это не позволяет автоматически управлять обратными ссылками и другими действиями и может привести к сломанной игровой логике  
 при этом ничего не мешает хранить дополнительные данные в компонентах помимо самой связи
@@ -338,6 +345,6 @@ ___
 > Компоненты отношений можно использовать в запросах как и любые другие компоненты
 
 ```csharp
-W.QueryEntities.For<All<Parent, Childs>>()
+W.Query.Entities<All<Parent, Childs>>()
 // ..
 ```

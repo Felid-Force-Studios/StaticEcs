@@ -1,3 +1,10 @@
+#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
@@ -35,25 +42,25 @@ namespace FFS.Libraries.StaticEcs {
         private static AbstractParallelTask _task;
         private static int _threadsCount;
         private static volatile bool _disposing;
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
         private static ConcurrentQueue<(Exception, string)> _exceptions;
         #endif
         
-        internal static void Create(WorldConfig cfg) {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        internal static void Create(ParallelQueryType parallelQueryType, uint customThreadCount) {
+            #if FFS_ECS_DEBUG
             _exceptions = new();
             #endif
-            if (cfg.ParallelQueryType == ParallelQueryType.Disabled) {
+            if (parallelQueryType == ParallelQueryType.Disabled) {
                 _threadsCount = -1;
                 return;
             }
             #if UNITY_WEBGL
             _threadsCount = 1;
             #else
-            if (cfg.ParallelQueryType == ParallelQueryType.MaxThreadsCount) {
+            if (parallelQueryType == ParallelQueryType.MaxThreadsCount) {
                 _threadsCount = Environment.ProcessorCount;
             } else {
-                _threadsCount = (int) Math.Min(Environment.ProcessorCount, cfg.CustomThreadCount);
+                _threadsCount = (int) Math.Min(Environment.ProcessorCount, customThreadCount);
             }
             #endif
             _disposing = false;
@@ -77,7 +84,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
 
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 _exceptions = null;
                 #endif
                 _workers = null;
@@ -87,13 +94,12 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         public static void Run(AbstractParallelTask task, uint count, uint chunkSize, uint workersLimit) {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             if (_task != null) {
                 throw new StaticEcsException("The current task is not completed, multiple calls are not supported");
             }
-
-            World<WorldType>.MultiThreadActive = true;
             #endif
+            World<WorldType>.MultiThreadActive = true;
             if (count == 0 || chunkSize <= 0) {
                 return;
             }
@@ -131,7 +137,7 @@ namespace FFS.Libraries.StaticEcs {
                 _workers[i].WorkDone.WaitOne();
             }
             
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             var error = string.Empty;
             while (!_exceptions.IsEmpty) {
                 if (_exceptions.TryDequeue(out var exData)) {
@@ -145,9 +151,10 @@ namespace FFS.Libraries.StaticEcs {
             #endif
 
             _task = default;
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
             World<WorldType>.MultiThreadActive = false;
-            #endif
+            
+            World<WorldType>.ModuleComponents.Value.MoveChunksToPool();
+            World<WorldType>.ModuleTags.Value.MoveChunksToPool();
         }
 
         static void ThreadFunction(object raw) {
@@ -165,7 +172,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 catch (Exception ex) {
                     worker.WorkDone.Set();
-                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                    #if FFS_ECS_DEBUG
                     if (ex is not ThreadAbortException) {
                         _exceptions.Enqueue((ex, Thread.CurrentThread.Name));
                     }

@@ -1,3 +1,10 @@
+#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -34,7 +41,7 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             internal void WriteGuids(ref BinaryPackWriter writer) {
-                writer.WriteCollection(0, _poolsCount, (ref BinaryPackWriter w, int i) => {
+                writer.WriteCollection(0, poolsCount, (ref BinaryPackWriter w, int i) => {
                     w.WriteGuid(Value._pools[i].Guid());
                 });
             }
@@ -62,6 +69,11 @@ namespace FFS.Libraries.StaticEcs {
                     _tempLoadedPools = null;
                     _poolByGuid = null;
                 }
+                
+                [MethodImpl(AggressiveInlining)]
+                internal bool TryGetPool(in Guid guid, out IComponentsWrapper pool) {
+                    return _poolByGuid.TryGetValue(guid, out pool);
+                }
 
                 [MethodImpl(AggressiveInlining)]
                 internal void RegisterComponentType<T>(IComponentConfig<T, WorldType> config) where T : struct, IComponent {
@@ -78,75 +90,128 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal void Write(ref BinaryPackWriter writer) {
+                internal void WriteWorld(ref BinaryPackWriter writer, TempChunksData tempChunks) {
                     ref var components = ref ModuleComponents.Value;
-                    components._bitMask.Write(ref writer, Entities.Value.nextActiveChunkIdx, components._poolsCount == 0);
-                    
-                    writer.WriteUshort(components._poolsCount);
-                    for (var i = 0; i < components._poolsCount; i++) {
-                        var pool = components._pools[i];
-                        var guid = pool.Guid();
+                    writer.WriteUshort(components.poolsCount);
+                    writer.WriteUshort(components.bitMask.maskLen);
+                    writer.WriteUint(tempChunks.ChunksCount);
+                    for (var i = 0; i < tempChunks.ChunksCount; i++) {
+                        var chunkIdx = tempChunks.Chunks[i];
+                        writer.WriteUint(chunkIdx);
+                        WriteChunk(ref writer, chunkIdx);
+                    }
+                }
 
-                        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                [MethodImpl(AggressiveInlining)]
+                internal void WriteChunk(ref BinaryPackWriter writer, uint chunkIdx) {
+                    ref var components = ref ModuleComponents.Value;
+                    
+                    var hasEntities = HasEntitiesInChunk(chunkIdx);
+                    writer.WriteBool(hasEntities);
+                        
+                    if (hasEntities) {
+                        components.bitMask.WriteChunk(ref writer, chunkIdx);
+                    }
+                            
+                    for (var j = 0; j < components.poolsCount; j++) {
+                        var pool = components._pools[j];
+                        var guid = pool.Guid();
+                    
+                        #if FFS_ECS_DEBUG
                         if (!_poolByGuid.ContainsKey(guid)) {
                             throw new StaticEcsException($"Serializer for component type {pool.GetElementType()} not registered");
                         }
                         #endif
+                                
                         writer.WriteGuid(guid);
                         writer.WriteUshort(pool.DynamicId());
-                        var offset = writer.MakePoint(sizeof(uint));
-                        _poolByGuid[guid].WriteAll(ref writer);
-                        writer.WriteUintAt(offset, writer.Position - (offset + sizeof(uint)));
+                            
+                        if (hasEntities) {
+                            var sizePosition = writer.MakePoint(sizeof(uint));
+                            _poolByGuid[guid].WriteChunk(ref writer, chunkIdx);
+                            writer.WriteUintAt(sizePosition, writer.Position - (sizePosition + sizeof(uint)));
+                        }
                     }
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal void Read(ref BinaryPackReader reader) {
+                internal void ReadWorld(ref BinaryPackReader reader) {
+                    ref var components = ref ModuleComponents.Value;
+                    
+                    var poolsCount = reader.ReadUshort();
+                    var maskLen = reader.ReadUshort();
+                    var chunksCount = reader.ReadUint();
+                    
+                    if (maskLen > components.bitMask.maskLen) {
+                        throw new StaticEcsException($"In the saved data, the mask is {maskLen * 64} components in size, and in the current world {components.bitMask.maskLen * 64}, register at least {maskLen * 64 - 63} components in the world.");
+                    }
+                    
+                    for (var i = 0; i < chunksCount; i++) {
+                        var chunkIdx = reader.ReadUint();
+                        
+                        ReadChunk(ref reader, chunkIdx, poolsCount);
+                    }
+                }
+
+                [MethodImpl(AggressiveInlining)]
+                internal void ReadChunk(ref BinaryPackReader reader, uint chunkIdx, uint poolsCount) {
+                    ref var components = ref ModuleComponents.Value;
+
                     _tempDeletedPoolIds.Clear();
                     _tempLoadedPools.Clear();
-                    ref var components = ref ModuleComponents.Value;
 
-                    components._bitMask.Read(ref reader);
-                    var poolsCount = reader.ReadUshort();
-                    for (var i = 0; i < poolsCount; i++) {
+                    var hasEntities = reader.ReadBool();
+
+                    if (hasEntities) {
+                        components.bitMask.InitChunk(chunkIdx);
+                        components.bitMask.ReadChunk(ref reader, chunkIdx);
+                    }
+
+                    for (var j = 0; j < poolsCount; j++) {
                         var guid = reader.ReadGuid();
                         var id = reader.ReadUshort();
-                        var byteSize = reader.ReadUint();
-                        if (_poolByGuid.TryGetValue(guid, out var pool)) {
-                            pool.ReadAll(ref reader);
-                            _tempLoadedPools.Add((guid, id));
-                        } else {
-                            _tempDeletedPoolIds.Add((guid, reader.Position));
-                            components._bitMask.DelRange(0, Entities.Value.entityIdSeq, id);
-                            reader.SkipNext(byteSize);
+
+                        if (hasEntities) {
+                            var byteSize = reader.ReadUint();
+                            if (_poolByGuid.TryGetValue(guid, out var pool)) {
+                                pool.ReadChunk(ref reader, chunkIdx);
+                                _tempLoadedPools.Add((guid, id));
+                            } else {
+                                _tempDeletedPoolIds.Add((guid, reader.Position));
+                                components.bitMask.DelInChunk(chunkIdx, id);
+                                reader.SkipNext(byteSize);
+                            }
                         }
                     }
 
-                    Migration(ref components);
-                    
-                    foreach (var (id, offset) in _tempDeletedPoolIds) {
-                        if (_deleteMigratorByGuid.TryGetValue(id, out var migration)) {
-                            var pReader = reader.AsReader(offset);
-                            pReader.DeleteAllComponentMigration(migration);
+                    Migration(chunkIdx);
+
+                    if (_deleteMigratorByGuid.Count > 0) {
+                        foreach (var (id, offset) in _tempDeletedPoolIds) {
+                            if (_deleteMigratorByGuid.TryGetValue(id, out var migrator)) {
+                                var pReader = reader.AsReader(offset);
+                                pReader.DeleteAllComponentMigration(migrator, chunkIdx);
+                            }
                         }
                     }
 
-                    for (int i = 0; i < components._poolsCount; i++) {
-                        components._pools[i].UpdateBitMask(components._bitMask);
+                    for (var p = 0; p < components.poolsCount; p++) {
+                        components._pools[p].UpdateBitMask(chunkIdx);
                     }
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal void Write(ref BinaryPackWriter writer, Entity entity) {
+                internal void WriteEntity(ref BinaryPackWriter writer, Entity entity) {
                     ref var components = ref ModuleComponents.Value;
-                    ref var bitMask = ref components._bitMask;
+                    ref var bitMask = ref components.bitMask;
                     
                     ushort len = 0;
                     var point = writer.MakePoint(sizeof(ushort));
                     
                     var maskLen = bitMask.MaskLen;
-                    var masks = bitMask.Chunk(entity._id);
-                    var start = (entity._id & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen;
+                    var eid = entity.id - Const.ENTITY_ID_OFFSET;
+                    var masks = bitMask.Chunk(eid);
+                    var start = (eid & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen;
                     for (ushort i = 0; i < maskLen; i++) {
                         var mask = masks[start + i];
                         var offset = i << Const.LONG_SHIFT;
@@ -164,16 +229,45 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal void Read(ref BinaryPackReader reader, Guid[] componentGuidById, Entity entity) {
+                internal void WriteEntityAndDestroy(ref BinaryPackWriter writer, Entity entity) {
+                    ref var components = ref ModuleComponents.Value;
+                    ref var bitMask = ref components.bitMask;
+                    
+                    ushort len = 0;
+                    var point = writer.MakePoint(sizeof(ushort));
+                    
+                    var maskLen = bitMask.MaskLen;
+                    var eid = entity.id - Const.ENTITY_ID_OFFSET;
+                    var masks = bitMask.Chunk(eid);
+                    var start = (eid & Const.ENTITIES_IN_CHUNK_OFFSET_MASK) * maskLen;
+                    for (ushort i = 0; i < maskLen; i++) {
+                        ref var mask = ref masks[start + i];
+                        var offset = i << Const.LONG_SHIFT;
+                        while (mask > 0) {
+                            var id = Utils.PopLsb(ref mask) + offset;
+                            var pool = components._pools[id];
+                            if (!pool.Guid().Equals(Guid.Empty)) {
+                                writer.WriteUshort((ushort) id);
+                                pool.Write(ref writer, entity);
+                                len++;
+                            }
+                            pool.DeleteInternalWithoutMask(entity);
+                        }
+                    }
+                    writer.WriteUshortAt(point, len);
+                }
+
+                [MethodImpl(AggressiveInlining)]
+                internal void ReadEntity(ref BinaryPackReader reader, Guid[] componentGuidById, IComponentsWrapper[] dynamicPoolMap, Entity entity) {
                     var len = reader.ReadUshort();
 
-                    for (int i = 0; i < len; i++) {
+                    for (var i = 0; i < len; i++) {
                         var id = reader.ReadUshort();
-                        var guid = componentGuidById[id];
-                        if (_poolByGuid.TryGetValue(guid, out var pool)) {
+                        var pool = dynamicPoolMap[id];
+                        if (pool != null) {
                             pool.Read(ref reader, entity);
                         } else {
-                            if (_deleteMigratorByGuid.TryGetValue(guid, out var migration)) {
+                            if (_deleteMigratorByGuid.TryGetValue(componentGuidById[id], out var migration)) {
                                 reader.DeleteOneComponentMigration(entity, migration);
                             } else {
                                 reader.SkipOneComponent();
@@ -183,42 +277,40 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                private void Migration(ref ModuleComponents value) {
+                private void Migration(uint chunkIdx) {
+                    ref var value = ref ModuleComponents.Value;
+                    
                     if (HasMigration(ref value)) {
-                        var bitMap = value._bitMask.CopyBitMapToArrayPool();
-                        value._bitMask.Clear(Entities.Value.nextActiveChunkIdx);
+                        var bitMapChunk = value.bitMask.CopyBitMapChunkToArrayPool(chunkIdx);
+                        value.bitMask.ClearChunk(chunkIdx);
                         
-                        for (var i = 0; i < value._poolsCount; i++) {
-                            MigrateLoadedPool(value._pools[i], i, ref value, bitMap);
+                        for (var i = 0; i < value.poolsCount; i++) {
+                            MigrateChunkMask(value._pools[i], i, ref value, bitMapChunk, chunkIdx);
                         }
-
-                        for (var i = 0; i < value._bitMask.chunks.Length; i++) {
-                            ArrayPool<ulong>.Shared.Return(bitMap[i]);
-                        }
-
-                        ArrayPool<ulong[]>.Shared.Return(bitMap);
+                        
+                        ArrayPool<ulong>.Shared.Return(bitMapChunk);
                     }
                 }
-
+                
                 private bool HasMigration(ref ModuleComponents value) {
-                    if (value._poolsCount != _tempLoadedPools.Count) return true;
+                    if (value.poolsCount != _tempLoadedPools.Count) return true;
                     
-                    for (var i = 0; i < value._poolsCount; i++) {
+                    for (var i = 0; i < value.poolsCount; i++) {
                         var cur = value._pools[i];
                         var (guid, id) = _tempLoadedPools[i];
-
+                
                         if (cur.Guid() != guid || cur.DynamicId() != id) {
                             return true;
                         }
                     }
-
+                
                     return false;
                 }
-
-                private void MigrateLoadedPool(IComponentsWrapper pool, int poolId, ref ModuleComponents components, ulong[][] bitMap) {
+                
+                private void MigrateChunkMask(IComponentsWrapper pool, int poolId, ref ModuleComponents value, ulong[] bitMap, uint chunkIdx) {
                     foreach (var (guid, id) in _tempLoadedPools) {
                         if (pool.Guid() == guid) {
-                            components._bitMask.Migrate(0, Entities.Value.entityIdSeq, id, (ushort) poolId, bitMap);
+                            value.bitMask.MigrateChunk(chunkIdx, id, (ushort) poolId, bitMap);
                             return;
                         }
                     }

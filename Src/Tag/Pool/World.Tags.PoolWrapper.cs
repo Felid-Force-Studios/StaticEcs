@@ -1,4 +1,10 @@
-﻿#if !FFS_ECS_DISABLE_TAGS
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
 using System;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -45,13 +51,17 @@ namespace FFS.Libraries.StaticEcs {
 
             public bool TryCast<C>(out TagsWrapper<C> wrapper) where C : struct, ITag;
 
-            internal void Resize(uint cap);
+            internal void Resize(uint chunksCapacity);
 
             internal void Destroy();
 
-            internal void Clear();
+            internal void ClearChunk(uint chunkIdx);
 
-            internal void UpdateBitMask(BitMask bitMask);
+            internal void UpdateBitMask(uint chunkIdx);
+
+            internal void Initialize(uint chunksCapacity);
+
+            internal void TryMoveChunkToPool(uint chunkIdx);
 
         }
 
@@ -59,12 +69,9 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
-        public readonly struct TagsWrapper<T> : ITagsWrapper, Stateless where T : struct, ITag {
+        public readonly struct TagsWrapper<T> : ITagsWrapper where T : struct, ITag {
             [MethodImpl(AggressiveInlining)]
             public ushort DynamicId() => Tags<T>.Value.DynamicId();
-
-            [MethodImpl(AggressiveInlining)]
-            void IRawPool.SetDynamicId(ushort id) => Tags<T>.Value.SetDynamicId(id);
 
             [MethodImpl(AggressiveInlining)]
             public Guid Guid() => Tags<T>.Value.Guid();
@@ -109,7 +116,13 @@ namespace FFS.Libraries.StaticEcs {
             object IRawPool.GetRaw(uint entity) => default(T);
             
             [MethodImpl(AggressiveInlining)]
-            void ITagsWrapper.UpdateBitMask(BitMask bitMask) => Tags<T>.Value.UpdateBitMask(bitMask);
+            void ITagsWrapper.UpdateBitMask(uint chunkIdx) => Tags<T>.Value.UpdateBitMask(chunkIdx);
+
+            [MethodImpl(AggressiveInlining)]
+            void ITagsWrapper.Initialize(uint chunksCapacity) => Tags<T>.Value.Initialize(chunksCapacity);
+
+            [MethodImpl(AggressiveInlining)]
+            void ITagsWrapper.TryMoveChunkToPool(uint chunkIdx) => Tags<T>.Value.TryMoveChunkToPool(chunkIdx);
 
             [MethodImpl(AggressiveInlining)]
             ref TagsChunk IRawTagPool.Chunk(uint chunkIdx) => ref Tags<T>.Value.Chunk(chunkIdx);
@@ -118,10 +131,10 @@ namespace FFS.Libraries.StaticEcs {
             ulong IRawTagPool.EMask(uint chunkIdx, int blockIdx) => Tags<T>.Value.EMask(chunkIdx, blockIdx);
 
             [MethodImpl(AggressiveInlining)]
-            void IRawPool.WriteAll(ref BinaryPackWriter writer) => Tags<T>.Serializer.Value.WriteAll(ref writer, ref Tags<T>.Value);
+            void IRawPool.WriteChunk(ref BinaryPackWriter writer, uint chunkIdx) => Tags<T>.Serializer.Value.WriteChunk(ref writer, ref Tags<T>.Value, chunkIdx);
 
             [MethodImpl(AggressiveInlining)]
-            void IRawPool.ReadAll(ref BinaryPackReader reader) => Tags<T>.Serializer.Value.ReadAll(ref reader, ref Tags<T>.Value);
+            void IRawPool.ReadChunk(ref BinaryPackReader reader, uint chunkIdx) => Tags<T>.Serializer.Value.ReadChunk(ref reader, ref Tags<T>.Value, chunkIdx);
 
             [MethodImpl(AggressiveInlining)]
             void IRawPool.PutRaw(uint entity, object value) => Tags<T>.Value.Set(new Entity(entity));
@@ -154,14 +167,13 @@ namespace FFS.Libraries.StaticEcs {
             int IRawPool.CalculateCapacity() => -1;
 
             [MethodImpl(AggressiveInlining)]
-            void ITagsWrapper.Resize(uint cap) => Tags<T>.Value.Resize(cap);
+            void ITagsWrapper.Resize(uint chunksCapacity) => Tags<T>.Value.Resize(chunksCapacity);
 
             [MethodImpl(AggressiveInlining)]
             void ITagsWrapper.Destroy() => Tags<T>.Value.Destroy();
 
             [MethodImpl(AggressiveInlining)]
-            void ITagsWrapper.Clear() => Tags<T>.Value.Clear();
+            void ITagsWrapper.ClearChunk(uint chunkIdx) => Tags<T>.Value.ClearChunk(chunkIdx);
         }
     }
 }
-#endif

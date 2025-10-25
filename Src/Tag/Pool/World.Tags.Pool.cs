@@ -1,4 +1,10 @@
-﻿#if !FFS_ECS_DISABLE_TAGS
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -24,27 +30,34 @@ namespace FFS.Libraries.StaticEcs {
         [FieldOffset(8)] private long fullBlocksSigned;
         [FieldOffset(72)] internal ulong[] entities;
         [FieldOffset(80)] internal ulong[] bitmask;
+        [FieldOffset(88)] internal SpinLock chunkLock;
+        
+        [MethodImpl(AggressiveInlining)]
+        internal TagsChunkData MoveToPoolData() {
+            var result = new TagsChunkData(entities);
+            entities = null;
+            return result;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        internal void InitFromPoolData(ref TagsChunkData data) {
+            entities = data.entities;
+            data = default;
+        }
 
         [MethodImpl(AggressiveInlining)]
         public void SetNotEmptyBit(byte index) {
             var mask = 1UL << index;
-            #if NET6_0_OR_GREATER
-            Interlocked.Or(ref notEmptyBlocksSigned, (long) mask);
-            #else
             long orig, newVal;
             do {
                 orig = notEmptyBlocksSigned;
                 newVal = orig | (long) mask;
             } while (Interlocked.CompareExchange(ref notEmptyBlocksSigned, newVal, orig) != orig);
-            #endif
         }
 
         [MethodImpl(AggressiveInlining)]
         public ulong ClearNotEmptyBit(byte index) {
             var mask = ~(1UL << index);
-            #if NET6_0_OR_GREATER
-            return (ulong) Interlocked.And(ref notEmptyBlocksSigned, (long) mask);
-            #else
             long orig, newVal;
             do {
                 orig = notEmptyBlocksSigned;
@@ -52,35 +65,40 @@ namespace FFS.Libraries.StaticEcs {
             } while (Interlocked.CompareExchange(ref notEmptyBlocksSigned, newVal, orig) != orig);
 
             return (ulong) newVal;
-            #endif
         }
 
         [MethodImpl(AggressiveInlining)]
         public void SetFullBit(byte index) {
             var mask = 1UL << index;
-            #if NET6_0_OR_GREATER
-            Interlocked.Or(ref fullBlocksSigned, (long) mask);
-            #else
             long orig, newVal;
             do {
                 orig = fullBlocksSigned;
                 newVal = orig | (long) mask;
             } while (Interlocked.CompareExchange(ref fullBlocksSigned, newVal, orig) != orig);
-            #endif
         }
 
         [MethodImpl(AggressiveInlining)]
         public void ClearFullBit(byte index) {
             var mask = ~(1UL << index);
-            #if NET6_0_OR_GREATER
-            Interlocked.And(ref fullBlocksSigned, (long) mask);
-            #else
             long orig, newVal;
             do {
                 orig = fullBlocksSigned;
                 newVal = orig & (long) mask;
             } while (Interlocked.CompareExchange(ref fullBlocksSigned, newVal, orig) != orig);
-            #endif
+        }
+    }
+    
+        
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, false)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
+    public struct TagsChunkData {
+        public readonly ulong[] entities;
+        
+        [MethodImpl(AggressiveInlining)]
+        public TagsChunkData(ulong[] entities) {
+            this.entities = entities;
         }
     }
     
@@ -97,14 +115,18 @@ namespace FFS.Libraries.StaticEcs {
         public partial struct Tags<T> where T : struct, ITag {
             public static Tags<T> Value;
             
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+            #if FFS_ECS_EVENTS
             internal List<ITagDebugEventListener> debugEventListeners;
             #endif
             
             internal TagsChunk[] chunks;
+            internal TagsChunkData[] chunksDataPool;
             private QueryData[] _queriesToUpdateOnDelete;
             private QueryData[] _queriesToUpdateOnAdd;
+            private BitMask _bitMask;
+            private FreeChunkCommandBuffer _freeChunkCommandBuffer;
             
+            internal int chunksDataPoolCount;
             internal ushort id;
             internal ushort maskLen;
             internal ulong idMask;
@@ -114,7 +136,10 @@ namespace FFS.Libraries.StaticEcs {
             internal byte _queriesToUpdateOnDeleteCount;
             internal byte _queriesToUpdateOnAddCount;
             
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
+            
+            internal static string TagsTypeName = $"{WorldTypeName}.Tags<{typeof(T).GenericName()}>"; 
+            
             private int _blockerDelete;
             private int _blockerAdd;
             #endif
@@ -122,20 +147,23 @@ namespace FFS.Libraries.StaticEcs {
             #region PUBLIC
             [MethodImpl(AggressiveInlining)]
             public bool Set(Entity entity) {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Add, World not initialized");
-                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Add, Tag type not registered");
-                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Add, cannot access ID - {id} from deleted entity");
-                if (_blockerAdd > 0 && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method Add, pool is blocked, use QueryMode.Flexible");
-                if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Add, pool is blocked, it is forbidden to modify a non-current entity in a parallel query");
+                #if FFS_ECS_DEBUG
+                AssertWorldIsInitialized(TagsTypeName);
+                AssertRegisteredTag<T>(TagsTypeName);
+                AssertEntityIsNotDestroyedAndLoaded(TagsTypeName, entity);
+                AssertNotBlockedByQuery(TagsTypeName, entity, _blockerAdd);
+                AssertNotBlockedByParallelQuery(TagsTypeName, entity);
                 #endif
                 
-                var eid = entity._id;
+                var eid = entity.id - Const.ENTITY_ID_OFFSET;
                 var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
                 var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
                 var blockEntityMask = 1UL << (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
                 
                 ref var chunk = ref chunks[chunkIdx];
+                if (chunk.entities == null) {
+                    InitChunk(ref chunk, chunkIdx);
+                }
                 ref var entitiesMask = ref chunk.entities[blockIdx];
 
                 if ((entitiesMask & blockEntityMask) != 0) {
@@ -156,7 +184,7 @@ namespace FFS.Libraries.StaticEcs {
                     _queriesToUpdateOnAdd[i].Update(~blockEntityMask, eid);
                 }
 
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                #if FFS_ECS_EVENTS
                 foreach (var listener in debugEventListeners) {
                     listener.OnTagAdd<T>(entity);
                 }
@@ -166,34 +194,40 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public bool Has(Entity entity) {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Has, World not initialized");
-                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Has, Tag type not registered");
-                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Has, cannot access ID - {id} from deleted entity");
+                #if FFS_ECS_DEBUG
+                AssertWorldIsInitialized(TagsTypeName);
+                AssertRegisteredTag<T>(TagsTypeName);
+                AssertEntityIsNotDestroyedAndLoaded(TagsTypeName, entity);
                 #endif
-                var eid = entity._id;
+                var eid = entity.id - Const.ENTITY_ID_OFFSET;
                 var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
                 var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
                 var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
-                return (chunks[chunkIdx].entities[blockIdx] & (1UL << blockEntityIdx)) != 0;
+                var entities = chunks[chunkIdx].entities;
+
+                return entities != null && (entities[blockIdx] & (1UL << blockEntityIdx)) != 0;
             }
 
             [MethodImpl(AggressiveInlining)]
             public bool Delete(Entity entity, bool deleteMask = true) {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Delete, World not initialized");
-                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Delete, Tag type not registered");
-                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Delete, cannot access ID - {id} from deleted entity");
-                if (_blockerDelete > 0 && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method Delete, pool is blocked, use QueryMode.Flexible");
-                if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(entity)) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Delete, pool is blocked, it is forbidden to modify a non-current entity in a parallel query");
+                #if FFS_ECS_DEBUG
+                AssertWorldIsInitialized(TagsTypeName);
+                AssertRegisteredTag<T>(TagsTypeName);
+                AssertEntityIsNotDestroyedAndLoaded(TagsTypeName, entity);
+                AssertNotBlockedByQuery(TagsTypeName, entity, _blockerDelete);
+                AssertNotBlockedByParallelQuery(TagsTypeName, entity);
                 #endif
-                var eid = entity._id;
+                var eid = entity.id - Const.ENTITY_ID_OFFSET;
                 var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
                 var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
                 var blockEntityMask = 1UL << (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
                 var blockEntityInvMask = ~blockEntityMask;
                 
                 ref var chunk = ref chunks[chunkIdx];
+                if (chunk.entities == null) {
+                    return false;
+                }
+                
                 ref var entitiesMask = ref chunk.entities[blockIdx];
                 
                 if ((entitiesMask & blockEntityMask) == 0) {
@@ -210,14 +244,20 @@ namespace FFS.Libraries.StaticEcs {
                 entitiesMask &= blockEntityInvMask;
                 
                 if (entitiesMask == 0) {
-                    chunk.ClearNotEmptyBit(blockIdx);
+                    if (chunk.ClearNotEmptyBit(blockIdx) == 0) {
+                        if (!MultiThreadActive) {
+                            chunksDataPool[chunksDataPoolCount++] = chunk.MoveToPoolData();
+                        } else {
+                            _freeChunkCommandBuffer.Add(chunkIdx, id);
+                        }
+                    }
                 }
                 
                 for (uint i = 0; i < _queriesToUpdateOnDeleteCount; i++) {
                     _queriesToUpdateOnDelete[i].Update(blockEntityInvMask, eid);
                 }
  
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                #if FFS_ECS_EVENTS
                 foreach (var listener in debugEventListeners) {
                     listener.OnTagDelete<T>(entity);
                 }
@@ -228,11 +268,11 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public void Copy(Entity src, Entity dst) {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Copy, World not initialized");
-                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Copy, Tag type not registered");
-                if (!src.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
-                if (!dst.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Copy, cannot access ID - {id} from deleted entity");
+                #if FFS_ECS_DEBUG
+                AssertWorldIsInitialized(TagsTypeName);
+                AssertRegisteredTag<T>(TagsTypeName);
+                AssertEntityIsNotDestroyedAndLoaded(TagsTypeName, src);
+                AssertEntityIsNotDestroyedAndLoaded(TagsTypeName, dst);
                 #endif
 
                 if (Has(src)) {
@@ -242,11 +282,11 @@ namespace FFS.Libraries.StaticEcs {
                         
             [MethodImpl(AggressiveInlining)]
             public void Move(Entity src, Entity dst) {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Move, World not initialized");
-                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Move, Tag type not registered");
-                if (!src.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Move, cannot access ID - {id} from deleted entity");
-                if (!dst.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Move, cannot access ID - {id} from deleted entity");
+                #if FFS_ECS_DEBUG
+                AssertWorldIsInitialized(TagsTypeName);
+                AssertRegisteredTag<T>(TagsTypeName);
+                AssertEntityIsNotDestroyedAndLoaded(TagsTypeName, src);
+                AssertEntityIsNotDestroyedAndLoaded(TagsTypeName, dst);
                 #endif
 
                 if (Has(src)) {
@@ -257,10 +297,10 @@ namespace FFS.Libraries.StaticEcs {
                         
             [MethodImpl(AggressiveInlining)]
             public bool Toggle(Entity entity) {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Toggle, World not initialized");
-                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Toggle, Tag type not registered");
-                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Toggle, cannot access ID - {id} from deleted entity");
+                #if FFS_ECS_DEBUG
+                AssertWorldIsInitialized(TagsTypeName);
+                AssertRegisteredTag<T>(TagsTypeName);
+                AssertEntityIsNotDestroyedAndLoaded(TagsTypeName, entity);
                 #endif
 
                 if (Has(entity)) {
@@ -274,10 +314,10 @@ namespace FFS.Libraries.StaticEcs {
                         
             [MethodImpl(AggressiveInlining)]
             public void Apply(Entity entity, bool state) {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-                if (!IsWorldInitialized()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Apply, World not initialized");
-                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: Apply, Tag type not registered");
-                if (!entity.IsActual()) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, {typeof(T)}>, Method: Apply, cannot access ID - {id} from deleted entity");
+                #if FFS_ECS_DEBUG
+                AssertWorldIsInitialized(TagsTypeName);
+                AssertRegisteredTag<T>(TagsTypeName);
+                AssertEntityIsNotDestroyedAndLoaded(TagsTypeName, entity);
                 #endif
                 
                 if (state) {
@@ -317,40 +357,81 @@ namespace FFS.Libraries.StaticEcs {
             #endregion
 
             #region INTERNAL
-            [MethodImpl(AggressiveInlining)]
-            internal void UpdateBitMask(BitMask bitMask) {
-                for (var i = 0; i < bitMask.chunks.Length; i++) {
-                    chunks[i].bitmask = bitMask.chunks[i];
+            [MethodImpl(NoInlining)]
+            private void InitChunk(ref TagsChunk chunk, uint chunkIdx) {
+                var taken = false;
+                chunk.chunkLock.Enter(ref taken);
+                #if FFS_ECS_DEBUG
+                if (!taken) throw new StaticEcsException($"Failed to acquire tags lock for chunk {chunkIdx}");
+                #endif
+                if (chunk.entities == null) {
+                    var count = Interlocked.Decrement(ref chunksDataPoolCount);
+                    if (count >= 0) {
+                        chunk.InitFromPoolData(ref chunksDataPool[count]);
+                    } else {
+                        Interlocked.Increment(ref chunksDataPoolCount);
+                        chunk.entities = new ulong[Const.BLOCK_IN_CHUNK];
+                    }
+                    chunk.bitmask = _bitMask.chunks[chunkIdx];
                 }
-
-                maskLen = bitMask.maskLen;
+                chunk.chunkLock.Exit();
             }
             
-            internal void Create(Guid guid, ushort tagId, uint entitiesCapacity) {
-                SetDynamicId(tagId);
-                var chunkCount = entitiesCapacity >> Const.ENTITIES_IN_CHUNK_SHIFT;
-                chunks = new TagsChunk[chunkCount];
-                for (var i = 0; i < chunkCount; i++) {
-                    chunks[i].entities = new ulong[Const.BLOCK_IN_CHUNK];
+            [MethodImpl(AggressiveInlining)]
+            private void InitChunkSimple(ref TagsChunk chunk, uint chunkIdx) {
+                if (chunksDataPoolCount > 0) {
+                    chunk.InitFromPoolData(ref chunksDataPool[--chunksDataPoolCount]);
+                } else {
+                    chunk.entities = new ulong[Const.BLOCK_IN_CHUNK];
+                    chunk.bitmask = _bitMask.chunks[chunkIdx];
                 }
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal void TryMoveChunkToPool(uint chunkIdx) {
+                ref var chunk = ref chunks[chunkIdx];
+                if (chunk.notEmptyBlocks == 0) {
+                    chunksDataPool[chunksDataPoolCount++] = chunk.MoveToPoolData();
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal void UpdateBitMask(uint chunkIdx) {
+                chunks[chunkIdx].bitmask = _bitMask.chunks[chunkIdx];
+                maskLen = _bitMask.maskLen;
+            }
+            
+            internal void Create(Guid guid, ushort tagId, FreeChunkCommandBuffer freeChunkCommandBuffer, BitMask bitMask) {
+                SetDynamicId(tagId);
+                _freeChunkCommandBuffer = freeChunkCommandBuffer;
+                _bitMask = bitMask;
                 Serializer.Value.Create(guid);
                 _queriesToUpdateOnDelete = new QueryData[Const.MAX_NESTED_QUERY];
                 _queriesToUpdateOnAdd = new QueryData[Const.MAX_NESTED_QUERY];
                 _queriesToUpdateOnDeleteCount = 0;
                 _queriesToUpdateOnAddCount = 0;
+                chunksDataPoolCount = 0;
                 _registered = true;
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                #if FFS_ECS_EVENTS
                 _blockerDelete = 0;
                 _blockerAdd = 0;
                 #endif
             }
             
+            internal void Initialize(uint chunksCapacity) {
+                chunksDataPool = new TagsChunkData[chunksCapacity];
+                chunks = new TagsChunk[chunksCapacity];
+                for (var i = 0; i < chunks.Length; i++) {
+                    chunks[i].chunkLock = new SpinLock(false);
+                }
+                maskLen = _bitMask.maskLen;
+            }
             
             [MethodImpl(AggressiveInlining)]
             public ushort DynamicId() {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-                if (Status < WorldStatus.Created) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: DynamicId, World not created");
-                if (!_registered) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}>, Method: DynamicId, Tag type not registered");
+                #if FFS_ECS_DEBUG
+                AssertWorldIsCreatedOrInitialized(TagsTypeName);
+                AssertRegisteredTag<T>(TagsTypeName);
                 #endif
                 return id;
             }
@@ -365,29 +446,29 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             internal Guid Guid() {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-                if (Status < WorldStatus.Created) throw new StaticEcsException($"World<{typeof(WorldType)}>.Tags<{typeof(T)}> Method: Guid, World not created");
-                if (!_registered) throw new Exception($"World<{typeof(StaticEcsException)}>.Masks<{typeof(T)}>, Method: Guid, Mask type not registered");
+                #if FFS_ECS_DEBUG
+                AssertWorldIsCreatedOrInitialized(TagsTypeName);
+                AssertRegisteredTag<T>(TagsTypeName);
                 #endif
                 return Serializer.Value.guid;
             }
             
             [MethodImpl(AggressiveInlining)]
-            internal void Resize(uint entitiesCapacity) {
-                var chunkCount = entitiesCapacity >> Const.ENTITIES_IN_CHUNK_SHIFT;
-                
-                if (chunks.Length < chunkCount) {
-                    var old = chunks.Length;
-                    Array.Resize(ref chunks, (int) chunkCount);
-                    for (var i = old; i < chunkCount; i++) {
-                        chunks[i].entities = new ulong[Const.BLOCK_IN_CHUNK];
-                    }
+            internal void Resize(uint chunksCapacity) {
+                var oldChunksCapacity = chunks.Length;
+                Array.Resize(ref chunksDataPool, (int) chunksCapacity);
+                Array.Resize(ref chunks, (int) chunksCapacity);
+                for (var i = oldChunksCapacity; i < chunks.Length; i++) {
+                    chunks[i].chunkLock = new SpinLock(false);
                 }
             }
 
             [MethodImpl(AggressiveInlining)]
             internal void Destroy() {
+                _freeChunkCommandBuffer = null;
                 chunks = null;
+                chunksDataPool = null;
+                chunksDataPoolCount = 0;
                 id = 0;
                 maskLen = 0;
                 idMask = 0;
@@ -397,23 +478,30 @@ namespace FFS.Libraries.StaticEcs {
                 _registered = false;
                 _queriesToUpdateOnDelete = null;
                 _queriesToUpdateOnAdd = null;
+                _bitMask = null;
                 _queriesToUpdateOnDeleteCount = 0;
                 _queriesToUpdateOnAddCount = 0;
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                #if FFS_ECS_EVENTS
                 debugEventListeners = null;
+                #endif
+                #if FFS_ECS_DEBUG
                 _blockerDelete = 0;
                 _blockerAdd = 0;
                 #endif
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal void Clear() {
-                for (var i = 0; i < chunks.Length; i++) {
-                    ref var chunk = ref chunks[i];
-                    Array.Clear(chunk.entities,  0, chunk.entities.Length);
-                    chunk.notEmptyBlocks = 0;
-                    chunk.fullBlocks = 0;
+            internal void ClearChunk(uint chunkIdx) {
+                ref var chunk = ref chunks[chunkIdx];
+                if (chunk.entities != null) {
+                    if (chunk.notEmptyBlocks != 0) {
+                        Array.Clear(chunk.entities,  0, Const.BLOCK_IN_CHUNK);
+                    }
+                    chunksDataPool[chunksDataPoolCount++] = chunk.MoveToPoolData();
                 }
+                chunk.bitmask = null;
+                chunk.notEmptyBlocks = 0;
+                chunk.fullBlocks = 0;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -423,7 +511,8 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             internal ulong EMask(uint chunkIdx, int blockIdx) {
-                return chunks[chunkIdx].entities[blockIdx];
+                var entities = chunks[chunkIdx].entities;
+                return entities != null ? entities[blockIdx] : 0UL;
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -438,7 +527,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal void DecQAdd() => _queriesToUpdateOnAdd[--_queriesToUpdateOnAddCount] = default;
             
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             [MethodImpl(AggressiveInlining)]
             internal void BlockDelete(int val) {
                 _blockerDelete += val;
@@ -453,4 +542,3 @@ namespace FFS.Libraries.StaticEcs {
         }
     }
 }
-#endif

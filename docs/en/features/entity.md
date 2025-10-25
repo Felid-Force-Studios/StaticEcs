@@ -10,13 +10,6 @@ Entity - serves to identify an object in the game world and access attached comp
 
 ___
 
-{: .important }
-> By default an entity can be created and exist without components, also when the last component is deleted it is not deleted  
-> If you want to override this, you must use the compiler directive `FFS_ECS_LIFECYCLE_ENTITY`  
-> More info: [Compiler directives](compilerdirectives.md)
-
-___
-
 #### Creation:
 ```csharp
 // Creating a single entity
@@ -57,6 +50,25 @@ W.Entity.NewOnes(count, new Position(x: 1, y: 1, z: 2), static entity => {
     // some init logic for each entity
 });
 
+// When creating an entity, you can pass the cluster ID (by default, the entity is created in the default cluster W.DEFAULT_CLUSTER = 0).
+var npc = W.Entity.New(clusterId: W.DEFAULT_CLUSTER);
+
+// Attempt to create an entity in the cluster; if the world is dependent and there are no free entity identifiers left in it, false will be returned.
+var created = W.Entity.TryNew(out var ent, clusterId: ENVIRONMENT_CLUSTER);
+
+// An optional cluster identifier parameter has been added for all overloads.
+W.Entity.New(
+    new Position(),
+    new Name(),
+    clusterId: NPC_CLUSTER
+);
+
+// When creating an entity, you can pass the chunk index (without specifying it; the chunk selection is determined by the world).
+var entity = W.Entity.New(chunkIdx: chunkIdx);
+
+// Попытаться создать сущность в чанке, если чанк полон вернется false
+var created = W.Entity.TryNew(out var ent, chunkIdx: chunkIdx);
+
 ```
 ___
 
@@ -74,9 +86,10 @@ entity.Enable();                               // Enable entity
 bool enabled = entity.IsEnabled();             // Check if the entity is enabled in the world
 bool disabled = entity.IsDisabled();           // Check if the entity is disabled in the world
 
-bool actual = entity.IsActual();               // Check if an entity has been deleted in the world
+bool actual = entity.IsNotDestroyed();         // Check if an entity has been deleted in the world
 short version = entity.Version();              // Get entity version
 W.Entity clone = entity.Clone();               // Clone the entity and all components, tags
+entity.Unload();                               // Unload the entity from memory
 entity.Destroy();                              // Delete the entity and all components, tags
 
 W.Entity entity2 = W.Entity.New<Name>();

@@ -1,4 +1,11 @@
-﻿using System.Runtime.CompilerServices;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System.Runtime.CompilerServices;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
@@ -15,9 +22,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static void RegisterMultiComponentType<T, V>(ushort defaultComponentCapacity, IComponentConfig<T, WorldType> config = null)
             where T : struct, IMultiComponent<T, V> where V : struct {
-            if (Status != WorldStatus.Created) {
-                throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: RegisterMultiComponentType<{typeof(T)}, {typeof(V)}>, World not created");
-            }
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
             config ??= DefaultComponentConfig<T, WorldType>.Default;
             ModuleComponents.Value.RegisterMultiComponentType<T, V>(defaultComponentCapacity, config);
         }
@@ -32,7 +39,9 @@ namespace FFS.Libraries.StaticEcs {
                 ushort defaultComponentCapacity,
                 IComponentConfig<T, WorldType> config
             ) where T : struct, IMultiComponent<T, V> where V : struct {
-                if (Components<T>.Value.IsRegistered()) throw new StaticEcsException($"Component {typeof(T)} already registered");
+                #if FFS_ECS_DEBUG
+                AssertNotRegisteredComponent<T>(WorldTypeName);
+                #endif
 
                 RegisterMultiComponentsData<V>(defaultComponentCapacity);
 
@@ -85,7 +94,7 @@ namespace FFS.Libraries.StaticEcs {
             
             private static void RegisterMultiComponentsData<T>(ushort defaultComponentCapacity) where T : struct {
                 if (!Context<MultiComponents<T>>.Has()) {
-                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                    #if FFS_ECS_DEBUG
                     Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity, MTStatus));
                     #else
                     Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity));

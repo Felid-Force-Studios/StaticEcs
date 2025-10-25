@@ -1,4 +1,11 @@
-﻿using System.Runtime.CompilerServices;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -41,7 +48,9 @@ namespace FFS.Libraries.StaticEcs {
                 RegisterComponentType(
                     actualConfigLeft
                 );
+                #if FFS_ECS_DEBUG
                 Components<O>.Value.addWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
+                #endif
 
                 ValidateComponentRegistration<M>();
 
@@ -71,7 +80,7 @@ namespace FFS.Libraries.StaticEcs {
                 return;
 
                 static void SetLeftLink(Entity e, Entity link) {
-                    #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                    #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                     if (CyclicCheck<M>.Value) {
                         CheckManyRelation<M>(e, link);
                     }
@@ -103,7 +112,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 static void DeleteLeftLink(Entity e, EntityGID child) {
                     if (child.TryUnpack<WorldType>(out var ent) && ent.HasAllOf<O>()) {
-                        #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                        #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                         var link = ent.Ref<O>().Link();
                         if (link != e.Gid()) {
                             throw new StaticEcsException($"When another link of type {typeof(O)} is deleted, the link refers to another entity {link}, not {e}");
@@ -114,7 +123,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 static OnComponentHandler<O> OnPutLeftHandle(OnComponentHandler<O> handler, bool disableRelationsCheck) {
-                    #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                    #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                     CyclicCheck<O>.Value = !disableRelationsCheck;
                     #endif
 
@@ -128,7 +137,7 @@ namespace FFS.Libraries.StaticEcs {
                     return SetRightLink;
 
                     static void SetRightLink(Entity e, ref O component) {
-                        #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                        #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                         if (CyclicCheck<O>.Value) {
                             CheckOneRelation(e, ref component);
                         }
@@ -151,7 +160,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 static OnComponentHandler<M> OnAddManyHandler(OnComponentHandler<M> handler, bool disableRelationsCheckRightDebug) {
-                    #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                    #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                     CyclicCheck<M>.Value = !disableRelationsCheckRightDebug;
                     #endif
 
@@ -224,7 +233,7 @@ namespace FFS.Libraries.StaticEcs {
                     static void DeleteLink(Entity e, ref M component) {
                         foreach (var gid in component.RefValue(ref component)) {
                             if (gid.TryUnpack<WorldType>(out var unpacked) && unpacked.HasAllOf<O>()) {
-                                #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                                #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                                 var link = unpacked.Ref<O>().Link();
                                 if (link != e.Gid()) {
                                     throw new StaticEcsException($"When another link of type {typeof(O)} is deleted, the link refers to another entity {link}, not {e}");

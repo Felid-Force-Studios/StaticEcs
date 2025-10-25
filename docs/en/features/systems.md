@@ -109,3 +109,32 @@ MySystems.Update();
 // All Destroy systems will be called here
 MySystems.Destroy();
 ```
+
+___
+
+#### Conditional execution systems:
+```c#
+// It is possible to add conditions for systems; this requires implementing ISystemState.
+class GamePauseState : ISystemState {
+    private bool paused;
+    
+    public bool IsActive() => !paused;
+}
+
+// The AddConditionalUpdate method takes the ISystemState implementation as its first argument.
+// When updating systems, they will only be updated if IsActive returns true.
+tSystems.AddConditionalUpdate(new GamePauseState(), new SomeUpdateSystem());
+
+// Also for the group of systems
+Systems.AddConditionalUpdate(
+    new GamePauseState(), 
+    
+    new SomeUpdateSystem1(),
+    new SomeComboSystem1(),
+    new SomeComboSystem2(),
+    new SomeComboSystem3(),
+    new SomeComboSystem4(),
+    new SomeComboSystem5(),
+    new SomeComboSystem()
+);
+```

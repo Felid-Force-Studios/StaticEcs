@@ -78,48 +78,48 @@ ___
 
 ```c#
 // Итерация по всем сущностям в мире без фильтрации:
-foreach (var entity in W.QueryEntities.For()) {
+foreach (var entity in W.Query.Entities()) {
     Console.WriteLine(entity.PrettyString);
 }
 
-// Различные наборы методов фильтрации могут быть применины к методу World.QueryEntities.For() например:
+// Различные наборы методов фильтрации могут быть применины к методу World.Query.Entities() например:
 // Вариант с 1 методом через дженерик
-foreach (var entity in W.QueryEntities.For<All<Position, Velocity, Direction>>()) {
+foreach (var entity in W.Query.Entities<All<Position, Velocity, Direction>>()) {
     entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 
 // Вариант с 1 методом через значение
 var all = default(All<Position, Direction, Velocity>);
-foreach (var entity in W.QueryEntities.For(all)) {
+foreach (var entity in W.Query.Entities(all)) {
     entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 
 // Вариант с 2 методами через дженерик
-foreach (var entity in W.QueryEntities.For<
+foreach (var entity in W.Query.Entities<
              All<Position, Velocity, Name>,
              None<Name>>()) {
     entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 
 // Вариант с 2 методами (All и None) через дженерик, можно указать до 8 методов фильтраций
-foreach (var entity in W.QueryEntities.For<All<Position, Direction, Velocity>, None<Name>>()) {
+foreach (var entity in W.Query.Entities<All<Position, Direction, Velocity>, None<Name>>()) {
     entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 
 // Вариант с 2 методами  через значение
 All<Position, Direction, Velocity> all2 = default;
 None<Name> none2 = default;
-foreach (var entity in W.QueryEntities.For(all2, none2)) {
+foreach (var entity in W.Query.Entities(all2, none2)) {
     entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 ```
 
 Также все методы фильтрации могут быть сгруппированны в тип With  
-который может применяться к методу `World.QueryEntities.For()` например:  
+который может применяться к методу `World.Query.Entities()` например:  
 
 ```c#
 // Способ 1 через дженерика
-foreach (var entity in W.QueryEntities.For<With<
+foreach (var entity in W.Query.Entities<With<
              All<Position, Velocity, Direction>,
              None<Name>,
              TagAny<Unit, Player>
@@ -133,7 +133,7 @@ With<
     None<Name>,
     TagAny<Unit, Player>
 > with = default;
-foreach (var entity in W.QueryEntities.For(with)) {
+foreach (var entity in W.Query.Entities(with)) {
     entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 
@@ -143,7 +143,7 @@ var with2 = With.Create(
     default(None<Name>),
     default(TagAny<Unit, Player>)
 );
-foreach (var entity in W.QueryEntities.For(with2)) {
+foreach (var entity in W.Query.Entities(with2)) {
     entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
 }
 ```
@@ -337,11 +337,47 @@ public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, W.IQueryFunction<
 }
 ```
 
+___
+
+## Search
+Существует возможность оптимизированой итерации для поиска кокнретной одной сущности:  
+Данная функция позволяет использовать делегаты с ранним выходом при первой совпадении условия поиска.  
+
+Пример:
+
+```c#
+if (W.Query.Search(out W.Entity foundEntity, (W.Entity entity, ref Position position, ref Health health) => {
+        return position.Val.x > 100 && health.Val < 50;
+    })) {
+    // foundEntity logic ...
+}
+```
+
+---
+
+___
+
+## Clusters
+
+{: .importantru }
+Для каждого метода фильтрации `Query.For()`, `Query.Parallel.For()`, `Query.Search()`, `Query.Entities()`  
+можно указать конкретные кластеры в которых будет произведена итерация:
+
+```c#
+ReadOnlySpan<ushort> clusters = stackalloc ushort[3] { 2, 5, 12 };
+
+W.Query.Entities<All<Position>>(clusters: clusters)
+    
+W.Query.For<Position>((W.Entity entity, ref Position position) => {
+    position.Val *= velocity.Val;
+}, clusters: clusters);
+```
+
 ---
 
 
 ## Query Mode
-Для каждого метода фильтрации `Query.For()`, `Query.Search()`, `QueryEntities.For()`
+Для каждого метода фильтрации `Query.For()`, `Query.Search()`, `Query.Entities()`
 можно указать строгость обращения к не итерируемым сущностям
 Доступны параметры: 
 - `QueryMode.Default` - По умолчанию если в конфигурации мира `WorldConfig.DefaultQueryModeStrict = true`: будет `Strict` иначе `Flexible` 
@@ -353,15 +389,15 @@ public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, W.IQueryFunction<
 ```c#
 var anotherEntity = ...;
 
-for (var entity : W.QueryEntities.For<All<Position>>(queryMode: QueryMode.Strict)) {
+for (var entity : W.Query.Entities<All<Position>>(queryMode: QueryMode.Strict)) {
     anotherEntity.Delete<Position>(); // В DEBUG будет ошибка так как Strict режим и мы пытаемся модифицировать итерируемым типом компонента другую сущность
 }
 
-for (var entity : W.QueryEntities.For<All<Position>>(queryMode: QueryMode.Flexible)) {
+for (var entity : W.Query.Entities<All<Position>>(queryMode: QueryMode.Flexible)) {
     anotherEntity.Delete<Position>(); // Ошибки не будет, и anotherEntity будет корректно исключена из текущей итерации
 }
 
-for (var entity : W.QueryEntities.For<None<Position>>(queryMode: QueryMode.Flexible)) {
+for (var entity : W.Query.Entities<None<Position>>(queryMode: QueryMode.Flexible)) {
     anotherEntity.Add<Position>(); // Ошибки не будет, и anotherEntity будет корректно исключена из текущей итерации
 }
 
@@ -374,11 +410,11 @@ ___
 
 
 {: .importantru }
-Для каждого метода фильтрации `Query.For()`, `Query.Parallel.For()`, `Query.Search()`, `QueryEntities.For()`  
+Для каждого метода фильтрации `Query.For()`, `Query.Parallel.For()`, `Query.Search()`, `Query.Entities()`  
 можно указать фильтрацию по статусу сущности, например:
 
 ```c#
-W.QueryEntities.For<All<Position>>(entities: EntityStatusType.Disabled)
+W.Query.Entities<All<Position>>(entities: EntityStatusType.Disabled)
     
 W.Query.For<Position>((W.Entity entity, ref Position position) => {
     position.Val *= velocity.Val;

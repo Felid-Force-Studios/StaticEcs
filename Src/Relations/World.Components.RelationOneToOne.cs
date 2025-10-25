@@ -1,4 +1,11 @@
-﻿using System.Runtime.CompilerServices;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -30,7 +37,7 @@ namespace FFS.Libraries.StaticEcs {
                 ValidateComponentRegistration<L>();
                 ValidateComponentRegistration<R>();
                 
-                #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
+                #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                 CyclicCheck<L>.Value = !disableRelationsCheckLeftDebug && typeof(L) != typeof(R);
                 #endif
                 
@@ -45,15 +52,16 @@ namespace FFS.Libraries.StaticEcs {
                 RegisterComponentType(
                     actualConfigLeft
                 );
+                #if FFS_ECS_DEBUG
                 Components<L>.Value.addWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
-                
+                #endif
 
                 if (Components<R>.Value.IsRegistered()) {
                     // Same types
                     return;
                 }
                 
-                #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
+                #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                 CyclicCheck<R>.Value = !disableRelationsCheckRightDebug;
                 #endif
                 
@@ -68,7 +76,9 @@ namespace FFS.Libraries.StaticEcs {
                 RegisterComponentType(
                     actualConfigRight
                 );
+                #if FFS_ECS_DEBUG
                 Components<R>.Value.addWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
+                #endif
                 return;
 
                 static OnComponentHandler<A> OnPutHandler<A, B>(OnComponentHandler<A> handler, bool disableRelationsCheck)
@@ -86,7 +96,7 @@ namespace FFS.Libraries.StaticEcs {
 
                     [MethodImpl(AggressiveInlining)]
                     static void SetAnotherLink(Entity e, ref A component) {
-                        #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
+                        #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                         if (CyclicCheck<A>.Value) {
                             CheckOneRelation(e, ref component);
                         }
@@ -140,7 +150,7 @@ namespace FFS.Libraries.StaticEcs {
 
                     static void DeleteAnotherLink(Entity e, ref A component) {
                         if (component.RefValue(ref component).TryUnpack<WorldType>(out var ent) && ent.HasAllOf<B>()) {
-                            #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+                            #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                             var link = ent.Ref<B>().Link();
                             if (link != e.Gid()) {
                                 throw new StaticEcsException($"When another link of type {typeof(B)} is deleted, the link refers to another entity {link}, not {e}");

@@ -1,7 +1,12 @@
-﻿using System.Runtime.CompilerServices;
-using static System.Runtime.CompilerServices.MethodImplOptions;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
 
-#if !FFS_ECS_DISABLE_EVENTS
+using System.Runtime.CompilerServices;
+using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
@@ -27,7 +32,7 @@ namespace FFS.Libraries.StaticEcs {
             public ref E Value {
                 [MethodImpl(AggressiveInlining)]
                 get {
-                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                    #if FFS_ECS_DEBUG
                     if (_idx < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Event<{typeof(E)}>.Value ] event is deleted");
                     #endif
                     return ref Events.Pool<E>.Value.Get(_idx);
@@ -36,7 +41,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public void Suppress() {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (_idx < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Event<{typeof(E)}>.Suppress ] event is deleted");
                 #endif
                 Events.Pool<E>.Value.Del((ushort) _idx, true);
@@ -45,7 +50,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public bool IsLastReading() {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (_idx < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Event<{typeof(E)}>.IsLastReading ] event is deleted");
                 #endif
                 return Events.Pool<E>.Value._dataReceiverUnreadCount[_idx] == 1;
@@ -53,7 +58,7 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             public int UnreadCount() {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (_idx < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Event<{typeof(E)}>.UnreadCount ] event is deleted");
                 #endif
                 return Events.Pool<E>.Value._dataReceiverUnreadCount[_idx] - 1;
@@ -61,7 +66,6 @@ namespace FFS.Libraries.StaticEcs {
         }
     }
 }
-#endif
 
 namespace FFS.Libraries.StaticEcs {
     public interface IEvent { }

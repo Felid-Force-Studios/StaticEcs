@@ -1,4 +1,11 @@
-﻿using System;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System;
 using System.IO;
 using System.Threading;
 using System.Runtime.CompilerServices;
@@ -16,11 +23,16 @@ using Unity.IL2CPP.CompilerServices;
 namespace FFS.Libraries.StaticEcs {
     
     internal class StaticEcsException : Exception {
-        public StaticEcsException() { }
+        internal StaticEcsException() { }
 
-        public StaticEcsException(string message) : base(message) { }
+        internal StaticEcsException(string message) : base(message) { }
 
-        public StaticEcsException(string message, Exception inner) : base(message, inner) { }
+        internal StaticEcsException(string message, Exception inner) : base(message, inner) { }
+        
+        internal StaticEcsException(string source, string method, string message) : base($"{source}, method `{method}`: {message}") { }
+        
+        internal StaticEcsException(string source, string message) : base($"{source}: {message}") { }
+        
     }
     
     #if ENABLE_IL2CPP
@@ -29,6 +41,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppEagerStaticClassConstruction]
     #endif
     internal static class Const {
+        internal const ushort US1 = 1;
+        internal const int ENTITY_ID_OFFSET = 1;
+        
         internal const int BITS_PER_LONG = 64;
         internal const int LONG_SHIFT = 6;
         internal const int LONG_OFFSET_MASK = BITS_PER_LONG - 1;
@@ -45,21 +60,12 @@ namespace FFS.Libraries.StaticEcs {
         internal const int ENTITIES_IN_CHUNK_SHIFT = ENTITIES_IN_BLOCK_SHIFT + BLOCK_IN_CHUNK_SHIFT;
         internal const int ENTITIES_IN_CHUNK_OFFSET_MASK = ENTITIES_IN_CHUNK - 1;
 
-        #if FFS_ECS_LARGE_WORLDS
-        internal const int DATA_BLOCK_SIZE = 4096;
-        internal const int DATA_BLOCK_SIZE_FOR_THREADS = 4096;
-        internal const int DATA_BLOCK_IN_CHUNK_FOR_THREADS = 1;
-        internal const int DATA_QUERY_SHIFT_FOR_THREADS = 6;
-        internal const int JOB_SIZE = 64;
-        internal const int DATA_SHIFT = 12;
-        #else
         internal const int DATA_BLOCK_SIZE = 256;
         internal const int DATA_BLOCK_SIZE_FOR_THREADS = 512;
         internal const int DATA_BLOCK_IN_CHUNK_FOR_THREADS = 8;
         internal const int DATA_QUERY_SHIFT_FOR_THREADS = 3;
         internal const int JOB_SIZE = 8;
         internal const int DATA_SHIFT = 8;
-        #endif
         internal const int DATA_ENTITY_MASK = DATA_BLOCK_SIZE - 1;
         internal const int DATA_QUERY_SHIFT = DATA_SHIFT - BLOCK_IN_CHUNK_SHIFT;
         internal const int DATA_BLOCK_MASK = ENTITIES_IN_CHUNK / DATA_BLOCK_SIZE - 1;
@@ -72,9 +78,7 @@ namespace FFS.Libraries.StaticEcs {
         internal static ulong[] CreateDataMasks() {
             var masks = new ulong[ENTITIES_IN_CHUNK / DATA_BLOCK_SIZE];
             const int range = DATA_BLOCK_SIZE / BLOCK_IN_CHUNK;
-            const ulong baseMask = range == 64 
-                ? ulong.MaxValue 
-                : (1UL << range) - 1;
+            const ulong baseMask = (1UL << range) - 1;
             for (var i = 0; i < masks.Length; i++) {
                 masks[i] = baseMask << (i * range);
             }
@@ -82,26 +86,249 @@ namespace FFS.Libraries.StaticEcs {
             return masks;
         }
     }
+    
+    #if FFS_ECS_DEBUG
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, false)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
+    public abstract partial class World<WorldType> {
+
+        internal static string WorldTypeName = $"World<{typeof(WorldType)}>"; 
+        internal static string EntityTypeName = $"World<{typeof(WorldType)}>.Entity"; 
+
+        internal static void Assert(string type, bool state, string message, [CallerMemberName] string method = "") {
+            if (!state) {
+                throw new StaticEcsException(type, method, message);
+            }
+        }
+        
+        internal static void AssertWorldIsInitialized(string type, [CallerMemberName] string method = "") {
+            if (Status != WorldStatus.Initialized) {
+                throw new StaticEcsException(type, method, "World not initialized.");
+            }
+        }
+        
+        internal static void AssertWorldIsIndependent(string type, [CallerMemberName] string method = "") {
+            if (!IsIndependent()) {
+                throw new StaticEcsException(type, method, "World not Independent.");
+            }
+        }
+        
+        internal static void AssertWorldIsDependent(string type, [CallerMemberName] string method = "") {
+            if (IsIndependent()) {
+                throw new StaticEcsException(type, method, "World not Dependent.");
+            }
+        }
+        
+        internal static void AssertWorldIsCreatedOrInitialized(string type, [CallerMemberName] string method = "") {
+            if (Status != WorldStatus.Created && Status != WorldStatus.Initialized) {
+                throw new StaticEcsException(type, method, "World not created or initialized.");
+            }
+        }
+        
+        internal static void AssertWorldIsCreated(string type, [CallerMemberName] string method = "") {
+            if (Status != WorldStatus.Created) {
+                throw new StaticEcsException(type, method, "World not created.");
+            }
+        }
+        
+        internal static void AssertWorldIsNotCreated(string type, [CallerMemberName] string method = "") {
+            if (Status != WorldStatus.NotCreated) {
+                throw new StaticEcsException(type, method, "World already created.");
+            }
+        }
+        
+        internal static void AssertNotRegisteredComponent<T>(string type, [CallerMemberName] string method = "") where T : struct, IComponent {
+            if (Components<T>.Value.IsRegistered()) {
+                throw new StaticEcsException(type, method, $"Component {typeof(T).GenericName()} already registered.");
+            }
+        }
+        
+        internal static void AssertRegisteredComponent<T>(string type, [CallerMemberName] string method = "") where T : struct, IComponent {
+            if (!Components<T>.Value.IsRegistered()) {
+                throw new StaticEcsException(type, method, $"Component {typeof(T).GenericName()} is not registered.");
+            }
+        }
+        
+        internal static void AssertRegisteredTag<T>(string type, [CallerMemberName] string method = "") where T : struct, ITag {
+            if (!Tags<T>.Value.IsRegistered()) {
+                throw new StaticEcsException(type, method, $"Tag {typeof(T).GenericName()} is not registered.");
+            }
+        }
+        
+        internal static void AssertNotRegisteredTag<T>(string type, [CallerMemberName] string method = "") where T : struct, ITag {
+            if (Tags<T>.Value.IsRegistered()) {
+                throw new StaticEcsException(type, method, $"Tag {typeof(T).GenericName()} already registered.");
+            }
+        }
+        
+        internal static void AssertEntityIsNotDestroyedAndLoaded(string type, Entity entity, [CallerMemberName] string method = "") {
+            if (!Entities.Value.EntityIsLoaded(entity)) {
+                throw new StaticEcsException(type, method, $"Cannot access not loaded {entity}.");
+            }
+            if (entity.IsDestroyed()) {
+                throw new StaticEcsException(type, method, $"Cannot access destroyed {entity}.");
+            }
+        }
+        
+        internal static void AssertEntityIsLoaded(string type, Entity entity, [CallerMemberName] string method = "") {
+            if (!Entities.Value.EntityIsLoaded(entity)) {
+                throw new StaticEcsException(type, method, $"Cannot access not loaded {entity}.");
+            }
+        }
+        
+        internal static void AssertEntityIsNotLoaded(string type, Entity entity, [CallerMemberName] string method = "") {
+            if (Entities.Value.EntityIsLoaded(entity)) {
+                throw new StaticEcsException(type, method, $"Cannot access loaded {entity}.");
+            }
+        }
+        
+        internal static void AssertEntityHasComponent<T>(string type, Entity entity, [CallerMemberName] string method = "") where T : struct, IComponent {
+            if (!Components<T>.Value.Has(entity)) {
+                throw new StaticEcsException(type, method, $"Component `{typeof(T).GenericName()}` is missing on {entity}.");
+            }
+        }
+        
+        internal static void AssertEntityNotHasComponent<T>(string type, Entity entity, [CallerMemberName] string method = "") where T : struct, IComponent {
+            if (Components<T>.Value.Has(entity)) {
+                throw new StaticEcsException(type, method, $"Component `{typeof(T).GenericName()}` already exists on {entity}.");
+            }
+        }
+        
+        internal static void AssertNotBlockedByQuery(string type, Entity entity, int blocker, [CallerMemberName] string method = "") {
+            if (blocker > 0 && CurrentQuery.IsNotCurrentEntity(entity)) {
+                throw new StaticEcsException(type, method, $" is blocked, it is forbidden to modify a non-current {entity} in a {nameof(QueryMode)}{QueryMode.Strict} query, use {nameof(QueryMode)}{QueryMode.Flexible}.");
+            }
+        }
+        
+        internal static void AssertNotBlockedByParallelQuery(string type, Entity entity, [CallerMemberName] string method = "") {
+            if (MultiThreadActive && CurrentQuery.IsNotCurrentEntity(entity)) {
+                throw new StaticEcsException(type, method, $" is blocked, it is forbidden to modify a non-current {entity} in a parallel query.");
+            }
+        }
+        
+        internal static void AssertNotNestedParallelQuery(string type, [CallerMemberName] string method = "") {
+            if (MultiThreadActive) {
+                throw new StaticEcsException(type, method, "Nested query are not available with parallel query");
+            }
+        }
+        
+        internal static void AssertParallelAvaliable(string type, [CallerMemberName] string method = "") {
+            if (config.ParallelQueryType == ParallelQueryType.Disabled) {
+                throw new StaticEcsException(type, method, "ParallelQueryType = Disabled, change World config");
+            }
+        }
+        
+        internal static void AssertMultiThreadNotActive(string type, [CallerMemberName] string method = "") {
+            if (MultiThreadActive) {
+                throw new StaticEcsException(type, method, "Forbidden in a parallel query.");
+            }
+        }
+        
+        internal static void AssertSameQueryMode(string type, byte mode, [CallerMemberName] string method = "") {
+            if (CurrentQuery.QueryMode != 0 && mode != CurrentQuery.QueryMode) {
+                throw new StaticEcsException(type, method, "Nested iterators must have the same QueryMode as the outer iterator");
+            }
+        }
+        
+        internal static void AssertQueryNotActive(string type, [CallerMemberName] string method = "") {
+            if (CurrentQuery.QueryDataCount != 0) {
+                throw new StaticEcsException(type, method, "Not available within the query");
+            }
+        }
+        
+        internal static void AssertGidIsLoaded(string type, EntityGID gid, [CallerMemberName] string method = "") {
+            if (!gid.IsLoaded<WorldType>()) {
+                throw new StaticEcsException(type, method, $"EntityGID ID: {gid.Id}, Version {gid.Version}, ClusterId {gid.ClusterId}. Not loaded.");
+            }
+        }
+        
+        internal static void AssertGidIsNotLoaded(string type, EntityGID gid, [CallerMemberName] string method = "") {
+            if (gid.IsLoaded<WorldType>()) {
+                throw new StaticEcsException(type, method, $"EntityGID ID: {gid.Id}, Version {gid.Version}, ClusterId {gid.ClusterId}. Already loaded.");
+            }
+        }
+        
+        internal static void AssertGidIsActual(string type, EntityGID gid, [CallerMemberName] string method = "") {
+            if (!gid.IsActual<WorldType>()) {
+                throw new StaticEcsException(type, method, $"EntityGID ID: {gid.Id}, Version {gid.Version}, ClusterId {gid.ClusterId}. Not actual.");
+            }
+        }
+        
+        internal static void AssertClusterIsRegistered(string type, ushort clusterId, [CallerMemberName] string method = "") {
+            if (!Entities.Value.ClusterIsRegistered(clusterId)) {
+                throw new StaticEcsException(type, method, $"ClusterId {clusterId} not registered.");
+            }
+        }
+        
+        internal static void AssertClusterIsNotRegistered(string type, ushort clusterId, [CallerMemberName] string method = "") {
+            if (Entities.Value.ClusterIsRegistered(clusterId)) {
+                throw new StaticEcsException(type, method, $"ClusterId {clusterId} already registered.");
+            }
+        }
+        
+        internal static void AssertChunkIsRegistered(string type, uint chunkIdx, [CallerMemberName] string method = "") {
+            if (!Entities.Value.ChunkIsRegistered(chunkIdx)) {
+                throw new StaticEcsException(type, method, $"Chunk {chunkIdx} not registered.");
+            }
+        }
+        
+        internal static void AssertChunkIsNotRegistered(string type, uint chunkIdx, [CallerMemberName] string method = "") {
+            if (Entities.Value.ChunkIsRegistered(chunkIdx)) {
+                throw new StaticEcsException(type, method, $"Chunk {chunkIdx} already registered.");
+            }
+        }
+    }
+    #endif
 
     #if ENABLE_IL2CPP
     [Il2CppSetOption (Option.NullChecks, false)]
     [Il2CppSetOption (Option.ArrayBoundsChecks, false)]
     [Il2CppEagerStaticClassConstruction]
     #endif
-    public static class Utils {
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-        public static Func<EntityGID, string> EntityGidToString = gid => $"GID {gid.Id()} : Version {gid.Version()}";
+    internal static class Utils {
+        #if FFS_ECS_DEBUG
+        internal static Func<EntityGID, string> EntityGidToString = gid => $"GID {gid.Id}, Version {gid.Version}, ClusterId {gid.ClusterId}";
         #endif
 
-        public static readonly byte[] DeBruijn = {
+        internal static readonly byte[] DeBruijn = {
             0, 1, 17, 2, 18, 50, 3, 57, 47, 19, 22, 51, 29, 4, 33, 58,
             15, 48, 20, 27, 25, 23, 52, 41, 54, 30, 38, 5, 43, 34, 59, 8,
             63, 16, 49, 56, 46, 21, 28, 32, 14, 26, 24, 40, 53, 37, 42, 7,
             62, 55, 45, 31, 13, 39, 36, 6, 61, 44, 12, 35, 60, 11, 10, 9,
         };
+
+        internal static readonly byte[] DeBruijnMSB = {
+            0, 1, 48, 2, 57, 49, 28, 3, 61, 58, 50, 42, 38, 29, 17, 4,
+            62, 55, 59, 36, 53, 51, 43, 22, 45, 39, 33, 30, 24, 18, 12,
+            5, 63, 47, 56, 27, 60, 41, 37, 16, 54, 35, 52, 21, 44, 32, 23,
+            11, 46, 26, 40, 15, 34, 20, 31, 10, 25, 14, 19, 9, 13, 8, 7, 6
+        };
         
         [MethodImpl(AggressiveInlining)]
-        public static int ApproximateMSB(this ulong value) {
+        internal static int Msb(ulong value) {
+            #if FFS_ECS_DEBUG
+            if (value == 0) throw new StaticEcsException("MSB check");
+            #endif
+            
+            #if NET6_0_OR_GREATER
+            return 63 - System.Numerics.BitOperations.LeadingZeroCount(value); 
+            #else
+
+            value |= value >> 1;
+            value |= value >> 2;
+            value |= value >> 4;
+            value |= value >> 8;
+            value |= value >> 16;
+            value |= value >> 32;
+
+            return DeBruijnMSB[(uint) ((((value >> 1) + 1UL) * 0x03F79D71B4CB0A89UL) >> 58)];
+            #endif
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        internal static int ApproximateMSB(this ulong value) {
             return value >= 0x100000000UL 
                 ? value >= 0x1000000000000UL 
                     ? 64 
@@ -114,7 +341,7 @@ namespace FFS.Libraries.StaticEcs {
         #region MATH
         
         [MethodImpl(AggressiveInlining)]
-        public static bool CheckBitDensity(this ulong x, out int idx, out int end) {
+        internal static bool CheckBitDensity(this ulong x, out int idx, out int end) {
             idx = DeBruijn[(int) (((x & (ulong) -(long) x) * 0x37E84A99DAE458FUL) >> 58)];
             end = ApproximateMSB(x);
             var total = PopCnt(x);
@@ -123,7 +350,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public static int PopCnt(this ulong x) {
+        internal static int PopCnt(this ulong x) {
             x -= (x >> 1) & 0x5555555555555555UL;
             x = (x & 0x3333333333333333UL) + ((x >> 2) & 0x3333333333333333UL);
             x = (x + (x >> 4)) & 0x0F0F0F0F0F0F0F0FUL;
@@ -132,17 +359,16 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         internal static int PopLsb(ref ulong v) {
-            var val = DeBruijn[(int) (((v & (ulong) -(long) v) * 0x37E84A99DAE458FUL) >> 58)];
+            var val = DeBruijn[(uint) (((v & (ulong) -(long) v) * 0x37E84A99DAE458FUL) >> 58)];
             v &= v - 1;
             return val;
         }
 
         [MethodImpl(AggressiveInlining)]
         internal static int Lsb(ulong v) {
-            return DeBruijn[(int) (((v & (ulong) -(long) v) * 0x37E84A99DAE458FUL) >> 58)];
+            return DeBruijn[(uint) (((v & (ulong) -(long) v) * 0x37E84A99DAE458FUL) >> 58)];
         }
         #endregion
-        
 
         
         [MethodImpl(AggressiveInlining)]
@@ -168,7 +394,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public static uint CalculateSize(uint value) {
+        internal static uint CalculateSize(uint value) {
             var u = value;
             if (u == 0) {
                 return 0;
@@ -186,19 +412,31 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        public static void NormalizeThis(this ref uint value, uint min) {
+        internal static void NormalizeThis(this ref uint value, uint min) {
             var minMinusOne = min - 1;
             value = (Math.Max(value, min) + minMinusOne) & ~minMinusOne;
         }
 
         [MethodImpl(AggressiveInlining)]
-        public static ushort Normalize(this ushort value, ushort min) {
+        internal static uint Normalize(this uint value, uint min) {
+            var minMinusOne = min - 1;
+            return (Math.Max(value, min) + minMinusOne) & ~minMinusOne;
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        internal static int Normalize(this int value, int min) {
+            var minMinusOne = min - 1;
+            return (Math.Max(value, min) + minMinusOne) & ~minMinusOne;
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        internal static ushort Normalize(this ushort value, ushort min) {
             var minMinusOne = min - 1;
             return (ushort) ((Math.Max(value, min) + minMinusOne) & ~minMinusOne);
         }
         
         [MethodImpl(AggressiveInlining)]
-        public static void LoopFallbackCopy<T>(T[] src, uint srcIdx, T[] dst, uint dstIdx, uint len) {
+        internal static void LoopFallbackCopy<T>(T[] src, uint srcIdx, T[] dst, uint dstIdx, uint len) {
             if (len > 4) {
                 Array.Copy(src, srcIdx, dst, dstIdx, len);
                 return;
@@ -210,7 +448,7 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
-        public static void LoopFallbackCopyReverse<T>(T[] src, uint srcIdx, T[] dst, uint dstIdx, uint len) {
+        internal static void LoopFallbackCopyReverse<T>(T[] src, uint srcIdx, T[] dst, uint dstIdx, uint len) {
             if (len > 4) {
                 Array.Copy(src, srcIdx, dst, dstIdx, len);
                 return;
@@ -222,7 +460,7 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
-        public static void LoopFallbackClear<T>(T[] array, int idx, int len) {
+        internal static void LoopFallbackClear<T>(T[] array, int idx, int len) {
             if (len > 4) {
                 Array.Clear(array, idx, len);
                 return;
@@ -233,22 +471,20 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        internal static string GetGenericName(this Type type) {
+        internal static string GenericName(this Type type) {
             if (!type.IsGenericType) {
                 return type.Name;
             }
 
             var genericArguments = type.GetGenericArguments();
             var typeName = type.FullName!.Substring(0, type.FullName.IndexOf('`'));
-            var genericArgs = string.Join(", ", Array.ConvertAll(genericArguments, GetGenericName));
+            var genericArgs = string.Join(", ", Array.ConvertAll(genericArguments, GenericName));
 
-            return $"{typeName}<{genericArgs}>";
+            return $"{typeName}<{genericArgs}>".Replace("+", ".");
         }
     }
-
-    public interface Stateless { }
     
-    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+    #if FFS_ECS_DEBUG
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, false)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
@@ -256,28 +492,35 @@ namespace FFS.Libraries.StaticEcs {
     public abstract partial class World<WorldType> where WorldType : struct, IWorldType {
         internal static FileLogger<WorldType> FileLogger;
         
-        public static void CreateFileLogger(string logsFilePath, OperationType[] excludedOperations = null, ICsvColumnHandler<WorldType>[] columnWriters = null) {
-            if (Status != WorldStatus.Created) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CreateFileLogger, world status not `Created`");
-            if (FileLogger != null) throw new StaticEcsException("File logger already added");
+        #if FFS_ECS_DEBUG
+        #if ENABLE_IL2CPP
+        [Il2CppSetOption(Option.NullChecks, false)]
+        [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+        #endif
+        public partial struct DEBUG {
+            public static void CreateFileLogger(string logsFilePath, OperationType[] excludedOperations = null, ICsvColumnHandler<WorldType>[] columnWriters = null) {
+                if (Status != WorldStatus.Created) throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: CreateFileLogger, world status not `Created`");
+                if (FileLogger != null) throw new StaticEcsException("File logger already added");
 
-            FileLogger = new FileLogger<WorldType>(logsFilePath, excludedOperations, columnWriters);
-            FileLogger.Enable();
-        }
-        
-        public static void EnableFileLogger() {
-            if (FileLogger == null) {
-                throw new StaticEcsException("File logger not added");
+                FileLogger = new FileLogger<WorldType>(logsFilePath, excludedOperations, columnWriters);
+                FileLogger.Enable();
             }
-            
-            FileLogger.Enable();
-        }
         
-        public static void DisableFileLogger() {
-            if (FileLogger == null) {
-                throw new StaticEcsException("File logger not added");
-            }
+            public static void EnableFileLogger() {
+                if (FileLogger == null) {
+                    throw new StaticEcsException("File logger not added");
+                }
             
-            FileLogger.Disable();
+                FileLogger.Enable();
+            }
+        
+            public static void DisableFileLogger() {
+                if (FileLogger == null) {
+                    throw new StaticEcsException("File logger not added");
+                }
+            
+                FileLogger.Disable();
+            }
         }
     }
 
@@ -359,15 +602,11 @@ namespace FFS.Libraries.StaticEcs {
     }
 
     public sealed class FileLogger<WorldType> : World<WorldType>.IWorldDebugEventListener,
-                                                World<WorldType>.IComponentsDebugEventListener
-                                                #if !FFS_ECS_DISABLE_TAGS
-                                                , World<WorldType>.ITagDebugEventListener
-                                                #endif
-                                                #if !FFS_ECS_DISABLE_EVENTS
-                                                , World<WorldType>.IEventsDebugEventListener
-                                              #endif
+                                                World<WorldType>.IComponentsDebugEventListener,
+                                                World<WorldType>.ITagDebugEventListener,
+                                                World<WorldType>.IEventsDebugEventListener
         where WorldType : struct, IWorldType {
-        internal static readonly uint EmptyEntity = uint.MaxValue;
+        internal static readonly uint EmptyEntity = uint.MaxValue - 1;
 
         internal readonly string LogsFilePath;
         internal readonly DateTime DateTime;
@@ -396,7 +635,7 @@ namespace FFS.Libraries.StaticEcs {
                     try {
                         File.Delete(file);
                     }
-                    catch (Exception _) {
+                    catch (Exception) {
                         // ignored
                     }
                 }
@@ -407,28 +646,20 @@ namespace FFS.Libraries.StaticEcs {
 
         public void Enable() {
             if (!Enabled) {
-                World<WorldType>.AddWorldDebugEventListener(this);
-                World<WorldType>.AddComponentsDebugEventListener(this);
-                #if !FFS_ECS_DISABLE_TAGS
-                World<WorldType>.AddTagDebugEventListener(this);
-                #endif
-                #if !FFS_ECS_DISABLE_EVENTS
+                World<WorldType>.DEBUG.AddWorldDebugEventListener(this);
+                World<WorldType>.DEBUG.AddComponentsDebugEventListener(this);
+                World<WorldType>.DEBUG.AddTagDebugEventListener(this);
                 World<WorldType>.Events.AddEventsDebugEventListener(this);
-                #endif
                 Enabled = true;
             }
         }
 
         public void Disable() {
             if (Enabled) {
-                World<WorldType>.RemoveWorldDebugEventListener(this);
-                World<WorldType>.RemoveComponentsDebugEventListener(this);
-                #if !FFS_ECS_DISABLE_TAGS
-                World<WorldType>.RemoveTagDebugEventListener(this);
-                #endif
-                #if !FFS_ECS_DISABLE_EVENTS
+                World<WorldType>.DEBUG.RemoveWorldDebugEventListener(this);
+                World<WorldType>.DEBUG.RemoveComponentsDebugEventListener(this);
+                World<WorldType>.DEBUG.RemoveTagDebugEventListener(this);
                 World<WorldType>.Events.RemoveEventsDebugEventListener(this);
-                #endif
                 Writer.Flush();
                 Enabled = false;
             }
@@ -475,20 +706,20 @@ namespace FFS.Libraries.StaticEcs {
                 return;
             }
             
-            if (entity._id != uint.MaxValue) {
-                Writer.Write(entity._id);
+            if (entity.id != uint.MaxValue) {
+                Writer.Write(entity.id);
             }
 
             Writer.Write(";");
             
-            if (entity._id != uint.MaxValue) {
-                Writer.Write(entity.Gid().id);
+            if (entity.id != uint.MaxValue) {
+                Writer.Write(entity.Gid().Raw);
             }
 
             Writer.Write(";");
 
             foreach (var columnWriter in ColumnWriters) {
-                if (entity._id != uint.MaxValue) {
+                if (entity.id != uint.MaxValue) {
                     columnWriter.TryAddColumn(entity, Writer);
                 } else {
                     Writer.Write(";");
@@ -535,7 +766,7 @@ namespace FFS.Libraries.StaticEcs {
         public void OnComponentDelete<T>(World<WorldType>.Entity entity, ref T component) where T : struct, IComponent {
             Write(entity, OperationType.ComponentDelete, TypeData<T>.Name);
         }
-        #if !FFS_ECS_DISABLE_TAGS
+
         public void OnTagAdd<T>(World<WorldType>.Entity entity) where T : struct, ITag {
             Write(entity, OperationType.TagAdd, TypeData<T>.Name);
         }
@@ -543,9 +774,7 @@ namespace FFS.Libraries.StaticEcs {
         public void OnTagDelete<T>(World<WorldType>.Entity entity) where T : struct, ITag {
             Write(entity, OperationType.TagDelete, TypeData<T>.Name);
         }
-        #endif
 
-        #if !FFS_ECS_DISABLE_EVENTS
         public void OnEventSent<T>(World<WorldType>.Event<T> value) where T : struct, IEvent {
             Write(new World<WorldType>.Entity(EmptyEntity), OperationType.EventAdd, TypeData<T>.Name);
         }

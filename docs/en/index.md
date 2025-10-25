@@ -4,7 +4,7 @@ has_toc: false
 parent: Main page
 ---
 
-![Version](https://img.shields.io/badge/version-1.1.preview-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.2.0-blue.svg?style=for-the-badge)
 
 ___
 
@@ -57,7 +57,7 @@ ___
 * [Telegram](https://t.me/felid_force_studios)
 
 # Installation
-The library has a dependency on [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) `1.0.3` for binary serialization, StaticPack must also be installed
+The library has a dependency on [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) `1.0.6` for binary serialization, StaticPack must also be installed
 * ### As source code
   From the release page or as an archive from the branch. In the `master` branch there is a stable tested version
 * ### Installation for Unity
@@ -70,6 +70,13 @@ The library has a dependency on [StaticPack](https://github.com/Felid-Force-Stud
 
 
 # Concept
+StaticEcs - a new ECS architecture based on an inverted hierarchical bitmap model.
+Unlike traditional ECS frameworks that rely on archetypes or sparse sets, this design introduces an inverted index structure where each component owns an entity bitmap instead of entities storing component masks.
+A hierarchical aggregation of these bitmaps provides logarithmic-space indexing of entity blocks, enabling O(1) block filtering and efficient parallel iteration through bitwise operations.
+This approach completely removes archetype migration and sparse-set indirection, offering direct SoA-style memory access across millions of entities with minimal cache misses.
+The model achieves up to 64× fewer memory lookups per block and scales linearly with the number of active component sets, making it ideal for large-scale simulations, reactive AI, and open-world environments.
+
+
 > - The main idea of this implementation is static, all data about the world and components are in static classes, which makes it possible to avoid expensive virtual calls and have a convenient API
 > - This framework is focused on maximum ease of use, speed and comfort of code writing without loss of performance
 > - Multi-world creation, strict typing, ~zero-cost abstractions
@@ -103,7 +110,7 @@ public struct Velocity : IComponent { public float Value; }
 // Define systems
 public readonly struct VelocitySystem : IUpdateSystem {
     public void Update() {
-        foreach (var entity in W.QueryEntities.For<All<Position, Velocity, Direction>>()) {
+        foreach (var entity in W.Query.Entities<All<Position, Velocity, Direction>>()) {
             entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
         }
         

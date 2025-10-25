@@ -8,7 +8,7 @@ nav_order: 2
 Глобальный идентификатор сущности - является стабильным идентификатором сущности   
 Используется для [отправки событий](events.md), [связей между сущностями](relations.md), [сериализации](serialization.md), передачи по сети, и тд.  
 Назначается автоматически или вручную при создании сущности.  
-- Представлена в виде структуры размером 4 байт
+- Представлена в виде структуры размером 8 байт
 
 ___
 
@@ -18,8 +18,8 @@ ___
 EntityGID gid = entity.Gid();
 
 // Или через конструктор
-EntityGID gid2 = new EntityGID(id: 0, version: 1);
-EntityGID gid3 = new EntityGID(rawValue: 16777216U);
+EntityGID gid2 = new EntityGID(id: 0, version: 1, clusterId: 0);
+EntityGID gid3 = new EntityGID(rawValue: 16777216UL);
 ```
 
 ___
@@ -28,18 +28,21 @@ ___
 ```csharp
 EntityGID gid = entity.Gid();
 
-uint id = gid.Id();                                           // Идентификатор
-byte version = gid.Version();                                 // Версия
-uint rawValue = gid.Raw();                                    // Сырое значение (id + version)
+uint id = gid.Id;                                             // Идентификатор сущности
+ushort version = gid.Version;                                 // Версия сущности
+ushort clusterId = gid.ClusterId;                             // Кластер сущности
+uint chunk = gid.Chunk;                                       // Чанк сущности
+uint rawValue = gid.Raw;                                      // Сырое значение (id + version + clusterId)
 
-bool registered = gid.IsRegistered<WT>();                     // Проверить зарегистрирован ли данный идентификатор в хранилище (сущность может быть не загружена)
-bool loaded = gid.IsLoaded<WT>();                             // Проверить загружена ли сущность с таким идентификатором
+bool actual = gid.IsActual<WT>();                             // Проверить актуальна ли сущность (сущность может быть не загружена)
+bool loaded = gid.IsLoaded<WT>();                             // Проверить загружена ли сущность
+bool loadedAndActual = gid.IsLoadedAndActual<WT>();           // Проверить загружена и актуальна ли сущность
 bool status = gid.TryUnpack<WT>(out var unpackedEntity);      // Попытаться получить активную сущность
-var unpacked = gid.Unpack<WT>();                              // Получить активную сущность небезопасно
+var unpacked = gid.Unpack<WT>();                              // Получить активную сущность небезопасно (будет ошибка в DEBUG если сущность не загружена или неактуальна)
 
-W.Entity.New(someGid);                                    // Сущность может быть создана с кастомным идентификатором
+W.Entity.New(someGid);                                        // Сущность может быть создана с кастомным идентификатором
 
-EntityGID gid2 = entity.Pack();
+EntityGID gid2 = entity.Gid();
 bool equals = gid.Equals(gid2);                               // Проверить идентичность идентификаторов
 ```
 
@@ -80,4 +83,20 @@ client.SendMessage(new SomeCreateEntityClientCommand(serverEntityPlayer.Gid(), "
 var someCreateEntityClientCommand = server.ReceiveMessage();
 var gidFromServer = someCreateEntityClientCommand.Id;
 var entity = ClientWorld.Entity.New(gidFromServer);
+```
+
+## EntityGIDCompact
+Аналогично EntityGID но размер в два раза меньше, и может использоваться в мирах до 16 000 сущностей и до 4 кластеров (будет ошибка в DEBUG если выйти за границы)
+- Представлена в виде структуры размером 4 байт
+
+___
+
+#### Создание:
+```csharp
+// Возможно получить у активной сущности
+EntityGIDCompact gid = entity.GidCompact();
+
+// Или через конструктор
+EntityGIDCompact gid2 = new EntityGIDCompact(id: 0, version: 1, clusterId: 0);
+EntityGIDCompact gid3 = new EntityGIDCompact(rawValue: 16777216U);
 ```

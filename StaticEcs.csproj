@@ -8,7 +8,7 @@
         <Nullable>disable</Nullable>
         <RootNamespace>FFS.Libraries.StaticEcs</RootNamespace>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>1.1.1</Version>
+        <Version>1.2.0</Version>
         <Authors>Felid-Force-Studios</Authors>
         <Description>C# Hierarchical Inverted Bitmap ECS framework</Description>
         <Copyright>Felid-Force-Studios</Copyright>
@@ -55,10 +55,10 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-        <PackageReference Include="FFS.StaticPack.Debug" Version="1.0.5" />
+        <PackageReference Include="FFS.StaticPack.Debug" Version="1.0.6" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(Configuration)' == 'Release'">
-        <PackageReference Include="FFS.StaticPack" Version="1.0.5" />
+        <PackageReference Include="FFS.StaticPack" Version="1.0.6" />
     </ItemGroup>
 </Project>

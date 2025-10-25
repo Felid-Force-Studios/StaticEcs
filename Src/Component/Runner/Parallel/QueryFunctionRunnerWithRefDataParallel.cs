@@ -1,4 +1,11 @@
-﻿using System;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -27,27 +34,29 @@ namespace FFS.Libraries.StaticEcs {
         private D _data;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(ref D data, QueryFunctionWithRefData<D, C1> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
+        public void Run(ReadOnlySpan<ushort> clusters, ref D data, QueryFunctionWithRefData<D, C1> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
+            #if FFS_ECS_DEBUG
+            World<WorldType>.AssertNotNestedParallelQuery(World<WorldType>.WorldTypeName);
+            World<WorldType>.AssertRegisteredComponent<C1>(World<WorldType>.Components<C1>.ComponentsTypeName);
+            with.Assert<WorldType>();
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
-            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
+            World<WorldType>.AssertParallelAvaliable(World<WorldType>.WorldTypeName);
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
             _runner = runner;
             _data = data;
             
-            Prepare(with, entities, components, out var count);
+            Prepare(clusters, with, entities, components, out var count);
 
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             try
             #endif
             {
                 ParallelRunner<WorldType>.Run(this, count, Math.Max(minEntitiesPerThread / Const.DATA_BLOCK_SIZE_FOR_THREADS, 1), workersLimit);;
                 data = _data;
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             finally
             #endif
             {
@@ -58,7 +67,7 @@ namespace FFS.Libraries.StaticEcs {
                     _jobIndexes = null;
                 }
                 World<WorldType>.CurrentQuery.QueryDataCount--;
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (World<WorldType>.CurrentQuery.QueryDataCount == 0) {
                     World<WorldType>.CurrentQuery.QueryMode = 0;
                 }
@@ -110,6 +119,7 @@ namespace FFS.Libraries.StaticEcs {
                     #else
                     var dOffset = blockEntity & Const.DATA_ENTITY_MASK;
                     #endif
+                    blockEntity += Const.ENTITY_ID_OFFSET;
                     var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                     var end = Utils.ApproximateMSB(entitiesMask);
                     var total = Utils.PopCnt(entitiesMask);
@@ -117,7 +127,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                                #if FFS_ECS_DEBUG
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 _runner(ref _data, ref d1[dIdx]);
@@ -126,7 +136,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                            #if FFS_ECS_DEBUG
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             _runner(ref _data, ref d1[dIdx]);
@@ -136,16 +146,15 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Prepare(P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
+        public void Prepare(ReadOnlySpan<ushort> clusters, P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
 
-            var chunksCount = World<WorldType>.Entities.Value.nextActiveChunkIdx;
             var entitiesChunks = World<WorldType>.Entities.Value.chunks;
 
             #if NET6_0_OR_GREATER
@@ -155,50 +164,63 @@ namespace FFS.Libraries.StaticEcs {
             #endif
 
             jobsCount = 0;
-            for (uint chunkIdx = 0; chunkIdx < chunksCount; chunkIdx++) {
-                ref var chE = ref entitiesChunks[chunkIdx];
-                ref var ch1 = ref c1.chunks[chunkIdx];
 
-                var chunkMask = chE.notEmptyBlocks
-                                & ch1.notEmptyBlocks;
-                with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
+            var entitiesClusters = World<WorldType>.Entities.Value.clusters;
 
-                var aMask = chE.entities;
-                var aMask1 = ch1.entities;
+            for (var i = 0; i < clusters.Length; i++) {
+                var clusterIdx = clusters[i];
+                ref var cluster = ref entitiesClusters[clusterIdx];
+                if (cluster.disabled) {
+                    continue;
+                }
+                for (uint chunkMapIdx = 0; chunkMapIdx < cluster.loadedChunksCount; chunkMapIdx++) {
+                    var chunkIdx = cluster.loadedChunks[chunkMapIdx];
 
-                var dMask = chE.disabledEntities;
-                var dMask1 = ch1.disabledEntities;
+                    ref var chE = ref entitiesChunks[chunkIdx];
+                    ref var ch1 = ref c1.chunks[chunkIdx];
 
-                while (chunkMask > 0) {
-                    var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
-                    chunkMask &= chunkMask - 1;
-                    var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-                    var entitiesMask = entities switch {
-                        EntityStatusType.Enabled  => aMask[blockIdx] & ~dMask[blockIdx],
-                        EntityStatusType.Disabled => dMask[blockIdx],
-                        _                         => aMask[blockIdx]
-                    };
-                    entitiesMask &= components switch {
-                        ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx],
-                        ComponentStatus.Disabled => dMask1[blockIdx],
-                        _                        => aMask1[blockIdx],
-                    };
-                    with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+                    var chunkMask = chE.notEmptyBlocks
+                                    & ch1.notEmptyBlocks;
+                    with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
 
-                    if (entitiesMask > 0) {
-                        if (jobsCount == 0) {
-                            var size = (int) (chunksCount * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS);
-                            _jobs = ArrayPool<Job>.Shared.Rent(size);
-                            _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                    var lMask = chE.loadedEntities;
+                    var aMask = chE.entities;
+                    var aMask1 = ch1.entities;
+
+                    var dMask = chE.disabledEntities;
+                    var dMask1 = ch1.disabledEntities;
+
+                    while (chunkMask > 0) {
+                        var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
+                        chunkMask &= chunkMask - 1;
+                        var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
+                        var entitiesMask = entities switch {
+                            EntityStatusType.Enabled  => lMask[blockIdx] & aMask[blockIdx] & ~dMask[blockIdx],
+                            EntityStatusType.Disabled => lMask[blockIdx] & dMask[blockIdx],
+                            _                         => lMask[blockIdx] & aMask[blockIdx]
+                        };
+                        entitiesMask &= components switch {
+                            ComponentStatus.Enabled  => aMask1[blockIdx] & ~dMask1[blockIdx],
+                            ComponentStatus.Disabled => dMask1[blockIdx],
+                            _                        => aMask1[blockIdx],
+                        };
+                        with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+
+                        if (entitiesMask > 0) {
+                            if (jobsCount == 0) {
+                                var size = entitiesChunks.Length * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS;
+                                _jobs = ArrayPool<Job>.Shared.Rent(size);
+                                _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                            }
+
+                            var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
+                            ref var job = ref _jobs[jobIdx];
+                            if (job.Count == 0) {
+                                _jobIndexes[jobsCount++] = jobIdx;
+                            }
+                            job.Masks[job.Count] = entitiesMask;
+                            job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                         }
-
-                        var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
-                        ref var job = ref _jobs[jobIdx];
-                        if (job.Count == 0) {
-                            _jobIndexes[jobsCount++] = jobIdx;
-                        }
-                        job.Masks[job.Count] = entitiesMask;
-                        job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                     }
                 }
             }
@@ -222,27 +244,30 @@ namespace FFS.Libraries.StaticEcs {
         private D _data;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(ref D data, QueryFunctionWithRefData<D, C1, C2> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
+        public void Run(ReadOnlySpan<ushort> clusters, ref D data, QueryFunctionWithRefData<D, C1, C2> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
+            #if FFS_ECS_DEBUG
+            World<WorldType>.AssertNotNestedParallelQuery(World<WorldType>.WorldTypeName);
+            World<WorldType>.AssertRegisteredComponent<C1>(World<WorldType>.Components<C1>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C2>(World<WorldType>.Components<C2>.ComponentsTypeName);
+            with.Assert<WorldType>();
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
-            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
+            World<WorldType>.AssertParallelAvaliable(World<WorldType>.WorldTypeName);
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
             _runner = runner;
             _data = data;
             
-            Prepare(with, entities, components, out var count);
+            Prepare(clusters, with, entities, components, out var count);
 
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             try
             #endif
             {
                 ParallelRunner<WorldType>.Run(this, count, Math.Max(minEntitiesPerThread / Const.DATA_BLOCK_SIZE_FOR_THREADS, 1), workersLimit);;
                 data = _data;
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             finally
             #endif
             {
@@ -253,7 +278,7 @@ namespace FFS.Libraries.StaticEcs {
                     _jobIndexes = null;
                 }
                 World<WorldType>.CurrentQuery.QueryDataCount--;
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (World<WorldType>.CurrentQuery.QueryDataCount == 0) {
                     World<WorldType>.CurrentQuery.QueryMode = 0;
                 }
@@ -310,6 +335,7 @@ namespace FFS.Libraries.StaticEcs {
                     #else
                     var dOffset = blockEntity & Const.DATA_ENTITY_MASK;
                     #endif
+                    blockEntity += Const.ENTITY_ID_OFFSET;
                     var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                     var end = Utils.ApproximateMSB(entitiesMask);
                     var total = Utils.PopCnt(entitiesMask);
@@ -317,7 +343,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                                #if FFS_ECS_DEBUG
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 _runner(ref _data, ref d1[dIdx], ref d2[dIdx]);
@@ -326,7 +352,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                            #if FFS_ECS_DEBUG
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             _runner(ref _data, ref d1[dIdx], ref d2[dIdx]);
@@ -336,17 +362,16 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Prepare(P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
+        public void Prepare(ReadOnlySpan<ushort> clusters, P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
 
-            var chunksCount = World<WorldType>.Entities.Value.nextActiveChunkIdx;
             var entitiesChunks = World<WorldType>.Entities.Value.chunks;
 
             #if NET6_0_OR_GREATER
@@ -356,54 +381,67 @@ namespace FFS.Libraries.StaticEcs {
             #endif
 
             jobsCount = 0;
-            for (uint chunkIdx = 0; chunkIdx < chunksCount; chunkIdx++) {
-                ref var chE = ref entitiesChunks[chunkIdx];
-                ref var ch1 = ref c1.chunks[chunkIdx];
-                ref var ch2 = ref c2.chunks[chunkIdx];
 
-                var chunkMask = chE.notEmptyBlocks
-                                & ch1.notEmptyBlocks
-                                & ch2.notEmptyBlocks;
-                with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
+            var entitiesClusters = World<WorldType>.Entities.Value.clusters;
 
-                var aMask = chE.entities;
-                var aMask1 = ch1.entities;
-                var aMask2 = ch2.entities;
+            for (var i = 0; i < clusters.Length; i++) {
+                var clusterIdx = clusters[i];
+                ref var cluster = ref entitiesClusters[clusterIdx];
+                if (cluster.disabled) {
+                    continue;
+                }
+                for (uint chunkMapIdx = 0; chunkMapIdx < cluster.loadedChunksCount; chunkMapIdx++) {
+                    var chunkIdx = cluster.loadedChunks[chunkMapIdx];
 
-                var dMask = chE.disabledEntities;
-                var dMask1 = ch1.disabledEntities;
-                var dMask2 = ch2.disabledEntities;
+                    ref var chE = ref entitiesChunks[chunkIdx];
+                    ref var ch1 = ref c1.chunks[chunkIdx];
+                    ref var ch2 = ref c2.chunks[chunkIdx];
 
-                while (chunkMask > 0) {
-                    var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
-                    chunkMask &= chunkMask - 1;
-                    var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-                    var entitiesMask = entities switch {
-                        EntityStatusType.Enabled  => aMask[blockIdx] & ~dMask[blockIdx],
-                        EntityStatusType.Disabled => dMask[blockIdx],
-                        _                         => aMask[blockIdx]
-                    };
-                    entitiesMask &= components switch {
-                        ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx],
-                        ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx],
-                        _                        => aMask1[blockIdx] & aMask2[blockIdx],
-                    };
-                    with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+                    var chunkMask = chE.notEmptyBlocks
+                                    & ch1.notEmptyBlocks
+                                    & ch2.notEmptyBlocks;
+                    with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
 
-                    if (entitiesMask > 0) {
-                        if (jobsCount == 0) {
-                            var size = (int) (chunksCount * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS);
-                            _jobs = ArrayPool<Job>.Shared.Rent(size);
-                            _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                    var lMask = chE.loadedEntities;
+                    var aMask = chE.entities;
+                    var aMask1 = ch1.entities;
+                    var aMask2 = ch2.entities;
+
+                    var dMask = chE.disabledEntities;
+                    var dMask1 = ch1.disabledEntities;
+                    var dMask2 = ch2.disabledEntities;
+
+                    while (chunkMask > 0) {
+                        var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
+                        chunkMask &= chunkMask - 1;
+                        var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
+                        var entitiesMask = entities switch {
+                            EntityStatusType.Enabled  => lMask[blockIdx] & aMask[blockIdx] & ~dMask[blockIdx],
+                            EntityStatusType.Disabled => lMask[blockIdx] & dMask[blockIdx],
+                            _                         => lMask[blockIdx] & aMask[blockIdx]
+                        };
+                        entitiesMask &= components switch {
+                            ComponentStatus.Enabled  => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx],
+                            ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx],
+                            _                        => aMask1[blockIdx] & aMask2[blockIdx],
+                        };
+                        with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+
+                        if (entitiesMask > 0) {
+                            if (jobsCount == 0) {
+                                var size = entitiesChunks.Length * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS;
+                                _jobs = ArrayPool<Job>.Shared.Rent(size);
+                                _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                            }
+
+                            var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
+                            ref var job = ref _jobs[jobIdx];
+                            if (job.Count == 0) {
+                                _jobIndexes[jobsCount++] = jobIdx;
+                            }
+                            job.Masks[job.Count] = entitiesMask;
+                            job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                         }
-
-                        var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
-                        ref var job = ref _jobs[jobIdx];
-                        if (job.Count == 0) {
-                            _jobIndexes[jobsCount++] = jobIdx;
-                        }
-                        job.Masks[job.Count] = entitiesMask;
-                        job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                     }
                 }
             }
@@ -428,27 +466,31 @@ namespace FFS.Libraries.StaticEcs {
         private D _data;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(ref D data, QueryFunctionWithRefData<D, C1, C2, C3> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
+        public void Run(ReadOnlySpan<ushort> clusters, ref D data, QueryFunctionWithRefData<D, C1, C2, C3> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
+            #if FFS_ECS_DEBUG
+            World<WorldType>.AssertNotNestedParallelQuery(World<WorldType>.WorldTypeName);
+            World<WorldType>.AssertRegisteredComponent<C1>(World<WorldType>.Components<C1>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C2>(World<WorldType>.Components<C2>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C3>(World<WorldType>.Components<C3>.ComponentsTypeName);
+            with.Assert<WorldType>();
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
-            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
+            World<WorldType>.AssertParallelAvaliable(World<WorldType>.WorldTypeName);
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
             _runner = runner;
             _data = data;
             
-            Prepare(with, entities, components, out var count);
+            Prepare(clusters, with, entities, components, out var count);
 
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             try
             #endif
             {
                 ParallelRunner<WorldType>.Run(this, count, Math.Max(minEntitiesPerThread / Const.DATA_BLOCK_SIZE_FOR_THREADS, 1), workersLimit);;
                 data = _data;
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             finally
             #endif
             {
@@ -459,7 +501,7 @@ namespace FFS.Libraries.StaticEcs {
                     _jobIndexes = null;
                 }
                 World<WorldType>.CurrentQuery.QueryDataCount--;
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (World<WorldType>.CurrentQuery.QueryDataCount == 0) {
                     World<WorldType>.CurrentQuery.QueryMode = 0;
                 }
@@ -521,6 +563,7 @@ namespace FFS.Libraries.StaticEcs {
                     #else
                     var dOffset = blockEntity & Const.DATA_ENTITY_MASK;
                     #endif
+                    blockEntity += Const.ENTITY_ID_OFFSET;
                     var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                     var end = Utils.ApproximateMSB(entitiesMask);
                     var total = Utils.PopCnt(entitiesMask);
@@ -528,7 +571,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                                #if FFS_ECS_DEBUG
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx]);
@@ -537,7 +580,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                            #if FFS_ECS_DEBUG
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx]);
@@ -547,18 +590,17 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Prepare(P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
+        public void Prepare(ReadOnlySpan<ushort> clusters, P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;
 
-            var chunksCount = World<WorldType>.Entities.Value.nextActiveChunkIdx;
             var entitiesChunks = World<WorldType>.Entities.Value.chunks;
 
             #if NET6_0_OR_GREATER
@@ -568,58 +610,71 @@ namespace FFS.Libraries.StaticEcs {
             #endif
 
             jobsCount = 0;
-            for (uint chunkIdx = 0; chunkIdx < chunksCount; chunkIdx++) {
-                ref var chE = ref entitiesChunks[chunkIdx];
-                ref var ch1 = ref c1.chunks[chunkIdx];
-                ref var ch2 = ref c2.chunks[chunkIdx];
-                ref var ch3 = ref c3.chunks[chunkIdx];
 
-                var chunkMask = chE.notEmptyBlocks
-                                & ch1.notEmptyBlocks
-                                & ch2.notEmptyBlocks
-                                & ch3.notEmptyBlocks;
-                with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
+            var entitiesClusters = World<WorldType>.Entities.Value.clusters;
 
-                var aMask = chE.entities;
-                var aMask1 = ch1.entities;
-                var aMask2 = ch2.entities;
-                var aMask3 = ch3.entities;
+            for (var i = 0; i < clusters.Length; i++) {
+                var clusterIdx = clusters[i];
+                ref var cluster = ref entitiesClusters[clusterIdx];
+                if (cluster.disabled) {
+                    continue;
+                }
+                for (uint chunkMapIdx = 0; chunkMapIdx < cluster.loadedChunksCount; chunkMapIdx++) {
+                    var chunkIdx = cluster.loadedChunks[chunkMapIdx];
 
-                var dMask = chE.disabledEntities;
-                var dMask1 = ch1.disabledEntities;
-                var dMask2 = ch2.disabledEntities;
-                var dMask3 = ch3.disabledEntities;
+                    ref var chE = ref entitiesChunks[chunkIdx];
+                    ref var ch1 = ref c1.chunks[chunkIdx];
+                    ref var ch2 = ref c2.chunks[chunkIdx];
+                    ref var ch3 = ref c3.chunks[chunkIdx];
 
-                while (chunkMask > 0) {
-                    var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
-                    chunkMask &= chunkMask - 1;
-                    var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-                    var entitiesMask = entities switch {
-                        EntityStatusType.Enabled  => aMask[blockIdx] & ~dMask[blockIdx],
-                        EntityStatusType.Disabled => dMask[blockIdx],
-                        _                         => aMask[blockIdx]
-                    };
-                    entitiesMask &= components switch {
-                        ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx],
-                        ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx],
-                        _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx],
-                    };
-                    with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+                    var chunkMask = chE.notEmptyBlocks
+                                    & ch1.notEmptyBlocks
+                                    & ch2.notEmptyBlocks
+                                    & ch3.notEmptyBlocks;
+                    with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
 
-                    if (entitiesMask > 0) {
-                        if (jobsCount == 0) {
-                            var size = (int) (chunksCount * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS);
-                            _jobs = ArrayPool<Job>.Shared.Rent(size);
-                            _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                    var lMask = chE.loadedEntities;
+                    var aMask = chE.entities;
+                    var aMask1 = ch1.entities;
+                    var aMask2 = ch2.entities;
+                    var aMask3 = ch3.entities;
+
+                    var dMask = chE.disabledEntities;
+                    var dMask1 = ch1.disabledEntities;
+                    var dMask2 = ch2.disabledEntities;
+                    var dMask3 = ch3.disabledEntities;
+
+                    while (chunkMask > 0) {
+                        var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
+                        chunkMask &= chunkMask - 1;
+                        var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
+                        var entitiesMask = entities switch {
+                            EntityStatusType.Enabled  => lMask[blockIdx] & aMask[blockIdx] & ~dMask[blockIdx],
+                            EntityStatusType.Disabled => lMask[blockIdx] & dMask[blockIdx],
+                            _                         => lMask[blockIdx] & aMask[blockIdx]
+                        };
+                        entitiesMask &= components switch {
+                            ComponentStatus.Enabled  => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx],
+                            ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx],
+                            _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx],
+                        };
+                        with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+
+                        if (entitiesMask > 0) {
+                            if (jobsCount == 0) {
+                                var size = entitiesChunks.Length * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS;
+                                _jobs = ArrayPool<Job>.Shared.Rent(size);
+                                _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                            }
+
+                            var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
+                            ref var job = ref _jobs[jobIdx];
+                            if (job.Count == 0) {
+                                _jobIndexes[jobsCount++] = jobIdx;
+                            }
+                            job.Masks[job.Count] = entitiesMask;
+                            job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                         }
-
-                        var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
-                        ref var job = ref _jobs[jobIdx];
-                        if (job.Count == 0) {
-                            _jobIndexes[jobsCount++] = jobIdx;
-                        }
-                        job.Masks[job.Count] = entitiesMask;
-                        job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                     }
                 }
             }
@@ -645,27 +700,32 @@ namespace FFS.Libraries.StaticEcs {
         private D _data;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(ref D data, QueryFunctionWithRefData<D, C1, C2, C3, C4> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
+        public void Run(ReadOnlySpan<ushort> clusters, ref D data, QueryFunctionWithRefData<D, C1, C2, C3, C4> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
+            #if FFS_ECS_DEBUG
+            World<WorldType>.AssertNotNestedParallelQuery(World<WorldType>.WorldTypeName);
+            World<WorldType>.AssertRegisteredComponent<C1>(World<WorldType>.Components<C1>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C2>(World<WorldType>.Components<C2>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C3>(World<WorldType>.Components<C3>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C4>(World<WorldType>.Components<C4>.ComponentsTypeName);
+            with.Assert<WorldType>();
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
-            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
+            World<WorldType>.AssertParallelAvaliable(World<WorldType>.WorldTypeName);
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
             _runner = runner;
             _data = data;
             
-            Prepare(with, entities, components, out var count);
+            Prepare(clusters, with, entities, components, out var count);
 
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             try
             #endif
             {
                 ParallelRunner<WorldType>.Run(this, count, Math.Max(minEntitiesPerThread / Const.DATA_BLOCK_SIZE_FOR_THREADS, 1), workersLimit);;
                 data = _data;
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             finally
             #endif
             {
@@ -676,7 +736,7 @@ namespace FFS.Libraries.StaticEcs {
                     _jobIndexes = null;
                 }
                 World<WorldType>.CurrentQuery.QueryDataCount--;
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (World<WorldType>.CurrentQuery.QueryDataCount == 0) {
                     World<WorldType>.CurrentQuery.QueryMode = 0;
                 }
@@ -743,6 +803,7 @@ namespace FFS.Libraries.StaticEcs {
                     #else
                     var dOffset = blockEntity & Const.DATA_ENTITY_MASK;
                     #endif
+                    blockEntity += Const.ENTITY_ID_OFFSET;
                     var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                     var end = Utils.ApproximateMSB(entitiesMask);
                     var total = Utils.PopCnt(entitiesMask);
@@ -750,7 +811,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                                #if FFS_ECS_DEBUG
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx], ref d4[dIdx]);
@@ -759,7 +820,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                            #if FFS_ECS_DEBUG
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx], ref d4[dIdx]);
@@ -769,19 +830,18 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Prepare(P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
+        public void Prepare(ReadOnlySpan<ushort> clusters, P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;
             ref var c4 = ref World<WorldType>.Components<C4>.Value;
 
-            var chunksCount = World<WorldType>.Entities.Value.nextActiveChunkIdx;
             var entitiesChunks = World<WorldType>.Entities.Value.chunks;
 
             #if NET6_0_OR_GREATER
@@ -791,62 +851,75 @@ namespace FFS.Libraries.StaticEcs {
             #endif
 
             jobsCount = 0;
-            for (uint chunkIdx = 0; chunkIdx < chunksCount; chunkIdx++) {
-                ref var chE = ref entitiesChunks[chunkIdx];
-                ref var ch1 = ref c1.chunks[chunkIdx];
-                ref var ch2 = ref c2.chunks[chunkIdx];
-                ref var ch3 = ref c3.chunks[chunkIdx];
-                ref var ch4 = ref c4.chunks[chunkIdx];
 
-                var chunkMask = chE.notEmptyBlocks
-                                & ch1.notEmptyBlocks
-                                & ch2.notEmptyBlocks
-                                & ch3.notEmptyBlocks
-                                & ch4.notEmptyBlocks;
-                with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
+            var entitiesClusters = World<WorldType>.Entities.Value.clusters;
 
-                var aMask = chE.entities;
-                var aMask1 = ch1.entities;
-                var aMask2 = ch2.entities;
-                var aMask3 = ch3.entities;
-                var aMask4 = ch4.entities;
+            for (var i = 0; i < clusters.Length; i++) {
+                var clusterIdx = clusters[i];
+                ref var cluster = ref entitiesClusters[clusterIdx];
+                if (cluster.disabled) {
+                    continue;
+                }
+                for (uint chunkMapIdx = 0; chunkMapIdx < cluster.loadedChunksCount; chunkMapIdx++) {
+                    var chunkIdx = cluster.loadedChunks[chunkMapIdx];
 
-                var dMask = chE.disabledEntities;
-                var dMask1 = ch1.disabledEntities;
-                var dMask2 = ch2.disabledEntities;
-                var dMask3 = ch3.disabledEntities;
-                var dMask4 = ch4.disabledEntities;
+                    ref var chE = ref entitiesChunks[chunkIdx];
+                    ref var ch1 = ref c1.chunks[chunkIdx];
+                    ref var ch2 = ref c2.chunks[chunkIdx];
+                    ref var ch3 = ref c3.chunks[chunkIdx];
+                    ref var ch4 = ref c4.chunks[chunkIdx];
 
-                while (chunkMask > 0) {
-                    var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
-                    chunkMask &= chunkMask - 1;
-                    var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-                    var entitiesMask = entities switch {
-                        EntityStatusType.Enabled  => aMask[blockIdx] & ~dMask[blockIdx],
-                        EntityStatusType.Disabled => dMask[blockIdx],
-                        _                         => aMask[blockIdx]
-                    };
-                    entitiesMask &= components switch {
-                        ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx] & aMask4[blockIdx] & ~dMask4[blockIdx],
-                        ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx] & dMask4[blockIdx],
-                        _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx] & aMask4[blockIdx],
-                    };
-                    with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+                    var chunkMask = chE.notEmptyBlocks
+                                    & ch1.notEmptyBlocks
+                                    & ch2.notEmptyBlocks
+                                    & ch3.notEmptyBlocks
+                                    & ch4.notEmptyBlocks;
+                    with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
 
-                    if (entitiesMask > 0) {
-                        if (jobsCount == 0) {
-                            var size = (int) (chunksCount * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS);
-                            _jobs = ArrayPool<Job>.Shared.Rent(size);
-                            _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                    var lMask = chE.loadedEntities;
+                    var aMask = chE.entities;
+                    var aMask1 = ch1.entities;
+                    var aMask2 = ch2.entities;
+                    var aMask3 = ch3.entities;
+                    var aMask4 = ch4.entities;
+
+                    var dMask = chE.disabledEntities;
+                    var dMask1 = ch1.disabledEntities;
+                    var dMask2 = ch2.disabledEntities;
+                    var dMask3 = ch3.disabledEntities;
+                    var dMask4 = ch4.disabledEntities;
+
+                    while (chunkMask > 0) {
+                        var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
+                        chunkMask &= chunkMask - 1;
+                        var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
+                        var entitiesMask = entities switch {
+                            EntityStatusType.Enabled  => lMask[blockIdx] & aMask[blockIdx] & ~dMask[blockIdx],
+                            EntityStatusType.Disabled => lMask[blockIdx] & dMask[blockIdx],
+                            _                         => lMask[blockIdx] & aMask[blockIdx]
+                        };
+                        entitiesMask &= components switch {
+                            ComponentStatus.Enabled  => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx] & aMask4[blockIdx] & ~dMask4[blockIdx],
+                            ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx] & dMask4[blockIdx],
+                            _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx] & aMask4[blockIdx],
+                        };
+                        with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+
+                        if (entitiesMask > 0) {
+                            if (jobsCount == 0) {
+                                var size = entitiesChunks.Length * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS;
+                                _jobs = ArrayPool<Job>.Shared.Rent(size);
+                                _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                            }
+
+                            var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
+                            ref var job = ref _jobs[jobIdx];
+                            if (job.Count == 0) {
+                                _jobIndexes[jobsCount++] = jobIdx;
+                            }
+                            job.Masks[job.Count] = entitiesMask;
+                            job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                         }
-
-                        var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
-                        ref var job = ref _jobs[jobIdx];
-                        if (job.Count == 0) {
-                            _jobIndexes[jobsCount++] = jobIdx;
-                        }
-                        job.Masks[job.Count] = entitiesMask;
-                        job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                     }
                 }
             }
@@ -873,27 +946,33 @@ namespace FFS.Libraries.StaticEcs {
         private D _data;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(ref D data, QueryFunctionWithRefData<D, C1, C2, C3, C4, C5> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
+        public void Run(ReadOnlySpan<ushort> clusters, ref D data, QueryFunctionWithRefData<D, C1, C2, C3, C4, C5> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
+            #if FFS_ECS_DEBUG
+            World<WorldType>.AssertNotNestedParallelQuery(World<WorldType>.WorldTypeName);
+            World<WorldType>.AssertRegisteredComponent<C1>(World<WorldType>.Components<C1>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C2>(World<WorldType>.Components<C2>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C3>(World<WorldType>.Components<C3>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C4>(World<WorldType>.Components<C4>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C5>(World<WorldType>.Components<C5>.ComponentsTypeName);
+            with.Assert<WorldType>();
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
-            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
+            World<WorldType>.AssertParallelAvaliable(World<WorldType>.WorldTypeName);
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
             _runner = runner;
             _data = data;
             
-            Prepare(with, entities, components, out var count);
+            Prepare(clusters, with, entities, components, out var count);
 
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             try
             #endif
             {
                 ParallelRunner<WorldType>.Run(this, count, Math.Max(minEntitiesPerThread / Const.DATA_BLOCK_SIZE_FOR_THREADS, 1), workersLimit);;
                 data = _data;
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             finally
             #endif
             {
@@ -904,7 +983,7 @@ namespace FFS.Libraries.StaticEcs {
                     _jobIndexes = null;
                 }
                 World<WorldType>.CurrentQuery.QueryDataCount--;
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (World<WorldType>.CurrentQuery.QueryDataCount == 0) {
                     World<WorldType>.CurrentQuery.QueryMode = 0;
                 }
@@ -976,6 +1055,7 @@ namespace FFS.Libraries.StaticEcs {
                     #else
                     var dOffset = blockEntity & Const.DATA_ENTITY_MASK;
                     #endif
+                    blockEntity += Const.ENTITY_ID_OFFSET;
                     var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                     var end = Utils.ApproximateMSB(entitiesMask);
                     var total = Utils.PopCnt(entitiesMask);
@@ -983,7 +1063,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                                #if FFS_ECS_DEBUG
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx], ref d4[dIdx], ref d5[dIdx]);
@@ -992,7 +1072,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                            #if FFS_ECS_DEBUG
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx], ref d4[dIdx], ref d5[dIdx]);
@@ -1002,20 +1082,19 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Prepare(P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
+        public void Prepare(ReadOnlySpan<ushort> clusters, P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;
             ref var c4 = ref World<WorldType>.Components<C4>.Value;
             ref var c5 = ref World<WorldType>.Components<C5>.Value;
 
-            var chunksCount = World<WorldType>.Entities.Value.nextActiveChunkIdx;
             var entitiesChunks = World<WorldType>.Entities.Value.chunks;
 
             #if NET6_0_OR_GREATER
@@ -1025,67 +1104,80 @@ namespace FFS.Libraries.StaticEcs {
             #endif
 
             jobsCount = 0;
-            for (uint chunkIdx = 0; chunkIdx < chunksCount; chunkIdx++) {
-                ref var chE = ref entitiesChunks[chunkIdx];
-                ref var ch1 = ref c1.chunks[chunkIdx];
-                ref var ch2 = ref c2.chunks[chunkIdx];
-                ref var ch3 = ref c3.chunks[chunkIdx];
-                ref var ch4 = ref c4.chunks[chunkIdx];
-                ref var ch5 = ref c5.chunks[chunkIdx];
 
-                var chunkMask = chE.notEmptyBlocks
-                                & ch1.notEmptyBlocks
-                                & ch2.notEmptyBlocks
-                                & ch3.notEmptyBlocks
-                                & ch4.notEmptyBlocks
-                                & ch5.notEmptyBlocks;
-                with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
+            var entitiesClusters = World<WorldType>.Entities.Value.clusters;
 
-                var aMask = chE.entities;
-                var aMask1 = ch1.entities;
-                var aMask2 = ch2.entities;
-                var aMask3 = ch3.entities;
-                var aMask4 = ch4.entities;
-                var aMask5 = ch5.entities;
+            for (var i = 0; i < clusters.Length; i++) {
+                var clusterIdx = clusters[i];
+                ref var cluster = ref entitiesClusters[clusterIdx];
+                if (cluster.disabled) {
+                    continue;
+                }
+                for (uint chunkMapIdx = 0; chunkMapIdx < cluster.loadedChunksCount; chunkMapIdx++) {
+                    var chunkIdx = cluster.loadedChunks[chunkMapIdx];
 
-                var dMask = chE.disabledEntities;
-                var dMask1 = ch1.disabledEntities;
-                var dMask2 = ch2.disabledEntities;
-                var dMask3 = ch3.disabledEntities;
-                var dMask4 = ch4.disabledEntities;
-                var dMask5 = ch5.disabledEntities;
+                    ref var chE = ref entitiesChunks[chunkIdx];
+                    ref var ch1 = ref c1.chunks[chunkIdx];
+                    ref var ch2 = ref c2.chunks[chunkIdx];
+                    ref var ch3 = ref c3.chunks[chunkIdx];
+                    ref var ch4 = ref c4.chunks[chunkIdx];
+                    ref var ch5 = ref c5.chunks[chunkIdx];
 
-                while (chunkMask > 0) {
-                    var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
-                    chunkMask &= chunkMask - 1;
-                    var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-                    var entitiesMask = entities switch {
-                        EntityStatusType.Enabled  => aMask[blockIdx] & ~dMask[blockIdx],
-                        EntityStatusType.Disabled => dMask[blockIdx],
-                        _                         => aMask[blockIdx]
-                    };
-                    entitiesMask &= components switch {
-                        ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx] & aMask4[blockIdx] & ~dMask4[blockIdx] & aMask5[blockIdx] &
-                                                   ~dMask5[blockIdx],
-                        ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx] & dMask4[blockIdx] & dMask5[blockIdx],
-                        _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx] & aMask4[blockIdx] & aMask5[blockIdx],
-                    };
-                    with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+                    var chunkMask = chE.notEmptyBlocks
+                                    & ch1.notEmptyBlocks
+                                    & ch2.notEmptyBlocks
+                                    & ch3.notEmptyBlocks
+                                    & ch4.notEmptyBlocks
+                                    & ch5.notEmptyBlocks;
+                    with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
 
-                    if (entitiesMask > 0) {
-                        if (jobsCount == 0) {
-                            var size = (int) (chunksCount * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS);
-                            _jobs = ArrayPool<Job>.Shared.Rent(size);
-                            _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                    var lMask = chE.loadedEntities;
+                    var aMask = chE.entities;
+                    var aMask1 = ch1.entities;
+                    var aMask2 = ch2.entities;
+                    var aMask3 = ch3.entities;
+                    var aMask4 = ch4.entities;
+                    var aMask5 = ch5.entities;
+
+                    var dMask = chE.disabledEntities;
+                    var dMask1 = ch1.disabledEntities;
+                    var dMask2 = ch2.disabledEntities;
+                    var dMask3 = ch3.disabledEntities;
+                    var dMask4 = ch4.disabledEntities;
+                    var dMask5 = ch5.disabledEntities;
+
+                    while (chunkMask > 0) {
+                        var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
+                        chunkMask &= chunkMask - 1;
+                        var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
+                        var entitiesMask = entities switch {
+                            EntityStatusType.Enabled  => lMask[blockIdx] & aMask[blockIdx] & ~dMask[blockIdx],
+                            EntityStatusType.Disabled => lMask[blockIdx] & dMask[blockIdx],
+                            _                         => lMask[blockIdx] & aMask[blockIdx]
+                        };
+                        entitiesMask &= components switch {
+                            ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx] & aMask4[blockIdx] & ~dMask4[blockIdx] & aMask5[blockIdx] &
+                                                       ~dMask5[blockIdx],
+                            ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx] & dMask4[blockIdx] & dMask5[blockIdx],
+                            _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx] & aMask4[blockIdx] & aMask5[blockIdx],
+                        };
+                        with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+
+                        if (entitiesMask > 0) {
+                            if (jobsCount == 0) {
+                                var size = entitiesChunks.Length * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS;
+                                _jobs = ArrayPool<Job>.Shared.Rent(size);
+                                _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                            }
+
+                            var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
+                            ref var job = ref _jobs[jobIdx];
+                            if (job.Count == 0) {
+                                _jobIndexes[jobsCount++] = jobIdx;
+                            }
+                            job.Masks[job.Count] = entitiesMask;
+                            job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                         }
-
-                        var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
-                        ref var job = ref _jobs[jobIdx];
-                        if (job.Count == 0) {
-                            _jobIndexes[jobsCount++] = jobIdx;
-                        }
-                        job.Masks[job.Count] = entitiesMask;
-                        job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                     }
                 }
             }
@@ -1113,27 +1205,34 @@ namespace FFS.Libraries.StaticEcs {
         private D _data;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(ref D data, QueryFunctionWithRefData<D, C1, C2, C3, C4, C5, C6> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
+        public void Run(ReadOnlySpan<ushort> clusters, ref D data, QueryFunctionWithRefData<D, C1, C2, C3, C4, C5, C6> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
+            #if FFS_ECS_DEBUG
+            World<WorldType>.AssertNotNestedParallelQuery(World<WorldType>.WorldTypeName);
+            World<WorldType>.AssertRegisteredComponent<C1>(World<WorldType>.Components<C1>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C2>(World<WorldType>.Components<C2>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C3>(World<WorldType>.Components<C3>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C4>(World<WorldType>.Components<C4>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C5>(World<WorldType>.Components<C5>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C6>(World<WorldType>.Components<C6>.ComponentsTypeName);
+            with.Assert<WorldType>();
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
-            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
+            World<WorldType>.AssertParallelAvaliable(World<WorldType>.WorldTypeName);
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
             _runner = runner;
             _data = data;
             
-            Prepare(with, entities, components, out var count);
+            Prepare(clusters, with, entities, components, out var count);
 
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             try
             #endif
             {
                 ParallelRunner<WorldType>.Run(this, count, Math.Max(minEntitiesPerThread / Const.DATA_BLOCK_SIZE_FOR_THREADS, 1), workersLimit);;
                 data = _data;
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             finally
             #endif
             {
@@ -1144,7 +1243,7 @@ namespace FFS.Libraries.StaticEcs {
                     _jobIndexes = null;
                 }
                 World<WorldType>.CurrentQuery.QueryDataCount--;
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (World<WorldType>.CurrentQuery.QueryDataCount == 0) {
                     World<WorldType>.CurrentQuery.QueryMode = 0;
                 }
@@ -1221,6 +1320,7 @@ namespace FFS.Libraries.StaticEcs {
                     #else
                     var dOffset = blockEntity & Const.DATA_ENTITY_MASK;
                     #endif
+                    blockEntity += Const.ENTITY_ID_OFFSET;
                     var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                     var end = Utils.ApproximateMSB(entitiesMask);
                     var total = Utils.PopCnt(entitiesMask);
@@ -1228,7 +1328,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                                #if FFS_ECS_DEBUG
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx], ref d4[dIdx], ref d5[dIdx], ref d6[dIdx]);
@@ -1237,7 +1337,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                            #if FFS_ECS_DEBUG
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx], ref d4[dIdx], ref d5[dIdx], ref d6[dIdx]);
@@ -1247,13 +1347,13 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Prepare(P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
+        public void Prepare(ReadOnlySpan<ushort> clusters, P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;
@@ -1261,7 +1361,6 @@ namespace FFS.Libraries.StaticEcs {
             ref var c5 = ref World<WorldType>.Components<C5>.Value;
             ref var c6 = ref World<WorldType>.Components<C6>.Value;
 
-            var chunksCount = World<WorldType>.Entities.Value.nextActiveChunkIdx;
             var entitiesChunks = World<WorldType>.Entities.Value.chunks;
 
             #if NET6_0_OR_GREATER
@@ -1271,71 +1370,84 @@ namespace FFS.Libraries.StaticEcs {
             #endif
 
             jobsCount = 0;
-            for (uint chunkIdx = 0; chunkIdx < chunksCount; chunkIdx++) {
-                ref var chE = ref entitiesChunks[chunkIdx];
-                ref var ch1 = ref c1.chunks[chunkIdx];
-                ref var ch2 = ref c2.chunks[chunkIdx];
-                ref var ch3 = ref c3.chunks[chunkIdx];
-                ref var ch4 = ref c4.chunks[chunkIdx];
-                ref var ch5 = ref c5.chunks[chunkIdx];
-                ref var ch6 = ref c6.chunks[chunkIdx];
 
-                var chunkMask = chE.notEmptyBlocks
-                                & ch1.notEmptyBlocks
-                                & ch2.notEmptyBlocks
-                                & ch3.notEmptyBlocks
-                                & ch4.notEmptyBlocks
-                                & ch5.notEmptyBlocks
-                                & ch6.notEmptyBlocks;
-                with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
+            var entitiesClusters = World<WorldType>.Entities.Value.clusters;
 
-                var aMask = chE.entities;
-                var aMask1 = ch1.entities;
-                var aMask2 = ch2.entities;
-                var aMask3 = ch3.entities;
-                var aMask4 = ch4.entities;
-                var aMask5 = ch5.entities;
-                var aMask6 = ch6.entities;
+            for (var i = 0; i < clusters.Length; i++) {
+                var clusterIdx = clusters[i];
+                ref var cluster = ref entitiesClusters[clusterIdx];
+                if (cluster.disabled) {
+                    continue;
+                }
+                for (uint chunkMapIdx = 0; chunkMapIdx < cluster.loadedChunksCount; chunkMapIdx++) {
+                    var chunkIdx = cluster.loadedChunks[chunkMapIdx];
 
-                var dMask = chE.disabledEntities;
-                var dMask1 = ch1.disabledEntities;
-                var dMask2 = ch2.disabledEntities;
-                var dMask3 = ch3.disabledEntities;
-                var dMask4 = ch4.disabledEntities;
-                var dMask5 = ch5.disabledEntities;
-                var dMask6 = ch6.disabledEntities;
+                    ref var chE = ref entitiesChunks[chunkIdx];
+                    ref var ch1 = ref c1.chunks[chunkIdx];
+                    ref var ch2 = ref c2.chunks[chunkIdx];
+                    ref var ch3 = ref c3.chunks[chunkIdx];
+                    ref var ch4 = ref c4.chunks[chunkIdx];
+                    ref var ch5 = ref c5.chunks[chunkIdx];
+                    ref var ch6 = ref c6.chunks[chunkIdx];
 
-                while (chunkMask > 0) {
-                    var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
-                    chunkMask &= chunkMask - 1;
-                    var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-                    var entitiesMask = entities switch {
-                        EntityStatusType.Enabled  => aMask[blockIdx] & ~dMask[blockIdx],
-                        EntityStatusType.Disabled => dMask[blockIdx],
-                        _                         => aMask[blockIdx]
-                    };
-                    entitiesMask &= components switch {
-                        ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx] & aMask4[blockIdx] & ~dMask4[blockIdx] & aMask5[blockIdx] &
-                                                   ~dMask5[blockIdx] & aMask6[blockIdx] & ~dMask6[blockIdx],
-                        ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx] & dMask4[blockIdx] & dMask5[blockIdx] & dMask6[blockIdx],
-                        _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx] & aMask4[blockIdx] & aMask5[blockIdx] & aMask6[blockIdx],
-                    };
-                    with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+                    var chunkMask = chE.notEmptyBlocks
+                                    & ch1.notEmptyBlocks
+                                    & ch2.notEmptyBlocks
+                                    & ch3.notEmptyBlocks
+                                    & ch4.notEmptyBlocks
+                                    & ch5.notEmptyBlocks
+                                    & ch6.notEmptyBlocks;
+                    with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
 
-                    if (entitiesMask > 0) {
-                        if (jobsCount == 0) {
-                            var size = (int) (chunksCount * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS);
-                            _jobs = ArrayPool<Job>.Shared.Rent(size);
-                            _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                    var lMask = chE.loadedEntities;
+                    var aMask = chE.entities;
+                    var aMask1 = ch1.entities;
+                    var aMask2 = ch2.entities;
+                    var aMask3 = ch3.entities;
+                    var aMask4 = ch4.entities;
+                    var aMask5 = ch5.entities;
+                    var aMask6 = ch6.entities;
+
+                    var dMask = chE.disabledEntities;
+                    var dMask1 = ch1.disabledEntities;
+                    var dMask2 = ch2.disabledEntities;
+                    var dMask3 = ch3.disabledEntities;
+                    var dMask4 = ch4.disabledEntities;
+                    var dMask5 = ch5.disabledEntities;
+                    var dMask6 = ch6.disabledEntities;
+
+                    while (chunkMask > 0) {
+                        var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
+                        chunkMask &= chunkMask - 1;
+                        var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
+                        var entitiesMask = entities switch {
+                            EntityStatusType.Enabled  => lMask[blockIdx] & aMask[blockIdx] & ~dMask[blockIdx],
+                            EntityStatusType.Disabled => lMask[blockIdx] & dMask[blockIdx],
+                            _                         => lMask[blockIdx] & aMask[blockIdx]
+                        };
+                        entitiesMask &= components switch {
+                            ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx] & aMask4[blockIdx] & ~dMask4[blockIdx] & aMask5[blockIdx] &
+                                                       ~dMask5[blockIdx] & aMask6[blockIdx] & ~dMask6[blockIdx],
+                            ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx] & dMask4[blockIdx] & dMask5[blockIdx] & dMask6[blockIdx],
+                            _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx] & aMask4[blockIdx] & aMask5[blockIdx] & aMask6[blockIdx],
+                        };
+                        with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+
+                        if (entitiesMask > 0) {
+                            if (jobsCount == 0) {
+                                var size = entitiesChunks.Length * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS;
+                                _jobs = ArrayPool<Job>.Shared.Rent(size);
+                                _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                            }
+
+                            var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
+                            ref var job = ref _jobs[jobIdx];
+                            if (job.Count == 0) {
+                                _jobIndexes[jobsCount++] = jobIdx;
+                            }
+                            job.Masks[job.Count] = entitiesMask;
+                            job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                         }
-
-                        var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
-                        ref var job = ref _jobs[jobIdx];
-                        if (job.Count == 0) {
-                            _jobIndexes[jobsCount++] = jobIdx;
-                        }
-                        job.Masks[job.Count] = entitiesMask;
-                        job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                     }
                 }
             }
@@ -1364,27 +1476,35 @@ namespace FFS.Libraries.StaticEcs {
         private D _data;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(ref D data, QueryFunctionWithRefData<D, C1, C2, C3, C4, C5, C6, C7> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
+        public void Run(ReadOnlySpan<ushort> clusters, ref D data, QueryFunctionWithRefData<D, C1, C2, C3, C4, C5, C6, C7> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
+            #if FFS_ECS_DEBUG
+            World<WorldType>.AssertNotNestedParallelQuery(World<WorldType>.WorldTypeName);
+            World<WorldType>.AssertRegisteredComponent<C1>(World<WorldType>.Components<C1>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C2>(World<WorldType>.Components<C2>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C3>(World<WorldType>.Components<C3>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C4>(World<WorldType>.Components<C4>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C5>(World<WorldType>.Components<C5>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C6>(World<WorldType>.Components<C6>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C7>(World<WorldType>.Components<C7>.ComponentsTypeName);
+            with.Assert<WorldType>();
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
-            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
+            World<WorldType>.AssertParallelAvaliable(World<WorldType>.WorldTypeName);
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
             _runner = runner;
             _data = data;
             
-            Prepare(with, entities, components, out var count);
+            Prepare(clusters, with, entities, components, out var count);
 
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             try
             #endif
             {
                 ParallelRunner<WorldType>.Run(this, count, Math.Max(minEntitiesPerThread / Const.DATA_BLOCK_SIZE_FOR_THREADS, 1), workersLimit);;
                 data = _data;
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             finally
             #endif
             {
@@ -1395,7 +1515,7 @@ namespace FFS.Libraries.StaticEcs {
                     _jobIndexes = null;
                 }
                 World<WorldType>.CurrentQuery.QueryDataCount--;
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (World<WorldType>.CurrentQuery.QueryDataCount == 0) {
                     World<WorldType>.CurrentQuery.QueryMode = 0;
                 }
@@ -1477,6 +1597,7 @@ namespace FFS.Libraries.StaticEcs {
                     #else
                     var dOffset = blockEntity & Const.DATA_ENTITY_MASK;
                     #endif
+                    blockEntity += Const.ENTITY_ID_OFFSET;
                     var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                     var end = Utils.ApproximateMSB(entitiesMask);
                     var total = Utils.PopCnt(entitiesMask);
@@ -1484,7 +1605,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                                #if FFS_ECS_DEBUG
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx], ref d4[dIdx], ref d5[dIdx], ref d6[dIdx], ref d7[dIdx]);
@@ -1493,7 +1614,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                            #if FFS_ECS_DEBUG
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx], ref d4[dIdx], ref d5[dIdx], ref d6[dIdx], ref d7[dIdx]);
@@ -1503,13 +1624,13 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Prepare(P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
+        public void Prepare(ReadOnlySpan<ushort> clusters, P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;
@@ -1518,7 +1639,6 @@ namespace FFS.Libraries.StaticEcs {
             ref var c6 = ref World<WorldType>.Components<C6>.Value;
             ref var c7 = ref World<WorldType>.Components<C7>.Value;
 
-            var chunksCount = World<WorldType>.Entities.Value.nextActiveChunkIdx;
             var entitiesChunks = World<WorldType>.Entities.Value.chunks;
 
             #if NET6_0_OR_GREATER
@@ -1528,75 +1648,88 @@ namespace FFS.Libraries.StaticEcs {
             #endif
 
             jobsCount = 0;
-            for (uint chunkIdx = 0; chunkIdx < chunksCount; chunkIdx++) {
-                ref var chE = ref entitiesChunks[chunkIdx];
-                ref var ch1 = ref c1.chunks[chunkIdx];
-                ref var ch2 = ref c2.chunks[chunkIdx];
-                ref var ch3 = ref c3.chunks[chunkIdx];
-                ref var ch4 = ref c4.chunks[chunkIdx];
-                ref var ch5 = ref c5.chunks[chunkIdx];
-                ref var ch6 = ref c6.chunks[chunkIdx];
-                ref var ch7 = ref c7.chunks[chunkIdx];
 
-                var chunkMask = chE.notEmptyBlocks
-                                & ch1.notEmptyBlocks
-                                & ch2.notEmptyBlocks
-                                & ch3.notEmptyBlocks
-                                & ch4.notEmptyBlocks
-                                & ch5.notEmptyBlocks
-                                & ch6.notEmptyBlocks
-                                & ch7.notEmptyBlocks;
-                with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
+            var entitiesClusters = World<WorldType>.Entities.Value.clusters;
 
-                var aMask = chE.entities;
-                var aMask1 = ch1.entities;
-                var aMask2 = ch2.entities;
-                var aMask3 = ch3.entities;
-                var aMask4 = ch4.entities;
-                var aMask5 = ch5.entities;
-                var aMask6 = ch6.entities;
-                var aMask7 = ch7.entities;
+            for (var i = 0; i < clusters.Length; i++) {
+                var clusterIdx = clusters[i];
+                ref var cluster = ref entitiesClusters[clusterIdx];
+                if (cluster.disabled) {
+                    continue;
+                }
+                for (uint chunkMapIdx = 0; chunkMapIdx < cluster.loadedChunksCount; chunkMapIdx++) {
+                    var chunkIdx = cluster.loadedChunks[chunkMapIdx];
 
-                var dMask = chE.disabledEntities;
-                var dMask1 = ch1.disabledEntities;
-                var dMask2 = ch2.disabledEntities;
-                var dMask3 = ch3.disabledEntities;
-                var dMask4 = ch4.disabledEntities;
-                var dMask5 = ch5.disabledEntities;
-                var dMask6 = ch6.disabledEntities;
-                var dMask7 = ch7.disabledEntities;
+                    ref var chE = ref entitiesChunks[chunkIdx];
+                    ref var ch1 = ref c1.chunks[chunkIdx];
+                    ref var ch2 = ref c2.chunks[chunkIdx];
+                    ref var ch3 = ref c3.chunks[chunkIdx];
+                    ref var ch4 = ref c4.chunks[chunkIdx];
+                    ref var ch5 = ref c5.chunks[chunkIdx];
+                    ref var ch6 = ref c6.chunks[chunkIdx];
+                    ref var ch7 = ref c7.chunks[chunkIdx];
 
-                while (chunkMask > 0) {
-                    var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
-                    chunkMask &= chunkMask - 1;
-                    var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-                    var entitiesMask = entities switch {
-                        EntityStatusType.Enabled  => aMask[blockIdx] & ~dMask[blockIdx],
-                        EntityStatusType.Disabled => dMask[blockIdx],
-                        _                         => aMask[blockIdx]
-                    };
-                    entitiesMask &= components switch {
-                        ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx] & aMask4[blockIdx] & ~dMask4[blockIdx] & aMask5[blockIdx] &
-                                                   ~dMask5[blockIdx] & aMask6[blockIdx] & ~dMask6[blockIdx] & aMask7[blockIdx] & ~dMask7[blockIdx],
-                        ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx] & dMask4[blockIdx] & dMask5[blockIdx] & dMask6[blockIdx] & dMask7[blockIdx],
-                        _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx] & aMask4[blockIdx] & aMask5[blockIdx] & aMask6[blockIdx] & aMask7[blockIdx],
-                    };
-                    with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+                    var chunkMask = chE.notEmptyBlocks
+                                    & ch1.notEmptyBlocks
+                                    & ch2.notEmptyBlocks
+                                    & ch3.notEmptyBlocks
+                                    & ch4.notEmptyBlocks
+                                    & ch5.notEmptyBlocks
+                                    & ch6.notEmptyBlocks
+                                    & ch7.notEmptyBlocks;
+                    with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
 
-                    if (entitiesMask > 0) {
-                        if (jobsCount == 0) {
-                            var size = (int) (chunksCount * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS);
-                            _jobs = ArrayPool<Job>.Shared.Rent(size);
-                            _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                    var lMask = chE.loadedEntities;
+                    var aMask = chE.entities;
+                    var aMask1 = ch1.entities;
+                    var aMask2 = ch2.entities;
+                    var aMask3 = ch3.entities;
+                    var aMask4 = ch4.entities;
+                    var aMask5 = ch5.entities;
+                    var aMask6 = ch6.entities;
+                    var aMask7 = ch7.entities;
+
+                    var dMask = chE.disabledEntities;
+                    var dMask1 = ch1.disabledEntities;
+                    var dMask2 = ch2.disabledEntities;
+                    var dMask3 = ch3.disabledEntities;
+                    var dMask4 = ch4.disabledEntities;
+                    var dMask5 = ch5.disabledEntities;
+                    var dMask6 = ch6.disabledEntities;
+                    var dMask7 = ch7.disabledEntities;
+
+                    while (chunkMask > 0) {
+                        var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
+                        chunkMask &= chunkMask - 1;
+                        var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
+                        var entitiesMask = entities switch {
+                            EntityStatusType.Enabled  => lMask[blockIdx] & aMask[blockIdx] & ~dMask[blockIdx],
+                            EntityStatusType.Disabled => lMask[blockIdx] & dMask[blockIdx],
+                            _                         => lMask[blockIdx] & aMask[blockIdx]
+                        };
+                        entitiesMask &= components switch {
+                            ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx] & aMask4[blockIdx] & ~dMask4[blockIdx] & aMask5[blockIdx] &
+                                                       ~dMask5[blockIdx] & aMask6[blockIdx] & ~dMask6[blockIdx] & aMask7[blockIdx] & ~dMask7[blockIdx],
+                            ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx] & dMask4[blockIdx] & dMask5[blockIdx] & dMask6[blockIdx] & dMask7[blockIdx],
+                            _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx] & aMask4[blockIdx] & aMask5[blockIdx] & aMask6[blockIdx] & aMask7[blockIdx],
+                        };
+                        with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+
+                        if (entitiesMask > 0) {
+                            if (jobsCount == 0) {
+                                var size = entitiesChunks.Length * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS;
+                                _jobs = ArrayPool<Job>.Shared.Rent(size);
+                                _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                            }
+
+                            var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
+                            ref var job = ref _jobs[jobIdx];
+                            if (job.Count == 0) {
+                                _jobIndexes[jobsCount++] = jobIdx;
+                            }
+                            job.Masks[job.Count] = entitiesMask;
+                            job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                         }
-
-                        var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
-                        ref var job = ref _jobs[jobIdx];
-                        if (job.Count == 0) {
-                            _jobIndexes[jobsCount++] = jobIdx;
-                        }
-                        job.Masks[job.Count] = entitiesMask;
-                        job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                     }
                 }
             }
@@ -1626,27 +1759,36 @@ namespace FFS.Libraries.StaticEcs {
         private D _data;
 
         [MethodImpl(AggressiveInlining)]
-        public void Run(ref D data, QueryFunctionWithRefData<D, C1, C2, C3, C4, C5, C6, C7, C8> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
-            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException("Nested query are not available with parallel query");
+        public void Run(ReadOnlySpan<ushort> clusters, ref D data, QueryFunctionWithRefData<D, C1, C2, C3, C4, C5, C6, C7, C8> runner, P with, EntityStatusType entities, ComponentStatus components, uint minEntitiesPerThread, uint workersLimit) {
+            #if FFS_ECS_DEBUG
+            World<WorldType>.AssertNotNestedParallelQuery(World<WorldType>.WorldTypeName);
+            World<WorldType>.AssertRegisteredComponent<C1>(World<WorldType>.Components<C1>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C2>(World<WorldType>.Components<C2>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C3>(World<WorldType>.Components<C3>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C4>(World<WorldType>.Components<C4>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C5>(World<WorldType>.Components<C5>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C6>(World<WorldType>.Components<C6>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C7>(World<WorldType>.Components<C7>.ComponentsTypeName);
+            World<WorldType>.AssertRegisteredComponent<C8>(World<WorldType>.Components<C8>.ComponentsTypeName);
+            with.Assert<WorldType>();
             if (World<WorldType>.CurrentQuery.QueryDataCount != 0) throw new StaticEcsException("Nested query are not available with parallel query");
-            if (World<WorldType>.cfg.ParallelQueryType == ParallelQueryType.Disabled) throw new StaticEcsException("ParallelQueryType = Disabled, change World config");
+            World<WorldType>.AssertParallelAvaliable(World<WorldType>.WorldTypeName);
             #endif
             World<WorldType>.CurrentQuery.QueryDataCount++;
 
             _runner = runner;
             _data = data;
             
-            Prepare(with, entities, components, out var count);
+            Prepare(clusters, with, entities, components, out var count);
 
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             try
             #endif
             {
                 ParallelRunner<WorldType>.Run(this, count, Math.Max(minEntitiesPerThread / Const.DATA_BLOCK_SIZE_FOR_THREADS, 1), workersLimit);;
                 data = _data;
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             finally
             #endif
             {
@@ -1657,7 +1799,7 @@ namespace FFS.Libraries.StaticEcs {
                     _jobIndexes = null;
                 }
                 World<WorldType>.CurrentQuery.QueryDataCount--;
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (World<WorldType>.CurrentQuery.QueryDataCount == 0) {
                     World<WorldType>.CurrentQuery.QueryMode = 0;
                 }
@@ -1744,6 +1886,7 @@ namespace FFS.Libraries.StaticEcs {
                     #else
                     var dOffset = blockEntity & Const.DATA_ENTITY_MASK;
                     #endif
+                    blockEntity += Const.ENTITY_ID_OFFSET;
                     var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                     var end = Utils.ApproximateMSB(entitiesMask);
                     var total = Utils.PopCnt(entitiesMask);
@@ -1751,7 +1894,7 @@ namespace FFS.Libraries.StaticEcs {
                         for (; idx < end; idx++) {
                             if ((entitiesMask & (1UL << idx)) > 0) {
                                 var dIdx = idx + dOffset;
-                                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                                #if FFS_ECS_DEBUG
                                 World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                                 #endif
                                 _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx], ref d4[dIdx], ref d5[dIdx], ref d6[dIdx], ref d7[dIdx], ref d8[dIdx]);
@@ -1760,7 +1903,7 @@ namespace FFS.Libraries.StaticEcs {
                     } else {
                         do {
                             var dIdx = idx + dOffset;
-                            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                            #if FFS_ECS_DEBUG
                             World<WorldType>.CurrentQuery.SetCurrentEntity(blockEntity + idx);
                             #endif
                             _runner(ref _data, ref d1[dIdx], ref d2[dIdx], ref d3[dIdx], ref d4[dIdx], ref d5[dIdx], ref d6[dIdx], ref d7[dIdx], ref d8[dIdx]);
@@ -1770,13 +1913,13 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+            #if FFS_ECS_DEBUG
             World<WorldType>.CurrentQuery.SetCurrentEntity(0);
             #endif
         }
         
         [MethodImpl(AggressiveInlining)]
-        public void Prepare(P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
+        public void Prepare(ReadOnlySpan<ushort> clusters, P with, EntityStatusType entities, ComponentStatus components, out uint jobsCount) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;
@@ -1786,7 +1929,6 @@ namespace FFS.Libraries.StaticEcs {
             ref var c7 = ref World<WorldType>.Components<C7>.Value;
             ref var c8 = ref World<WorldType>.Components<C8>.Value;
 
-            var chunksCount = World<WorldType>.Entities.Value.nextActiveChunkIdx;
             var entitiesChunks = World<WorldType>.Entities.Value.chunks;
 
             #if NET6_0_OR_GREATER
@@ -1796,79 +1938,92 @@ namespace FFS.Libraries.StaticEcs {
             #endif
 
             jobsCount = 0;
-            for (uint chunkIdx = 0; chunkIdx < chunksCount; chunkIdx++) {
-                ref var chE = ref entitiesChunks[chunkIdx];
-                ref var ch1 = ref c1.chunks[chunkIdx];
-                ref var ch2 = ref c2.chunks[chunkIdx];
-                ref var ch3 = ref c3.chunks[chunkIdx];
-                ref var ch4 = ref c4.chunks[chunkIdx];
-                ref var ch5 = ref c5.chunks[chunkIdx];
-                ref var ch6 = ref c6.chunks[chunkIdx];
-                ref var ch7 = ref c7.chunks[chunkIdx];
-                ref var ch8 = ref c8.chunks[chunkIdx];
 
-                var chunkMask = chE.notEmptyBlocks
-                                & ch1.notEmptyBlocks
-                                & ch2.notEmptyBlocks
-                                & ch3.notEmptyBlocks
-                                & ch4.notEmptyBlocks
-                                & ch5.notEmptyBlocks
-                                & ch6.notEmptyBlocks
-                                & ch7.notEmptyBlocks
-                                & ch8.notEmptyBlocks;
-                with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
+            var entitiesClusters = World<WorldType>.Entities.Value.clusters;
 
-                var aMask = chE.entities;
-                var aMask1 = ch1.entities;
-                var aMask2 = ch2.entities;
-                var aMask3 = ch3.entities;
-                var aMask4 = ch4.entities;
-                var aMask5 = ch5.entities;
-                var aMask6 = ch6.entities;
-                var aMask7 = ch7.entities;
-                var aMask8 = ch8.entities;
+            for (var i = 0; i < clusters.Length; i++) {
+                var clusterIdx = clusters[i];
+                ref var cluster = ref entitiesClusters[clusterIdx];
+                if (cluster.disabled) {
+                    continue;
+                }
+                for (uint chunkMapIdx = 0; chunkMapIdx < cluster.loadedChunksCount; chunkMapIdx++) {
+                    var chunkIdx = cluster.loadedChunks[chunkMapIdx];
 
-                var dMask = chE.disabledEntities;
-                var dMask1 = ch1.disabledEntities;
-                var dMask2 = ch2.disabledEntities;
-                var dMask3 = ch3.disabledEntities;
-                var dMask4 = ch4.disabledEntities;
-                var dMask5 = ch5.disabledEntities;
-                var dMask6 = ch6.disabledEntities;
-                var dMask7 = ch7.disabledEntities;
-                var dMask8 = ch8.disabledEntities;
+                    ref var chE = ref entitiesChunks[chunkIdx];
+                    ref var ch1 = ref c1.chunks[chunkIdx];
+                    ref var ch2 = ref c2.chunks[chunkIdx];
+                    ref var ch3 = ref c3.chunks[chunkIdx];
+                    ref var ch4 = ref c4.chunks[chunkIdx];
+                    ref var ch5 = ref c5.chunks[chunkIdx];
+                    ref var ch6 = ref c6.chunks[chunkIdx];
+                    ref var ch7 = ref c7.chunks[chunkIdx];
+                    ref var ch8 = ref c8.chunks[chunkIdx];
 
-                while (chunkMask > 0) {
-                    var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
-                    chunkMask &= chunkMask - 1;
-                    var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-                    var entitiesMask = entities switch {
-                        EntityStatusType.Enabled  => aMask[blockIdx] & ~dMask[blockIdx],
-                        EntityStatusType.Disabled => dMask[blockIdx],
-                        _                         => aMask[blockIdx]
-                    };
-                    entitiesMask &= components switch {
-                        ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx] & aMask4[blockIdx] & ~dMask4[blockIdx] & aMask5[blockIdx] &
-                                                   ~dMask5[blockIdx] & aMask6[blockIdx] & ~dMask6[blockIdx] & aMask7[blockIdx] & ~dMask7[blockIdx] & aMask8[blockIdx] & ~dMask8[blockIdx],
-                        ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx] & dMask4[blockIdx] & dMask5[blockIdx] & dMask6[blockIdx] & dMask7[blockIdx] & dMask8[blockIdx],
-                        _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx] & aMask4[blockIdx] & aMask5[blockIdx] & aMask6[blockIdx] & aMask7[blockIdx] & aMask8[blockIdx],
-                    };
-                    with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+                    var chunkMask = chE.notEmptyBlocks
+                                    & ch1.notEmptyBlocks
+                                    & ch2.notEmptyBlocks
+                                    & ch3.notEmptyBlocks
+                                    & ch4.notEmptyBlocks
+                                    & ch5.notEmptyBlocks
+                                    & ch6.notEmptyBlocks
+                                    & ch7.notEmptyBlocks
+                                    & ch8.notEmptyBlocks;
+                    with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
 
-                    if (entitiesMask > 0) {
-                        if (jobsCount == 0) {
-                            var size = (int) (chunksCount * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS);
-                            _jobs = ArrayPool<Job>.Shared.Rent(size);
-                            _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                    var lMask = chE.loadedEntities;
+                    var aMask = chE.entities;
+                    var aMask1 = ch1.entities;
+                    var aMask2 = ch2.entities;
+                    var aMask3 = ch3.entities;
+                    var aMask4 = ch4.entities;
+                    var aMask5 = ch5.entities;
+                    var aMask6 = ch6.entities;
+                    var aMask7 = ch7.entities;
+                    var aMask8 = ch8.entities;
+
+                    var dMask = chE.disabledEntities;
+                    var dMask1 = ch1.disabledEntities;
+                    var dMask2 = ch2.disabledEntities;
+                    var dMask3 = ch3.disabledEntities;
+                    var dMask4 = ch4.disabledEntities;
+                    var dMask5 = ch5.disabledEntities;
+                    var dMask6 = ch6.disabledEntities;
+                    var dMask7 = ch7.disabledEntities;
+                    var dMask8 = ch8.disabledEntities;
+
+                    while (chunkMask > 0) {
+                        var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
+                        chunkMask &= chunkMask - 1;
+                        var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
+                        var entitiesMask = entities switch {
+                            EntityStatusType.Enabled  => lMask[blockIdx] & aMask[blockIdx] & ~dMask[blockIdx],
+                            EntityStatusType.Disabled => lMask[blockIdx] & dMask[blockIdx],
+                            _                         => lMask[blockIdx] & aMask[blockIdx]
+                        };
+                        entitiesMask &= components switch {
+                            ComponentStatus.Enabled => aMask1[blockIdx] & ~dMask1[blockIdx] & aMask2[blockIdx] & ~dMask2[blockIdx] & aMask3[blockIdx] & ~dMask3[blockIdx] & aMask4[blockIdx] & ~dMask4[blockIdx] & aMask5[blockIdx] &
+                                                       ~dMask5[blockIdx] & aMask6[blockIdx] & ~dMask6[blockIdx] & aMask7[blockIdx] & ~dMask7[blockIdx] & aMask8[blockIdx] & ~dMask8[blockIdx],
+                            ComponentStatus.Disabled => dMask1[blockIdx] & dMask2[blockIdx] & dMask3[blockIdx] & dMask4[blockIdx] & dMask5[blockIdx] & dMask6[blockIdx] & dMask7[blockIdx] & dMask8[blockIdx],
+                            _                        => aMask1[blockIdx] & aMask2[blockIdx] & aMask3[blockIdx] & aMask4[blockIdx] & aMask5[blockIdx] & aMask6[blockIdx] & aMask7[blockIdx] & aMask8[blockIdx],
+                        };
+                        with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
+
+                        if (entitiesMask > 0) {
+                            if (jobsCount == 0) {
+                                var size = entitiesChunks.Length * Const.DATA_BLOCK_IN_CHUNK_FOR_THREADS;
+                                _jobs = ArrayPool<Job>.Shared.Rent(size);
+                                _jobIndexes = ArrayPool<uint>.Shared.Rent(size);
+                            }
+
+                            var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
+                            ref var job = ref _jobs[jobIdx];
+                            if (job.Count == 0) {
+                                _jobIndexes[jobsCount++] = jobIdx;
+                            }
+                            job.Masks[job.Count] = entitiesMask;
+                            job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                         }
-
-                        var jobIdx = globalBlockIdx >> Const.DATA_QUERY_SHIFT_FOR_THREADS;
-                        ref var job = ref _jobs[jobIdx];
-                        if (job.Count == 0) {
-                            _jobIndexes[jobsCount++] = jobIdx;
-                        }
-                        job.Masks[job.Count] = entitiesMask;
-                        job.GlobalBlockIdx[job.Count++] = globalBlockIdx;
                     }
                 }
             }

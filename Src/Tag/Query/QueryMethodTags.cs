@@ -1,4 +1,10 @@
-﻿#if !FFS_ECS_DISABLE_TAGS
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
 using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
@@ -36,7 +42,12 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C1>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+        }
+        
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -76,7 +87,13 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C2>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -122,7 +139,14 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C3>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -174,7 +198,15 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C4>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -232,7 +264,16 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C5>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -296,7 +337,17 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C6>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C6>(World<WorldType>.Tags<C6>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -366,7 +417,18 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C7>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C6>(World<WorldType>.Tags<C6>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C7>(World<WorldType>.Tags<C7>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -442,7 +504,19 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C8>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C6>(World<WorldType>.Tags<C6>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C7>(World<WorldType>.Tags<C7>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C8>(World<WorldType>.Tags<C8>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -486,7 +560,12 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C1>.Value.DecQAdd();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockAdd(val);
@@ -526,7 +605,13 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C2>.Value.DecQAdd();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockAdd(val);
@@ -572,7 +657,14 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C3>.Value.DecQAdd();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockAdd(val);
@@ -624,7 +716,15 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C4>.Value.DecQAdd();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockAdd(val);
@@ -683,7 +783,16 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C5>.Value.DecQAdd();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockAdd(val);
@@ -747,7 +856,17 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C6>.Value.DecQAdd();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C6>(World<WorldType>.Tags<C6>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockAdd(val);
@@ -817,7 +936,18 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C7>.Value.DecQAdd();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C6>(World<WorldType>.Tags<C6>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C7>(World<WorldType>.Tags<C7>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockAdd(val);
@@ -893,7 +1023,19 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C8>.Value.DecQAdd();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C6>(World<WorldType>.Tags<C6>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C7>(World<WorldType>.Tags<C7>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C8>(World<WorldType>.Tags<C8>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockAdd(val);
@@ -954,7 +1096,13 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C2>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -1014,7 +1162,14 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C3>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -1081,7 +1236,15 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C4>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -1156,7 +1319,16 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C5>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -1237,7 +1409,17 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C6>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C6>(World<WorldType>.Tags<C6>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -1325,7 +1507,18 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C7>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C6>(World<WorldType>.Tags<C6>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C7>(World<WorldType>.Tags<C7>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -1420,7 +1613,19 @@ namespace FFS.Libraries.StaticEcs {
             World<WorldType>.Tags<C8>.Value.DecQDelete();
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        [MethodImpl(AggressiveInlining)]
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            World<WorldType>.AssertRegisteredTag<C1>(World<WorldType>.Tags<C1>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C2>(World<WorldType>.Tags<C2>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C3>(World<WorldType>.Tags<C3>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C4>(World<WorldType>.Tags<C4>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C5>(World<WorldType>.Tags<C5>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C6>(World<WorldType>.Tags<C6>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C7>(World<WorldType>.Tags<C7>.TagsTypeName);
+            World<WorldType>.AssertRegisteredTag<C8>(World<WorldType>.Tags<C8>.TagsTypeName);
+        }
+
         [MethodImpl(AggressiveInlining)]
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             World<WorldType>.Tags<C1>.Value.BlockDelete(val);
@@ -1436,4 +1641,3 @@ namespace FFS.Libraries.StaticEcs {
     }
     #endregion
 }
-#endif

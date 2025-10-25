@@ -1,4 +1,11 @@
-﻿using System;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
@@ -163,8 +170,8 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
         
-        public delegate void EntityOnAddLinkAction(Entity a, Entity b);
-        public delegate void EntityOnDeleteLinkAction(Entity a, EntityGID b);
+        internal delegate void EntityOnAddLinkAction(Entity a, Entity b);
+        internal delegate void EntityOnDeleteLinkAction(Entity a, EntityGID b);
         
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
@@ -175,7 +182,7 @@ namespace FFS.Libraries.StaticEcs {
             internal EntityOnDeleteLinkAction OnDeleteLinkItem;
         }
         
-        #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+        #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
         internal struct CyclicCheck<T> where T : struct, IComponent {
             internal static bool Value;
         }
@@ -187,13 +194,13 @@ namespace FFS.Libraries.StaticEcs {
         #endif
         internal struct DestroyEntityLoopMultiAccess<T> where T : struct, IEntityLinksComponent<T> {
             internal readonly Stack<(int, int)> Ranges;
-            internal readonly Stack<uint> ForDelete;
+            internal readonly Stack<Entity> ForDelete;
             internal bool Active;
 
             public DestroyEntityLoopMultiAccess(bool active) {
                 Active = active;
                 Ranges = new Stack<(int, int)>(64);
-                ForDelete = new Stack<uint>(64);
+                ForDelete = new Stack<Entity>(64);
             }
 
             public void DeepDestroy(ref T component) {
@@ -215,13 +222,13 @@ namespace FFS.Libraries.StaticEcs {
                                     Ranges.Push(((int, int)) (targets.offset, targets.count));
                                 }
 
-                                ForDelete.Push(e._id);
+                                ForDelete.Push(e);
                             }
                         }
                     }
 
                     while (ForDelete.Count > 0) {
-                        new Entity(ForDelete.Pop()).Destroy();
+                        ForDelete.Pop().Destroy();
                     }
 
                     Active = false;
@@ -250,13 +257,13 @@ namespace FFS.Libraries.StaticEcs {
                                             Ranges.Push(((int, int)) (targets.offset, targets.count));
                                         }
 
-                                        ForDelete.Push(e._id);
+                                        ForDelete.Push(e);
                                     }
                                 }
                             }
 
                             while (ForDelete.Count > 0) {
-                                new Entity(ForDelete.Pop()).Destroy();
+                                ForDelete.Pop().Destroy();
                             }
                         }
                     } 
@@ -311,7 +318,7 @@ namespace FFS.Libraries.StaticEcs {
         }
     }
     
-    #if (DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_RELATION_CHECK
+    #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
     internal static class RelationExtension {
         [MethodImpl(AggressiveInlining)]
         internal static EntityGID Link<L>(this ref L value) where L : struct, IEntityLinkComponent<L> {

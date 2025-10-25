@@ -1,4 +1,11 @@
-﻿using System;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
@@ -24,27 +31,27 @@ namespace FFS.Libraries.StaticEcs {
 
         public uint CalculateEntitiesCapacity();
 
-        public void Clear();
+        public void DestroyAllEntities();
+
+        public void DestroyAllEntitiesInCluster(ushort clusterId);
+
+        public void DestroyAllEntitiesInChunk(uint chunkIdx);
 
         public WorldStatus Status();
 
         public IContext Context();
 
-        #if !FFS_ECS_DISABLE_EVENTS
         public IEvents Events();
         public List<IEventPoolWrapper> GetAllEventPools();
-        #endif
 
         internal bool TryGetComponentsRawPool(Type type, out IRawComponentPool pool);
 
         internal List<IRawPool> GetAllComponentsRawPools();
 
 
-        #if !FFS_ECS_DISABLE_TAGS
         internal bool TryGetTagsRawPool(Type type, out IRawPool pool);
 
         internal List<IRawPool> GetAllTagsRawPools();
-        #endif
     }
 
     #if ENABLE_IL2CPP
@@ -83,7 +90,13 @@ namespace FFS.Libraries.StaticEcs {
         public uint CalculateEntitiesCapacity() => World<WorldType>.CalculateEntitiesCapacity();
 
         [MethodImpl(AggressiveInlining)]
-        public void Clear() => World<WorldType>.Clear();
+        public void DestroyAllEntities() => World<WorldType>.DestroyAllEntities();
+
+        [MethodImpl(AggressiveInlining)]
+        public void DestroyAllEntitiesInCluster(ushort clusterId) => World<WorldType>.DestroyAllEntitiesInCluster(clusterId);
+
+        [MethodImpl(AggressiveInlining)]
+        public void DestroyAllEntitiesInChunk(uint chunkIdx) => World<WorldType>.DestroyAllEntitiesInChunk(chunkIdx);
 
         [MethodImpl(AggressiveInlining)]
         public WorldStatus Status() => World<WorldType>.Status;
@@ -91,14 +104,12 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public IContext Context() => World<WorldType>.Context.Value;
 
-        #if !FFS_ECS_DISABLE_EVENTS
         [MethodImpl(AggressiveInlining)]
         public IEvents Events() => new EventsWrapper<WorldType>();
 
         public List<IEventPoolWrapper> GetAllEventPools() {
             return World<WorldType>.Events.GetAllRawsPools();
         }
-        #endif
 
         bool IWorld.TryGetComponentsRawPool(Type type, out IRawComponentPool pool) {
             if (World<WorldType>.TryGetComponentsPool(type, out var p)) {
@@ -114,7 +125,6 @@ namespace FFS.Libraries.StaticEcs {
             return World<WorldType>.ModuleComponents.Value.GetAllRawsPools();
         }
 
-        #if !FFS_ECS_DISABLE_TAGS
         bool IWorld.TryGetTagsRawPool(Type type, out IRawPool pool) {
             if (World<WorldType>.TryGetTagsPool(type, out var p)) {
                 pool = p;
@@ -128,6 +138,5 @@ namespace FFS.Libraries.StaticEcs {
         List<IRawPool> IWorld.GetAllTagsRawPools() {
             return World<WorldType>.ModuleTags.Value.GetAllRawsPools();
         }
-        #endif
     }
 }

@@ -1,4 +1,11 @@
-﻿#if ENABLE_IL2CPP
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+#if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
 
@@ -10,25 +17,25 @@ namespace FFS.Libraries.StaticEcs {
     public abstract partial class World<WorldType> {
         #region ABSTRACT_QUERY_FUNCTION
         public interface IQueryFunction {
-            public void Run(Entity entity);
+            public void Invoke(Entity entity);
         }
         
         public interface IQueryFunction<C1>
             where C1 : struct, IComponent {
-            public void Run(Entity entity, ref C1 c1);
+            public void Invoke(Entity entity, ref C1 c1);
         }
 
         public interface IQueryFunction<C1, C2>
             where C1 : struct, IComponent
             where C2 : struct, IComponent {
-            public void Run(Entity entity, ref C1 c1, ref C2 c2);
+            public void Invoke(Entity entity, ref C1 c1, ref C2 c2);
         }
 
         public interface IQueryFunction<C1, C2, C3>
             where C1 : struct, IComponent
             where C2 : struct, IComponent
             where C3 : struct, IComponent {
-            public void Run(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3);
+            public void Invoke(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3);
         }
 
         public interface IQueryFunction<C1, C2, C3, C4>
@@ -36,7 +43,7 @@ namespace FFS.Libraries.StaticEcs {
             where C2 : struct, IComponent
             where C3 : struct, IComponent
             where C4 : struct, IComponent {
-            public void Run(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4);
+            public void Invoke(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4);
         }
 
         public interface IQueryFunction<C1, C2, C3, C4, C5>
@@ -45,7 +52,7 @@ namespace FFS.Libraries.StaticEcs {
             where C3 : struct, IComponent
             where C4 : struct, IComponent
             where C5 : struct, IComponent {
-            public void Run(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5);
+            public void Invoke(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5);
         }
 
         public interface IQueryFunction<C1, C2, C3, C4, C5, C6>
@@ -55,7 +62,7 @@ namespace FFS.Libraries.StaticEcs {
             where C4 : struct, IComponent
             where C5 : struct, IComponent
             where C6 : struct, IComponent {
-            public void Run(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5, ref C6 c6);
+            public void Invoke(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5, ref C6 c6);
         }
 
         public interface IQueryFunction<C1, C2, C3, C4, C5, C6, C7>
@@ -66,7 +73,7 @@ namespace FFS.Libraries.StaticEcs {
             where C5 : struct, IComponent
             where C6 : struct, IComponent
             where C7 : struct, IComponent {
-            public void Run(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5, ref C6 c6, ref C7 c7);
+            public void Invoke(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5, ref C6 c6, ref C7 c7);
         }
 
         public interface IQueryFunction<C1, C2, C3, C4, C5, C6, C7, C8>
@@ -78,7 +85,7 @@ namespace FFS.Libraries.StaticEcs {
             where C6 : struct, IComponent
             where C7 : struct, IComponent
             where C8 : struct, IComponent {
-            public void Run(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5, ref C6 c6, ref C7 c7, ref C8 c8);
+            public void Invoke(Entity entity, ref C1 c1, ref C2 c2, ref C3 c3, ref C4 c4, ref C5 c5, ref C6 c6, ref C7 c7, ref C8 c8);
         }
         #endregion
     }

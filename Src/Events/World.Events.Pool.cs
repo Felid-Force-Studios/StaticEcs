@@ -1,4 +1,10 @@
-﻿#if !FFS_ECS_DISABLE_EVENTS
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
 using System;
 using System.Runtime.CompilerServices;
 using FFS.Libraries.StaticPack;
@@ -148,7 +154,7 @@ namespace FFS.Libraries.StaticEcs {
                 internal ushort Id;
                 internal bool Initialized;
                 
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 private int _blockers;
                 #endif
 
@@ -171,7 +177,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 [MethodImpl(AggressiveInlining)]
                 internal EventReceiver<WorldType, T> CreateReceiver() {
-                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                    #if FFS_ECS_DEBUG
                     if (_blockers > 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Pool<{typeof(T)}>.CreateReceiver ] event pool cannot be changed, it is in read-only mode");
                     #endif
                     for (var i = _dataFirstIdx; i < _dataCount; i++) {
@@ -196,7 +202,7 @@ namespace FFS.Libraries.StaticEcs {
                 
                 [MethodImpl(AggressiveInlining)]
                 internal void DeleteReceiver(ref EventReceiver<WorldType, T> receiver) {
-                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                    #if FFS_ECS_DEBUG
                     if (_blockers > 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Pool<{typeof(T)}>.DeleteReceiver ] event pool cannot be changed, it is in read-only mode");
                     #endif
                     if (_deletedReceiversCount == _deletedReceivers.Length) {
@@ -234,7 +240,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 [MethodImpl(AggressiveInlining)]
                 internal bool Add(T value = default) {
-                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                    #if FFS_ECS_DEBUG
                     if (_blockers > 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Pool<{typeof(T)}>.Add ] event pool cannot be changed, it is in read-only mode");
                     #endif
                     if (_receiversCount > 0) {
@@ -252,7 +258,7 @@ namespace FFS.Libraries.StaticEcs {
                         }
                         version++;
                         _dataReceiverUnreadCount[_dataCount] = _receiversCount;
-                        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                        #if FFS_ECS_EVENTS
                         if (_debugEventListeners != null) {
                             foreach (var listener in _debugEventListeners) {
                                 listener.OnEventSent(new Event<T>(_dataCount));
@@ -269,7 +275,7 @@ namespace FFS.Libraries.StaticEcs {
                 [MethodImpl(AggressiveInlining)]
                 internal bool Del(int idx, bool suppressed) {
                     if (_versions[idx] > 0) {
-                        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                        #if FFS_ECS_EVENTS
                         if (_debugEventListeners != null) {
                             foreach (var listener in _debugEventListeners) {
                                 if (suppressed) {
@@ -388,7 +394,7 @@ namespace FFS.Libraries.StaticEcs {
                     return false;
                 }
 
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 [MethodImpl(AggressiveInlining)]
                 internal void AddBlocker(int val) {
                     _blockers += val;
@@ -403,4 +409,3 @@ namespace FFS.Libraries.StaticEcs {
         }
     }
 }
-#endif

@@ -1,4 +1,10 @@
-﻿#if !FFS_ECS_DISABLE_EVENTS
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -41,7 +47,7 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppEagerStaticClassConstruction]
         #endif
         public abstract partial class Events {
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+            #if FFS_ECS_EVENTS
             internal static List<IEventsDebugEventListener> _debugEventListeners;
             #endif
 
@@ -52,7 +58,7 @@ namespace FFS.Libraries.StaticEcs {
             #region PUBLIC
             [MethodImpl(AggressiveInlining)]
             public static bool Send<E>(E value = default) where E : struct, IEvent {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Send<{typeof(E)}> ] Ecs not initialized");
                 if (MultiThreadActive) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Send<{typeof(E)}> ] this operation is not supported in multithreaded mode");
                 #endif
@@ -61,7 +67,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static EventReceiver<WorldType, E> RegisterEventReceiver<E>() where E : struct, IEvent {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.RegisterEventReceiver<{typeof(E)}> ] Ecs not initialized");
                 if (!Pool<E>.Value.Initialized) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.RegisterEventReceiver<{typeof(E)}> ] Event type {typeof(E)} not registered");
                 #endif
@@ -70,7 +76,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void DeleteEventReceiver<E>(ref EventReceiver<WorldType, E> receiver) where E : struct, IEvent {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.DeleteEventReceiver<{typeof(E)}> ] Ecs not initialized");
                 #endif
                 if (Pool<E>.Value.Initialized) {
@@ -78,7 +84,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
             }
 
-            #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+            #if FFS_ECS_EVENTS
             [MethodImpl(AggressiveInlining)]
             public static void AddEventsDebugEventListener(IEventsDebugEventListener listener) {
                 _debugEventListeners ??= new List<IEventsDebugEventListener>();
@@ -93,7 +99,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static IEventPoolWrapper GetPool(Type eventType) {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool, World not initialized");
                 if (!_poolIdxByType.ContainsKey(eventType)) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool, Event type {eventType} not registered");
                 #endif
@@ -102,7 +108,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static EventPoolWrapper<WorldType, T> GetPool<T>() where T : struct, IEvent {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool<{typeof(T)}>, World not initialized");
                 if (!_poolIdxByType.ContainsKey(typeof(T))) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool, Event type {typeof(T)} not registered");
                 #endif
@@ -111,7 +117,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static bool TryGetPool(Type eventType, out IEventPoolWrapper pool) {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool, World not initialized");
                 #endif
                 if (!_poolIdxByType.TryGetValue(eventType, out var idx)) {
@@ -125,7 +131,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static bool TryGetPool<T>(out EventPoolWrapper<WorldType, T> pool) where T : struct, IEvent {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: GetPool<{typeof(T)}>, World not initialized");
                 #endif
                 pool = default;
@@ -134,7 +140,7 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             public static void RegisterEventType<T>(IEventConfig<T, WorldType> config = null, uint baseCapacity = 64) where T : struct, IEvent {
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                #if FFS_ECS_DEBUG
                 if (Status != WorldStatus.Created) {
                     throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: RegisterEventType<{typeof(T)}>, World not initialized");
                 }
@@ -175,7 +181,7 @@ namespace FFS.Libraries.StaticEcs {
                 _pools = default;
                 _poolIdxByType = default;
                 Serializer.Value.Destroy();
-                #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+                #if FFS_ECS_EVENTS
                 _debugEventListeners = default;
                 #endif
             }
@@ -199,7 +205,7 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG) || FFS_ECS_ENABLE_DEBUG_EVENTS
+        #if FFS_ECS_EVENTS
         public interface IEventsDebugEventListener {
             void OnEventSent<T>(Event<T> value) where T : struct, IEvent;
             void OnEventReadAll<T>(Event<T> value) where T : struct, IEvent;
@@ -208,4 +214,3 @@ namespace FFS.Libraries.StaticEcs {
         #endif
     }
 }
-#endif

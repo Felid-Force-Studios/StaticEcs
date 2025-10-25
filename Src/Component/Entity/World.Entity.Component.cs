@@ -1,4 +1,11 @@
-﻿using System;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
@@ -245,9 +252,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void Add<C1>(C1 c1)
+            public ref C1 Add<C1>(C1 c1)
                 where C1 : struct, IComponent {
-                Components<C1>.Value.Add(this, c1);
+                return ref Components<C1>.Value.Add(this, c1);
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -773,52 +780,52 @@ namespace FFS.Libraries.StaticEcs {
 
             #region BY_RAW_TYPE
             [MethodImpl(AggressiveInlining)]
-            public bool HasAllOf(Type componentType) {
+            public bool RawHasAllOf(Type componentType) {
                 return ModuleComponents.Value.GetPool(componentType).Has(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void Add(Type componentType) {
+            public void RawAdd(Type componentType) {
                 ModuleComponents.Value.GetPool(componentType).Add(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public IComponent GetRaw(Type componentType) {
+            public IComponent RawGet(Type componentType) {
                 return ModuleComponents.Value.GetPool(componentType).GetRaw(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void PutRaw(IComponent component) {
+            public void RawPut(IComponent component) {
                 ModuleComponents.Value.GetPool(component.GetType()).PutRaw(this, component);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void TryAdd(Type componentType) {
+            public void RawTryAdd(Type componentType) {
                 ModuleComponents.Value.GetPool(componentType).TryAdd(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void TryAdd(Type componentType, out bool added) {
+            public void RawTryAdd(Type componentType, out bool added) {
                 ModuleComponents.Value.GetPool(componentType).TryAdd(this, out added);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool TryDelete(Type componentType) {
+            public bool RawTryDelete(Type componentType) {
                 return ModuleComponents.Value.GetPool(componentType).TryDelete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void Delete(Type componentType) {
+            public void RawDelete(Type componentType) {
                 ModuleComponents.Value.GetPool(componentType).Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void CopyComponentsTo(Type componentType, Entity target) {
+            public void RawCopyComponentsTo(Type componentType, Entity target) {
                 ModuleComponents.Value.GetPool(componentType).Copy(this, target);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void MoveComponentsTo(Type componentType, Entity target) {
+            public void RawMoveComponentsTo(Type componentType, Entity target) {
                 ModuleComponents.Value.GetPool(componentType).Move(this, target);
             }
             #endregion
@@ -874,28 +881,28 @@ namespace FFS.Libraries.StaticEcs {
     }
 
     public partial class BoxedEntity<WorldType> {
-        public int ComponentsCount() => new World<WorldType>.Entity(_entity).ComponentsCount();
-        public void GetAllComponents(List<IComponent> result) => new World<WorldType>.Entity(_entity).GetAllComponents(result);
-        public ref C Ref<C>() where C : struct, IComponent => ref new World<WorldType>.Entity(_entity).Ref<C>();
-        public bool HasAllOf<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).HasAllOf<C>();
-        public bool HasDisabledAllOf<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).HasDisabledAllOf<C>();
-        public bool HasEnabledAllOf<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).HasEnabledAllOf<C>();
-        public ref C Add<C>() where C : struct, IComponent => ref new World<WorldType>.Entity(_entity).Add<C>();
-        public void Add<C>(C component) where C : struct, IComponent => new World<WorldType>.Entity(_entity).Add(component);
-        public void Put<C>(C component) where C : struct, IComponent => new World<WorldType>.Entity(_entity).Put(component);
-        public void Disable<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).Disable<C>();
-        public void Enable<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).Enable<C>();
-        public ref C TryAdd<C>() where C : struct, IComponent => ref new World<WorldType>.Entity(_entity).TryAdd<C>();
-        public ref C TryAdd<C>(out bool added) where C : struct, IComponent => ref new World<WorldType>.Entity(_entity).TryAdd<C>(out added);
-        public bool TryDelete<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).TryDelete<C>();
-        public void Delete<C>() where C : struct, IComponent => new World<WorldType>.Entity(_entity).Delete<C>();
-        public bool HasAllOf(Type componentType) => new World<WorldType>.Entity(_entity).HasAllOf(componentType);
-        public void Add(Type componentType) => new World<WorldType>.Entity(_entity).Add(componentType);
-        public IComponent GetRaw(Type componentType) => new World<WorldType>.Entity(_entity).GetRaw(componentType);
-        public void PutRaw(IComponent component) => new World<WorldType>.Entity(_entity).PutRaw(component);
-        public void TryAdd(Type componentType) => new World<WorldType>.Entity(_entity).TryAdd(componentType);
-        public void TryAdd(Type componentType, out bool added) => new World<WorldType>.Entity(_entity).TryAdd(componentType, out added);
-        public bool TryDelete(Type componentType) => new World<WorldType>.Entity(_entity).TryDelete(componentType);
-        public void Delete(Type componentType) => new World<WorldType>.Entity(_entity).Delete(componentType);
+        public int ComponentsCount() => _entity.ComponentsCount();
+        public void GetAllComponents(List<IComponent> result) => _entity.GetAllComponents(result);
+        public ref C Ref<C>() where C : struct, IComponent => ref _entity.Ref<C>();
+        public bool HasAllOf<C>() where C : struct, IComponent => _entity.HasAllOf<C>();
+        public bool HasDisabledAllOf<C>() where C : struct, IComponent => _entity.HasDisabledAllOf<C>();
+        public bool HasEnabledAllOf<C>() where C : struct, IComponent => _entity.HasEnabledAllOf<C>();
+        public ref C Add<C>() where C : struct, IComponent => ref _entity.Add<C>();
+        public void Add<C>(C component) where C : struct, IComponent => _entity.Add(component);
+        public void Put<C>(C component) where C : struct, IComponent => _entity.Put(component);
+        public void Disable<C>() where C : struct, IComponent => _entity.Disable<C>();
+        public void Enable<C>() where C : struct, IComponent => _entity.Enable<C>();
+        public ref C TryAdd<C>() where C : struct, IComponent => ref _entity.TryAdd<C>();
+        public ref C TryAdd<C>(out bool added) where C : struct, IComponent => ref _entity.TryAdd<C>(out added);
+        public bool TryDelete<C>() where C : struct, IComponent => _entity.TryDelete<C>();
+        public void Delete<C>() where C : struct, IComponent => _entity.Delete<C>();
+        public bool HasAllOf(Type componentType) => _entity.RawHasAllOf(componentType);
+        public void Add(Type componentType) => _entity.RawAdd(componentType);
+        public IComponent GetRaw(Type componentType) => _entity.RawGet(componentType);
+        public void PutRaw(IComponent component) => _entity.RawPut(component);
+        public void TryAdd(Type componentType) => _entity.RawTryAdd(componentType);
+        public void TryAdd(Type componentType, out bool added) => _entity.RawTryAdd(componentType, out added);
+        public bool TryDelete(Type componentType) => _entity.RawTryDelete(componentType);
+        public void Delete(Type componentType) => _entity.RawDelete(componentType);
     }
 }

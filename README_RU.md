@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.1.preview-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.2.0-blue.svg?style=for-the-badge)
 
 ### ЯЗЫК
 [RU](./README_RU.md)
@@ -55,7 +55,7 @@ ___
 * [Telegram](https://t.me/felid_force_studios)
 
 # Установка
-Библиотека имеет зависимость на [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) версии `1.0.3` для бинарной сериализации, StaticPack должен быть так же установлен
+Библиотека имеет зависимость на [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) версии `1.0.6` для бинарной сериализации, StaticPack должен быть так же установлен
 * ### В виде исходников
   Со страницы релизов или как архив из нужной ветки. В ветке `master` стабильная проверенная версия
 * ### Установка для Unity
@@ -66,7 +66,15 @@ ___
     `"com.felid-force-studios.static-ecs": "https://github.com/Felid-Force-Studios/StaticEcs.git"`  
     `"com.felid-force-studios.static-pack": "https://github.com/Felid-Force-Studios/StaticPack.git"`
 
+
 # Концепция
+StaticEcs — новая архитектура ECS, основанная на инвертированной иерархической bitmap модели.
+В отличие от традиционных фреймворков ECS, которые полагаются на архетипы или разреженные наборы, в этой конструкции используется инвертированная индексная структура, в которой каждый тип компонента владеет масками активных сущностей, а не сущности хранят маски компонентов.
+Иерархическая агрегация этих масок обеспечивает логарифмическое индексирование блоков сущностей, что позволяет осуществлять фильтрацию блоков O(1) и эффективную параллельную итерацию с помощью битовых операций.
+Этот подход полностью устраняет миграцию архетипов и sparse set индирекцию, предлагая прямой доступ к памяти в стиле SoA с минимальным количеством промахов кэша.
+Модель обеспечивает до 64 раз меньшее количество запросов к памяти на блок и линейно масштабируется с количеством активных наборов компонентов, что делает ее идеальной для крупномасштабных симуляций, реактивного ИИ и открытых миров.
+
+
 > - Основная идея данной реализации в статике, все данные о мире и компонентах находятся в статических классах, что дает возможность избегать дорогостоящих виртуальных вызовов, иметь удобный API со множеством сахара
 > - Данный фреймворк нацелен на максимальную простоту использования, скорость и комфорт написания кода без жертв в производительности
 > - Доступно создание мульти-миров, строгая типизация, обширные бесплатные абстракции
@@ -84,7 +92,6 @@ using FFS.Libraries.StaticEcs;
 // Определяем тип мира
 public struct WT : IWorldType { }
 
-// Определяем типы-алиасы для удобного доступа к типам библиотеки
 public abstract class W : World<WT> { }
 
 // Определяем тип систем
@@ -101,7 +108,7 @@ public struct Velocity : IComponent { public float Value; }
 // Определяем системы
 public readonly struct VelocitySystem : IUpdateSystem {
     public void Update() {
-        foreach (var entity in W.QueryEntities.For<All<Position, Velocity, Direction>>()) {
+        foreach (var entity in W.Query.Entities<All<Position, Velocity, Direction>>()) {
             entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
         }
         

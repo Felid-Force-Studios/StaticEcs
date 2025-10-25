@@ -1,4 +1,11 @@
-﻿using System.Runtime.CompilerServices;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -35,11 +42,13 @@ namespace FFS.Libraries.StaticEcs {
                 RegisterComponentType(
                     actualConfig
                 );
+                #if FFS_ECS_DEBUG
                 Components<T>.Value.addWithoutValueError = "not allowed for relation components, use entity.SetLink() or entity.Put(value) or entity.Add(value)";
+                #endif
                 return;
 
                 static OnComponentHandler<T> OnPutHandler(OnComponentHandler<T> handler, bool disableRelationsCheck) {
-                    #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
+                    #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                     if (!disableRelationsCheck) {
                         if (handler != null) {
                             return (Entity entity, ref T component) => {

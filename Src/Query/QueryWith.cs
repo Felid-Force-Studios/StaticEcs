@@ -1,4 +1,11 @@
-﻿using System.Runtime.CompilerServices;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -103,8 +110,10 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public void DecQ<WorldType>() where WorldType : struct, IWorldType { }
+
+        #if FFS_ECS_DEBUG
+        public void Assert<WorldType>() where WorldType : struct, IWorldType { }
         
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType { }
         #endif
     }
@@ -141,7 +150,11 @@ namespace FFS.Libraries.StaticEcs {
             qm1.DecQ<WorldType>();
         }
         
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Assert<WorldType>();
+        }
+        
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             qm1.BlockQ<WorldType>(val);
         }
@@ -187,7 +200,11 @@ namespace FFS.Libraries.StaticEcs {
             qm2.DecQ<WorldType>();
         }
         
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Assert<WorldType>();
+            qm2.Assert<WorldType>();
+        }
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             qm1.BlockQ<WorldType>(val);
             qm2.BlockQ<WorldType>(val);
@@ -241,7 +258,12 @@ namespace FFS.Libraries.StaticEcs {
             qm3.DecQ<WorldType>();
         }
         
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Assert<WorldType>();
+            qm2.Assert<WorldType>();
+            qm3.Assert<WorldType>();
+        }
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             qm1.BlockQ<WorldType>(val);
             qm2.BlockQ<WorldType>(val);
@@ -303,7 +325,13 @@ namespace FFS.Libraries.StaticEcs {
             qm4.DecQ<WorldType>();
         }
         
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Assert<WorldType>();
+            qm2.Assert<WorldType>();
+            qm3.Assert<WorldType>();
+            qm4.Assert<WorldType>();
+        }
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             qm1.BlockQ<WorldType>(val);
             qm2.BlockQ<WorldType>(val);
@@ -373,7 +401,14 @@ namespace FFS.Libraries.StaticEcs {
             qm5.DecQ<WorldType>();
         }
         
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Assert<WorldType>();
+            qm2.Assert<WorldType>();
+            qm3.Assert<WorldType>();
+            qm4.Assert<WorldType>();
+            qm5.Assert<WorldType>();
+        }
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             qm1.BlockQ<WorldType>(val);
             qm2.BlockQ<WorldType>(val);
@@ -451,7 +486,15 @@ namespace FFS.Libraries.StaticEcs {
             qm6.DecQ<WorldType>();
         }
         
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Assert<WorldType>();
+            qm2.Assert<WorldType>();
+            qm3.Assert<WorldType>();
+            qm4.Assert<WorldType>();
+            qm5.Assert<WorldType>();
+            qm6.Assert<WorldType>();
+        }
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             qm1.BlockQ<WorldType>(val);
             qm2.BlockQ<WorldType>(val);
@@ -537,7 +580,16 @@ namespace FFS.Libraries.StaticEcs {
             qm7.DecQ<WorldType>();
         }
         
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Assert<WorldType>();
+            qm2.Assert<WorldType>();
+            qm3.Assert<WorldType>();
+            qm4.Assert<WorldType>();
+            qm5.Assert<WorldType>();
+            qm6.Assert<WorldType>();
+            qm7.Assert<WorldType>();
+        }
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             qm1.BlockQ<WorldType>(val);
             qm2.BlockQ<WorldType>(val);
@@ -631,7 +683,18 @@ namespace FFS.Libraries.StaticEcs {
             qm8.DecQ<WorldType>();
         }
         
-        #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+        #if FFS_ECS_DEBUG
+        public void Assert<WorldType>() where WorldType : struct, IWorldType {
+            qm1.Assert<WorldType>();
+            qm2.Assert<WorldType>();
+            qm3.Assert<WorldType>();
+            qm4.Assert<WorldType>();
+            qm5.Assert<WorldType>();
+            qm6.Assert<WorldType>();
+            qm7.Assert<WorldType>();
+            qm8.Assert<WorldType>();
+        }
+
         public void BlockQ<WorldType>(int val) where WorldType : struct, IWorldType {
             qm1.BlockQ<WorldType>(val);
             qm2.BlockQ<WorldType>(val);

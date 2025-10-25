@@ -1,8 +1,14 @@
-﻿using System;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
@@ -61,48 +67,70 @@ namespace FFS.Libraries.StaticEcs {
 
                 [MethodImpl(AggressiveInlining)]
                 [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
-                internal void WriteAll(ref BinaryPackWriter writer, ref Components<T> pool) {
-                    writer.WriteByte(version);
-                    writer.WriteInt(pool.chunks.Length);
+                internal void WriteChunk(ref BinaryPackWriter writer, ref Components<T> pool, uint chunkIdx) {
+                    ref var chunk = ref pool.chunks[chunkIdx];
+                    
                     writer.WriteBool(pool._clearable);
-                    writer.WriteInt(Entities.Value.nextActiveChunkIdx);
-                    for (var i = 0; i < Entities.Value.nextActiveChunkIdx; i++) {
-                        ref var chunk = ref pool.chunks[i];
-                        writer.WriteUlong(chunk.notEmptyBlocks);
+                    writer.WriteUlong(chunk.notEmptyBlocks);
+                    if (chunk.notEmptyBlocks != 0) {
+                        var entities = chunk.entities;
+                        
+                        writer.WriteByte(version);
                         writer.WriteUlong(chunk.fullBlocks);
-                        writer.WriteArrayUnmanaged(chunk.entities);
+                        writer.WriteArrayUnmanaged(entities);
                         writer.WriteArrayUnmanaged(chunk.disabledEntities);
-                    }
-                    writer.WriteBool(_readWriteArrayStrategy.IsUnmanaged());
-                    if (_readWriteArrayStrategy.IsUnmanaged()) {
-                        var dataCount = Entities.Value.nextActiveChunkIdx * Const.DATA_BLOCKS_IN_CHUNK;
-                        var offset = writer.MakePoint(sizeof(uint));
-                        uint len = 0;
-                        for (var idx = 0; idx < dataCount; idx++) {
-                            if (pool.data[idx] != null) {
-                                writer.WriteInt(idx);
-                                len++;
-                                _readWriteArrayStrategy.WriteArray(ref writer, pool.data[idx], 0, Const.DATA_BLOCK_SIZE);
+
+                        var unmanagedStrategy = _readWriteArrayStrategy.IsUnmanaged();
+                        writer.WriteBool(unmanagedStrategy);
+
+                        if (unmanagedStrategy) {
+                            var eidChunk = chunkIdx << Const.ENTITIES_IN_CHUNK_SHIFT;
+                            var dataIdxStart = (ushort) (eidChunk >> Const.DATA_SHIFT);
+                            var dataIdxEnd = dataIdxStart + Const.DATA_BLOCKS_IN_CHUNK;
+                            var blockIdxStart = (byte) ((eidChunk >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+
+                            const int blockStep = Const.BLOCK_IN_CHUNK / Const.DATA_BLOCKS_IN_CHUNK; 
+
+                            for (var dataIdx = dataIdxStart; dataIdx < dataIdxEnd; dataIdx++) {
+                                ref var components = ref pool.data[dataIdx];
+                                writer.WriteNotNullFlag(components);
+                                if (components != null) {
+                                    var curBlockIdx = 0;
+                                    ulong mask;
+                                    do {
+                                        mask = entities[blockIdxStart + curBlockIdx];
+                                    } while (mask == 0 && ++curBlockIdx < blockStep);
+                                    var start = Utils.Lsb(mask) + Const.ENTITIES_IN_BLOCK * curBlockIdx;
+
+                                    curBlockIdx = blockStep - 1;
+                                    do {
+                                        mask = entities[blockIdxStart + curBlockIdx];
+                                    } while (mask == 0 && --curBlockIdx >= 0);
+                                    
+                                    var end = Utils.Msb(mask) + Const.ENTITIES_IN_BLOCK * curBlockIdx + 1;
+                                    var count = end - start;
+                                    writer.WriteInt(start);
+                                    writer.WriteInt(count);
+                                    _readWriteArrayStrategy.WriteArray(ref writer, components, start, count);
+                                }
+
+                                blockIdxStart += blockStep;
                             }
-                        }
-                        writer.WriteUintAt(offset, len); 
-                    } else {
-                        #if NET6_0_OR_GREATER
-                        ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
-                        Span<T> data = default;
-                        #else
-                        var deBruijn = Utils.DeBruijn;
-                        T[] data = null;
-                        #endif
-                        var dataIdx = uint.MaxValue;
-                        for (var chunkIdx = 0; chunkIdx < Entities.Value.nextActiveChunkIdx; chunkIdx++) {
-                            ref var chunk = ref pool.chunks[chunkIdx];
+                        } else {
+                            #if NET6_0_OR_GREATER
+                            ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
+                            Span<T> data = default;
+                            #else
+                            var deBruijn = Utils.DeBruijn;
+                            T[] data = null;
+                            #endif
+                            var dataIdx = uint.MaxValue;
                             var chunkMask = chunk.notEmptyBlocks;
 
                             while (chunkMask > 0) {
                                 var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
                                 chunkMask &= chunkMask - 1;
-                                var entitiesMask = chunk.entities[blockIdx];
+                                var entitiesMask = entities[blockIdx];
 
                                 if (entitiesMask > 0) {
                                     var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
@@ -112,7 +140,7 @@ namespace FFS.Libraries.StaticEcs {
                                     #else
                                     var dOffset = blockEntity & Const.DATA_ENTITY_MASK;
                                     #endif
-                                    
+
                                     if (globalBlockIdx >> Const.DATA_QUERY_SHIFT != dataIdx) {
                                         dataIdx = (uint) (globalBlockIdx >> Const.DATA_QUERY_SHIFT);
                                         #if NET6_0_OR_GREATER
@@ -121,7 +149,7 @@ namespace FFS.Libraries.StaticEcs {
                                         data = pool.data[dataIdx];
                                         #endif
                                     }
-                                    
+
                                     var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                                     var end = Utils.ApproximateMSB(entitiesMask);
                                     var total = Utils.PopCnt(entitiesMask);
@@ -145,87 +173,73 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal void ReadAll(ref BinaryPackReader reader, ref Components<T> pool) {
-                    var oldVersion = reader.ReadByte();
-                    var chunkCapacity = reader.ReadInt();
-                    var clearable = reader.ReadBool(); // TODO  
-                    var chunkCount = reader.ReadInt();
+                [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+                internal void ReadChunk(ref BinaryPackReader reader, ref Components<T> pool, uint chunkIdx) {
+                    ref var chunk = ref pool.chunks[chunkIdx];
 
-                    pool.chunks ??= new ComponentsChunk[chunkCapacity];
-                    if (pool.chunks.Length < chunkCapacity) {
-                        Array.Resize(ref pool.chunks, chunkCapacity);
-                    }
-                    
-                    for (uint i = 0; i < chunkCount; i++) {
-                        ref var chunk = ref pool.chunks[i];
-                        chunk.notEmptyBlocks =  reader.ReadUlong();
-                        chunk.fullBlocks =  reader.ReadUlong();
+                    var clearable = reader.ReadBool(); // TODO  
+                    chunk.notEmptyBlocks = reader.ReadUlong();
+
+                    if (chunk.notEmptyBlocks != 0) {
+                        pool.InitChunkSimple(ref chunk, chunkIdx);
+                        
+                        var oldVersion = reader.ReadByte();
+                        chunk.fullBlocks = reader.ReadUlong();
                         reader.ReadArrayUnmanaged(ref chunk.entities);
                         reader.ReadArrayUnmanaged(ref chunk.disabledEntities);
-                    }
-                    
-                    var dataCapacity = chunkCapacity * Const.DATA_BLOCKS_IN_CHUNK;
-                    pool.data ??= new T[dataCapacity][];
-                    pool.dataPool ??= new T[dataCapacity][];
-                    if (pool.data.Length < dataCapacity) {
-                        Array.Resize(ref pool.data, dataCapacity);
-                        Array.Resize(ref pool.dataPool, dataCapacity);
-                    }
-                    var unmanaged = reader.ReadBool(); // TODO validate strategy
-                    
-                    if (unmanaged) {
-                        var dataCount = reader.ReadUint();
-                        
-                        for (uint j = 0; j < dataCount; j++) {
-                            var idx = reader.ReadInt();
-                            ref var components = ref pool.data[idx];
-                            if (components == null) {
-                                var count = Interlocked.Decrement(ref pool.dataPoolCount);
-                                if (count >= 0) {
-                                    components = pool.dataPool[count];
-                                } else {
-                                    Interlocked.Increment(ref pool.dataPoolCount);    
-                                    components = new T[Const.DATA_BLOCK_SIZE];
-                                }
-                            }
-                            
-                            if (version == oldVersion) {
-                                _readWriteArrayStrategy.ReadArray(ref reader, ref components);
-                            } else {
-                                _ = reader.ReadNullFlag();
-                                var count = reader.ReadInt();
-                                var byteSize = reader.ReadUint();
-                                var oneSize = byteSize / count; 
-                                var dataEntity = (uint) (idx * Const.DATA_BLOCK_SIZE);
-                                var entity = new Entity(dataEntity);
-                                ref var eid = ref entity._id;
-                                var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
-                                ref var chunk = ref pool.chunks[chunkIdx];
-                                for (var i = 0; i < count; i++) {
-                                    eid = (uint) (dataEntity + i);
-                                    var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
-                                    var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
-                                    if ((chunk.entities[blockIdx] & (1UL << blockEntityIdx)) != 0) {
-                                        components[i] = _migrationReader(ref reader, entity, oldVersion, (chunk.disabledEntities[blockIdx] & (1UL << blockEntityIdx)) != 0);
+
+                        var unmanaged = reader.ReadBool(); // TODO validate strategy
+
+                        if (unmanaged) {
+                            var dataIdxStart = (ushort) ((chunkIdx << Const.ENTITIES_IN_CHUNK_SHIFT) >> Const.DATA_SHIFT);
+                            var dataIdxEnd = dataIdxStart + Const.DATA_BLOCKS_IN_CHUNK;
+
+                            for (var dataIdx = dataIdxStart; dataIdx < dataIdxEnd; dataIdx++) {
+                                ref var components = ref pool.data[dataIdx];
+                                
+                                var notEmpty = !reader.ReadNullFlag();
+                                if (notEmpty) {
+                                    pool.InitializeData(ref components);
+                                    var start = reader.ReadInt();
+                                    var count = reader.ReadInt();
+                                    
+                                    if (version == oldVersion) {
+                                        _readWriteArrayStrategy.ReadArray(ref reader, ref components, start);
                                     } else {
-                                        reader.SkipNext((uint) oneSize);
+                                        _ = reader.ReadNullFlag();
+                                        _ = reader.ReadInt(); // count
+                                        var byteSize = reader.ReadUint();
+                                        var oneSize = byteSize / count;
+                                        var dataEntity = (uint) (dataIdx * Const.DATA_BLOCK_SIZE);
+                                        var entity = new Entity();
+                                        ref var eid = ref entity.id;
+                                        for (var i = start; i < start + count; i++) {
+                                            eid = (uint) (dataEntity + i);
+                                            var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                                            var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
+                                            if ((chunk.entities[blockIdx] & (1UL << blockEntityIdx)) != 0) {
+                                                eid += Const.ENTITY_ID_OFFSET;
+                                                components[i] = _migrationReader(ref reader, entity, oldVersion, (chunk.disabledEntities[blockIdx] & (1UL << blockEntityIdx)) != 0);
+                                            } else {
+                                                reader.SkipNext((uint) oneSize);
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        }
-                    } else {
-                        #if NET6_0_OR_GREATER
-                        ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
-                        Span<T> data = default;
-                        #else
-                        var deBruijn = Utils.DeBruijn;
-                        T[] data = null;
-                        #endif
-                        var dataIdx = uint.MaxValue;
-                        for (var chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
-                            ref var chunk = ref pool.chunks[chunkIdx];
+                        } else {
+                            #if NET6_0_OR_GREATER
+                            ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
+                            Span<T> data = default;
+                            #else
+                            var deBruijn = Utils.DeBruijn;
+                            T[] data = null;
+                            #endif
+                            var dataIdx = uint.MaxValue;
                             var chunkMask = chunk.notEmptyBlocks;
 
+                            var entity = new Entity();
+                            ref var eid = ref entity.id;
                             while (chunkMask > 0) {
                                 var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
                                 chunkMask &= chunkMask - 1;
@@ -239,17 +253,18 @@ namespace FFS.Libraries.StaticEcs {
                                     #else
                                     var dOffset = blockEntity & Const.DATA_ENTITY_MASK;
                                     #endif
-                                    
+
                                     if (globalBlockIdx >> Const.DATA_QUERY_SHIFT != dataIdx) {
                                         dataIdx = (uint) (globalBlockIdx >> Const.DATA_QUERY_SHIFT);
-                                        pool.data[dataIdx] ??= new T[Const.DATA_BLOCK_SIZE];
+                                        ref var components = ref pool.data[dataIdx];
+                                        pool.InitializeData(ref components);
                                         #if NET6_0_OR_GREATER
-                                        data = new(pool.data[dataIdx]);
+                                        data = new(components);
                                         #else
-                                        data = pool.data[dataIdx];
+                                        data = components;
                                         #endif
                                     }
-                                    
+
                                     var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                                     var end = Utils.ApproximateMSB(entitiesMask);
                                     var total = Utils.PopCnt(entitiesMask);
@@ -272,12 +287,14 @@ namespace FFS.Libraries.StaticEcs {
                                         if (total >= (end - idx) >> 1) {
                                             for (; idx < end; idx++) {
                                                 if ((entitiesMask & (1UL << idx)) > 0) {
-                                                    data[idx + dOffset] = _migrationReader(ref reader, new (blockEntity + idx), oldVersion, (disabledMask & (1UL << idx)) != 0);
+                                                    eid = blockEntity + idx + Const.ENTITY_ID_OFFSET;
+                                                    data[idx + dOffset] = _migrationReader(ref reader, entity, oldVersion, (disabledMask & (1UL << idx)) != 0);
                                                 }
                                             }
                                         } else {
                                             do {
-                                                data[idx + dOffset] = _migrationReader(ref reader, new (blockEntity + idx), oldVersion, (disabledMask & (1UL << idx)) != 0);
+                                                eid = blockEntity + idx + Const.ENTITY_ID_OFFSET;
+                                                data[idx + dOffset] = _migrationReader(ref reader, entity, oldVersion, (disabledMask & (1UL << idx)) != 0);
                                                 entitiesMask &= entitiesMask - 1UL;
                                                 idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                                             } while (entitiesMask > 0);
@@ -291,11 +308,11 @@ namespace FFS.Libraries.StaticEcs {
 
                 [MethodImpl(AggressiveInlining)]
                 internal void Write(ref BinaryPackWriter writer, ref Components<T> pool, Entity entity) {
-                    var offset = writer.MakePoint(sizeof(short));
+                    var offset = writer.MakePoint(sizeof(ushort));
                     writer.WriteByte(version);
                     writer.Write(in pool.RefInternal(entity));
                     var size = writer.Position - (offset + sizeof(short));
-                    #if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+                    #if FFS_ECS_DEBUG
                     if (size > short.MaxValue) throw new StaticEcsException($"Size of component {typeof(T)} more than {short.MaxValue} bytes");
                     #endif
                     var disabled = pool.HasDisabled(entity);
@@ -343,87 +360,86 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         [MethodImpl(AggressiveInlining)]
-        internal static void DeleteAllComponentMigration<WorldType>(this ref BinaryPackReader reader, EcsComponentDeleteMigrationReader<WorldType> migration) 
+        internal static void DeleteAllComponentMigration<WorldType>(this ref BinaryPackReader reader, EcsComponentDeleteMigrationReader<WorldType> migration, uint chunkIdx) 
             where WorldType : struct, IWorldType {
-            var oldVersion = reader.ReadByte();
-            var chunkCapacity = reader.ReadInt();
             var clearable = reader.ReadBool();
-            var chunkCount = reader.ReadInt();
+            var notEmptyBlocks = reader.ReadUlong();
 
-            var chunks = ArrayPool<ComponentsChunk>.Shared.Rent(chunkCapacity);
-            for (uint i = 0; i < chunkCount; i++) {
-                ref var chunk = ref chunks[i];
-                chunk.notEmptyBlocks = reader.ReadUlong();
-                chunk.fullBlocks = reader.ReadUlong();
-                chunk.entities = ArrayPool<ulong>.Shared.Rent(Const.BLOCK_IN_CHUNK);
-                chunk.disabledEntities = ArrayPool<ulong>.Shared.Rent(Const.BLOCK_IN_CHUNK);
-                reader.ReadArrayUnmanaged(ref chunk.entities);
-                reader.ReadArrayUnmanaged(ref chunk.disabledEntities);
-            }
+            if (notEmptyBlocks != 0) {
+                var entities = ArrayPool<ulong>.Shared.Rent(Const.BLOCK_IN_CHUNK);
+                var disabledEntities = ArrayPool<ulong>.Shared.Rent(Const.BLOCK_IN_CHUNK);
 
-            var unmanaged = reader.ReadBool(); // TODO validate strategy
+                var oldVersion = reader.ReadByte();
+                var fullBlocks = reader.ReadUlong();
+                reader.ReadArrayUnmanaged(ref entities);
+                reader.ReadArrayUnmanaged(ref disabledEntities);
 
-            if (unmanaged) {
-                var dataCount = reader.ReadUint();
+                var unmanaged = reader.ReadBool();
 
-                for (uint j = 0; j < dataCount; j++) {
-                    var idx = reader.ReadInt();
-                    _ = reader.ReadNullFlag();
-                    var count = reader.ReadInt();
-                    var byteSize = reader.ReadUint();
-                    var oneSize = byteSize / count;
-                    var dataEntity = (uint) (idx * Const.DATA_BLOCK_SIZE);
-                    var entity = new World<WorldType>.Entity(dataEntity);
-                    ref var eid = ref entity._id;
-                    for (var i = 0; i < Const.DATA_BLOCK_SIZE; i++) {
-                        eid = (uint) (dataEntity + i);
-                        var chunkIdx = (ushort) (eid >> Const.ENTITIES_IN_CHUNK_SHIFT);
-                        var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
-                        var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
-                        var has = (chunks[chunkIdx].entities[blockIdx] & (1UL << blockEntityIdx)) != 0;
-                        if (has) {
-                            var disabled = (chunks[chunkIdx].disabledEntities[blockIdx] & (1UL << blockEntityIdx)) != 0;
-                            migration(ref reader, entity, oldVersion, disabled);
-                        } else {
-                            reader.SkipNext((uint) oneSize);
+                if (unmanaged) {
+                    var dataIdxStart = (ushort) ((chunkIdx << Const.ENTITIES_IN_CHUNK_SHIFT) >> Const.DATA_SHIFT);
+                    var dataIdxEnd = dataIdxStart + Const.DATA_BLOCKS_IN_CHUNK;
+
+                    for (var dataIdx = dataIdxStart; dataIdx < dataIdxEnd; dataIdx++) {
+                        var notEmpty = !reader.ReadNullFlag();
+                        if (notEmpty) {
+                            var start = reader.ReadInt();
+                            var count = reader.ReadInt();
+
+                            _ = reader.ReadNullFlag();
+                            _ = reader.ReadInt(); // count
+                            var byteSize = reader.ReadUint();
+                            var oneSize = byteSize / count;
+                            var dataEntity = (uint) (dataIdx * Const.DATA_BLOCK_SIZE);
+                            var entity = new World<WorldType>.Entity();
+                            ref var eid = ref entity.id;
+                            for (var i = start; i < start + count; i++) {
+                                eid = (uint) (dataEntity + i);
+                                var blockIdx = (byte) ((eid >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCK_IN_CHUNK_OFFSET_MASK);
+                                var blockEntityIdx = (byte) (eid & Const.ENTITIES_IN_BLOCK_OFFSET_MASK);
+                                if ((entities[blockIdx] & (1UL << blockEntityIdx)) != 0) {
+                                    var disabled = (disabledEntities[blockIdx] & (1UL << blockEntityIdx)) != 0;
+                                    eid += Const.ENTITY_ID_OFFSET;
+                                    migration(ref reader, entity, oldVersion, disabled);
+                                } else {
+                                    reader.SkipNext((uint) oneSize);
+                                }
+                            }
                         }
                     }
-                }
-            } else {
-                #if NET6_0_OR_GREATER
-                ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
-                #else
-                var deBruijn = Utils.DeBruijn;
-                #endif
-                var entity = new World<WorldType>.Entity();
-                ref var eid = ref entity._id;
-                for (var chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
-                    ref var chunk = ref chunks[chunkIdx];
-                    var chunkMask = chunk.notEmptyBlocks;
+                } else {
+                    #if NET6_0_OR_GREATER
+                    ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
+                    #else
+                    var deBruijn = Utils.DeBruijn;
+                    #endif
+                    var chunkMask = notEmptyBlocks;
 
+                    var entity = new World<WorldType>.Entity();
+                    ref var eid = ref entity.id;
                     while (chunkMask > 0) {
                         var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
                         chunkMask &= chunkMask - 1;
-                        var entitiesMask = chunk.entities[blockIdx];
+                        var entitiesMask = entities[blockIdx];
 
                         if (entitiesMask > 0) {
                             var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
                             var blockEntity = (uint) (globalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-
+       
                             var idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
                             var end = Utils.ApproximateMSB(entitiesMask);
                             var total = Utils.PopCnt(entitiesMask);
-                            var disabledMask = chunk.disabledEntities[blockIdx];
+                            var disabledMask = disabledEntities[blockIdx];
                             if (total >= (end - idx) >> 1) {
                                 for (; idx < end; idx++) {
                                     if ((entitiesMask & (1UL << idx)) > 0) {
-                                        eid = blockEntity + idx;
+                                        eid = blockEntity + idx + Const.ENTITY_ID_OFFSET;
                                         migration(ref reader, entity, oldVersion, (disabledMask & (1UL << idx)) != 0);
                                     }
                                 }
                             } else {
                                 do {
-                                    eid = blockEntity + idx;
+                                    eid = blockEntity + idx + Const.ENTITY_ID_OFFSET;
                                     migration(ref reader, entity, oldVersion, (disabledMask & (1UL << idx)) != 0);
                                     entitiesMask &= entitiesMask - 1UL;
                                     idx = deBruijn[(int) (((entitiesMask & (ulong) -(long) entitiesMask) * 0x37E84A99DAE458FUL) >> 58)];
@@ -432,15 +448,10 @@ namespace FFS.Libraries.StaticEcs {
                         }
                     }
                 }
+                
+                ArrayPool<ulong>.Shared.Return(entities, true);
+                ArrayPool<ulong>.Shared.Return(disabledEntities, true);
             }
-            
-            for (uint i = 0; i < chunkCount; i++) {
-                ref var chunk = ref chunks[i];
-                ArrayPool<ulong>.Shared.Return(chunk.entities, true);
-                ArrayPool<ulong>.Shared.Return(chunk.disabledEntities, true);
-            }
-            
-            ArrayPool<ComponentsChunk>.Shared.Return(chunks, true);
         }
     }
 }

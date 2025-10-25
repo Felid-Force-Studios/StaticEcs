@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.1.0-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.2.0-blue.svg?style=for-the-badge)
 
 ### LANGUAGE
 [RU](./README_RU.md)
@@ -56,7 +56,7 @@ ___
 * [Telegram](https://t.me/felid_force_studios)
 
 # Installation
-The library has a dependency on [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) `1.0.3` for binary serialization, StaticPack must also be installed
+The library has a dependency on [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) `1.0.6` for binary serialization, StaticPack must also be installed
 * ### As source code
   From the release page or as an archive from the branch. In the `master` branch there is a stable tested version
 * ### Installation for Unity
@@ -109,7 +109,7 @@ public struct Velocity : IComponent { public float Value; }
 // Define systems
 public readonly struct VelocitySystem : IUpdateSystem {
     public void Update() {
-        foreach (var entity in W.QueryEntities.For<All<Position, Velocity, Direction>>()) {
+        foreach (var entity in W.Query.Entities<All<Position, Velocity, Direction>>()) {
             entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
         }
         

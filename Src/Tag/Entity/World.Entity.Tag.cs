@@ -1,4 +1,10 @@
-﻿#if !FFS_ECS_DISABLE_TAGS
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -321,22 +327,22 @@ namespace FFS.Libraries.StaticEcs {
 
             #region BY_RAW_TYPE
             [MethodImpl(AggressiveInlining)]
-            public bool HasAllOfTags(Type tagType) {
+            public bool RawHasAllOfTags(Type tagType) {
                 return ModuleTags.Value.GetPool(tagType).Has(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void SetTag(Type tagType) {
+            public void RawSetTag(Type tagType) {
                 ModuleTags.Value.GetPool(tagType).Set(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void DeleteTag(Type tagType) {
+            public void RawDeleteTag(Type tagType) {
                 ModuleTags.Value.GetPool(tagType).Delete(this);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void MoveTagsTo(Type tagType, Entity target) {
+            public void RawMoveTagsTo(Type tagType, Entity target) {
                 ModuleTags.Value.GetPool(tagType).Move(this, target);
             }
             #endregion
@@ -362,14 +368,13 @@ namespace FFS.Libraries.StaticEcs {
     }
 
     public partial class BoxedEntity<WorldType> {
-        public int TagsCount() => new World<WorldType>.Entity(_entity).TagsCount();
-        public void GetAllTags(List<ITag> result) => new World<WorldType>.Entity(_entity).GetAllTags(result);
-        public bool HasAllOfTags<C>() where C : struct, ITag => new World<WorldType>.Entity(_entity).HasAllOfTags<C>();
-        public void SetTag<C>() where C : struct, ITag => new World<WorldType>.Entity(_entity).SetTag<C>();
-        public void DeleteTag<C>() where C : struct, ITag => new World<WorldType>.Entity(_entity).DeleteTag<C>();
-        public bool HasAllOfTags(Type tagType) => new World<WorldType>.Entity(_entity).HasAllOfTags(tagType);
-        public void SetTag(Type tagType) => new World<WorldType>.Entity(_entity).SetTag(tagType);
-        public void DeleteTag(Type tagType) => new World<WorldType>.Entity(_entity).DeleteTag(tagType);
+        public int TagsCount() => _entity.TagsCount();
+        public void GetAllTags(List<ITag> result) => _entity.GetAllTags(result);
+        public bool HasAllOfTags<C>() where C : struct, ITag => _entity.HasAllOfTags<C>();
+        public void SetTag<C>() where C : struct, ITag => _entity.SetTag<C>();
+        public void DeleteTag<C>() where C : struct, ITag => _entity.DeleteTag<C>();
+        public bool HasAllOfTags(Type tagType) => _entity.RawHasAllOfTags(tagType);
+        public void SetTag(Type tagType) => _entity.RawSetTag(tagType);
+        public void DeleteTag(Type tagType) => _entity.RawDeleteTag(tagType);
     }
 }
-#endif

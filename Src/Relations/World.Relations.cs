@@ -1,4 +1,11 @@
-﻿using System.Runtime.CompilerServices;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -19,9 +26,9 @@ namespace FFS.Libraries.StaticEcs {
             bool disableRelationCheck = false
         )
             where T : struct, IEntityLinkComponent<T> {
-            if (Status != WorldStatus.Created) {
-                throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: RegisterToOneRelationType<{typeof(T)}>, World not created");
-            }
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
 
             config ??= DefaultComponentConfig<T, WorldType>.Default;
             ModuleComponents.Value.RegisterToOneRelationType(config, onDeleteStrategy, onCopyStrategy, disableRelationCheck);
@@ -35,9 +42,9 @@ namespace FFS.Libraries.StaticEcs {
             IComponentConfig<T, WorldType> config = null,
             bool disableRelationsCheckDebug = false
         ) where T : struct, IEntityLinksComponent<T> {
-            if (Status != WorldStatus.Created) {
-                throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: RegisterToManyRelationType<{typeof(T)}>, World not created");
-            }
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
 
             config ??= DefaultComponentConfig<T, WorldType>.Default;
             ModuleComponents.Value.RegisterToManyRelationType(defaultComponentCapacity, config, deleteStrategy, copyStrategy, disableRelationsCheckDebug);
@@ -55,9 +62,9 @@ namespace FFS.Libraries.StaticEcs {
         )
             where L : struct, IEntityLinkComponent<L>
             where R : struct, IEntityLinkComponent<R> {
-            if (Status != WorldStatus.Created) {
-                throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: RegisterOneToOneRelationType<{typeof(L)}, {typeof(R)}>, World not created");
-            }
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
 
             leftConfig ??= DefaultComponentConfig<L, WorldType>.Default;
             rightConfig ??= DefaultComponentConfig<R, WorldType>.Default;
@@ -77,9 +84,9 @@ namespace FFS.Libraries.StaticEcs {
         )
             where O : struct, IEntityLinkComponent<O>
             where M : struct, IEntityLinksComponent<M> {
-            if (Status != WorldStatus.Created) {
-                throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: RegisterOneToManyRelationType<{typeof(O)}, {typeof(M)}>, World not created");
-            }
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
 
             leftConfig ??= DefaultComponentConfig<O, WorldType>.Default;
             rightConfig ??= DefaultComponentConfig<M, WorldType>.Default;
@@ -100,9 +107,9 @@ namespace FFS.Libraries.StaticEcs {
         )
             where L : struct, IEntityLinksComponent<L>
             where R : struct, IEntityLinksComponent<R> {
-            if (Status != WorldStatus.Created) {
-                throw new StaticEcsException($"World<{typeof(WorldType)}>, Method: RegisterManyToManyRelationType<{typeof(L)}, {typeof(R)}>, World not created");
-            }
+            #if FFS_ECS_DEBUG
+            AssertWorldIsCreated(WorldTypeName);
+            #endif
 
             leftConfig ??= DefaultComponentConfig<L, WorldType>.Default;
             rightConfig ??= DefaultComponentConfig<R, WorldType>.Default;

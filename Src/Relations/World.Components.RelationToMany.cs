@@ -1,4 +1,11 @@
-﻿using System.Runtime.CompilerServices;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -28,7 +35,7 @@ namespace FFS.Libraries.StaticEcs {
                 
                 Context.Value.GetOrCreate<LinkManyHandlers<T>>();
                 
-                #if (((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)) && !FFS_ECS_DISABLE_RELATION_CHECK
+                #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                 if (!disableRelationsCheckDebug) {
                     Context.Value.Get<LinkManyHandlers<T>>().OnAddLinkItem = CheckManyRelation<T>;
                 }

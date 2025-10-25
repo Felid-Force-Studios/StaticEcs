@@ -1,4 +1,11 @@
-﻿using System;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System;
 using System.Runtime.CompilerServices;
 using System.Text;
 using FFS.Libraries.StaticPack;
@@ -10,8 +17,6 @@ using Unity.IL2CPP.CompilerServices;
 namespace FFS.Libraries.StaticEcs {
     public interface IRawPool {
         public ushort DynamicId();
-
-        internal void SetDynamicId(ushort id);
 
         public Guid Guid();
 
@@ -27,9 +32,9 @@ namespace FFS.Libraries.StaticEcs {
 
         public uint CalculateCount();
         
-        internal void WriteAll(ref BinaryPackWriter writer);
+        internal void WriteChunk(ref BinaryPackWriter writer, uint chunkIdx);
 
-        internal void ReadAll(ref BinaryPackReader reader);
+        internal void ReadChunk(ref BinaryPackReader reader, uint chunkIdx);
         
         internal bool Has(uint entity);
 
@@ -104,7 +109,7 @@ namespace FFS.Libraries.StaticEcs {
 
             public bool TryCast<C>(out ComponentsWrapper<C> wrapper) where C : struct, IComponent;
 
-            internal void Resize(uint cap);
+            internal void Resize(uint chunksCapacity);
             
             internal void DeleteInternalWithoutMask(Entity entity);
 
@@ -112,20 +117,24 @@ namespace FFS.Libraries.StaticEcs {
 
             internal void ToStringComponent(StringBuilder builder, Entity entity);
 
-            internal void Clear();
+            internal void ClearChunk(uint chunkIdx);
         
             void Write(ref BinaryPackWriter writer, Entity entity);
 
             void Read(ref BinaryPackReader reader, Entity entity);
 
-            internal void UpdateBitMask(BitMask bitMask);
+            internal void UpdateBitMask(uint chunkIdx);
+
+            internal void Initialize(uint chunksCapacity);
+
+            internal void TryMoveChunkToPool(uint chunkIdx);
         }
 
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
-        public readonly struct ComponentsWrapper<T> : IComponentsWrapper, Stateless
+        public readonly struct ComponentsWrapper<T> : IComponentsWrapper
             where T : struct, IComponent {
             
             [MethodImpl(AggressiveInlining)]
@@ -133,9 +142,6 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             public ushort DynamicId() => Components<T>.Value.DynamicId();
-
-            [MethodImpl(AggressiveInlining)]
-            void IRawPool.SetDynamicId(ushort id) => Components<T>.Value.SetDynamicId(id);
 
             [MethodImpl(AggressiveInlining)]
             internal ref T Ref(Entity entity) => ref Components<T>.Value.Ref(entity);
@@ -234,7 +240,7 @@ namespace FFS.Libraries.StaticEcs {
             void IComponentsWrapper.ToStringComponent(StringBuilder builder, Entity entity) => Components<T>.Value.ToStringComponent(builder, entity);
 
             [MethodImpl(AggressiveInlining)]
-            void IComponentsWrapper.Resize(uint cap) => Components<T>.Value.Resize(cap);
+            void IComponentsWrapper.Resize(uint chunksCapacity) => Components<T>.Value.Resize(chunksCapacity);
 
             [MethodImpl(AggressiveInlining)]
             void IComponentsWrapper.DeleteInternalWithoutMask(Entity entity) => Components<T>.Value.Delete(entity, false);
@@ -249,7 +255,13 @@ namespace FFS.Libraries.StaticEcs {
             public void Read(ref BinaryPackReader reader, Entity entity) => Components<T>.Serializer.Value.Read(ref reader, ref Components<T>.Value, entity);
 
             [MethodImpl(AggressiveInlining)]
-            void IComponentsWrapper.UpdateBitMask(BitMask bitMask) => Components<T>.Value.UpdateBitMask(bitMask);
+            void IComponentsWrapper.UpdateBitMask(uint chunkIdx) => Components<T>.Value.UpdateBitMask(chunkIdx);
+
+            [MethodImpl(AggressiveInlining)]
+            void IComponentsWrapper.Initialize(uint chunksCapacity) => Components<T>.Value.Initialize(chunksCapacity);
+            
+            [MethodImpl(AggressiveInlining)]
+            void IComponentsWrapper.TryMoveChunkToPool(uint chunkIdx) => Components<T>.Value.TryMoveChunkToPool(chunkIdx);
 
             [MethodImpl(AggressiveInlining)]
             ref ComponentsChunk IRawComponentPool.Chunk(uint chunkIdx) => ref Components<T>.Value.Chunk(chunkIdx);
@@ -264,13 +276,13 @@ namespace FFS.Libraries.StaticEcs {
             ulong IRawComponentPool.AMask(uint chunkIdx, int blockIdx) => Components<T>.Value.AMask(chunkIdx, blockIdx);
 
             [MethodImpl(AggressiveInlining)]
-            void IRawPool.WriteAll(ref BinaryPackWriter writer) => Components<T>.Serializer.Value.WriteAll(ref writer, ref Components<T>.Value);
+            void IRawPool.WriteChunk(ref BinaryPackWriter writer, uint chunkIdx) => Components<T>.Serializer.Value.WriteChunk(ref writer, ref Components<T>.Value, chunkIdx);
 
             [MethodImpl(AggressiveInlining)]
-            void IRawPool.ReadAll(ref BinaryPackReader reader) => Components<T>.Serializer.Value.ReadAll(ref reader, ref Components<T>.Value);
+            void IRawPool.ReadChunk(ref BinaryPackReader reader, uint chunkIdx) => Components<T>.Serializer.Value.ReadChunk(ref reader, ref Components<T>.Value, chunkIdx);
 
             [MethodImpl(AggressiveInlining)]
-            void IComponentsWrapper.Clear() => Components<T>.Value.Clear();
+            void IComponentsWrapper.ClearChunk(uint chunkIdx) => Components<T>.Value.ClearChunk(chunkIdx);
             
             [MethodImpl(AggressiveInlining)]
             bool IRawComponentPool.HasDisabled(uint entity) => Components<T>.Value.HasDisabled(new Entity(entity));

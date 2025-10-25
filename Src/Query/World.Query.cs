@@ -1,4 +1,12 @@
-﻿using System.Runtime.CompilerServices;
+﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#define FFS_ECS_DEBUG
+#endif
+#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
+#define FFS_ECS_EVENTS
+#endif
+
+using System;
+using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -14,62 +22,67 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.NullChecks, false)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
-        public abstract partial class QueryEntities {
+        public partial struct Query {
             
             [MethodImpl(AggressiveInlining)]
-            public static QueryEntitiesIterator<WorldType, WithNothing> For(EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default) {
-                return new QueryEntitiesIterator<WorldType, WithNothing>(default, entities, queryMode);
+            internal static QueryEntitiesIterator<WorldType, WithNothing> Entities(ReadOnlySpan<uint> chunks, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default) {
+                return new QueryEntitiesIterator<WorldType, WithNothing>(chunks, default, entities, queryMode);
             }
             
             [MethodImpl(AggressiveInlining)]
-            public static QueryEntitiesIterator<WorldType, QM1> For<QM1>(QM1 qm1 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default)
+            public static QueryEntitiesIterator<WorldType, WithNothing> Entities(EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default, ReadOnlySpan<ushort> clusters = default) {
+                return new QueryEntitiesIterator<WorldType, WithNothing>(HandleClustersRange(clusters), default, entities, queryMode);
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            public static QueryEntitiesIterator<WorldType, QM1> Entities<QM1>(QM1 qm1 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default, ReadOnlySpan<ushort> clusters = default)
                 where QM1 : struct, IQueryMethod {
-                return new QueryEntitiesIterator<WorldType, QM1>(qm1, entities, queryMode);
+                return new QueryEntitiesIterator<WorldType, QM1>(HandleClustersRange(clusters), qm1, entities, queryMode);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static QueryEntitiesIterator<WorldType, With<QM1, QM2>> For<QM1, QM2>(QM1 qm1 = default, QM2 qm2 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default)
+            public static QueryEntitiesIterator<WorldType, With<QM1, QM2>> Entities<QM1, QM2>(QM1 qm1 = default, QM2 qm2 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default, ReadOnlySpan<ushort> clusters = default)
                 where QM1 : struct, IQueryMethod
                 where QM2 : struct, IQueryMethod {
-                return new QueryEntitiesIterator<WorldType, With<QM1, QM2>>(new With<QM1, QM2>(qm1, qm2), entities, queryMode);
+                return new QueryEntitiesIterator<WorldType, With<QM1, QM2>>(HandleClustersRange(clusters), new With<QM1, QM2>(qm1, qm2), entities, queryMode);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3>> For<QM1, QM2, QM3>(
-                QM1 qm1 = default, QM2 qm2 = default, QM3 qm3 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default
+            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3>> Entities<QM1, QM2, QM3>(
+                QM1 qm1 = default, QM2 qm2 = default, QM3 qm3 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default, ReadOnlySpan<ushort> clusters = default
             )
                 where QM1 : struct, IQueryMethod
                 where QM2 : struct, IQueryMethod
                 where QM3 : struct, IQueryMethod {
-                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3>>(new With<QM1, QM2, QM3>(qm1, qm2, qm3), entities, queryMode);
+                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3>>(HandleClustersRange(clusters), new With<QM1, QM2, QM3>(qm1, qm2, qm3), entities, queryMode);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4>> For<QM1, QM2, QM3, QM4>(
-                QM1 qm1 = default, QM2 qm2 = default, QM3 qm3 = default, QM4 qm4 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default
+            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4>> Entities<QM1, QM2, QM3, QM4>(
+                QM1 qm1 = default, QM2 qm2 = default, QM3 qm3 = default, QM4 qm4 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default, ReadOnlySpan<ushort> clusters = default
             )
                 where QM1 : struct, IQueryMethod
                 where QM2 : struct, IQueryMethod
                 where QM3 : struct, IQueryMethod
                 where QM4 : struct, IQueryMethod {
-                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4>>(new With<QM1, QM2, QM3, QM4>(qm1, qm2, qm3, qm4), entities, queryMode);
+                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4>>(HandleClustersRange(clusters), new With<QM1, QM2, QM3, QM4>(qm1, qm2, qm3, qm4), entities, queryMode);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5>> For<QM1, QM2, QM3, QM4, QM5>(
-                QM1 qm1 = default, QM2 qm2 = default, QM3 qm3 = default, QM4 qm4 = default, QM5 qm5 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default
+            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5>> Entities<QM1, QM2, QM3, QM4, QM5>(
+                QM1 qm1 = default, QM2 qm2 = default, QM3 qm3 = default, QM4 qm4 = default, QM5 qm5 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default, ReadOnlySpan<ushort> clusters = default
             )
                 where QM1 : struct, IQueryMethod
                 where QM2 : struct, IQueryMethod
                 where QM3 : struct, IQueryMethod
                 where QM4 : struct, IQueryMethod
                 where QM5 : struct, IQueryMethod {
-                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5>>(new With<QM1, QM2, QM3, QM4, QM5>(qm1, qm2, qm3, qm4, qm5), entities, queryMode);
+                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5>>(HandleClustersRange(clusters), new With<QM1, QM2, QM3, QM4, QM5>(qm1, qm2, qm3, qm4, qm5), entities, queryMode);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6>> For<QM1, QM2, QM3, QM4, QM5, QM6>(
-                QM1 qm1 = default, QM2 qm2 = default, QM3 qm3 = default, QM4 qm4 = default, QM5 qm5 = default, QM6 qm6 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default
+            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6>> Entities<QM1, QM2, QM3, QM4, QM5, QM6>(
+                QM1 qm1 = default, QM2 qm2 = default, QM3 qm3 = default, QM4 qm4 = default, QM5 qm5 = default, QM6 qm6 = default, EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default, ReadOnlySpan<ushort> clusters = default
             )
                 where QM1 : struct, IQueryMethod
                 where QM2 : struct, IQueryMethod
@@ -77,14 +90,14 @@ namespace FFS.Libraries.StaticEcs {
                 where QM4 : struct, IQueryMethod
                 where QM5 : struct, IQueryMethod
                 where QM6 : struct, IQueryMethod {
-                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6>>(
-                    new With<QM1, QM2, QM3, QM4, QM5, QM6>(qm1, qm2, qm3, qm4, qm5, qm6), entities, queryMode);
+                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6>>(HandleClustersRange(clusters), 
+                                                                                                new With<QM1, QM2, QM3, QM4, QM5, QM6>(qm1, qm2, qm3, qm4, qm5, qm6), entities, queryMode);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6, QM7>> For<QM1, QM2, QM3, QM4, QM5, QM6, QM7>(
+            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6, QM7>> Entities<QM1, QM2, QM3, QM4, QM5, QM6, QM7>(
                 QM1 qm1 = default, QM2 qm2 = default, QM3 qm3 = default, QM4 qm4 = default, QM5 qm5 = default, QM6 qm6 = default, QM7 qm7 = default,
-                EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default
+                EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default, ReadOnlySpan<ushort> clusters = default
             )
                 where QM1 : struct, IQueryMethod
                 where QM2 : struct, IQueryMethod
@@ -93,14 +106,14 @@ namespace FFS.Libraries.StaticEcs {
                 where QM5 : struct, IQueryMethod
                 where QM6 : struct, IQueryMethod
                 where QM7 : struct, IQueryMethod {
-                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6, QM7>>(
-                    new With<QM1, QM2, QM3, QM4, QM5, QM6, QM7>(qm1, qm2, qm3, qm4, qm5, qm6, qm7), entities, queryMode);
+                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6, QM7>>(HandleClustersRange(clusters), 
+                                                                                                     new With<QM1, QM2, QM3, QM4, QM5, QM6, QM7>(qm1, qm2, qm3, qm4, qm5, qm6, qm7), entities, queryMode);
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6, QM7, QM8>> For<QM1, QM2, QM3, QM4, QM5, QM6, QM7, QM8>(
+            public static QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6, QM7, QM8>> Entities<QM1, QM2, QM3, QM4, QM5, QM6, QM7, QM8>(
                 QM1 qm1 = default, QM2 qm2 = default, QM3 qm3 = default, QM4 qm4 = default, QM5 qm5 = default, QM6 qm6 = default, QM7 qm7 = default, QM8 qm8 = default,
-                EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default
+                EntityStatusType entities = EntityStatusType.Enabled, QueryMode queryMode = QueryMode.Default, ReadOnlySpan<ushort> clusters = default
             )
                 where QM1 : struct, IQueryMethod
                 where QM2 : struct, IQueryMethod
@@ -110,8 +123,8 @@ namespace FFS.Libraries.StaticEcs {
                 where QM6 : struct, IQueryMethod
                 where QM7 : struct, IQueryMethod
                 where QM8 : struct, IQueryMethod {
-                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6, QM7, QM8>>(
-                    new With<QM1, QM2, QM3, QM4, QM5, QM6, QM7, QM8>(qm1, qm2, qm3, qm4, qm5, qm6, qm7, qm8), entities, queryMode);
+                return new QueryEntitiesIterator<WorldType, With<QM1, QM2, QM3, QM4, QM5, QM6, QM7, QM8>>(HandleClustersRange(clusters), 
+                                                                                                          new With<QM1, QM2, QM3, QM4, QM5, QM6, QM7, QM8>(qm1, qm2, qm3, qm4, qm5, qm6, qm7, qm8), entities, queryMode);
             }
         }
     }

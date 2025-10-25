@@ -100,6 +100,29 @@ Systems.AddUpdate(
     new SomeComboSystem()
 );
 
+// Есть возможность добавить условия для систем, для этого требуется реализовать ISystemCondition
+class GamePauseCondition : ISystemCondition {
+    private bool paused;
+    
+    public bool ShouldUpdate() => !paused;
+}
+
+// Метод AddConditionalUpdate принимает первым аргументом реализацию ISystemCondition, при обновлении систем они будут запущенны только если ShouldUpdate true
+tSystems.AddConditionalUpdate(new GamePauseCondition(), new SaveLoadSystem());
+
+// Также для группы систем
+Systems.AddConditionalUpdate(
+    new GamePauseCondition(), 
+    
+    new SomeUpdateSystem1(),
+    new SomeComboSystem1(),
+    new SomeComboSystem2(),
+    new SomeComboSystem3(),
+    new SomeComboSystem4(),
+    new SomeComboSystem5(),
+    new SomeComboSystem()
+);
+
 // Здесь будут вызваны все Init системы
 Systems.Initialize();
 
@@ -108,4 +131,33 @@ Systems.Update();
 
 // Здесь будут вызваны все Destroy системы
 Systems.Destroy();
+```
+
+___
+
+#### Системы с условным выполнением:
+```c#
+// Есть возможность добавить условия для систем, для этого требуется реализовать ISystemState
+class GamePauseState : ISystemState {
+    private bool paused;
+    
+    public bool IsActive() => !paused;
+}
+
+// Метод AddConditionalUpdate принимает первым аргументом реализацию ISystemState
+// при обновлении систем они будут запущенны только если IsActive возвращает true
+tSystems.AddConditionalUpdate(new GamePauseState(), new SomeUpdateSystem());
+
+// Также для группы систем
+Systems.AddConditionalUpdate(
+    new GamePauseState(), 
+    
+    new SomeUpdateSystem1(),
+    new SomeComboSystem1(),
+    new SomeComboSystem2(),
+    new SomeComboSystem3(),
+    new SomeComboSystem4(),
+    new SomeComboSystem5(),
+    new SomeComboSystem()
+);
 ```
