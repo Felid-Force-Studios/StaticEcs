@@ -10,7 +10,7 @@ ___
 
 ___
 
-### ❗️ **[Guide for migrating from version 1.0.x to 1.1.x](https://felid-force-studios.github.io/StaticEcs/en/migrationguide.html)** ❗️
+### ❗️ **[Guide for migrating from version 1.0.x to 1.2.x](https://felid-force-studios.github.io/StaticEcs/en/migrationguide.html)** ❗️
 
 # Static ECS - C# Hierarchical Inverted Bitmap ECS framework
 - Lightweight

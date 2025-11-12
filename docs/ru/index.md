@@ -11,7 +11,7 @@ ___
 ### 🚀 **[Benchmarks](https://gist.github.com/blackbone/6d254a684cf580441bf58690ad9485c3)** 🚀
 ### ⚙️ **[Unity module](https://github.com/Felid-Force-Studios/StaticEcs-Unity)** ⚙️
 
-### ❗️ **[Гайд миграции с версии 1.0.x на 1.1.x](migrationguide.md)** ❗️
+### ❗️ **[Гайд миграции с версии 1.0.x на 1.2.x](migrationguide.md)** ❗️
 
 # Static ECS - C# Binary Entity component system framework
 - Легковесность

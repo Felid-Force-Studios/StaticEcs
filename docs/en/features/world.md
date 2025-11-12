@@ -199,7 +199,7 @@ ushort gidClusterId = npc.Gid().ClusterId;
 
 ___
 
-## Чанк:
+## Chunk:
 A chunk is a group of entities with a size of 4096; the entire world consists of chunks. A chunk always belongs to a cluster.  
 A world can be dependent or independent; this parameter is set in the world configuration when creating `W.Create(new() { Independent = true })`.  
 By default, an independent world manages entity IDs and all chunks automatically, creating new chunks when entities are created with `W.Entity.New()` when needed.   
@@ -209,7 +209,7 @@ Next, we will look at some examples.
 
 ___
 
-#### Основные операции:
+#### Basic operations:
 ```c#
 // Find a free chunk that does not belong to any cluster.
 // For an independent world, if there is no free chunk, a new one will be created.

@@ -10,7 +10,7 @@ ___
 
 ___
 
-### ❗️ **[Гайд миграции с версии 1.0.x на 1.1.x](https://felid-force-studios.github.io/StaticEcs/ru/migrationguide.html)** ❗️
+### ❗️ **[Гайд миграции с версии 1.0.x на 1.2.x](https://felid-force-studios.github.io/StaticEcs/ru/migrationguide.html)** ❗️
 
 # Static ECS - C# Binary Entity component system framework
 - Легковесность
