@@ -23,7 +23,7 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     internal class BitMask {
         internal ulong[][] chunks;
-        internal uint[] freeChunks;
+        internal ulong[][] freeChunks;
         internal int freeChunksCount;
         internal ushort maskLen;
 
@@ -35,7 +35,7 @@ namespace FFS.Libraries.StaticEcs {
         internal void Create(uint chunksCapacity, ushort maskLen) {
             this.maskLen = maskLen;
             freeChunksCount = 0;
-            freeChunks = new uint[chunksCapacity];
+            freeChunks = new ulong[chunksCapacity][];
             chunks = new ulong[chunksCapacity][];
         }
 
@@ -56,14 +56,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void InitChunk(uint chunkIdx) {
             if (freeChunksCount > 0) {
-                var freeChunkIdx = freeChunks[--freeChunksCount];
-                ref var chunk = ref chunks[freeChunkIdx];
-                chunks[chunkIdx] = chunk;
-                #if FFS_ECS_DEBUG
-                if (freeChunkIdx != chunkIdx) {
-                    chunk = null;
-                }
-                #endif
+                ref var freeChunk = ref freeChunks[--freeChunksCount];
+                chunks[chunkIdx] = freeChunk;
+                freeChunk = null;
             } else {
                 chunks[chunkIdx] = new ulong[Const.ENTITIES_IN_CHUNK * maskLen];
             }
@@ -71,7 +66,9 @@ namespace FFS.Libraries.StaticEcs {
         
         [MethodImpl(AggressiveInlining)]
         public void FreeChunk(uint chunkIdx) {
-            freeChunks[Interlocked.Increment(ref freeChunksCount) - 1] = chunkIdx;
+            ref var chunk = ref chunks[chunkIdx];
+            freeChunks[Interlocked.Increment(ref freeChunksCount) - 1] = chunk;
+            chunk = null;
         }
         
         [MethodImpl(AggressiveInlining)]

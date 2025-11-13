@@ -1063,23 +1063,23 @@ namespace FFS.Libraries.StaticEcs {
                 chunk.loadedEntities[blockIdx] &= blockEntityInvMask;
                 ref var version = ref chunk.versions[chunkEntityIdx];
                 version = version == ushort.MaxValue ? Const.US1 : (ushort) (version + 1);
-
-                Interlocked.Decrement(ref chunk.loadedEntitiesCount);
                 
                 if (entitiesMask == 0) {
-                    if (chunk.ClearNotEmptyBit(blockIdx) == 0) {
-                        ref var cluster = ref clusters[chunk.clusterId];
+                    chunk.ClearNotEmptyBit(blockIdx);
+                }
 
-                        var taken = false;
-                        cluster.clusterLock.Enter(ref taken);
-                        #if FFS_ECS_DEBUG
-                        if (!taken) throw new StaticEcsException($"Failed to acquire cluster lock for cluster {chunk.clusterId}");
-                        #endif
-                        ModuleComponents.Value.bitMask.FreeChunk(chunkIdx);
-                        ModuleTags.Value.bitMask.FreeChunk(chunkIdx);
-                        RemoveLoadedChunkFromCluster(ref cluster, chunkIdx);
-                        cluster.clusterLock.Exit();
-                    }
+                if (Interlocked.Decrement(ref chunk.loadedEntitiesCount) == 0) {
+                    ref var cluster = ref clusters[chunk.clusterId];
+
+                    var taken = false;
+                    cluster.clusterLock.Enter(ref taken);
+                    #if FFS_ECS_DEBUG
+                    if (!taken) throw new StaticEcsException($"Failed to acquire cluster lock for cluster {chunk.clusterId}");
+                    #endif
+                    ModuleComponents.Value.bitMask.FreeChunk(chunkIdx);
+                    ModuleTags.Value.bitMask.FreeChunk(chunkIdx);
+                    RemoveLoadedChunkFromCluster(ref cluster, chunkIdx);
+                    cluster.clusterLock.Exit();
                 }
 
                 for (uint i = 0; i < queriesToUpdateOnDestroyCount; i++) {
