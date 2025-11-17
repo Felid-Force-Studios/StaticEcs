@@ -113,7 +113,7 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        private static ReadOnlySpan<ushort> HandleClustersRange(ReadOnlySpan<ushort> clusters) {
+        public static ReadOnlySpan<ushort> HandleClustersRange(ReadOnlySpan<ushort> clusters) {
             return clusters.Length == 0
                 ? new ReadOnlySpan<ushort>(Entities.Value.activeClusters, 0, Entities.Value.activeClustersCount)
                 : clusters;

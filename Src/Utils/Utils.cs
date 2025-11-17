@@ -40,38 +40,38 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption (Option.ArrayBoundsChecks, false)]
     [Il2CppEagerStaticClassConstruction]
     #endif
-    internal static class Const {
-        internal const ushort US1 = 1;
-        internal const int ENTITY_ID_OFFSET = 1;
+    public static class Const {
+        public const ushort US1 = 1;
+        public const int ENTITY_ID_OFFSET = 1;
         
-        internal const int BITS_PER_LONG = 64;
-        internal const int LONG_SHIFT = 6;
-        internal const int LONG_OFFSET_MASK = BITS_PER_LONG - 1;
+        public const int BITS_PER_LONG = 64;
+        public const int LONG_SHIFT = 6;
+        public const int LONG_OFFSET_MASK = BITS_PER_LONG - 1;
         
-        internal const int ENTITIES_IN_BLOCK = BITS_PER_LONG;
-        internal const int ENTITIES_IN_BLOCK_SHIFT = LONG_SHIFT;
-        internal const int ENTITIES_IN_BLOCK_OFFSET_MASK = ENTITIES_IN_BLOCK - 1;
+        public const int ENTITIES_IN_BLOCK = BITS_PER_LONG;
+        public const int ENTITIES_IN_BLOCK_SHIFT = LONG_SHIFT;
+        public const int ENTITIES_IN_BLOCK_OFFSET_MASK = ENTITIES_IN_BLOCK - 1;
         
-        internal const int BLOCK_IN_CHUNK = 64;
-        internal const int BLOCK_IN_CHUNK_SHIFT = 6;
-        internal const int BLOCK_IN_CHUNK_OFFSET_MASK = BLOCK_IN_CHUNK - 1;
+        public const int BLOCK_IN_CHUNK = 64;
+        public const int BLOCK_IN_CHUNK_SHIFT = 6;
+        public const int BLOCK_IN_CHUNK_OFFSET_MASK = BLOCK_IN_CHUNK - 1;
         
-        internal const int ENTITIES_IN_CHUNK = ENTITIES_IN_BLOCK * BLOCK_IN_CHUNK;
-        internal const int ENTITIES_IN_CHUNK_SHIFT = ENTITIES_IN_BLOCK_SHIFT + BLOCK_IN_CHUNK_SHIFT;
-        internal const int ENTITIES_IN_CHUNK_OFFSET_MASK = ENTITIES_IN_CHUNK - 1;
+        public const int ENTITIES_IN_CHUNK = ENTITIES_IN_BLOCK * BLOCK_IN_CHUNK;
+        public const int ENTITIES_IN_CHUNK_SHIFT = ENTITIES_IN_BLOCK_SHIFT + BLOCK_IN_CHUNK_SHIFT;
+        public const int ENTITIES_IN_CHUNK_OFFSET_MASK = ENTITIES_IN_CHUNK - 1;
 
-        internal const int DATA_BLOCK_SIZE = 256;
-        internal const int DATA_BLOCK_SIZE_FOR_THREADS = 512;
-        internal const int DATA_BLOCK_IN_CHUNK_FOR_THREADS = 8;
-        internal const int DATA_QUERY_SHIFT_FOR_THREADS = 3;
-        internal const int JOB_SIZE = 8;
-        internal const int DATA_SHIFT = 8;
-        internal const int DATA_ENTITY_MASK = DATA_BLOCK_SIZE - 1;
-        internal const int DATA_QUERY_SHIFT = DATA_SHIFT - BLOCK_IN_CHUNK_SHIFT;
-        internal const int DATA_BLOCK_MASK = ENTITIES_IN_CHUNK / DATA_BLOCK_SIZE - 1;
-        internal const int DATA_BLOCKS_IN_CHUNK = ENTITIES_IN_CHUNK / DATA_BLOCK_SIZE;
+        public const int DATA_BLOCK_SIZE = 256;
+        public const int DATA_BLOCK_SIZE_FOR_THREADS = 512;
+        public const int DATA_BLOCK_IN_CHUNK_FOR_THREADS = 8;
+        public const int DATA_QUERY_SHIFT_FOR_THREADS = 3;
+        public const int JOB_SIZE = 8;
+        public const int DATA_SHIFT = 8;
+        public const int DATA_ENTITY_MASK = DATA_BLOCK_SIZE - 1;
+        public const int DATA_QUERY_SHIFT = DATA_SHIFT - BLOCK_IN_CHUNK_SHIFT;
+        public const int DATA_BLOCK_MASK = ENTITIES_IN_CHUNK / DATA_BLOCK_SIZE - 1;
+        public const int DATA_BLOCKS_IN_CHUNK = ENTITIES_IN_CHUNK / DATA_BLOCK_SIZE;
         
-        internal const int MAX_NESTED_QUERY = 4;
+        public const int MAX_NESTED_QUERY = 4;
         
         internal static readonly ulong[] DataMasks = CreateDataMasks();
 

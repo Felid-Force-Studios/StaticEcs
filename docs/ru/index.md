@@ -4,7 +4,7 @@ has_toc: false
 parent: Main page
 ---
 
-![Version](https://img.shields.io/badge/version-1.2.10-blue.svg?style=for-the-badge)  
+![Version](https://img.shields.io/badge/version-1.2.11-blue.svg?style=for-the-badge)  
 
 ___
 
@@ -23,7 +23,8 @@ ___
 - Бесплатные абстракции
 - Мощный механизм запросов
 - Минимум болерплейта
-- Совместимость с Unity и другими C# движками
+- Совместимость с Unity с поддержкой Il2Cpp и [Burst](https://github.com/Felid-Force-Studios/StaticEcs-Unity?tab=readme-ov-file#templates)
+- Совместимость с другими C# движками
 - Совместимость с Native AOT
 
 ## Оглавление

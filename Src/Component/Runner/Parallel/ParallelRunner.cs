@@ -19,7 +19,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     #endif
     public abstract class AbstractParallelTask {
-        public abstract void Run(uint from, uint to);
+        public abstract void Run(uint from, uint to, int worker);
     }
     
     #if ENABLE_IL2CPP
@@ -37,7 +37,7 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
     [Il2CppEagerStaticClassConstruction]
     #endif
-    internal static class ParallelRunner<WorldType> where WorldType : struct, IWorldType {
+    public static class ParallelRunner<WorldType> where WorldType : struct, IWorldType {
         private static Worker[] _workers;
         private static AbstractParallelTask _task;
         private static int _threadsCount;
@@ -132,7 +132,7 @@ namespace FFS.Libraries.StaticEcs {
                 worker.HasWork.Set();
             }
 
-            _task.Run(from, count);
+            _task.Run(from, count, _workers.Length);
             for (uint i = 0, iMax = workersCount - 1; i < iMax; i++) {
                 _workers[i].WorkDone.WaitOne();
             }
@@ -158,7 +158,8 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         static void ThreadFunction(object raw) {
-            ref var worker = ref _workers[(int) raw];
+            var workerId = (int) raw;
+            ref var worker = ref _workers[workerId];
             while (!_disposing) {
                 try {
                     worker.HasWork.WaitOne();
@@ -167,7 +168,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
 
                     worker.HasWork.Reset();
-                    _task.Run(worker.FromIndex, worker.BeforeIndex);
+                    _task.Run(worker.FromIndex, worker.BeforeIndex, workerId);
                     worker.WorkDone.Set();
                 }
                 catch (Exception ex) {

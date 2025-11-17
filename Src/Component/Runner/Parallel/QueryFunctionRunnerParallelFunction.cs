@@ -73,7 +73,7 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        public override void Run(uint from, uint to) {
+        public override void Run(uint from, uint to, int worker) {
             #if NET6_0_OR_GREATER
             ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
             #else
@@ -246,7 +246,7 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        public override void Run(uint from, uint to) {
+        public override void Run(uint from, uint to, int worker) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             
             #if NET6_0_OR_GREATER
@@ -459,7 +459,7 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        public override void Run(uint from, uint to) {
+        public override void Run(uint from, uint to, int worker) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             
@@ -684,7 +684,7 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        public override void Run(uint from, uint to) {
+        public override void Run(uint from, uint to, int worker) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;
@@ -921,7 +921,7 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        public override void Run(uint from, uint to) {
+        public override void Run(uint from, uint to, int worker) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;
@@ -1170,7 +1170,7 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        public override void Run(uint from, uint to) {
+        public override void Run(uint from, uint to, int worker) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;
@@ -1432,7 +1432,7 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        public override void Run(uint from, uint to) {
+        public override void Run(uint from, uint to, int worker) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;
@@ -1706,7 +1706,7 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        public override void Run(uint from, uint to) {
+        public override void Run(uint from, uint to, int worker) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;
@@ -1992,7 +1992,7 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
-        public override void Run(uint from, uint to) {
+        public override void Run(uint from, uint to, int worker) {
             ref var c1 = ref World<WorldType>.Components<C1>.Value;
             ref var c2 = ref World<WorldType>.Components<C2>.Value;
             ref var c3 = ref World<WorldType>.Components<C3>.Value;

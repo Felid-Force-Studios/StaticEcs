@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-1.2.10-blue.svg?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.2.11-blue.svg?style=for-the-badge)
 
 ### LANGUAGE
 [RU](./README_RU.md)
@@ -22,7 +22,8 @@ ___
 - Free abstractions
 - Powerful query engine
 - No boilerplate
-- Compatible with Unity and other C# engines
+- Compatibility with Unity with support for Il2Cpp and [Burst](https://github.com/Felid-Force-Studios/StaticEcs-Unity?tab=readme-ov-file#templates)
+- Compatibility with other C# engines
 - Compatible with Native AOT
 
 ## Table of Contents
