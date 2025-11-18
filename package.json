@@ -10,7 +10,7 @@
         "url": "https://github.com/Felid-Force-Studios/StaticEcs.git"
     },
     "displayName": "Static ECS",
-    "version": "1.2.11",
+    "version": "1.2.12",
     "unity": "2022.3",
     "description": "C# Entity Component System Framework",
     "keywords":

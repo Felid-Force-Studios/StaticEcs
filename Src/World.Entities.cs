@@ -905,7 +905,7 @@ namespace FFS.Libraries.StaticEcs {
                 var blockEntityIdx = chunkEntityIdx & Const.ENTITIES_IN_BLOCK_OFFSET_MASK;
 
                 if (chunkIdx >= chunks.Length) {
-                    Resize(chunkIdx.Normalize(4));
+                    Resize((chunkIdx + 1).Normalize(4));
                 }
 
                 ref var chunk = ref chunks[chunkIdx];
@@ -1304,7 +1304,7 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
                 
                 if (chunkIdx >= chunks.Length) {
-                    Resize(chunkIdx.Normalize(4));
+                    Resize((chunkIdx + 1).Normalize(4));
                 }
                 
                 ref var chunk = ref chunks[chunkIdx];
