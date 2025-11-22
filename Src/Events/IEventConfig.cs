@@ -14,6 +14,7 @@ namespace FFS.Libraries.StaticEcs {
         where WorldType : struct, IWorldType {
         public Guid Id();
         public byte Version();
+        public bool IsClearable();
         public BinaryWriter<T> Writer();
         public BinaryReader<T> Reader();
         public EcsEventMigrationReader<T, WorldType> MigrationReader();
@@ -29,6 +30,8 @@ namespace FFS.Libraries.StaticEcs {
 
         public virtual byte Version() => 0;
 
+        public virtual bool IsClearable() => true;
+
         public virtual BinaryWriter<T> Writer() => null;
 
         public virtual BinaryReader<T> Reader() => null;
@@ -43,6 +46,7 @@ namespace FFS.Libraries.StaticEcs {
         where WorldType : struct, IWorldType {
         public Guid IdValue;
         public byte VersionValue;
+        public bool Clearable;
         public BinaryWriter<T> WriterValue;
         public BinaryReader<T> ReaderValue;
         public EcsEventMigrationReader<T, WorldType> MigrationReaderValue;
@@ -53,6 +57,7 @@ namespace FFS.Libraries.StaticEcs {
         public ValueEventConfig(
             Guid idValue = default,
             byte version = default,
+            bool clearable = true,
             BinaryWriter<T> writer = null,
             BinaryReader<T> reader = null,
             EcsEventMigrationReader<T, WorldType> migrationReaderValue = null,
@@ -60,6 +65,7 @@ namespace FFS.Libraries.StaticEcs {
         ) {
             IdValue = idValue;
             VersionValue = version;
+            Clearable = clearable;
             WriterValue = writer;
             ReaderValue = reader;
             MigrationReaderValue = migrationReaderValue;
@@ -73,6 +79,7 @@ namespace FFS.Libraries.StaticEcs {
         public void CopyFrom(IEventConfig<T, WorldType> config) {
             IdValue = config.Id();
             VersionValue = config.Version();
+            Clearable = config.IsClearable();
             WriterValue = config.Writer();
             ReaderValue = config.Reader();
             MigrationReaderValue = config.MigrationReader();
@@ -81,6 +88,8 @@ namespace FFS.Libraries.StaticEcs {
         public Guid Id() => IdValue;
 
         public byte Version() => VersionValue;
+
+        public bool IsClearable() => Clearable;
 
         public BinaryWriter<T> Writer() => WriterValue;
 

@@ -60,16 +60,17 @@ namespace FFS.Libraries.StaticEcs {
             public static bool Send<E>(E value = default) where E : struct, IEvent {
                 #if FFS_ECS_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Send<{typeof(E)}> ] Ecs not initialized");
+                if (!Pool<E>.Value.initialized) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Send<{typeof(E)}> ] Event type {typeof(E)} not registered");
                 if (MultiThreadActive) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Send<{typeof(E)}> ] this operation is not supported in multithreaded mode");
                 #endif
-                return Pool<E>.Value.Initialized && Pool<E>.Value.Add(value);
+                return Pool<E>.Value.Add(value);
             }
 
             [MethodImpl(AggressiveInlining)]
             public static EventReceiver<WorldType, E> RegisterEventReceiver<E>() where E : struct, IEvent {
                 #if FFS_ECS_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.RegisterEventReceiver<{typeof(E)}> ] Ecs not initialized");
-                if (!Pool<E>.Value.Initialized) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.RegisterEventReceiver<{typeof(E)}> ] Event type {typeof(E)} not registered");
+                if (!Pool<E>.Value.initialized) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.RegisterEventReceiver<{typeof(E)}> ] Event type {typeof(E)} not registered");
                 #endif
                 return Pool<E>.Value.CreateReceiver();
             }
@@ -78,10 +79,9 @@ namespace FFS.Libraries.StaticEcs {
             public static void DeleteEventReceiver<E>(ref EventReceiver<WorldType, E> receiver) where E : struct, IEvent {
                 #if FFS_ECS_DEBUG
                 if (!IsWorldInitialized()) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.DeleteEventReceiver<{typeof(E)}> ] Ecs not initialized");
+                if (!Pool<E>.Value.initialized) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.DeleteEventReceiver<{typeof(E)}> ] Event type {typeof(E)} not registered");
                 #endif
-                if (Pool<E>.Value.Initialized) {
-                    Pool<E>.Value.DeleteReceiver(ref receiver);
-                }
+                Pool<E>.Value.DeleteReceiver(ref receiver);
             }
 
             #if FFS_ECS_EVENTS
@@ -139,17 +139,17 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public static void RegisterEventType<T>(IEventConfig<T, WorldType> config = null, uint baseCapacity = 64) where T : struct, IEvent {
+            public static void RegisterEventType<T>(IEventConfig<T, WorldType> config = null) where T : struct, IEvent {
                 #if FFS_ECS_DEBUG
                 if (Status != WorldStatus.Created) {
                     throw new StaticEcsException($"Events<{typeof(WorldType)}>, Method: RegisterEventType<{typeof(T)}>, World not initialized");
                 }
                 #endif
 
-                if (Pool<T>.Value.Initialized) throw new StaticEcsException($"Event {typeof(T)} already registered");
+                if (Pool<T>.Value.initialized) throw new StaticEcsException($"Event {typeof(T)} already registered");
                 
                 config ??= DefaultEventConfig<T, WorldType>.Default;
-                Pool<T>.Value.Create(_poolsCount, config, baseCapacity);
+                Pool<T>.Value.Create(_poolsCount, config);
 
                 if (_poolsCount == _pools.Length) {
                     Array.Resize(ref _pools, _poolsCount << 1);

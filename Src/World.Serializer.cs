@@ -523,7 +523,6 @@ namespace FFS.Libraries.StaticEcs {
                 ModuleComponents.Serializer.Value.ReadWorld(ref reader);
                 ModuleTags.Serializer.Value.ReadWorld(ref reader);
                 if (readEvents) {
-                    Events.Clear();
                     Events.Serializer.Value.Read(ref reader);
                 }
                 

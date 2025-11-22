@@ -167,6 +167,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 [MethodImpl(AggressiveInlining)]
                 internal void Read(ref BinaryPackReader reader) {
+                    Clear();
                     _tempDeletedPoolIds.Clear();
                     
                     var poolsCount = reader.ReadUshort();

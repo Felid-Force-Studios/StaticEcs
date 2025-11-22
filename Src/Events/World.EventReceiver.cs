@@ -7,6 +7,7 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -23,17 +24,24 @@ namespace FFS.Libraries.StaticEcs {
         internal int _id;
 
         [MethodImpl(AggressiveInlining)]
-        internal EventReceiver(int id) {
-            _id = id;
+        internal EventReceiver(int id) => _id = id;
+        
+        [MethodImpl(AggressiveInlining)]
+        public void ReadAll(World<WorldType>.EventAction<T> action) {
+            #if FFS_ECS_DEBUG
+            if (_id < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.ReadAll ] receiver is deleted");
+            if (World<WorldType>.MultiThreadActive) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.ReadAll ] this operation is not supported in multithreaded mode");
+            #endif
+            World<WorldType>.Events.Pool<T>.Value.ReadAll(_id, action);
         }
-            
+
         [MethodImpl(AggressiveInlining)]
         public void MarkAsReadAll() {
             #if FFS_ECS_DEBUG
             if (_id < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.MarkAsReadAll ] receiver is deleted");
             if (World<WorldType>.MultiThreadActive) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.MarkAsReadAl ] this operation is not supported in multithreaded mode");
             #endif
-            World<WorldType>.Events.Pool<T>.Value.MarkAsReadAll(_id);
+            World<WorldType>.Events.Pool<T>.Value.ReadAll(_id);
         }
             
         [MethodImpl(AggressiveInlining)]
@@ -42,7 +50,7 @@ namespace FFS.Libraries.StaticEcs {
             if (_id < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.SuppressAll ] receiver is deleted");
             if (World<WorldType>.MultiThreadActive) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.EventReceiver<{typeof(T)}>.SuppressAll ] this operation is not supported in multithreaded mode");
             #endif
-            World<WorldType>.Events.Pool<T>.Value.ClearEvents(_id);
+            World<WorldType>.Events.Pool<T>.Value.SuppressAll(_id);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -54,6 +62,18 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             return new World<WorldType>.EventIterator<T>(_id);
         }
+    }
+    
+    #if ENABLE_IL2CPP
+   [Il2CppSetOption(Option.NullChecks, false)]
+   [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
+    public static class EventReceiverSerializer {
+        [MethodImpl(AggressiveInlining)]
+        public static void WriteEventReceiver<WorldType, T>(this ref BinaryPackWriter writer, in EventReceiver<WorldType, T> value) where WorldType : struct, IWorldType where T : struct, IEvent => writer.WriteInt(value._id);
+
+        [MethodImpl(AggressiveInlining)]
+        public static EventReceiver<WorldType, T> ReadEventReceiver<WorldType, T>(this ref BinaryPackReader reader) where WorldType : struct, IWorldType where T : struct, IEvent => new(reader.ReadInt());
     }
     
     #if ENABLE_IL2CPP
@@ -83,13 +103,11 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public bool MoveNext() => Events.Pool<T>.Value.ShiftReceiverOffset(_id, _current._idx, out _current._idx);
+            public bool MoveNext() => Events.Pool<T>.Value.ReadOne(_id, _current._eventIdx, out _current._eventIdx);
             
             [MethodImpl(AggressiveInlining)]
             public void Dispose() {
-                if (_current._idx >= 0) {
-                    Events.Pool<T>.Value.MarkAsRead(_current._idx);
-                }
+                Events.Pool<T>.Value.ReadOne(_id, _current._eventIdx, out var _);
                 #if FFS_ECS_DEBUG
                 Events.Pool<T>.Value.AddBlocker(-1);
                 #endif

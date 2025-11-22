@@ -44,7 +44,7 @@ namespace FFS.Libraries.StaticEcs {
 
         internal int Last();
 
-        internal short Version(int idx);
+        internal ushort Version(int idx);
 
         internal void PutRaw(int idx, IEvent value);
 
@@ -100,31 +100,38 @@ namespace FFS.Libraries.StaticEcs {
         public bool Add() => World<WorldType>.Events.Pool<T>.Value.Add();
 
         [MethodImpl(AggressiveInlining)]
-        void IEventPoolWrapper.Del(int idx) => World<WorldType>.Events.Pool<T>.Value.Del(idx, true);
+        void IEventPoolWrapper.Del(int idx) => World<WorldType>.Events.Pool<T>.Value.SuppressOne(idx);
 
         [MethodImpl(AggressiveInlining)]
-        short IEventPoolWrapper.Version(int idx) => World<WorldType>.Events.Pool<T>.Value._versions[idx];
+        ushort IEventPoolWrapper.Version(int idx) => World<WorldType>.Events.Pool<T>.Value.Version(idx);
 
         [MethodImpl(AggressiveInlining)]
-        bool IEventPoolWrapper.IsDeleted(int idx) => World<WorldType>.Events.Pool<T>.Value._versions[idx] <= 0;
+        bool IEventPoolWrapper.IsDeleted(int idx) => World<WorldType>.Events.Pool<T>.Value.UnreadCount(idx) == 0;
 
         [MethodImpl(AggressiveInlining)]
-        int IEventPoolWrapper.UnreadCount(int idx) => World<WorldType>.Events.Pool<T>.Value._dataReceiverUnreadCount[idx];
+        int IEventPoolWrapper.UnreadCount(int idx) => World<WorldType>.Events.Pool<T>.Value.UnreadCount(idx);
 
         [MethodImpl(AggressiveInlining)]
-        int IEventPoolWrapper.Last() => World<WorldType>.Events.Pool<T>.Value._dataCount - 1;
+        int IEventPoolWrapper.Last() => World<WorldType>.Events.Pool<T>.Value.Last();
 
         [MethodImpl(AggressiveInlining)]
-        int IEventPoolWrapper.NotDeletedCount() => World<WorldType>.Events.Pool<T>.Value._notDeletedCount;
+        int IEventPoolWrapper.NotDeletedCount() => World<WorldType>.Events.Pool<T>.Value.NotDeletedCount();
 
         [MethodImpl(AggressiveInlining)]
-        int IEventPoolWrapper.Capacity() => World<WorldType>.Events.Pool<T>.Value._data.Length;
+        int IEventPoolWrapper.Capacity() => World<WorldType>.Events.Pool<T>.Value.Capacity();
 
         [MethodImpl(AggressiveInlining)]
-        int IEventPoolWrapper.ReceiversCount() => World<WorldType>.Events.Pool<T>.Value._receiversCount - World<WorldType>.Events.Pool<T>.Value._deletedReceiversCount;
-
-        [MethodImpl(AggressiveInlining)]
-        internal void Del(int idx) => World<WorldType>.Events.Pool<T>.Value.Del(idx, true);
+        int IEventPoolWrapper.ReceiversCount() => World<WorldType>.Events.Pool<T>.Value.receiversCount - World<WorldType>.Events.Pool<T>.Value.deletedReceiversCount;
+    }
+    
+    
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, false)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+    #endif
+    internal struct ReceiverData {
+        internal ulong Sequence;
+        internal bool Deleted;
     }
     
     #if ENABLE_IL2CPP
@@ -133,7 +140,21 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     public abstract partial class World<WorldType> {
         
+        public delegate void EventAction<T>(Event<T> eventValue) where T : struct, IEvent;
+        
         public abstract partial class Events {
+            
+            internal const int MAX_PAGES = 256;
+            internal const int PAGES_OFFSET_MASK = MAX_PAGES - 1;
+            internal const int EVENTS_PER_PAGE = 512;
+            internal const int EVENT_PAGE_SHIFT = 9;
+            internal const int EVENT_PAGE_OFFSET_MASK = EVENTS_PER_PAGE - 1;
+            internal const int MASKS_IN_PAGE = EVENTS_PER_PAGE / Const.BITS_PER_LONG;
+            internal const int EVENT_IN_PAGE_MASK_SHIFT = Const.LONG_SHIFT;
+            internal const int EVENT_IN_PAGE_OFFSET_MASK = Const.LONG_OFFSET_MASK;
+            internal const int MAX_EVENTS = MAX_PAGES * EVENTS_PER_PAGE;
+            internal const int MAX_EVENTS_OFFSET_MASK = MAX_EVENTS - 1;
+
             #if ENABLE_IL2CPP
             [Il2CppSetOption(Option.NullChecks, false)]
             [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
@@ -141,38 +162,86 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             internal partial struct Pool<T> where T : struct, IEvent {
                 internal static Pool<T> Value;
-                internal T[] _data;
-                internal short[] _versions;
-                internal int[] _dataReceiverUnreadCount;
-                internal int[] _dataReceiverOffsets;
-                internal ushort[] _deletedReceivers;
-                internal int _dataCount;
-                internal int _notDeletedCount;
-                internal int _dataFirstIdx;
-                internal ushort _deletedReceiversCount;
-                internal ushort _receiversCount;
+                
+                #if ENABLE_IL2CPP
+                [Il2CppSetOption(Option.NullChecks, false)]
+                [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+                #endif
+                internal struct Page {
+                    internal T[] Data;
+                    internal ulong[] Mask;
+                    internal ushort[] UnreadReceiversCount;
+                    internal ushort Version;
+
+                    [MethodImpl(AggressiveInlining)]
+                    public void Free(ref FreePage freePage) {
+                        freePage.Data = Data;
+                        freePage.Mask = Mask;
+                        freePage.UnreadReceiversCount = UnreadReceiversCount;
+                        Data = null;
+                        Mask = null;
+                        UnreadReceiversCount = null;
+                        Version++;
+                    }
+                    
+                    [MethodImpl(AggressiveInlining)]
+                    public void FromFree(ref FreePage freePage) {
+                        Data = freePage.Data;
+                        Mask = freePage.Mask;
+                        UnreadReceiversCount = freePage.UnreadReceiversCount;
+                        freePage = default;
+                    }
+                    
+                    [MethodImpl(AggressiveInlining)]
+                    public void InitNew() {
+                        Data = new T[EVENTS_PER_PAGE];
+                        Mask = new ulong[MASKS_IN_PAGE];
+                        UnreadReceiversCount = new ushort[EVENTS_PER_PAGE];
+                    }
+                }
+                
+                #if ENABLE_IL2CPP
+                [Il2CppSetOption(Option.NullChecks, false)]
+                [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
+                #endif
+                internal struct FreePage {
+                    internal T[] Data;
+                    internal ulong[] Mask;
+                    internal ushort[] UnreadReceiversCount;
+                }
+                
+                internal Page[] pages;
+                internal FreePage[] freePages;
+                internal ReceiverData[] receivers;
+                
+                internal ulong sequence;
+                internal ushort maxPagesCount;
+                internal ushort freePagesCount;
+                internal ushort receiversCount;
+                internal ushort deletedReceiversCount;
                 internal ushort Id;
-                internal bool Initialized;
+                internal bool clearable;
+                internal bool initialized;
                 
                 #if FFS_ECS_DEBUG
                 private int _blockers;
                 #endif
 
                 [MethodImpl(AggressiveInlining)]
-                internal void Create(ushort id, IEventConfig<T, WorldType> config, uint baseCapacity) {
+                internal void Create(ushort id, IEventConfig<T, WorldType> config) {
                     Id = id;
-                    _data = new T[baseCapacity];
-                    _versions = new short[baseCapacity];
-                    _dataReceiverUnreadCount = new int[baseCapacity];
-                    _dataFirstIdx = 0;
-                    _dataCount = 0;
-                    _dataReceiverOffsets = new int[8];
-                    _deletedReceivers = new ushort[8];
-                    _receiversCount = 0;
-                    _deletedReceiversCount = 0;
-                    _notDeletedCount = 0;
+                    pages = new Page[MAX_PAGES];
+                    freePages = new FreePage[MAX_PAGES];
+                    receivers = new ReceiverData[32];
+
+                    maxPagesCount = 0;
+                    freePagesCount = 0;
+                    receiversCount = 0;
+                    deletedReceiversCount = 0;
+                    sequence = 0;
+                    clearable = config.IsClearable();
                     Serializer.Value.Create(config);
-                    Initialized = true;
+                    initialized = true;
                 }
 
                 [MethodImpl(AggressiveInlining)]
@@ -180,24 +249,24 @@ namespace FFS.Libraries.StaticEcs {
                     #if FFS_ECS_DEBUG
                     if (_blockers > 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Pool<{typeof(T)}>.CreateReceiver ] event pool cannot be changed, it is in read-only mode");
                     #endif
-                    for (var i = _dataFirstIdx; i < _dataCount; i++) {
-                        _dataReceiverUnreadCount[i]++;
-                    }
-                    
-                    if (_deletedReceiversCount > 0) {
-                        var receiver = _deletedReceivers[--_deletedReceiversCount];
-                        _dataReceiverOffsets[receiver] = _dataFirstIdx;
-                        return new EventReceiver<WorldType, T>(receiver);
-                    }
-                    
-                    if (_receiversCount == _dataReceiverOffsets.Length) {
-                        Array.Resize(ref _dataReceiverOffsets, _receiversCount << 1);
-                        for (var i = _receiversCount; i < _dataReceiverOffsets.Length; i++) {
-                            _dataReceiverOffsets[i] = _dataFirstIdx;
+                    if (deletedReceiversCount > 0) {
+                        for (int i = 0; i < receiversCount; i++) {
+                            ref var receiver = ref receivers[i];
+                            if (receiver.Deleted) {
+                                deletedReceiversCount--;
+                                receiver.Deleted = false;
+                                receiver.Sequence = sequence;
+                                return new EventReceiver<WorldType, T>(i);
+                            }
                         }
                     }
-                    
-                    return new EventReceiver<WorldType, T>(_receiversCount++);
+
+                    if (receiversCount == receivers.Length) {
+                        Array.Resize(ref receivers, receiversCount << 1);
+                    }
+
+                    receivers[receiversCount].Sequence = sequence;
+                    return new EventReceiver<WorldType, T>(receiversCount++);
                 }
                 
                 [MethodImpl(AggressiveInlining)]
@@ -205,37 +274,32 @@ namespace FFS.Libraries.StaticEcs {
                     #if FFS_ECS_DEBUG
                     if (_blockers > 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Pool<{typeof(T)}>.DeleteReceiver ] event pool cannot be changed, it is in read-only mode");
                     #endif
-                    if (_deletedReceiversCount == _deletedReceivers.Length) {
-                        Array.Resize(ref _deletedReceivers, _deletedReceiversCount << 1);
+                    ref var receiverData = ref receivers[receiver._id];
+                    if (!receiverData.Deleted) {
+                        ReadAll(receiver._id);
+                        deletedReceiversCount++;
+                        receiverData.Deleted = true;
+                        receiver._id = -1;
                     }
-                    
-                    MarkAsReadAll(receiver._id);
-
-                    _dataReceiverOffsets[receiver._id] = -1;
-                    _deletedReceivers[_deletedReceiversCount++] = (ushort) receiver._id;
-                    receiver._id = -1;
                 }
 
                 [MethodImpl(AggressiveInlining)]
                 internal void Destroy() {
-                    Initialized = false;
+                    initialized = false;
                     Serializer.Value.Destroy();
-                    _dataReceiverUnreadCount = default;
-                    _deletedReceiversCount = default;
-                    _dataReceiverOffsets = default;
-                    _deletedReceivers = default;
-                    _notDeletedCount = default;
-                    _receiversCount = default;
-                    _dataFirstIdx = default;
-                    _dataCount = default;
-                    _versions = default;
-                    _data = default;
+                    freePages = default;
+                    pages = default;
+                    maxPagesCount = default;
+                    freePagesCount = default;
+                    receiversCount = default;
+                    sequence = default;
+                    clearable = default;
                     Id = default;
                 }
                 
                 [MethodImpl(AggressiveInlining)]
                 internal ref T Get(int idx) {
-                    return ref _data[idx];
+                    return ref pages[idx >> EVENT_PAGE_SHIFT].Data[idx & EVENT_PAGE_OFFSET_MASK];
                 }
 
                 [MethodImpl(AggressiveInlining)]
@@ -243,29 +307,34 @@ namespace FFS.Libraries.StaticEcs {
                     #if FFS_ECS_DEBUG
                     if (_blockers > 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Pool<{typeof(T)}>.Add ] event pool cannot be changed, it is in read-only mode");
                     #endif
-                    if (_receiversCount > 0) {
-                        _notDeletedCount++;
-                        if (_dataCount == _data.Length) {
-                            Array.Resize(ref _data, _dataCount << 1);
-                            Array.Resize(ref _versions, _dataCount << 1);
-                            Array.Resize(ref _dataReceiverUnreadCount, _dataCount << 1);
+                    if (receiversCount > deletedReceiversCount) {
+                        var pageIdx = (uint) ((sequence >> EVENT_PAGE_SHIFT) & PAGES_OFFSET_MASK);
+                        var inPageIdx = (uint) (sequence & EVENT_PAGE_OFFSET_MASK);
+                        var maskIdx = (byte) (inPageIdx >> EVENT_IN_PAGE_MASK_SHIFT);
+                        var inMaskBit = (byte) (inPageIdx & EVENT_IN_PAGE_OFFSET_MASK);
+                        
+                        ref var page = ref pages[pageIdx];
+                        if (page.Data == null) {
+                            if (freePagesCount > 0) {
+                                page.FromFree(ref freePages[--freePagesCount]);
+                            } else {
+                                page.InitNew();
+                                maxPagesCount++;
+                            }
                         }
-                        _data[_dataCount] = value;
-                        ref var version = ref _versions[_dataCount];
-                        version *= -1;
-                        if (version == short.MaxValue) {
-                            version = 0;
-                        }
-                        version++;
-                        _dataReceiverUnreadCount[_dataCount] = _receiversCount;
+
+                        page.Data[inPageIdx] = value;
+                        page.Mask[maskIdx] |= 1UL << inMaskBit;
+                        page.UnreadReceiversCount[inPageIdx] = receiversCount;
+                        sequence++;
+
                         #if FFS_ECS_EVENTS
                         if (_debugEventListeners != null) {
                             foreach (var listener in _debugEventListeners) {
-                                listener.OnEventSent(new Event<T>(_dataCount));
+                                listener.OnEventSent(new Event<T>((int) ((pageIdx << EVENT_PAGE_SHIFT) + inPageIdx)));
                             }
                         }
                         #endif
-                        _dataCount++;
                         return true;
                     }
 
@@ -273,53 +342,49 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 
                 [MethodImpl(AggressiveInlining)]
-                internal bool Del(int idx, bool suppressed) {
-                    if (_versions[idx] > 0) {
-                        #if FFS_ECS_EVENTS
-                        if (_debugEventListeners != null) {
-                            foreach (var listener in _debugEventListeners) {
-                                if (suppressed) {
-                                    listener.OnEventSuppress(new Event<T>(idx));
-                                } else {
-                                    listener.OnEventReadAll(new Event<T>(idx));
+                internal bool ReadOne(int receiverId, int previous, out int next) {
+                    ref var receiver = ref receivers[receiverId];
+
+                    if (previous != -1) {
+                        var pageIdx = (uint) (previous >> EVENT_PAGE_SHIFT);
+                        var inPageIdx = (uint) (previous & EVENT_PAGE_OFFSET_MASK);
+                        var maskIdx = (byte) (inPageIdx >> EVENT_IN_PAGE_MASK_SHIFT);
+                        var inMaskBit = (byte) (inPageIdx & EVENT_IN_PAGE_OFFSET_MASK);
+                        
+                        ref var page = ref pages[pageIdx];
+                        ref var unreadCount = ref page.UnreadReceiversCount[inPageIdx];
+                        if (unreadCount != 0) {
+                            unreadCount--;
+                            if (unreadCount == 0) {
+                                page.Mask[maskIdx] &= ~(1UL << inMaskBit);
+                                #if FFS_ECS_EVENTS
+                                if (_debugEventListeners != null) {
+                                    foreach (var listener in _debugEventListeners) {
+                                        listener.OnEventReadAll(new Event<T>(previous));
+                                    }
+                                }
+                                #endif
+                                if (clearable) {
+                                    page.Data[inPageIdx] = default;
+                                }
+
+                                if (inPageIdx == EVENT_PAGE_OFFSET_MASK) {
+                                    #if FFS_ECS_DEBUG
+                                    if (freePagesCount + 1 >= freePages.Length) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events<{typeof(T)}> ] Active events buffer overflow, maximum {MAX_EVENTS} events");
+                                    #endif
+                                    page.Free(ref freePages[freePagesCount++]);
                                 }
                             }
                         }
-                        #endif
-                        _notDeletedCount--;
-                        _data[idx] = default;
-                        _versions[idx] *= -1;
-                        _dataReceiverUnreadCount[idx] = 0;
-                    
-                        if (idx == _dataCount - 1) {
-                            _dataCount--;
-                            return TryDropOffsets();
-                        }
-
-                        if (_dataFirstIdx == idx) {
-                            while (_versions[idx] <= 0 && idx < _dataCount) {
-                                _dataFirstIdx++;
-                                idx++;
-                            }
-                        
-                            return TryDropOffsets();
-                        }
                     }
 
-                    return false;
-                }
-                
-                [MethodImpl(AggressiveInlining)]
-                internal bool ShiftReceiverOffset(int receiverId, int previous, out int next) {
-                    if (previous >= 0 && MarkAsRead(previous)) {
-                        next = -1;
-                        return false;
-                    }
-                    
-                    ref var offset = ref _dataReceiverOffsets[receiverId];
-                    for (; offset < _dataCount; offset++) {
-                        if (_versions[offset] > 0) {
-                            next = offset++;
+                    while (receiver.Sequence != sequence) {
+                        next = (int) (receiver.Sequence++ & MAX_EVENTS_OFFSET_MASK);
+                        var pageIdx = (uint) (next >> EVENT_PAGE_SHIFT);
+                        var inPageIdx = (uint) (next & EVENT_PAGE_OFFSET_MASK);
+                        var maskIdx = (byte) (inPageIdx >> EVENT_IN_PAGE_MASK_SHIFT);
+                        var inMaskBit = (byte) (inPageIdx & EVENT_IN_PAGE_OFFSET_MASK);
+                        if ((pages[pageIdx].Mask[maskIdx] & (1UL << inMaskBit)) != 0) {
                             return true;
                         }
                     }
@@ -329,69 +394,238 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 
                 [MethodImpl(AggressiveInlining)]
-                internal void MarkAsReadAll(int receiverId) {
-                    ref var offset = ref _dataReceiverOffsets[receiverId];
-                    for (; offset < _dataCount; offset++) {
-                        if (_versions[offset] > 0 && MarkAsRead(offset)) {
-                            return;
+                internal void ReadAll(int receiverId, EventAction<T> action) {
+                    ref var receiver = ref receivers[receiverId];
+                    var ev = new Event<T>();
+                    ref var next = ref ev._eventIdx;
+
+                    while (receiver.Sequence != sequence) {
+                        next = (int) (receiver.Sequence++ & MAX_EVENTS_OFFSET_MASK);
+                        var pageIdx = (uint) (next >> EVENT_PAGE_SHIFT);
+                        var inPageIdx = (uint) (next & EVENT_PAGE_OFFSET_MASK);
+                        var maskIdx = (byte) (inPageIdx >> EVENT_IN_PAGE_MASK_SHIFT);
+                        var inMaskBit = (byte) (inPageIdx & EVENT_IN_PAGE_OFFSET_MASK);
+                        ref var page = ref pages[pageIdx];
+                        var mask = page.Mask;
+                        
+                        if ((mask[maskIdx] & (1UL << inMaskBit)) != 0) {
+                            action(ev);
+                        }
+
+                        ref var unreadCount = ref page.UnreadReceiversCount[inPageIdx];
+                        if (unreadCount != 0) {
+                            unreadCount--;
+                            if (unreadCount == 0) {
+                                mask[maskIdx] &= ~(1UL << inMaskBit);
+                                #if FFS_ECS_EVENTS
+                                if (_debugEventListeners != null) {
+                                    foreach (var listener in _debugEventListeners) {
+                                        listener.OnEventReadAll(ev);
+                                    }
+                                }
+                                #endif
+                                if (clearable) {
+                                    page.Data[inPageIdx] = default;
+                                }
+
+                                if (inPageIdx == EVENT_PAGE_OFFSET_MASK) {
+                                    #if FFS_ECS_DEBUG
+                                    if (freePagesCount + 1 >= freePages.Length) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events<{typeof(T)}> ] Active events buffer overflow, maximum {MAX_EVENTS} events");
+                                    #endif
+                                    page.Free(ref freePages[freePagesCount++]);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                [MethodImpl(AggressiveInlining)]
+                internal void ReadAll(int receiverId) {
+                    ref var receiver = ref receivers[receiverId];
+                    var ev = new Event<T>();
+                    ref var next = ref ev._eventIdx;
+
+                    while (receiver.Sequence != sequence) {
+                        next = (int) (receiver.Sequence++ & MAX_EVENTS_OFFSET_MASK);
+                        var pageIdx = (uint) (next >> EVENT_PAGE_SHIFT);
+                        var inPageIdx = (uint) (next & EVENT_PAGE_OFFSET_MASK);
+                        var maskIdx = (byte) (inPageIdx >> EVENT_IN_PAGE_MASK_SHIFT);
+                        var inMaskBit = (byte) (inPageIdx & EVENT_IN_PAGE_OFFSET_MASK);
+                        ref var page = ref pages[pageIdx];
+                        var mask = page.Mask;
+                        ref var unreadCount = ref page.UnreadReceiversCount[inPageIdx];
+                        if (unreadCount != 0) {
+                            unreadCount--;
+                            if (unreadCount == 0) {
+                                mask[maskIdx] &= ~(1UL << inMaskBit);
+                                #if FFS_ECS_EVENTS
+                                if (_debugEventListeners != null) {
+                                    foreach (var listener in _debugEventListeners) {
+                                        listener.OnEventReadAll(ev);
+                                    }
+                                }
+                                #endif
+                                if (clearable) {
+                                    page.Data[inPageIdx] = default;
+                                }
+
+                                if (inPageIdx == EVENT_PAGE_OFFSET_MASK) {
+                                    #if FFS_ECS_DEBUG
+                                    if (freePagesCount + 1 >= freePages.Length) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events<{typeof(T)}> ] Active events buffer overflow, maximum {MAX_EVENTS} events");
+                                    #endif
+                                    page.Free(ref freePages[freePagesCount++]);
+                                }
+                            }
                         }
                     }
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal bool MarkAsRead(int offset) {
-                    ref var unreadCount = ref _dataReceiverUnreadCount[offset];
-                    if (unreadCount != 0 && --unreadCount == 0) {
-                        if (Del(offset, false)) {
-                            return true;
+                internal void SuppressOne(int eventIdx) {
+                    var pageIdx = (uint) (eventIdx >> EVENT_PAGE_SHIFT);
+                    var inPageIdx = (uint) (eventIdx & EVENT_PAGE_OFFSET_MASK);
+                    var maskIdx = (byte) (inPageIdx >> EVENT_IN_PAGE_MASK_SHIFT);
+                    var inMaskBit = (byte) (inPageIdx & EVENT_IN_PAGE_OFFSET_MASK);
+                        
+                    ref var page = ref pages[pageIdx];
+                    ref var unreadCount = ref page.UnreadReceiversCount[inPageIdx];
+                    if (unreadCount != 0) {
+                        unreadCount = 0;
+                        page.Mask[maskIdx] &= ~(1UL << inMaskBit);
+                        #if FFS_ECS_EVENTS
+                        if (_debugEventListeners != null) {
+                            foreach (var listener in _debugEventListeners) {
+                                listener.OnEventSuppress(new Event<T>(eventIdx));
+                            }
+                        }
+                        #endif
+                        if (clearable) {
+                            page.Data[inPageIdx] = default;
+                        }
+
+                        if (inPageIdx == EVENT_PAGE_OFFSET_MASK) {
+                            #if FFS_ECS_DEBUG
+                            if (freePagesCount + 1 >= freePages.Length) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events<{typeof(T)}> ] Active events buffer overflow, maximum {MAX_EVENTS} events");
+                            #endif
+                            page.Free(ref freePages[freePagesCount++]);
                         }
                     }
-
-                    return false;
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal void ClearEvents(int receiverId) {
-                    ref var offset = ref _dataReceiverOffsets[receiverId];
-                    for (; offset < _dataCount; offset++) {
-                        Del(offset, true);
+                internal void SuppressAll(int receiverId) {
+                    ref var receiver = ref receivers[receiverId];
+                    var ev = new Event<T>();
+                    ref var next = ref ev._eventIdx;
+
+                    while (receiver.Sequence != sequence) {
+                        next = (int) (receiver.Sequence++ & MAX_EVENTS_OFFSET_MASK);
+                        var pageIdx = (uint) (next >> EVENT_PAGE_SHIFT);
+                        var inPageIdx = (uint) (next & EVENT_PAGE_OFFSET_MASK);
+                        var maskIdx = (byte) (inPageIdx >> EVENT_IN_PAGE_MASK_SHIFT);
+                        var inMaskBit = (byte) (inPageIdx & EVENT_IN_PAGE_OFFSET_MASK);
+                        ref var page = ref pages[pageIdx];
+                        var mask = page.Mask;
+
+                        ref var unreadCount = ref page.UnreadReceiversCount[inPageIdx];
+                        if (unreadCount != 0) {
+                            unreadCount = 0;
+                            mask[maskIdx] &= ~(1UL << inMaskBit);
+                            #if FFS_ECS_EVENTS
+                            if (_debugEventListeners != null) {
+                                foreach (var listener in _debugEventListeners) {
+                                    listener.OnEventReadAll(ev);
+                                }
+                            }
+                            #endif
+                            if (clearable) {
+                                page.Data[inPageIdx] = default;
+                            }
+
+                            if (inPageIdx == EVENT_PAGE_OFFSET_MASK) {
+                                #if FFS_ECS_DEBUG
+                                if (freePagesCount + 1 >= freePages.Length) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events<{typeof(T)}> ] Active events buffer overflow, maximum {MAX_EVENTS} events");
+                                #endif
+                                page.Free(ref freePages[freePagesCount++]);
+                            }
+                        }
                     }
+                }
+                
+                [MethodImpl(AggressiveInlining)]
+                internal ushort Version(int eventIdx) {
+                    var pageIdx = (uint) (eventIdx >> EVENT_PAGE_SHIFT);
+                    return pages[pageIdx].Version;
+                }
+
+                [MethodImpl(AggressiveInlining)]
+                internal bool IsLastReading(int eventIdx) {
+                    var pageIdx = (uint) (eventIdx >> EVENT_PAGE_SHIFT);
+                    var inPageIdx = (uint) (eventIdx & EVENT_PAGE_OFFSET_MASK);
+                    return pages[pageIdx].UnreadReceiversCount[inPageIdx] == 1;
+                }
+
+                [MethodImpl(AggressiveInlining)]
+                internal int UnreadCount(int eventIdx) {
+                    var pageIdx = (uint) (eventIdx >> EVENT_PAGE_SHIFT);
+                    var inPageIdx = (uint) (eventIdx & EVENT_PAGE_OFFSET_MASK);
+                    return pages[pageIdx].UnreadReceiversCount[inPageIdx];
+                }
+
+                [MethodImpl(AggressiveInlining)]
+                internal int Last() {
+                    var seq = sequence - 1;
+                    var pageIdx = (uint) ((seq >> EVENT_PAGE_SHIFT) & PAGES_OFFSET_MASK);
+                    var inPageIdx = (uint) (seq & EVENT_PAGE_OFFSET_MASK);
+                    
+                    return pages[pageIdx].UnreadReceiversCount[inPageIdx];
+                }
+
+                [MethodImpl(AggressiveInlining)]
+                internal int NotDeletedCount() {
+                    if (receiversCount > deletedReceiversCount) {
+                        var minSeq = sequence;
+                        for (var i = 0; i < receiversCount; i++) {
+                            ref var receiver = ref receivers[i];
+                            if (!receiver.Deleted && receiver.Sequence < minSeq) {
+                                minSeq = receiver.Sequence;
+                            }
+                        }
+
+                        return (int) (sequence - minSeq);
+                    }
+
+                    return 0;
+                }
+
+                [MethodImpl(AggressiveInlining)]
+                internal int Capacity() {
+                    return maxPagesCount << EVENT_PAGE_SHIFT;
                 }
 
                 [MethodImpl(AggressiveInlining)]
                 internal void Clear() {
-                    for (var i = _dataFirstIdx; i < _dataCount; i++) {
-                        _data[i] = default;
-                        _versions[i] *= -1;
-                    }
-                    
-                    _dataFirstIdx = 0;
-                    _dataCount = 0;
-                    for (var i = 0; i < _receiversCount; i++) {
-                        _dataReceiverUnreadCount[i] = 0;
-                        ref var offset = ref _dataReceiverOffsets[i];
-                        if (offset > 0) {
-                            offset = 0;
-                        }
-                    }
-                }
-
-                [MethodImpl(AggressiveInlining)]
-                private bool TryDropOffsets() {
-                    if (_dataFirstIdx == _dataCount) {
-                        _dataFirstIdx = 0;
-                        _dataCount = 0;
-                        for (var i = 0; i < _receiversCount; i++) {
-                            ref var offset = ref _dataReceiverOffsets[i];
-                            if (offset > 0) {
-                                offset = 0;
-                            }
+                    for (int i = 0; i < pages.Length; i++) {
+                        ref var page = ref pages[i];
+                        if (page.Data != null) {
+                            Array.Clear(page.Data, 0, page.Data.Length);
+                            Array.Clear(page.Mask, 0, page.Mask.Length);
+                            Array.Clear(page.UnreadReceiversCount, 0, page.UnreadReceiversCount.Length);
+                            page.Free(ref freePages[freePagesCount++]);
                         }
 
-                        return true;
+                        page.Version = 0;
                     }
 
-                    return false;
+                    for (int i = 0; i < receiversCount; i++) {
+                        ref var receiver = ref receivers[i];
+                        receiver.Sequence = 0;
+                        receiver.Deleted = false;
+                    }
+
+                    receiversCount = 0;
+                    deletedReceiversCount = 0;
+                    sequence = 0;
                 }
 
                 #if FFS_ECS_DEBUG
