@@ -37,7 +37,9 @@ namespace FFS.Libraries.StaticEcs {
                 where R : struct, IEntityLinksComponent<R> {
                 
                 ValidateComponentRegistration<L>();
-                RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity);
+                RegisterMultiComponentsData<EntityGID>();
+                
+                var minLevel = MultiComponents<L>.SlotCapacityToLevel(defaultComponentCapacity);
 
                 #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                 CyclicCheck<L>.Value = !disableRelationsCheckLeftDebug;
@@ -45,10 +47,10 @@ namespace FFS.Libraries.StaticEcs {
                 AddItemsHandlers<L, R>(leftDeleteStrategy);
                 
                 var actualConfigLeft = new ValueComponentConfig<L, WorldType>(leftConfig) {
-                    OnPutHandler = OnAddHandler(leftConfig.OnPut()),
+                    OnPutHandler = OnAddHandler(leftConfig.OnPut(), minLevel),
                     OnDeleteHandler = OnDeleteHandlerManyToMany<L, R>(leftDeleteStrategy, leftConfig.OnDelete()),
                     OnCopyHandler = OnCopyManyHandler(leftCopyStrategy, leftConfig.OnCopy()),
-                    OnAddHandler = OnAddHandler(leftConfig.OnAdd()),
+                    OnAddHandler = OnAddHandler(leftConfig.OnAdd(), minLevel),
                     Copyable = leftCopyStrategy != CopyStrategy.NotCopy
                 };
 
@@ -57,7 +59,7 @@ namespace FFS.Libraries.StaticEcs {
                 );
 
                 ValidateComponentRegistration<R>();
-                RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity);
+                RegisterMultiComponentsData<EntityGID>();
 
                 #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                 CyclicCheck<R>.Value = !disableRelationsCheckRightDebug;
@@ -65,10 +67,10 @@ namespace FFS.Libraries.StaticEcs {
                 AddItemsHandlers<R, L>(rightDeleteStrategy);
                 
                 var actualConfigRight = new ValueComponentConfig<R, WorldType>(rightConfig) {
-                    OnPutHandler = OnAddHandler(rightConfig.OnPut()),
+                    OnPutHandler = OnAddHandler(rightConfig.OnPut(), minLevel),
                     OnDeleteHandler = OnDeleteHandlerManyToMany<R, L>(rightDeleteStrategy, rightConfig.OnDelete()),
                     OnCopyHandler = OnCopyManyHandler(rightCopyStrategy, rightConfig.OnCopy()),
-                    OnAddHandler = OnAddHandler(rightConfig.OnAdd()),
+                    OnAddHandler = OnAddHandler(rightConfig.OnAdd(), minLevel),
                     Copyable = rightCopyStrategy != CopyStrategy.NotCopy
                 };
 
@@ -125,15 +127,15 @@ namespace FFS.Libraries.StaticEcs {
                     Context<DestroyEntityLoopMultiAccess<T>>.Get().DeepDestroy(entity);
                 }
                 
-                static OnComponentHandler<T> OnAddHandler<T>(OnComponentHandler<T> handler) where T : struct, IEntityLinksComponent<T> {
+                static OnComponentHandler<T> OnAddHandler<T>(OnComponentHandler<T> handler, byte level) where T : struct, IEntityLinksComponent<T> {
                     if (handler != null) {
                         return (Entity entity, ref T component) => {
                             handler(entity, ref component);
-                            OnAddMultiLink(entity, ref component);
+                            Context<MultiComponents<EntityGID>>.Get().AddWithLevel(ref component.RefValue(ref component).multi, level);
                         };
                     }
 
-                    return OnAddMultiLink;
+                    return (Entity entity, ref T component) => Context<MultiComponents<EntityGID>>.Get().AddWithLevel(ref component.RefValue(ref component).multi, level);
                 }
                             
                 static OnComponentHandler<A> OnDeleteHandlerManyToMany<A, B>(BiDirectionalDeleteStrategy strategy, OnComponentHandler<A> handler)

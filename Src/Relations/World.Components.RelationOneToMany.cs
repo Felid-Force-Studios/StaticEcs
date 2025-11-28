@@ -63,13 +63,15 @@ namespace FFS.Libraries.StaticEcs {
                     Context.Value.Get<LinkManyHandlers<M>>().OnDeleteLinkItem = DeleteLeftLink;
                 }
 
-                RegisterMultiComponentsData<EntityGID>(defaultComponentCapacity);
+                RegisterMultiComponentsData<EntityGID>();
+                
+                var minLevel = MultiComponents<M>.SlotCapacityToLevel(defaultComponentCapacity);
                 
                 var actualConfigRight = new ValueComponentConfig<M, WorldType>(rightConfig) {
-                    OnPutHandler = OnAddManyHandler(rightConfig.OnPut(), disableRelationsCheckRightDebug),
+                    OnPutHandler = OnAddManyHandler(rightConfig.OnPut(), disableRelationsCheckRightDebug, minLevel),
                     OnDeleteHandler = OnDeleteHandlerManyToOne(rightDeleteStrategy, rightConfig.OnDelete()),
                     OnCopyHandler = OnCopyManyHandler(rightCopyStrategy, rightConfig.OnCopy()),
-                    OnAddHandler = OnAddManyHandler(rightConfig.OnAdd(), disableRelationsCheckRightDebug),
+                    OnAddHandler = OnAddManyHandler(rightConfig.OnAdd(), disableRelationsCheckRightDebug, minLevel),
                     Copyable = rightCopyStrategy != CopyStrategy.NotCopy
                 };
 
@@ -159,7 +161,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
 
-                static OnComponentHandler<M> OnAddManyHandler(OnComponentHandler<M> handler, bool disableRelationsCheckRightDebug) {
+                static OnComponentHandler<M> OnAddManyHandler(OnComponentHandler<M> handler, bool disableRelationsCheckRightDebug, byte level) {
                     #if FFS_ECS_DEBUG && !FFS_ECS_DISABLE_RELATION_CHECK
                     CyclicCheck<M>.Value = !disableRelationsCheckRightDebug;
                     #endif
@@ -167,11 +169,11 @@ namespace FFS.Libraries.StaticEcs {
                     if (handler != null) {
                         return (Entity entity, ref M component) => {
                             handler(entity, ref component);
-                            OnAddMultiLink(entity, ref component);
+                            Context<MultiComponents<EntityGID>>.Get().AddWithLevel(ref component.RefValue(ref component).multi, level);
                         };
                     }
 
-                    return OnAddMultiLink;
+                    return (Entity entity, ref M component) => Context<MultiComponents<EntityGID>>.Get().AddWithLevel(ref component.RefValue(ref component).multi, level);
                 }
 
                 static OnComponentHandler<O> OnDeleteHandlerOneToMany(BiDirectionalDeleteStrategy strategy, OnComponentHandler<O> handler) {

@@ -43,28 +43,29 @@ namespace FFS.Libraries.StaticEcs {
                 AssertNotRegisteredComponent<T>(WorldTypeName);
                 #endif
 
-                RegisterMultiComponentsData<V>(defaultComponentCapacity);
+                RegisterMultiComponentsData<V>();
 
+                var minLevel = MultiComponents<T>.SlotCapacityToLevel(defaultComponentCapacity);
                 var actualConfig = new ValueComponentConfig<T, WorldType>(config);
 
                 var onAdd = config.OnAdd();
                 if (onAdd != null) {
                     actualConfig.OnAddHandler = (Entity e, ref T component) => {
-                        OnAddMultiComponent<T, V>(e, ref component);
+                        Context<MultiComponents<V>>.Get().AddWithLevel(ref component.RefValue(ref component), minLevel);
                         onAdd(e, ref component);
                     };
                 } else {
-                    actualConfig.OnAddHandler = OnAddMultiComponent<T, V>;
+                    actualConfig.OnAddHandler = (Entity entity, ref T component) => Context<MultiComponents<V>>.Get().AddWithLevel(ref component.RefValue(ref component), minLevel);
                 }
 
                 var onPut = config.OnPut();
                 if (onPut != null) {
                     actualConfig.OnPutHandler = (Entity e, ref T component) => {
-                        OnAddMultiComponent<T, V>(e, ref component);
+                        Context<MultiComponents<V>>.Get().AddWithLevel(ref component.RefValue(ref component), minLevel);
                         onPut(e, ref component);
                     };
                 } else {
-                    actualConfig.OnPutHandler = OnAddMultiComponent<T, V>;
+                    actualConfig.OnPutHandler = (Entity entity, ref T component) => Context<MultiComponents<V>>.Get().AddWithLevel(ref component.RefValue(ref component), minLevel);
                 }
 
                 var onDelete = config.OnDelete();
@@ -92,18 +93,13 @@ namespace FFS.Libraries.StaticEcs {
                 );
             }
             
-            private static void RegisterMultiComponentsData<T>(ushort defaultComponentCapacity) where T : struct {
+            private static void RegisterMultiComponentsData<T>() where T : struct {
                 if (!Context<MultiComponents<T>>.Has()) {
+                    Context<MultiComponents<T>>.Set(new MultiComponents<T>());
                     #if FFS_ECS_DEBUG
-                    Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity, MTStatus));
-                    #else
-                    Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity));
+                    Context<MultiComponents<T>>.Get().mtStatus = MTStatus;
                     #endif
                 }
-            }
-            
-            private static void OnAddMultiComponent<T, V>(Entity e, ref T component) where T : struct, IMultiComponent<T, V> where V : struct {
-                Context<MultiComponents<V>>.Get().Add(ref component.RefValue(ref component));
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -130,12 +126,12 @@ namespace FFS.Libraries.StaticEcs {
             var value = new Multi<T>();
             var count = reader.ReadUshort();
             if (count > 0) {
-                World<WorldType>.Context<MultiComponents<T>>.Get().Add(ref value, count);
+                World<WorldType>.Context<MultiComponents<T>>.Get().AddWithCapacity(ref value, count);
                 for (var i = 0; i < count; i++) {
                     value.Add(reader.Read<T>());
                 }
             } else {
-                World<WorldType>.Context<MultiComponents<T>>.Get().Add(ref value);
+                World<WorldType>.Context<MultiComponents<T>>.Get().AddDefault(ref value);
             }
 
             return value;
@@ -146,11 +142,34 @@ namespace FFS.Libraries.StaticEcs {
             var count = value.count;
             writer.WriteUshort(count);
             if (count > 0) {
-                var values = value.data.values;
-                var offset = value.offset;
+                var values = value.data.values[value.blockIdx];
+                var offset = value.dataOffset;
                 for (var i = 0; i < count; i++) {
                     writer.Write(in values[i + offset]);
                 }
+            }
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static Multi<T> ReadMultiUnmanaged<WorldType, T>(this ref BinaryPackReader reader) where T : unmanaged where WorldType : struct, IWorldType {
+            var value = new Multi<T>();
+            var count = reader.ReadUshort();
+            if (count > 0) {
+                World<WorldType>.Context<MultiComponents<T>>.Get().AddWithCapacity(ref value, count);
+                reader.ReadArrayUnmanaged(ref value.data.values[value.blockIdx]);
+            } else {
+                World<WorldType>.Context<MultiComponents<T>>.Get().AddDefault(ref value);
+            }
+
+            return value;
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static void WriteMultiUnmanaged<T>(this ref BinaryPackWriter writer, in Multi<T> value) where T : unmanaged {
+            var count = value.count;
+            writer.WriteUshort(count);
+            if (count > 0) {
+                writer.WriteArrayUnmanaged(value.data.values[value.blockIdx], value.dataOffset, count);
             }
         }
         
@@ -164,6 +183,18 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static void WriteROMulti<T>(this ref BinaryPackWriter writer, in ROMulti<T> value) where T : struct {
             writer.WriteMulti(in value.multi);
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static ROMulti<T> ReadROMultiUnmanaged<WorldType, T>(this ref BinaryPackReader reader) where T : unmanaged where WorldType : struct, IWorldType {
+            return new ROMulti<T> {
+                multi = reader.ReadMultiUnmanaged<WorldType, T>(),
+            };
+        }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static void WriteROMultiUnmanaged<T>(this ref BinaryPackWriter writer, in ROMulti<T> value) where T : unmanaged {
+            writer.WriteMultiUnmanaged(in value.multi);
         }
     }
 }
