@@ -32,12 +32,6 @@ namespace FFS.Libraries.StaticEcs {
 
         internal static volatile bool MultiThreadActive;
 
-        #if FFS_ECS_DEBUG
-        internal static MultiThreadStatus MTStatus = new() {
-            Active = static () => MultiThreadActive
-        };
-        #endif
-
         public static void Create(WorldConfig worldConfig) {
             #if FFS_ECS_DEBUG
             AssertWorldIsNotCreated(WorldTypeName);
