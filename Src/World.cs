@@ -33,9 +33,7 @@ namespace FFS.Libraries.StaticEcs {
         internal static volatile bool MultiThreadActive;
 
         #if FFS_ECS_DEBUG
-        internal static MultiThreadStatus MTStatus = new() {
-            Active = static () => MultiThreadActive
-        };
+        internal static MultiThreadStatus MTStatus = new(static () => MultiThreadActive);
         #endif
 
         public static void Create(WorldConfig worldConfig) {
@@ -364,6 +362,10 @@ namespace FFS.Libraries.StaticEcs {
     #if FFS_ECS_DEBUG
     internal struct MultiThreadStatus {
         public Func<bool> Active;
+
+        public MultiThreadStatus(Func<bool> active) {
+            Active = active;
+        }
     }
     #endif
 }

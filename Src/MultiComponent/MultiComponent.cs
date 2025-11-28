@@ -474,7 +474,7 @@ namespace FFS.Libraries.StaticEcs {
         public readonly bool Contains(T item) {
             var equalityComparer = EqualityComparer<T>.Default;
             var values = data.values[blockIdx];
-            for (var index = dataOffset; index < dataOffset + count; ++index) {
+            for (int index = dataOffset; index < dataOffset + count; ++index) {
                 if (equalityComparer.Equals(values[index], item)) return true;
             }
 
@@ -484,7 +484,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public readonly bool Contains<C>(T item, C comparer) where C : IEqualityComparer<T> {
             var values = data.values[blockIdx];
-            for (var index = dataOffset; index < dataOffset + count; ++index) {
+            for (int index = dataOffset; index < dataOffset + count; ++index) {
                 if (comparer.Equals(values[index], item)) return true;
             }
 
