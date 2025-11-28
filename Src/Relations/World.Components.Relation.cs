@@ -193,13 +193,13 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
         #endif
         internal struct DestroyEntityLoopMultiAccess<T> where T : struct, IEntityLinksComponent<T> {
-            internal readonly Stack<(uint blockIdx, ushort count, byte offset)> Ranges;
+            internal readonly Stack<(int, int)> Ranges;
             internal readonly Stack<Entity> ForDelete;
             internal bool Active;
 
             public DestroyEntityLoopMultiAccess(bool active) {
                 Active = active;
-                Ranges = new Stack<(uint, ushort, byte)>(64);
+                Ranges = new Stack<(int, int)>(64);
                 ForDelete = new Stack<Entity>(64);
             }
 
@@ -209,18 +209,17 @@ namespace FFS.Libraries.StaticEcs {
 
                     ref var multi = ref component.RefValue(ref component).multi;
                     var data = multi.data;
-                    Ranges.Push((multi.blockIdx, multi.count, multi.dataOffset));
+                    Ranges.Push(((int, int)) (multi.offset, multi.count));
 
                     while (Ranges.Count > 0) {
-                        var val = Ranges.Pop();
-                        var values = data.values[val.blockIdx];
-                        for (var i = val.offset + val.count - 1; i >= val.offset; i--) {
-                            var gid = values[i];
+                        var (from, count) = Ranges.Pop();
+                        for (var i = from + count - 1; i >= from; i--) {
+                            var gid = data.values[i];
                             if (gid.TryUnpack<WorldType>(out var e)) {
                                 if (e.HasAllOf<T>()) {
                                     ref var linksComponent = ref e.Ref<T>();
                                     ref var targets = ref linksComponent.RefValue(ref linksComponent).multi;
-                                    Ranges.Push((targets.blockIdx, targets.count, targets.dataOffset));
+                                    Ranges.Push(((int, int)) (targets.offset, targets.count));
                                 }
 
                                 ForDelete.Push(e);
@@ -245,18 +244,17 @@ namespace FFS.Libraries.StaticEcs {
                             ref var link = ref ent.Ref<T>();
                             ref var multi = ref link.RefValue(ref link).multi;
                             var data = multi.data;
-                            Ranges.Push((multi.blockIdx, multi.count, multi.dataOffset));
+                            Ranges.Push(((int, int)) (multi.offset, multi.count));
 
                             while (Ranges.Count > 0) {
-                                var val = Ranges.Pop();
-                                var values = data.values[val.blockIdx];
-                                for (var i = val.offset + val.count - 1; i >= val.offset; i--) {
-                                    gid = values[i];
+                                var (from, count) = Ranges.Pop();
+                                for (var i = from + count - 1; i >= from; i--) {
+                                    gid = data.values[i];
                                     if (gid.TryUnpack<WorldType>(out var e)) {
                                         if (e.HasAllOf<T>()) {
                                             ref var linksComponent = ref e.Ref<T>();
                                             ref var targets = ref linksComponent.RefValue(ref linksComponent).multi;
-                                            Ranges.Push((targets.blockIdx, targets.count, targets.dataOffset));
+                                            Ranges.Push(((int, int)) (targets.offset, targets.count));
                                         }
 
                                         ForDelete.Push(e);

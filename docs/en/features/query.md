@@ -244,7 +244,7 @@ W.Query.With(with).For((ref Position pos, ref Velocity vel, ref Direction dir) =
 ### Parallel
 There is a possibility of multithreaded processing:  
 Important! Within an iteration always works `QueryMode.Strict` which means that modification of other (non-iterated) entities is forbidden (There will be an error in DEBUG).
-It is temporarily not possible in multithreaded processing to create new entities, and send or read events (Will be improved in future versions) (There will be a bug in DEBUG)  
+It is temporarily not possible in multithreaded processing to create new entities, extend multicomponents, and send or read events (Will be improved in future versions) (There will be a bug in DEBUG)  
 Multithreading service is disabled by default, to enable it you should specify `ParallelQueryType` as `MaxThreadsCount` in the config when creating a world.  
 or (`CustomThreadsCount` and specify the maximum number of threads) - useful when you want to specify different numbers for different worlds.  
 All the query methods below do not require caching, are allocated on the stack and can be used on the fly  

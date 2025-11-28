@@ -94,7 +94,11 @@ namespace FFS.Libraries.StaticEcs {
             
             private static void RegisterMultiComponentsData<T>(ushort defaultComponentCapacity) where T : struct {
                 if (!Context<MultiComponents<T>>.Has()) {
+                    #if FFS_ECS_DEBUG
+                    Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity, MTStatus));
+                    #else
                     Context<MultiComponents<T>>.Set(new MultiComponents<T>(defaultComponentCapacity));
+                    #endif
                 }
             }
             
@@ -142,34 +146,11 @@ namespace FFS.Libraries.StaticEcs {
             var count = value.count;
             writer.WriteUshort(count);
             if (count > 0) {
-                var values = value.data.values[value.blockIdx];
-                var offset = value.dataOffset;
+                var values = value.data.values;
+                var offset = value.offset;
                 for (var i = 0; i < count; i++) {
                     writer.Write(in values[i + offset]);
                 }
-            }
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public static Multi<T> ReadMultiUnmanaged<WorldType, T>(this ref BinaryPackReader reader) where T : unmanaged where WorldType : struct, IWorldType {
-            var value = new Multi<T>();
-            var count = reader.ReadUshort();
-            if (count > 0) {
-                World<WorldType>.Context<MultiComponents<T>>.Get().Add(ref value, count);
-                reader.ReadArrayUnmanaged(ref value.data.values[value.blockIdx]);
-            } else {
-                World<WorldType>.Context<MultiComponents<T>>.Get().Add(ref value);
-            }
-
-            return value;
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public static void WriteMultiUnmanaged<T>(this ref BinaryPackWriter writer, in Multi<T> value) where T : unmanaged {
-            var count = value.count;
-            writer.WriteUshort(count);
-            if (count > 0) {
-                writer.WriteArrayUnmanaged(value.data.values[value.blockIdx], value.dataOffset, count);
             }
         }
         
@@ -183,18 +164,6 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static void WriteROMulti<T>(this ref BinaryPackWriter writer, in ROMulti<T> value) where T : struct {
             writer.WriteMulti(in value.multi);
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public static ROMulti<T> ReadROMultiUnmanaged<WorldType, T>(this ref BinaryPackReader reader) where T : unmanaged where WorldType : struct, IWorldType {
-            return new ROMulti<T> {
-                multi = reader.ReadMultiUnmanaged<WorldType, T>(),
-            };
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public static void WriteROMultiUnmanaged<T>(this ref BinaryPackWriter writer, in ROMulti<T> value) where T : unmanaged {
-            writer.WriteMultiUnmanaged(in value.multi);
         }
     }
 }
