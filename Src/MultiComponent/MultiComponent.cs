@@ -9,8 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Threading;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -703,7 +701,7 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     public class MultiComponents<T> where T : struct {
         #if FFS_ECS_DEBUG
-        private readonly HashSet<uint> _blocked = new();
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<uint, bool> _blocked = new();
         internal MultiThreadStatus mtStatus;
         #endif
 
@@ -817,17 +815,17 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_DEBUG
         [MethodImpl(AggressiveInlining)]
         internal bool IsBlocked(ref Multi<T> value) {
-            return _blocked.Contains(Level.PackSlot(value.blockIdx, value.dataOffset));
+            return _blocked.ContainsKey(Level.PackSlot(value.blockIdx, value.dataOffset));
         }
 
         [MethodImpl(AggressiveInlining)]
         internal void Block(uint blockIdx, byte offset) {
-            _blocked.Add(Level.PackSlot(blockIdx, offset));
+            _blocked[Level.PackSlot(blockIdx, offset)] = true;
         }
 
         [MethodImpl(AggressiveInlining)]
         internal void Unblock(uint blockIdx, byte offset) {
-            _blocked.Remove(Level.PackSlot(blockIdx, offset));
+            _blocked.TryRemove(Level.PackSlot(blockIdx, offset), out _);
         }
         #endif
     }
