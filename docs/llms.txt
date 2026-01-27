@@ -1,0 +1,139 @@
+# StaticEcs
+
+> StaticEcs is a high-performance static ECS (Entity Component System) framework for C#/.NET and Unity. All world state lives in static generic classes — zero heap allocations. Uses hierarchical inverted bitmap architecture (not archetypes, not sparse-sets). Namespace: `FFS.Libraries.StaticEcs`. Dependency: [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) for binary serialization.
+
+## Core Concepts
+
+- **Static generics**: `World<TWorld>` where `TWorld : struct, IWorldType` is the central type. Each unique TWorld gets isolated static storage. Typical pattern: `public struct WT : IWorldType {} public abstract class W : World<WT> {}`
+- **World lifecycle**: `W.Create(WorldConfig.Default())` → `W.Types().RegisterAll()` (or manual `.Component<T>().Tag<T>().Event<T>()`) → `W.Initialize()` → work → `W.Destroy()`. Type registration is ONLY allowed between Create and Initialize.
+- **Entity** (`W.Entity`): 4-byte uint handle. NOT a persistent reference — valid only while entity is alive. No generation counter embedded. Use `EntityGID` for persistent references.
+- **Entity types** (`IEntityType`): Logical entity grouping for cache locality. `Default` is the built-in type. Create: `W.NewEntity<Default>()`. Register custom types: `W.Types().EntityType<Bullet>(Bullet.Id)`. Entities of the same type are stored together in memory segments. Non-generic overloads accept `byte entityType` for runtime-known types: `W.NewEntity(entityTypeId)`, `W.NewEntityInChunk(entityTypeId, chunkIdx)`, `W.NewEntityByGID(entityTypeId, gid)`.
+- **EntityGID** (8 bytes): Persistent entity reference with version-based staleness detection. Fields: Id (uint) + ClusterId (ushort) + Version (ushort). Check status: `gid.Status<WT>()` → `GIDStatus.Active/NotActual/NotLoaded`. Resolve: `gid.TryUnpack<WT>(out entity)`.
+- **Components** (`IComponent`): Data structs. Register: `W.Types().Component<T>()`. Add: `entity.Add<T>()`. Set with value: `entity.Set(new T{...})`. Access: `ref var c = ref entity.Ref<T>()`. Check: `entity.Has<T>()`. Remove: `entity.Delete<T>()`.
+- **Data access**: `Ref<T>()` — fast mutable ref, does NOT mark Changed. `Mut<T>()` — mutable ref, marks component as Changed (for tracking). `Read<T>()` — readonly ref, does NOT mark Changed.
+- **Add/Set semantics**: `Add<T>()` without value is idempotent — if exists, returns ref to existing data, NO hooks called. `Set(value)` ALWAYS overwrites — calls OnDelete on old → overwrites → calls OnAdd on new.
+- **Component hooks**: `OnAdd<TW>(entity)`, `OnDelete<TW>(entity, reason)`, `CopyTo<TW>(self, other, disabled)`, `Write<TW>(ref writer, entity)`, `Read<TW>(ref reader, entity, version, disabled)`. All have default empty implementations. `HookReason` enum (`Default`, `UnloadEntity`, `WorldDestroy`) indicates why deletion occurs. `IEntityType.OnDestroy` also receives `HookReason reason`.
+- **Tags** (`ITag`): Zero-size markers (bitmap only, no data storage). Internally unified with components. `entity.Set<T>()`, `entity.Has<T>()`, `entity.Delete<T>()`. Uses the same query filters as components (`All<>`, `None<>`, `Any<>`).
+- **Enable/Disable**: Both entities and individual components can be enabled/disabled. Disabled items are excluded from default queries but data is preserved.
+- **MultiComponent** (`IMultiComponent`): Variable-length per-entity data (struct, not just unmanaged). Stored as `Multi<TValue>` component. Register: `W.Types().Multi<Item>(elementStrategy: new UnmanagedPackArrayStrategy<Item>())`. Non-unmanaged types require `Write`/`Read` hooks. Default strategy: `StructPackArrayStrategy<T>`. Static `PackStrategy` field for auto-registration. Operations: Add, RemoveAt, IndexOf, Contains, foreach by reference, Span access.
+- **Relations**: `ILinkType` for single entity reference (`Link<T>`), `ILinksType` for multiple (`Links<T>`). Both support OnAdd/OnDelete/CopyTo hooks. Register: `W.Types().Link<T>()` / `W.Types().Links<T>()`.
+- **Systems**: `ISystem` with `Init()`, `Update()`, `UpdateIsActive() → bool`, `Destroy()`. Group via `ISystemsType`. Nested in `World<TWorld>`. `W.Systems<TSys>.Create()` → `Add(system, order)` → `Initialize()` → `Update()` per frame → `Destroy()`.
+- **Resources**: `W.SetResource<T>(value)` / `ref var r = ref W.GetResource<T>()` for singletons. `NamedResource<T>(key)` for keyed resources.
+- **Events**: `IEvent` structs. `W.SendEvent<T>(value)` → `W.RegisterEventReceiver<T>()` → iterate with foreach. SendEvent is thread-safe when there is no concurrent reading of the same event type; receiver ops are main-thread only.
+- **Clusters**: Logical entity groupings for spatial partitioning and streaming. Each entity belongs to one cluster. Clusters can be loaded/unloaded. Queries can target specific clusters.
+
+## Query System
+
+- **Basic iteration**: `foreach (var entity in W.Query<All<Position, Velocity>>().Entities()) { ref var p = ref entity.Ref<Position>(); }`
+- **Delegate iteration** (faster, 1–6 components): `W.Query().For(static (ref Position p, in Velocity v) => { ... });` — `ref` for writable, `in` for readonly
+- **Parallel**: `W.Query().ForParallel(static (ref Position p, in Velocity v) => { ... }, minEntitiesPerThread: 256);`
+- **Struct functions** (fluent builder): `W.Query().Write<Position>().Read<Velocity>().For<MyFunc>();` — interfaces: `IQuery.Write<>`, `IQuery.Read<>`, `IQuery.Write<>.Read<>`
+- **Block struct functions** (unmanaged, fastest): `W.Query().WriteBlock<Position>().Read<Velocity>().For<MyBlock>();` — `Block<T>` writable, `BlockR<T>` readonly
+- **Search**: `W.Query().Search(out entity, (entity, in Position p, in Health h) => p.Value.x > 100);` — all components `in`
+- **Component filters**: `All<T0..T7>` (require all), `None<T0..T7>` (exclude), `Any<T0..T7>` (at least one, min 2 params)
+- **Disabled variants**: `AllOnlyDisabled<>`, `AllWithDisabled<>`, `NoneWithDisabled<>`, `AnyOnlyDisabled<>`, `AnyWithDisabled<>`
+- **Tag filters**: Tags use the same filters as components: `All<>`, `None<>`, `Any<>` and their disabled variants
+- **Entity type filters**: `EntityIs<T>` (exact type), `EntityIsNot<T0..T4>` (exclude types, 1-5), `EntityIsAny<T0..T4>` (any of types, 2-5)
+- **Composite**: `And<TFilter0..TFilter5>` combines filters with AND semantics (all must match). `Or<TFilter0..TFilter5>` combines with OR semantics (any must match). `Nothing` matches all.
+- **Batch ops**: `W.Query<Filter>().BatchSet(value)`, `BatchDelete<T>()`, `BatchSet<T>()` (for tags), `BatchDestroy()`, `BatchUnload()`.
+- **Query modes**: Strict (default, faster — forbids modifying filtered types on OTHER entities) vs Flexible (allows it, re-checks bitmasks). Foreach: `.Entities()` for Strict, `.EntitiesFlexible()` for Flexible.
+- **Entity status**: All query methods accept `EntityStatusType` parameter: `Enabled` (default), `Disabled`, `Any`.
+
+## Change Tracking
+
+- **Opt-in, bitmap-based, zero-allocation, tick-versioned**. Disabled by default. Enable per-type at registration.
+- **Tick-based ring buffer**: `WorldConfig.TrackingBufferSize` (default 8). `W.Tick()` advances world tick — call once per frame after `W.Systems.Update()`. Each system automatically sees changes since its last execution via per-system `LastTick`.
+- **Component tracking**: `ComponentTypeConfig<T>(trackAdded: true, trackDeleted: true, trackChanged: true)`.
+- **Tag tracking**: `TagTypeConfig<T>(trackAdded: true, trackDeleted: true)`.
+- **Entity creation tracking**: `WorldConfig { TrackCreated = true }`.
+- **Component tracking filters** (1–5 type params): `AllAdded<>`, `NoneAdded<>`, `AnyAdded<>`, `AllDeleted<>`, `NoneDeleted<>`, `AnyDeleted<>`, `AllChanged<>`, `NoneChanged<>`, `AnyChanged<>`. All accept optional `fromTick` constructor parameter.
+- **Tag tracking**: `AllAdded<>`, `NoneAdded<>`, `AnyAdded<>`, `AllDeleted<>`, `NoneDeleted<>`, `AnyDeleted<>` work with both components and tags. All accept optional `fromTick`.
+- **Entity creation filter**: `Created` (requires `WorldConfig.TrackCreated = true`). Accepts optional `fromTick`.
+- **Data access and tracking**: `Ref<T>()` does NOT mark Changed (fast path). `Mut<T>()` marks Changed. `Read<T>()` does NOT mark Changed. In delegates: `ref` marks Changed, `in` does not. In IQuery: `Write<>` marks, `Read<>` does not.
+- **Clearing**: `ClearTracking()` clears ALL ring buffer slots — normally not needed (tracking managed automatically by `W.Tick()` + `W.Systems<T>.Update()`). Use as nuclear reset after deserialization.
+- **Entity checks**: `entity.HasAdded<T>()`, `entity.HasDeleted<T>()`, `entity.HasChanged<T>()` — work for both components and tags. All accept optional `fromTick` parameter.
+- **Game loop**: `W.Systems<Update>.Update()` → `W.Tick()` → repeat. Multiple system groups share the same tick.
+
+## Common Pitfalls
+
+- **Forgetting type registration**: ALL component/tag/event/link types MUST be registered between `W.Create()` and `W.Initialize()`. Unregistered types cause runtime errors.
+- **Using Entity after Destroy**: Entity is a uint slot handle. After `Destroy()`, the slot is reused — the old handle now points to a different entity. Use `EntityGID` for safe persistent references.
+- **Add vs Set semantics**: `entity.Add<Position>()` does NOT overwrite if component exists — it returns the existing data silently. To overwrite, use `entity.Set(new Position{...})`.
+- **Empty hook methods causing overhead**: If IComponent has any non-empty hook method, reflection detects it at startup and enables hook dispatch for ALL instances of that component type. Don't implement hooks you don't need.
+- **Strict mode violations**: In default Strict query mode, modifying filtered component/tag types on OTHER entities during iteration is forbidden. Use Flexible mode if needed, or restructure the code.
+- **Storing Entity across frames**: Entity handles have no generation counter. A stored Entity may silently alias a different entity after the original is destroyed. Always use EntityGID for cross-frame references.
+- **Parallel iteration constraints**: During `ForParallel`, only modify the CURRENT entity. Do not create/destroy entities or modify other entities.
+- **Forgetting StaticPack for serialization**: Serialization requires FFS.StaticPack. All serializable types need Guid registration. Non-unmanaged components need Write/Read hook implementations.
+- **Entity operations before Initialize**: NewEntity, queries, and other entity operations only work after `W.Initialize()` is called.
+- **NamedResource caching**: `NamedResource<T>` caches its box reference on first access. Do not store it as `readonly` or pass by value after first use — this breaks the cache.
+
+## Quick Start
+
+```csharp
+using FFS.Libraries.StaticEcs;
+
+public struct WT : IWorldType { }
+public abstract class W : World<WT> { }
+public struct GameSystems : ISystemsType { }
+public abstract class GameSys : W.Systems<GameSystems> { }
+
+public struct Position : IComponent { public Vector3 Value; }
+public struct Direction : IComponent { public Vector3 Value; }
+public struct Velocity : IComponent { public float Value; }
+
+public struct VelocitySystem : ISystem {
+    public void Update() {
+        foreach (var entity in W.Query<All<Position, Velocity, Direction>>().Entities()) {
+            ref var pos = ref entity.Ref<Position>();
+            ref readonly var dir = ref entity.Read<Direction>();
+            ref readonly var vel = ref entity.Read<Velocity>();
+            pos.Value += dir.Value * vel.Value;
+        }
+    }
+}
+
+public class Program {
+    public static void Main() {
+        W.Create(WorldConfig.Default());
+        W.Types().RegisterAll();
+        W.Initialize();
+
+        GameSys.Create();
+        GameSys.Add(new VelocitySystem(), order: 0);
+        GameSys.Initialize();
+
+        W.NewEntity<Default>().Set(
+            new Position { Value = Vector3.Zero },
+            new Direction { Value = Vector3.UnitX },
+            new Velocity { Value = 1f }
+        );
+
+        GameSys.Update();
+        GameSys.Destroy();
+        W.Destroy();
+    }
+}
+```
+
+## Documentation
+
+- [Features overview](https://felid-force-studios.github.io/StaticEcs/en/features.html)
+- [World](https://felid-force-studios.github.io/StaticEcs/en/features/world.html): World lifecycle, WorldConfig, clusters, chunks, ownership
+- [Entity](https://felid-force-studios.github.io/StaticEcs/en/features/entity.html): Entity creation, lifecycle, operations, entity types
+- [Entity Global ID](https://felid-force-studios.github.io/StaticEcs/en/features/gid.html): EntityGID, EntityGIDCompact, validation, serialization
+- [Component](https://felid-force-studios.github.io/StaticEcs/en/features/component.html): Component system, lifecycle hooks, Add semantics, enable/disable
+- [Tag](https://felid-force-studios.github.io/StaticEcs/en/features/tag.html): Zero-size markers, tag operations, query filters
+- [MultiComponent](https://felid-force-studios.github.io/StaticEcs/en/features/multicomponent.html): Variable-length per-entity data, storage, operations
+- [Relations](https://felid-force-studios.github.io/StaticEcs/en/features/relations.html): Link<T>, Links<T>, bidirectional relations, hook examples
+- [Systems](https://felid-force-studios.github.io/StaticEcs/en/features/systems.html): System lifecycle, registration, execution order
+- [Resources](https://felid-force-studios.github.io/StaticEcs/en/features/resources.html): Singleton and named resources
+- [Query](https://felid-force-studios.github.io/StaticEcs/en/features/query.html): Filters, iteration methods, parallel processing, batch operations
+- [Events](https://felid-force-studios.github.io/StaticEcs/en/features/events.html): Event system, sending, receiving, lifecycle
+- [Change Tracking](https://felid-force-studios.github.io/StaticEcs/en/features/tracking.html): Tick-based change tracking, ring buffer, per-system tick, query filters, edge cases
+- [Serialization](https://felid-force-studios.github.io/StaticEcs/en/features/serialization.html): Binary snapshots, world/entity/cluster serialization
+- [Compiler directives](https://felid-force-studios.github.io/StaticEcs/en/features/compilerdirectives.html): FFS_ECS_ENABLE_DEBUG, ENABLE_IL2CPP, FFS_ECS_BURST
+- [Performance](https://felid-force-studios.github.io/StaticEcs/en/performance.html): Architecture advantages, iteration methods, optimization tips
+- [Unity integration](https://felid-force-studios.github.io/StaticEcs/en/unityintegrations.html): MonoBehaviour integration, editor tools
+- [Common pitfalls](https://felid-force-studios.github.io/StaticEcs/en/pitfalls.html): Frequent mistakes and how to avoid them
+- [AI agent guide](https://felid-force-studios.github.io/StaticEcs/en/aiagentguide.html): CLAUDE.md snippet and agent setup
+- [Migration guide v2.0.0](https://felid-force-studios.github.io/StaticEcs/en/migrationguide.html): Breaking changes from v1.2.x

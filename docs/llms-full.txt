@@ -1,0 +1,5394 @@
+# StaticEcs
+
+> StaticEcs is a high-performance static ECS (Entity Component System) framework for C#/.NET and Unity. All world state lives in static generic classes — zero heap allocations. Uses hierarchical inverted bitmap architecture (not archetypes, not sparse-sets). Namespace: `FFS.Libraries.StaticEcs`. Dependency: [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) for binary serialization.
+
+## Core Concepts
+
+- **Static generics**: `World<TWorld>` where `TWorld : struct, IWorldType` is the central type. Each unique TWorld gets isolated static storage. Typical pattern: `public struct WT : IWorldType {} public abstract class W : World<WT> {}`
+- **World lifecycle**: `W.Create(WorldConfig.Default())` → `W.Types().RegisterAll()` (or manual `.Component<T>().Tag<T>().Event<T>()`) → `W.Initialize()` → work → `W.Destroy()`. Type registration is ONLY allowed between Create and Initialize.
+- **Entity** (`W.Entity`): 4-byte uint handle. NOT a persistent reference — valid only while entity is alive. No generation counter embedded. Use `EntityGID` for persistent references.
+- **Entity types** (`IEntityType`): Logical entity grouping for cache locality. `Default` is the built-in type. Create: `W.NewEntity<Default>()`. Register custom types: `W.Types().EntityType<Bullet>(Bullet.Id)`. Entities of the same type are stored together in memory segments. Non-generic overloads accept `byte entityType` for runtime-known types: `W.NewEntity(entityTypeId)`, `W.NewEntityInChunk(entityTypeId, chunkIdx)`, `W.NewEntityByGID(entityTypeId, gid)`.
+- **EntityGID** (8 bytes): Persistent entity reference with version-based staleness detection. Fields: Id (uint) + ClusterId (ushort) + Version (ushort). Check status: `gid.Status<WT>()` → `GIDStatus.Active/NotActual/NotLoaded`. Resolve: `gid.TryUnpack<WT>(out entity)`.
+- **Components** (`IComponent`): Data structs. Register: `W.Types().Component<T>()`. Add: `entity.Add<T>()`. Set with value: `entity.Set(new T{...})`. Access: `ref var c = ref entity.Ref<T>()`. Check: `entity.Has<T>()`. Remove: `entity.Delete<T>()`.
+- **Data access**: `Ref<T>()` — fast mutable ref, does NOT mark Changed. `Mut<T>()` — mutable ref, marks component as Changed (for tracking). `Read<T>()` — readonly ref, does NOT mark Changed.
+- **Add/Set semantics**: `Add<T>()` without value is idempotent — if exists, returns ref to existing data, NO hooks called. `Set(value)` ALWAYS overwrites — calls OnDelete on old → overwrites → calls OnAdd on new.
+- **Component hooks**: `OnAdd<TW>(entity)`, `OnDelete<TW>(entity, reason)`, `CopyTo<TW>(self, other, disabled)`, `Write<TW>(ref writer, entity)`, `Read<TW>(ref reader, entity, version, disabled)`. All have default empty implementations. `HookReason` enum (`Default`, `UnloadEntity`, `WorldDestroy`) indicates why deletion occurs. `IEntityType.OnDestroy` also receives `HookReason reason`.
+- **Tags** (`ITag`): Zero-size markers (bitmap only, no data storage). `entity.Set<T>()`, `entity.Has<T>()`, `entity.Delete<T>()`. Tags use the same API and query filters as components.
+- **Enable/Disable**: Both entities and individual components can be enabled/disabled. Disabled items are excluded from default queries but data is preserved.
+- **MultiComponent** (`IMultiComponent`): Variable-length per-entity data (struct, not just unmanaged). Stored as `Multi<TValue>` component. Register: `W.Types().Multi<Item>(elementStrategy: new UnmanagedPackArrayStrategy<Item>())`. Non-unmanaged types require `Write`/`Read` hooks. Default strategy: `StructPackArrayStrategy<T>`. Static `PackStrategy` field for auto-registration. Operations: Add, RemoveAt, IndexOf, Contains, foreach by reference, Span access.
+- **Relations**: `ILinkType` for single entity reference (`Link<T>`), `ILinksType` for multiple (`Links<T>`). Both support OnAdd/OnDelete/CopyTo hooks. Register: `W.Types().Link<T>()` / `W.Types().Links<T>()`.
+- **Systems**: `ISystem` with `Init()`, `Update()`, `UpdateIsActive() → bool`, `Destroy()`. Group via `ISystemsType`. Nested in `World<TWorld>`. `W.Systems<TSys>.Create()` → `Add(system, order)` → `Initialize()` → `Update()` per frame → `Destroy()`.
+- **Resources**: `W.SetResource<T>(value)` / `ref var r = ref W.GetResource<T>()` for singletons. `NamedResource<T>(key)` for keyed resources.
+- **Events**: `IEvent` structs. `W.SendEvent<T>(value)` → `W.RegisterEventReceiver<T>()` → iterate with foreach. SendEvent is thread-safe when there is no concurrent reading of the same event type; receiver ops are main-thread only.
+- **Clusters**: Logical entity groupings for spatial partitioning and streaming. Each entity belongs to one cluster. Clusters can be loaded/unloaded. Queries can target specific clusters.
+
+## Query System
+
+- **Basic iteration**: `foreach (var entity in W.Query<All<Position, Velocity>>().Entities()) { ref var p = ref entity.Ref<Position>(); }`
+- **Delegate iteration** (faster, 1–6 components): `W.Query().For(static (ref Position p, in Velocity v) => { ... });` — `ref` for writable, `in` for readonly
+- **Parallel**: `W.Query().ForParallel(static (ref Position p, in Velocity v) => { ... }, minEntitiesPerThread: 256);`
+- **Struct functions** (fluent builder): `W.Query().Write<Position>().Read<Velocity>().For<MyFunc>();` — interfaces: `IQuery.Write<>`, `IQuery.Read<>`, `IQuery.Write<>.Read<>`
+- **Block struct functions** (unmanaged, fastest): `W.Query().WriteBlock<Position>().Read<Velocity>().For<MyBlock>();` — `Block<T>` writable, `BlockR<T>` readonly
+- **Search**: `W.Query().Search(out entity, (entity, in Position p, in Health h) => p.Value.x > 100);` — all components `in`
+- **Component filters**: `All<T0..T7>` (require all), `None<T0..T7>` (exclude), `Any<T0..T7>` (at least one, min 2 params)
+- **Disabled variants**: `AllOnlyDisabled<>`, `AllWithDisabled<>`, `NoneWithDisabled<>`, `AnyOnlyDisabled<>`, `AnyWithDisabled<>`
+- **Tag filters**: Tags use the same filters as components: `All<>`, `None<>`, `Any<>` (and their disabled variants)
+- **Entity type filters**: `EntityIs<T>` (exact type), `EntityIsNot<T0..T4>` (exclude types, 1-5), `EntityIsAny<T0..T4>` (any of types, 2-5)
+- **Composite**: `And<TFilter0..TFilter5>` combines filters with AND semantics (all must match). `Or<TFilter0..TFilter5>` combines with OR semantics (any must match). `Nothing` matches all.
+- **Batch ops**: `W.Query<Filter>().BatchSet(value)`, `BatchDelete<T>()`, `BatchSet<T>()` (for tags), `BatchDestroy()`, `BatchUnload()`.
+- **Query modes**: Strict (default, faster — forbids modifying filtered types on OTHER entities) vs Flexible (allows it, re-checks bitmasks). Foreach: `.Entities()` for Strict, `.EntitiesFlexible()` for Flexible.
+- **Entity status**: All query methods accept `EntityStatusType` parameter: `Enabled` (default), `Disabled`, `Any`.
+
+## Change Tracking
+
+- **Opt-in, bitmap-based, zero-allocation, tick-versioned**. Disabled by default. Enable per-type at registration.
+- **Tick-based ring buffer**: `WorldConfig.TrackingBufferSize` (default 8). `W.Tick()` advances world tick — call once per frame after `W.Systems.Update()`. Each system automatically sees changes since its last execution via per-system `LastTick`.
+- **Component tracking**: `ComponentTypeConfig<T>(trackAdded: true, trackDeleted: true, trackChanged: true)`.
+- **Tag tracking**: `TagTypeConfig<T>(trackAdded: true, trackDeleted: true)`.
+- **Entity creation tracking**: `WorldConfig { TrackCreated = true }`.
+- **Tracking filters** (1–5 type params): `AllAdded<>`, `NoneAdded<>`, `AnyAdded<>`, `AllDeleted<>`, `NoneDeleted<>`, `AnyDeleted<>`, `AllChanged<>`, `NoneChanged<>`, `AnyChanged<>`. All accept optional `fromTick` constructor parameter. Added/Deleted filters work with both components and tags.
+- **Entity creation filter**: `Created` (requires `WorldConfig.TrackCreated = true`). Accepts optional `fromTick`.
+- **Data access and tracking**: `Ref<T>()` does NOT mark Changed (fast path). `Mut<T>()` marks Changed. `Read<T>()` does NOT mark Changed. In delegates: `ref` marks Changed, `in` does not. In IQuery: `Write<>` marks, `Read<>` does not.
+- **Clearing**: `ClearTracking()` clears ALL ring buffer slots — normally not needed (tracking managed automatically by `W.Tick()` + `W.Systems<T>.Update()`). Use as nuclear reset after deserialization.
+- **Entity checks**: `entity.HasAdded<T>()`, `entity.HasDeleted<T>()`, `entity.HasChanged<T>()`. These work for both components and tags. All accept optional `fromTick` parameter.
+- **Game loop**: `W.Systems<Update>.Update()` → `W.Tick()` → repeat. Multiple system groups share the same tick.
+
+## Common Pitfalls
+
+- **Forgetting type registration**: ALL component/tag/event/link types MUST be registered between `W.Create()` and `W.Initialize()`. Unregistered types cause runtime errors.
+- **Using Entity after Destroy**: Entity is a uint slot handle. After `Destroy()`, the slot is reused — the old handle now points to a different entity. Use `EntityGID` for safe persistent references.
+- **Add vs Set semantics**: `entity.Add<Position>()` does NOT overwrite if component exists — it returns the existing data silently. To overwrite, use `entity.Set(new Position{...})`.
+- **Empty hook methods causing overhead**: If IComponent has any non-empty hook method, reflection detects it at startup and enables hook dispatch for ALL instances of that component type. Don't implement hooks you don't need.
+- **Strict mode violations**: In default Strict query mode, modifying filtered component/tag types on OTHER entities during iteration is forbidden. Use Flexible mode if needed, or restructure the code.
+- **Storing Entity across frames**: Entity handles have no generation counter. A stored Entity may silently alias a different entity after the original is destroyed. Always use EntityGID for cross-frame references.
+- **Parallel iteration constraints**: During `ForParallel`, only modify the CURRENT entity. Do not create/destroy entities or modify other entities.
+- **Forgetting StaticPack for serialization**: Serialization requires FFS.StaticPack. All serializable types need Guid registration. Non-unmanaged components need Write/Read hook implementations.
+- **Entity operations before Initialize**: NewEntity, queries, and other entity operations only work after `W.Initialize()` is called.
+- **NamedResource caching**: `NamedResource<T>` caches its box reference on first access. Do not store it as `readonly` or pass by value after first use — this breaks the cache.
+
+## Quick Start
+
+```csharp
+using FFS.Libraries.StaticEcs;
+
+public struct WT : IWorldType { }
+public abstract class W : World<WT> { }
+public struct GameSystems : ISystemsType { }
+public abstract class GameSys : W.Systems<GameSystems> { }
+
+public struct Position : IComponent { public Vector3 Value; }
+public struct Direction : IComponent { public Vector3 Value; }
+public struct Velocity : IComponent { public float Value; }
+
+public struct VelocitySystem : ISystem {
+    public void Update() {
+        foreach (var entity in W.Query<All<Position, Velocity, Direction>>().Entities()) {
+            ref var pos = ref entity.Ref<Position>();
+            ref readonly var dir = ref entity.Read<Direction>();
+            ref readonly var vel = ref entity.Read<Velocity>();
+            pos.Value += dir.Value * vel.Value;
+        }
+    }
+}
+
+public class Program {
+    public static void Main() {
+        W.Create(WorldConfig.Default());
+        W.Types().RegisterAll();
+        W.Initialize();
+
+        GameSys.Create();
+        GameSys.Add(new VelocitySystem(), order: 0);
+        GameSys.Initialize();
+
+        W.NewEntity<Default>().Set(
+            new Position { Value = Vector3.Zero },
+            new Direction { Value = Vector3.UnitX },
+            new Velocity { Value = 1f }
+        );
+
+        GameSys.Update();
+        GameSys.Destroy();
+        W.Destroy();
+    }
+}
+```
+
+## Documentation
+
+- [Features overview](https://felid-force-studios.github.io/StaticEcs/en/features.html)
+- [World](https://felid-force-studios.github.io/StaticEcs/en/features/world.html): World lifecycle, WorldConfig, clusters, chunks, ownership
+- [Entity](https://felid-force-studios.github.io/StaticEcs/en/features/entity.html): Entity creation, lifecycle, operations, entity types
+- [Entity Global ID](https://felid-force-studios.github.io/StaticEcs/en/features/gid.html): EntityGID, EntityGIDCompact, validation, serialization
+- [Component](https://felid-force-studios.github.io/StaticEcs/en/features/component.html): Component system, lifecycle hooks, Add semantics, enable/disable
+- [Tag](https://felid-force-studios.github.io/StaticEcs/en/features/tag.html): Zero-size markers, tag operations, query filters
+- [MultiComponent](https://felid-force-studios.github.io/StaticEcs/en/features/multicomponent.html): Variable-length per-entity data, storage, operations
+- [Relations](https://felid-force-studios.github.io/StaticEcs/en/features/relations.html): Link<T>, Links<T>, bidirectional relations, hook examples
+- [Systems](https://felid-force-studios.github.io/StaticEcs/en/features/systems.html): System lifecycle, registration, execution order
+- [Resources](https://felid-force-studios.github.io/StaticEcs/en/features/resources.html): Singleton and named resources
+- [Query](https://felid-force-studios.github.io/StaticEcs/en/features/query.html): Filters, iteration methods, parallel processing, batch operations
+- [Events](https://felid-force-studios.github.io/StaticEcs/en/features/events.html): Event system, sending, receiving, lifecycle
+- [Change Tracking](https://felid-force-studios.github.io/StaticEcs/en/features/tracking.html): Tick-based change tracking, ring buffer, per-system tick, query filters, edge cases
+- [Serialization](https://felid-force-studios.github.io/StaticEcs/en/features/serialization.html): Binary snapshots, world/entity/cluster serialization
+- [Compiler directives](https://felid-force-studios.github.io/StaticEcs/en/features/compilerdirectives.html): FFS_ECS_ENABLE_DEBUG, ENABLE_IL2CPP, FFS_ECS_BURST
+- [Performance](https://felid-force-studios.github.io/StaticEcs/en/performance.html): Architecture advantages, iteration methods, optimization tips
+- [Unity integration](https://felid-force-studios.github.io/StaticEcs/en/unityintegrations.html): MonoBehaviour integration, editor tools
+- [Common pitfalls](https://felid-force-studios.github.io/StaticEcs/en/pitfalls.html): Frequent mistakes and how to avoid them
+- [AI agent guide](https://felid-force-studios.github.io/StaticEcs/en/aiagentguide.html): CLAUDE.md snippet and agent setup
+- [Migration guide v2.0.0](https://felid-force-studios.github.io/StaticEcs/en/migrationguide.html): Breaking changes from v1.2.x
+
+
+---
+
+
+---
+
+
+## WorldType
+World identifier type-tag, used to isolate static data when creating different worlds in the same process
+- Represented as a user struct with no data and the `IWorldType` marker interface
+- Each unique `IWorldType` gets its own fully isolated static storage
+
+#### Example:
+```csharp
+public struct MainWorldType : IWorldType { }
+public struct MiniGameWorldType : IWorldType { }
+```
+
+___
+
+## World
+Library entry point responsible for accessing, creating, initializing, operating, and destroying world data
+- Represented as a static class `World<T>` parameterized by `IWorldType`
+
+{: .important }
+> Since the `IWorldType` type-identifier defines access to a specific world,
+> there are three ways to work with the framework:
+
+___
+
+#### First way — full qualification (very inconvenient):
+```csharp
+public struct WT : IWorldType { }
+
+World<WT>.Create(WorldConfig.Default());
+World<WT>.CalculateEntitiesCount();
+
+var entity = World<WT>.NewEntity<Default>();
+```
+
+#### Second way — static imports (must be written in each file):
+```csharp
+using static FFS.Libraries.StaticEcs.World<WT>;
+
+public struct WT : IWorldType { }
+
+Create(WorldConfig.Default());
+CalculateEntitiesCount();
+
+var entity = NewEntity<Default>();
+```
+
+#### Third way — type alias in the root namespace (most convenient, no need to write in every file):
+This is the method used in all examples
+```csharp
+public struct WT : IWorldType { }
+
+public abstract class W : World<WT> { }
+
+W.Create(WorldConfig.Default());
+W.CalculateEntitiesCount();
+
+var entity = W.NewEntity<Default>();
+```
+
+___
+
+## Lifecycle
+
+```
+Create() → Type registration → Initialize() → Work → Destroy()
+```
+
+#### WorldStatus:
+- `NotCreated` — world not created or destroyed
+- `Created` — structures allocated, type registration available
+- `Initialized` — world fully operational, entity operations available
+
+___
+
+#### Creating the world:
+```csharp
+// Define the world identifier
+public struct WT : IWorldType { }
+public abstract class W : World<WT> { }
+
+// Create with default configuration
+W.Create(WorldConfig.Default());
+
+// Or with custom configuration
+W.Create(new WorldConfig {
+    // Independent world (manages chunks automatically) or dependent (requires manual chunk management)
+    Independent = true,
+    // Initial capacity for component types (default — 64)
+    BaseComponentTypesCount = 64,
+    // Initial capacity for clusters (minimum 16, default — 16)
+    BaseClustersCapacity = 16,
+    // Multithreading mode
+    // Disabled — no threads created
+    // MaxThreadsCount — maximum available threads
+    // CustomThreadsCount — specified number of threads
+    ParallelQueryType = ParallelQueryType.Disabled,
+    // Thread count when using CustomThreadsCount
+    CustomThreadCount = 4,
+    // Worker spin iterations before blocking (default — 256)
+    WorkerSpinCount = 256,
+    // Enable entity creation tracking (for Created query filter)
+    TrackingBufferSize = 8,
+    TrackCreated = false,
+});
+```
+
+{: .note }
+`WorldConfig` provides factory methods:
+- `WorldConfig.Default()` — standard settings (single-threaded, independent)
+- `WorldConfig.MaxThreads()` — all available CPU threads
+Both accept `bool independent = true`.
+
+___
+
+#### Type registration:
+```csharp
+W.Create(WorldConfig.Default());
+
+// Register components, tags, and events — only between Create() and Initialize()
+W.Types()
+    .EntityType<Bullet>(Bullet.Id)
+    .Component<Position>()
+    .Component<Velocity>()
+    .Tag<IsPlayer>()
+    .Event<OnDamage>();
+
+// Initialize the world
+W.Initialize();
+```
+
+{: .important }
+Type registration (`Types().Component<T>()`, `Types().Tag<T>()`, `Types().EntityType<T>(id)`) is only available in the `Created` state — after `Create()` and before `Initialize()`. Event registration (`Types().Event<T>()`) is also available after initialization.
+
+___
+
+#### Auto-registration of types:
+Instead of manually registering each type, you can use automatic assembly scanning.
+`RegisterAll()` discovers all structs implementing ECS interfaces and registers them automatically:
+
+```csharp
+W.Create(WorldConfig.Default());
+
+// Auto-register all types from the calling assembly
+W.Types().RegisterAll();
+
+// Or specify particular assemblies
+W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
+
+// Can be combined with manual registration (e.g. to set serialization GUID)
+W.Types()
+    .RegisterAll()
+    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent> { Guid = myGuid });
+
+W.Initialize();
+```
+
+Detected interfaces:
+
+| Interface | Registration |
+|-----------|-------------|
+| `IComponent` | `Types().Component<T>()` |
+| `ITag` | `Types().Tag<T>()` |
+| `IEvent` | `Types().Event<T>()` |
+| `ILinkType` | Wrapped in `Link<T>` and registered as a component |
+| `ILinksType` | Wrapped in `Links<T>` and registered as a component |
+| `IMultiComponent` | Wrapped in `Multi<T>` and registered as a component |
+| `IEntityType` | `Types().EntityType<T>(T.Id)` |
+
+{: .note }
+- If no assemblies are specified, only the calling assembly is scanned (not all loaded assemblies)
+- The StaticEcs framework assembly itself is always excluded from scanning
+- All types are registered with default configuration (no GUID, no custom serialization)
+- A struct implementing multiple interfaces (e.g. both `IComponent` and `IMultiComponent`) will be registered for each one
+
+___
+
+#### Initialization:
+```csharp
+// Standard initialization (baseEntitiesCapacity — initial entity capacity)
+W.Initialize(baseEntitiesCapacity: 4096);
+
+// Initialize with restored entity identifiers (EntityGID versions)
+W.InitializeFromGIDStoreSnapshot(snapshot);
+
+// Initialize with full world restoration from a snapshot
+W.InitializeFromWorldSnapshot(snapshot);
+```
+
+{: .note }
+`InitializeFromGIDStoreSnapshot` restores only entity identifier metadata (GID versions). `InitializeFromWorldSnapshot` restores the full world state, including all entities and their data.
+
+___
+
+#### Destruction:
+```csharp
+// Destroy the world and release all resources
+W.Destroy();
+```
+
+___
+
+## Basic operations
+
+```csharp
+// Current world status
+WorldStatus status = W.Status;
+
+// true if the world is initialized
+bool initialized = W.IsWorldInitialized;
+
+// true if the world is independent
+bool independent = W.IsIndependent;
+
+// Entity count in the world (active + unloaded)
+uint entitiesCount = W.CalculateEntitiesCount();
+
+// Loaded entity count
+uint loadedCount = W.CalculateLoadedEntitiesCount();
+
+// Current entity capacity
+uint capacity = W.CalculateEntitiesCapacity();
+
+// Destroy all entities in the world (world remains initialized)
+W.DestroyAllLoadedEntities();
+```
+
+___
+
+For details on creating entities and entity operations — see [Entity](entity).
+
+For details on world resources — see [Resources](resources).
+
+___
+
+## Cluster
+
+A cluster is a group of entity chunks for spatial segmentation of the world. Entities in the same cluster are grouped together and stored in memory in a segmented manner.
+- Represented as a `ushort` value (0–65535)
+- By default, cluster 0 is created on world initialization
+- All entities are created in cluster 0 by default
+- A cluster can be disabled — entities from disabled clusters are excluded from iteration
+
+{: .note }
+Clusters are designed for **spatial grouping**: levels, map zones, game rooms. For **logical** grouping (units, bullets, effects) use `entityType`.
+
+___
+
+#### Basic operations:
+```csharp
+// Register clusters (can be called after Create() or after Initialize())
+const ushort LEVEL_1_CLUSTER = 1;
+const ushort LEVEL_2_CLUSTER = 2;
+W.RegisterCluster(LEVEL_1_CLUSTER);
+W.RegisterCluster(LEVEL_2_CLUSTER);
+
+// Check if a cluster is registered
+bool registered = W.ClusterIsRegistered(LEVEL_1_CLUSTER);
+
+// Enable or disable a cluster — entities from disabled clusters are excluded from iteration
+W.SetActiveCluster(LEVEL_2_CLUSTER, false);
+
+// Check if a cluster is active
+bool active = W.ClusterIsActive(LEVEL_2_CLUSTER);
+
+// Destroy all entities in a cluster
+W.DestroyAllEntitiesInCluster(LEVEL_1_CLUSTER);
+
+// Free a cluster — all entities are deleted, chunks and the identifier are released
+W.FreeCluster(LEVEL_2_CLUSTER);
+
+// Safe free — returns false if the cluster is not registered
+bool freed = W.TryFreeCluster(LEVEL_2_CLUSTER);
+```
+
+___
+
+#### Cluster snapshots and unloading:
+```csharp
+// Create a cluster snapshot (stores all entity data)
+// Overloads available for writing to disk, compression, etc.
+byte[] snapshot = W.Serializer.CreateClusterSnapshot(LEVEL_1_CLUSTER);
+
+// Unload a cluster from memory
+// Component and tag data is removed, entities are marked as unloaded
+// Only identifier information is preserved, entities are excluded from queries
+ReadOnlySpan<ushort> clusters = stackalloc ushort[] { LEVEL_1_CLUSTER };
+W.Query().BatchUnload(EntityStatusType.Any, clusters: clusters);
+
+// Load a cluster from a snapshot
+W.Serializer.LoadClusterSnapshot(snapshot);
+```
+
+___
+
+#### Cluster chunks:
+```csharp
+// Get all chunks in a cluster (including empty ones)
+ReadOnlySpan<uint> chunks = W.GetClusterChunks(LEVEL_1_CLUSTER);
+
+// Get chunks that have at least one loaded entity
+ReadOnlySpan<uint> loadedChunks = W.GetClusterLoadedChunks(LEVEL_1_CLUSTER);
+```
+
+___
+
+#### Creating entities in a cluster:
+```csharp
+// Specify a cluster when creating an entity (default — cluster 0)
+var entity = W.NewEntity<UnitType>( clusterId: LEVEL_1_CLUSTER);
+
+// The clusterId parameter is available in all overloads
+W.NewEntity<UnitType>(
+    new Position { Value = Vector3.Zero },
+    new Velocity { Value = 1f },
+    clusterId: LEVEL_1_CLUSTER
+);
+
+// Get the entity's cluster
+ushort entityClusterId = entity.ClusterId;
+
+// Get the cluster from EntityGID
+ushort gidClusterId = entity.GID.ClusterId;
+```
+
+___
+
+## Chunk
+
+A chunk is a block of 4096 entities. The entire world consists of chunks. Each chunk belongs to a cluster.
+
+- **Independent world** (`Independent = true`) — manages chunks automatically, creates new ones as needed
+- **Dependent world** (`Independent = false`) — has no chunks available for entity creation via `NewEntity()`, chunks must be explicitly assigned
+
+___
+
+#### Basic operations:
+```csharp
+// Find a free chunk not belonging to any cluster
+// Independent world: if none available — creates a new one
+// Dependent world: if none available — error
+EntitiesChunkInfo chunkInfo = W.FindNextSelfFreeChunk();
+uint chunkIdx = chunkInfo.ChunkIdx;
+// chunkInfo.EntitiesFrom — first entity identifier in the chunk
+// chunkInfo.EntitiesCapacity — chunk size (always 4096)
+
+// Safe variant (returns false if no free chunks)
+bool found = W.TryFindNextSelfFreeChunk(out EntitiesChunkInfo info);
+
+// Register a chunk in a cluster
+W.RegisterChunk(chunkIdx, clusterId: LEVEL_1_CLUSTER);
+
+// Register a chunk with a specific ownership type
+W.RegisterChunk(chunkIdx, owner: ChunkOwnerType.Self, clusterId: LEVEL_1_CLUSTER);
+
+// Safe registration (returns false if the chunk is already registered)
+bool registered = W.TryRegisterChunk(chunkIdx, clusterId: LEVEL_1_CLUSTER);
+
+// Check if a chunk is registered
+bool isRegistered = W.ChunkIsRegistered(chunkIdx);
+
+// Get the cluster a chunk belongs to
+ushort clusterId = W.GetChunkClusterId(chunkIdx);
+
+// Move a chunk to another cluster
+W.ChangeChunkCluster(chunkIdx, LEVEL_2_CLUSTER);
+
+// Check for entities in a chunk
+bool hasEntities = W.HasEntitiesInChunk(chunkIdx);           // active + unloaded
+bool hasLoaded = W.HasLoadedEntitiesInChunk(chunkIdx);       // loaded only
+
+// Destroy all entities in a chunk
+W.DestroyAllEntitiesInChunk(chunkIdx);
+
+// Free a chunk — all entities are deleted, the identifier is released
+W.FreeChunk(chunkIdx);
+```
+
+___
+
+#### Chunk snapshots and unloading:
+```csharp
+// Create a chunk snapshot
+byte[] snapshot = W.Serializer.CreateChunkSnapshot(chunkIdx);
+
+// Unload a chunk from memory (data removed, entities marked as unloaded)
+ReadOnlySpan<uint> chunks = stackalloc uint[] { chunkIdx };
+W.Query().BatchUnload(EntityStatusType.Any, chunks);
+
+// Load a chunk from a snapshot
+W.Serializer.LoadChunkSnapshot(snapshot);
+```
+
+___
+
+#### Creating entities in a specific chunk:
+```csharp
+// Create an entity in a specific chunk
+var entity = W.NewEntityInChunk<UnitType>( chunkIdx: chunkIdx);
+
+// Safe variant (returns false if the chunk is full)
+bool created = W.TryNewEntityInChunk<UnitType>(out var entity, chunkIdx: chunkIdx);
+```
+
+___
+
+## Chunk ownership (ChunkOwnerType)
+
+The ownership type determines how the world uses a chunk for entity creation:
+
+- **`ChunkOwnerType.Self`** — chunk is managed by this world. Entities created via `NewEntity()` are placed in these chunks
+  - Independent worlds have all chunks with `Self` ownership by default
+- **`ChunkOwnerType.Other`** — chunk is not managed by this world. `NewEntity()` will never place entities in these chunks
+  - Dependent worlds have all chunks with `Other` ownership by default
+
+```csharp
+// Get the chunk's ownership type
+ChunkOwnerType owner = W.GetChunkOwner(chunkIdx);
+
+// Change ownership
+// Self → Other: chunk becomes unavailable for NewEntity()
+// Other → Self: chunk becomes available for NewEntity()
+W.ChangeChunkOwner(chunkIdx, ChunkOwnerType.Other);
+```
+
+{: .important }
+Entity creation via `NewEntityByGID<TEntityType>(gid)` is only available for chunks with `Other` ownership.
+Entity creation via `NewEntityInChunk<TEntityType>(chunkIdx)` is only available for chunks with `Self` ownership.
+
+___
+
+#### Client-server example:
+
+```csharp
+// === Server side (Independent world) ===
+// Find a free chunk and register with Other ownership
+// The server will not create its own entities in this identifier range
+EntitiesChunkInfo chunkInfo = WServer.FindNextSelfFreeChunk();
+WServer.RegisterChunk(chunkInfo.ChunkIdx, ChunkOwnerType.Other);
+// Send the chunk identifier to the client
+
+// === Client side (Dependent world) ===
+// Receive the chunk identifier from the server
+// Register with Self ownership — now 4096 entity slots are available
+WClient.RegisterChunk(chunkIdxFromServer, ChunkOwnerType.Self);
+
+// The client can create entities via NewEntity()
+// For example, for UI or VFX
+var vfx = WClient.NewEntity<VfxType>();
+
+// Similarly works for P2P:
+// one Independent host + N Dependent clients
+```
+
+___
+
+## Cluster and chunk usage examples
+
+#### Clusters:
+- **Levels and map zones** — different clusters for different parts of the game world. As the player moves, clusters can be loaded and unloaded to save memory
+- **Game levels** — load/unload clusters when changing levels
+- **Game sessions** — cluster identifier defines a session. Combined with parallel iteration, multi-world emulation within a single world is possible
+
+#### Chunks:
+- **World streaming** — loading and unloading chunks during gameplay
+- **Custom identifier management** — control over EntityGID distribution
+- **Arena memory** — fast allocation and cleanup of large numbers of temporary entities
+
+#### Chunk ownership:
+- **Client-server interaction** — server allocates identifier ranges to clients
+- **P2P network formats** — one Independent host and N Dependent clients
+
+---
+
+
+## Entity
+Entity is a structure for identifying an object in the world and accessing its components and tags
+- 4-byte struct (`uint` wrapper over a slot index)
+- Does not contain a generation counter — for persistent references use [EntityGID](gid.md)
+- All component and tag operations are available as methods on the entity itself
+
+___
+
+## Entity type (IEntityType)
+
+When creating an entity, you specify a **type** (`IEntityType) — a logical identifier that defines the entity's purpose: units, bullets, effects, etc.
+
+### How it works
+
+When creating an entity, the world automatically places it into a memory segment allocated for the specified type. Entities of the same type within the same cluster always end up in the same segments — the world tracks free segments for each type separately.
+
+### Why it matters
+
+**Data locality during iteration.** Components are stored in SoA arrays indexed by entity position. When entities of the same type (e.g., all bullets) occupy adjacent slots in the same segment, their `Position` and `Velocity` components are also contiguous in memory. During query iteration this means sequential reads from continuous array regions — the CPU efficiently utilizes cache lines.
+
+**Reduced fragmentation.** Without typing, entities of different "kinds" (units, bullets, effects) would be created interleaved. When short-lived entities (bullets, effects) are destroyed, "holes" appear in segments that get filled by entities of a completely different kind. With typing, holes from destroyed bullets are filled by new bullets — the segment remains homogeneous.
+
+**Predictable placement.** The type unambiguously determines which segment a new entity will be placed in. This simplifies profiling and provides predictable behavior during streaming/serialization.
+
+### Example
+
+```csharp
+const byte UNIT_TYPE = 1;
+const byte BULLET_TYPE = 2;
+const byte EFFECT_TYPE = 3;
+
+// Units, bullets, and effects are stored in different segments
+var unit = W.NewEntity<UnitType>();
+var bullet = W.NewEntity<BulletType>();
+var effect = W.NewEntity<EffectType>();
+
+// A new bullet will be placed in the same segment as previous bullets
+var bullet2 = W.NewEntity<BulletType>();
+```
+
+### entityType and clusterId
+
+These two parameters complement each other:
+
+- **`entityType`** — **logical** grouping: defines *what* the entity is (unit, bullet, effect). Affects memory placement — entities of the same type are stored together for optimal iteration.
+- **`clusterId`** — **spatial** grouping: defines *where* the entity is (level, map zone, room). Allows restricting queries to specific areas of the world and managing streaming — loading and unloading entire clusters.
+
+Segmentation works at the intersection of these parameters: within each cluster, separate segments are allocated for each type. For example, bullets on level 1 and bullets on level 2 are stored in different segments, but within each — compactly and without fragmentation.
+
+___
+
+## Creation
+
+```csharp
+// Create an entity with default type
+W.Entity entity = W.NewEntity<Default>();
+
+// With entity type (IEntityType)
+W.Entity entity = W.NewEntity<Default>();
+
+// With cluster (default W.DEFAULT_CLUSTER = 0)
+// Clusters are used for spatial grouping: levels, map zones, etc.
+W.Entity entity = W.NewEntity<Default>( clusterId: LEVEL_1_CLUSTER);
+
+// With components by type (from 1 to 5 types) — components are default-initialized
+W.Entity entity = W.NewEntity<Default>();
+W.Entity entity = W.NewEntity<Default>();
+
+// With components by value (via Set — from 1 to 12 components)
+W.Entity entity = W.NewEntity<Default>().Set( new Position { Value = Vector3.One });
+W.Entity entity = W.NewEntity<Default>(
+    new Position { Value = Vector3.One },
+    new Velocity { Value = 1f },
+    new Name { Value = "Player" }
+);
+
+// Create in a specific chunk
+W.Entity entity = W.NewEntityInChunk<Default>( chunkIdx: chunkIdx);
+
+// Create by GID (for deserialization and network synchronization)
+W.Entity entity = W.NewEntityByGID<Default>(gid);
+
+// Non-generic overloads (entity type known only at runtime, e.g. during deserialization)
+byte entityTypeId = EntityTypeInfo<Default>.Id;
+W.Entity entity = W.NewEntity(entityTypeId, clusterId: LEVEL_1_CLUSTER);
+W.Entity entity = W.NewEntityInChunk(entityTypeId, chunkIdx: chunkIdx);
+W.Entity entity = W.NewEntityByGID(entityTypeId, gid);
+```
+
+#### Creation in a dependent world (Try):
+
+{: .note }
+A dependent world (`Independent = false`) shares slot space with other worlds. If its allocated slots are exhausted, entity creation is not possible.
+
+```csharp
+// Returns false if the dependent world has run out of allocated slots
+if (W.TryNewEntity<Default>(out var entity, clusterId: LEVEL_1_CLUSTER)) {
+    entity.Set(new Position { Value = Vector3.Zero });
+}
+
+// Returns false if the chunk is full
+if (W.TryNewEntityInChunk<Default>(out var entity, chunkIdx: chunkIdx)) {
+    // ...
+}
+```
+
+___
+
+## Batch creation
+
+```csharp
+uint count = 1000;
+
+// Without components
+W.NewEntities<Default>(count);
+
+// With components by type (from 1 to 5 types)
+W.NewEntities<Default, Position>(count);
+W.NewEntities<Default, Position, Velocity>(count);
+
+// With components by value (from 1 to 8 components)
+W.NewEntities<Default>(count, new Position { Value = Vector3.Zero });
+W.NewEntities<Default>(count,
+    new Position { Value = Vector3.Zero },
+    new Velocity { Value = 1f }
+);
+
+// With initialization delegate for each entity
+W.NewEntities<Default, Position>(count, onCreate: static entity => {
+    entity.Set<Unit>();
+});
+
+// With cluster
+W.NewEntities<Default, Position>(count, clusterId: LEVEL_1_CLUSTER);
+
+// Full overload: values + cluster + delegate
+W.NewEntities<Default>(count,
+    new Position { Value = Vector3.Zero },
+    clusterId: LEVEL_1_CLUSTER,
+    onCreate: static entity => {
+        entity.Set<Unit>();
+    }
+);
+```
+
+___
+
+## Properties
+
+```csharp
+W.Entity entity = W.NewEntity<Default>();
+
+uint id = entity.ID;                         // Internal slot index
+EntityGID gid = entity.GID;                  // Global identifier (8 bytes)
+EntityGIDCompact gidC = entity.GIDCompact;   // Compact identifier (4 bytes)
+ushort version = entity.Version;             // Slot generation counter
+ushort clusterId = entity.ClusterId;         // Cluster identifier
+byte entityType = entity.EntityType;         // Entity type (0–255)
+uint chunkId = entity.ChunkID;              // Chunk index
+
+bool alive = entity.IsNotDestroyed;          // Not destroyed
+bool destroyed = entity.IsDestroyed;         // Destroyed
+bool enabled = entity.IsEnabled;             // Enabled (participates in queries)
+bool disabled = entity.IsDisabled;           // Disabled
+bool selfOwned = entity.IsSelfOwned;         // Segment belongs to this world (not received from another world)
+
+string info = entity.PrettyString;           // Debug string (ID, version, components, tags)
+```
+
+___
+
+## Lifecycle
+
+```csharp
+// Disable entity — excluded from standard queries but retains all data
+entity.Disable();
+
+// Re-enable
+entity.Enable();
+
+// Destroy — removes all components (triggering OnDelete hooks), tags, frees slot
+entity.Destroy();
+
+// Safe destroy — no error if entity is already destroyed or world is not initialized
+entity.TryDestroy();
+
+// Unload from memory — entity becomes invisible but its ID is preserved
+// Used for streaming (temporary unload with subsequent reload via serialization)
+entity.Unload();
+
+// Increment version without destroying — all previously obtained GIDs become invalid
+entity.UpVersion();
+```
+
+___
+
+## Cloning and transfer
+
+```csharp
+// Clone entity — creates a new entity with a copy of all components and tags
+W.Entity clone = entity.Clone();
+
+// Clone into a different cluster
+W.Entity clone = entity.Clone(clusterId: OTHER_CLUSTER);
+
+// Copy all components and tags to an existing entity
+// If the target already has matching components — they are overwritten
+entity.CopyTo(targetEntity);
+
+// Move all data to an existing entity and destroy the source
+entity.MoveTo(targetEntity);
+
+// Move to a different cluster — creates a new entity, copies data, destroys the source
+W.Entity moved = entity.MoveTo(clusterId: OTHER_CLUSTER);
+```
+
+___
+
+## Components
+
+Full component API is described in the [Components](component.md) section.
+
+```csharp
+// Get reference to component
+ref var pos = ref entity.Ref<Position>();
+// Add component (without value — if already exists, returns ref without triggering hooks)
+ref var pos = ref entity.Add<Position>();
+
+// Set component with value (always overwrites with OnDelete → OnAdd cycle)
+entity.Set(new Position { Value = Vector3.One });
+
+// Add multiple (from 2 to 5 types)
+entity.Add<Position, Velocity>();
+
+// Delete component (returns true if existed)
+bool existed = entity.Delete<Position>();
+
+// Check presence
+bool has = entity.Has<Position>();
+bool hasAll = entity.Has<Position, Velocity>();
+bool hasAny = entity.HasAny<Position, Velocity>();
+
+// Enable/disable component (data is preserved but component is excluded from queries)
+entity.Disable<Position>();
+entity.Enable<Position>();
+
+// Selective copy/move of components (from 1 to 5 types)
+entity.CopyTo<Position, Velocity>(targetEntity);
+entity.MoveTo<Position>(targetEntity);
+```
+
+___
+
+## Tags
+
+Full tag API is described in the [Tags](tag.md) section.
+
+```csharp
+// Set tag (returns true if tag was added)
+bool added = entity.Set<Unit>();
+
+// Set multiple (from 2 to 5 types)
+entity.Set<Unit, Player>();
+
+// Delete tag (returns true if existed)
+bool removed = entity.Delete<Unit>();
+
+// Check presence
+bool has = entity.Has<Unit>();
+bool hasAll = entity.Has<Unit, Player>();
+bool hasAny = entity.HasAny<Unit, Player>();
+
+// Toggle (add if absent, remove if present)
+entity.Toggle<Unit>();
+
+// Conditional application
+entity.Apply<Unit>(isPlayer);
+
+// Selective copy/move of tags (from 1 to 5 types)
+entity.CopyTo<Unit, Player>(targetEntity);
+entity.MoveTo<Unit>(targetEntity);
+```
+
+___
+
+## Debugging
+
+```csharp
+// Debug string with full information
+string info = entity.PrettyString;
+
+// Component count (enabled + disabled)
+int compCount = entity.ComponentsCount();
+
+// Tag count
+int tagCount = entity.TagsCount();
+
+// Get all components (list is cleared before filling)
+var components = new List<IComponent>();
+entity.GetAllComponents(components);
+
+// Get all tags (list is cleared before filling)
+var tags = new List<ITag>();
+entity.GetAllTags(tags);
+```
+
+___
+
+## Operators and conversions
+
+```csharp
+W.Entity a = W.NewEntity<Default>();
+W.Entity b = W.NewEntity<Default>();
+
+// Comparison by slot index (no version check)
+bool eq = a == b;
+bool neq = a != b;
+
+// Implicit conversion Entity → EntityGID (8 bytes)
+EntityGID gid = entity;
+
+// Explicit conversion Entity → EntityGIDCompact (4 bytes)
+// Throws in DEBUG if Chunk >= 4 or ClusterId >= 4
+EntityGIDCompact compact = (EntityGIDCompact)entity;
+
+// Convert to typed link (for the relations system)
+Link<ChildOf> link = entity.AsLink<ChildOf>();
+```
+
+---
+
+
+## EntityGID
+Global entity identifier — a stable reference to an entity, safe for storage, serialization, and network transmission
+- Used for [events](events.md), [entity relationships](relations.md), [serialization](serialization.md), networking
+- Contains Id, Version, and ClusterId — enables stale reference detection via version checking
+- Assigned automatically on entity creation or manually via `NewEntityByGID`
+- 8-byte struct (`StructLayout.Explicit`, fields overlap via `Raw`)
+
+___
+
+#### Obtaining:
+```csharp
+// Property on entity
+EntityGID gid = entity.GID;
+
+// Implicit conversion Entity → EntityGID
+EntityGID gid = entity;
+
+// Via constructor
+EntityGID gid = new EntityGID(id: 0, version: 1, clusterId: 0);
+EntityGID gid = new EntityGID(rawValue: 16777216UL);
+```
+
+___
+
+#### Properties:
+```csharp
+EntityGID gid = entity.GID;
+
+uint id = gid.Id;               // Internal entity slot index
+ushort version = gid.Version;   // Generation counter (incremented on slot reuse)
+ushort clusterId = gid.ClusterId; // Cluster identifier
+uint chunk = gid.Chunk;         // Chunk index (computed)
+ulong raw = gid.Raw;            // Raw 8-byte representation (all fields packed)
+```
+
+___
+
+#### Validation and unpacking:
+```csharp
+EntityGID gid = entity.GID;
+
+// Check GID status: Active, NotActual, or NotLoaded
+GIDStatus status = gid.Status<WT>();
+
+// Safe unpacking — returns true if entity is loaded and actual
+if (gid.TryUnpack<WT>(out var entity)) {
+    ref var pos = ref entity.Ref<Position>();
+}
+
+// With failure diagnostics
+if (!gid.TryUnpack<WT>(out var entity, out GIDStatus status)) {
+    // status == GIDStatus.NotActual → entity does not exist or version/cluster doesn't match (stale reference)
+    // status == GIDStatus.NotLoaded → entity exists and version matches, but is currently unloaded
+}
+
+// Unsafe unpacking — throws in DEBUG if not loaded or stale
+var entity = gid.Unpack<WT>();
+```
+
+___
+
+#### Creating an entity with a specific GID:
+```csharp
+// Create entity at the exact slot specified by GID
+// Used during deserialization and network synchronization
+var entity = W.NewEntityByGID<Default>(gid);
+```
+
+___
+
+#### Invalidation:
+```csharp
+// Increment version without destroying the entity
+// All previously obtained GIDs become stale (Status returns GIDStatus.NotActual)
+entity.UpVersion();
+```
+
+___
+
+#### Comparison:
+```csharp
+EntityGID a = entity1.GID;
+EntityGID b = entity2.GID;
+
+bool eq = a == b;           // Comparison by Raw (8 bytes)
+bool eq = a.Equals(b);      // Same
+
+// Cross-type comparison with EntityGIDCompact
+EntityGIDCompact compact = entity1.GIDCompact;
+bool eq = a == compact;     // Comparison by Id, Version, ClusterId
+bool eq = a.Equals(compact);
+
+// Explicit narrowing conversion to EntityGIDCompact
+// Throws in DEBUG if Chunk >= 4 or ClusterId >= 4
+EntityGIDCompact compact = (EntityGIDCompact)gid;
+```
+
+___
+
+## EntityGIDCompact
+Compact version of EntityGID — 4 bytes instead of 8, for memory-constrained scenarios
+- Bit packing: `[31..16]` Version, `[15..14]` ClusterId (2 bits), `[13..12]` Chunk (2 bits), `[11..0]` entity index within chunk
+- Limits: max 4 chunks (~16,384 entities), max 4 clusters
+- Throws in DEBUG when exceeding limits
+
+#### Obtaining:
+```csharp
+EntityGIDCompact gid = entity.GIDCompact;
+
+// Explicit conversion Entity → EntityGIDCompact
+EntityGIDCompact gid = (EntityGIDCompact)entity;
+
+// Via constructor
+EntityGIDCompact gid = new EntityGIDCompact(id: 0, version: 1, clusterId: 0);
+EntityGIDCompact gid = new EntityGIDCompact(raw: 16777216U);
+```
+
+___
+
+#### Validation and unpacking:
+```csharp
+// API is identical to EntityGID
+GIDStatus status = gid.Status<WT>();
+
+if (gid.TryUnpack<WT>(out var entity)) {
+    // ...
+}
+
+var entity = gid.Unpack<WT>();
+
+// Implicit widening conversion to EntityGID (always safe)
+EntityGID full = gid;
+```
+
+___
+
+## Usage examples
+
+#### Events:
+```csharp
+public struct OnDamage : IEvent {
+    public EntityGID Target;
+    public float Amount;
+}
+
+// In a system:
+foreach (var e in damageReceiver) {
+    ref var data = ref e.Value;
+    if (data.Target.TryUnpack<WT>(out var target)) {
+        ref var health = ref target.Ref<Health>();
+        health.Current -= data.Amount;
+    }
+}
+```
+
+#### Server-client networking:
+GID can be used as an entity binding identifier between client and server.
+The server creates an entity, sends the GID to the client, the client creates an entity with the same GID —
+further commands with GID allow the client to easily find the needed entity via `TryUnpack`.
+
+```csharp
+public struct CreateEntityCommand {
+    public EntityGID Id;
+    public string Prefab;
+}
+
+// Server:
+var serverEntity = W.NewEntity<Default>();
+client.Send(new CreateEntityCommand { Id = serverEntity.GID, Prefab = "player" });
+
+// Client:
+var cmd = server.Receive<CreateEntityCommand>();
+var clientEntity = ClientW.NewEntityByGID<Default>(cmd.Id);
+```
+
+---
+
+
+## Component
+Component gives an entity data and properties
+- Represented as a user struct with the `IComponent` marker interface
+- Implemented as struct purely for performance reasons (SoA storage)
+- Supports lifecycle hooks: `OnAdd`, `OnDelete`, `CopyTo`, `Write`, `Read`
+- Can be enabled/disabled without removing data
+
+#### Example:
+```csharp
+public struct Position : IComponent {
+    public Vector3 Value;
+}
+
+public struct Velocity : IComponent {
+    public float Value;
+}
+
+public struct Name : IComponent {
+    public string Val;
+}
+```
+
+___
+
+{: .important }
+Requires registration in the world between creation and initialization
+
+```csharp
+W.Create(WorldConfig.Default());
+//...
+// Simple registration without configuration (suitable for most cases)
+W.Types()
+    .Component<Position>()
+    .Component<Velocity>()
+    .Component<Name>();
+
+// Registration with configuration
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("..."),      // stable identifier for serialization
+    version: 1,                  // data schema version for migration (default — 0)
+    notClearable: true,          // skip zeroing data on deletion (default — false)
+    readWriteStrategy: null      // binary serialization strategy (default — StructPackArrayStrategy<T>)
+));
+//...
+W.Initialize();
+```
+
+{: .note }
+The `notClearable` parameter only takes effect when the component has **no** `OnDelete` hook. By default (`notClearable: false`), component data is zeroed (`= default`) on deletion. With `notClearable: true`, zeroing is skipped — useful for unmanaged types where it's unnecessary overhead. If `OnDelete` is defined, it handles cleanup, and the flag has no effect.
+
+___
+
+#### Creating entities with components:
+```csharp
+// Create an empty entity (no components or tags)
+W.Entity entity = W.NewEntity<Default>();
+
+// Create an entity with a specific type and cluster
+W.Entity entity = W.NewEntity<Default>( clusterId: 0);
+
+// Create an entity with components (default values, overloads from 1 to 8 components)
+W.Entity entity = W.NewEntity<Default>();
+W.Entity entity = W.NewEntity<Default>();
+
+// Create an entity with components via values (Set — overloads from 1 to 12 components)
+W.Entity entity = W.NewEntity<Default>().Set( new Position { Value = Vector3.One });
+W.Entity entity = W.NewEntity<Default>(
+    new Position { Value = Vector3.One },
+    new Velocity { Value = 1f }
+);
+```
+
+___
+
+#### Adding components:
+```csharp
+// Add without value: if component exists → returns ref to existing, hooks are NOT called
+// If new → initializes with default, calls OnAdd
+ref var position = ref entity.Add<Position>();
+
+// With isNew flag: isNew=true if component was added for the first time
+ref var position = ref entity.Add<Position>(out bool isNew);
+
+// Add multiple components in a single call (overloads from 2 to 5)
+entity.Add<Position, Velocity>();
+
+// Set with value: ALWAYS overwrites data
+// If component exists → OnDelete(old) → replace → OnAdd(new)
+// If new → set value → OnAdd
+entity.Set(new Position { Value = Vector3.One });
+
+// Set multiple components with values (overloads from 1 to 12)
+entity.Set(new Position { Value = Vector3.One }, new Velocity { Value = 1f });
+```
+
+{: .important }
+`Add<T>()` without a value and `Add<T>(T value)` with a value have different hook semantics.
+Without value: if the component already exists, hooks are **not called**, a ref to current data is returned.
+With value: data is **always overwritten** with the full cycle `OnDelete` → replace → `OnAdd`.
+
+___
+
+#### Data access:
+```csharp
+// Get a mutable ref to the component (read and write)
+ref var velocity = ref entity.Ref<Velocity>();
+velocity.Value += 10f;
+
+// Get readonly ref to the component
+ref readonly var pos = ref entity.Read<Position>();
+var x = pos.Value.x; // reading OK
+```
+
+___
+
+#### Basic operations:
+```csharp
+// Get the number of components on an entity
+int count = entity.ComponentsCount();
+
+// Check if a component is present (overloads from 1 to 3 — checks ALL specified)
+// Checks presence regardless of enabled/disabled state
+bool has = entity.Has<Position>();
+bool hasBoth = entity.Has<Position, Velocity>();
+bool hasAll = entity.Has<Position, Velocity, Name>();
+
+// Check if at least one of the specified components is present (overloads from 2 to 3)
+bool hasAny = entity.HasAny<Position, Velocity>();
+bool hasAny3 = entity.HasAny<Position, Velocity, Name>();
+
+// Remove a component (overloads from 1 to 5)
+// Calls OnDelete if the component was present; returns true if removed, false if not present
+bool deleted = entity.Delete<Position>();
+entity.Delete<Position, Velocity>();
+entity.Delete<Position, Velocity, Name>();
+```
+
+___
+
+#### Enable/Disable:
+```csharp
+// Disable a component — data is preserved, but entity is excluded from standard queries
+// Returns true if the component was enabled and is now disabled
+bool disabled = entity.Disable<Position>();
+entity.Disable<Position, Velocity>();
+entity.Disable<Position, Velocity, Name>();
+
+// Re-enable a component
+// Returns true if the component was disabled and is now enabled
+bool enabled = entity.Enable<Position>();
+entity.Enable<Position, Velocity>();
+entity.Enable<Position, Velocity, Name>();
+
+// Check that ALL specified components are enabled (overloads from 1 to 3)
+bool posEnabled = entity.HasEnabled<Position>();
+bool bothEnabled = entity.HasEnabled<Position, Velocity>();
+
+// Check that at least one is enabled (overloads from 2 to 3)
+bool anyEnabled = entity.HasEnabledAny<Position, Velocity>();
+
+// Check that ALL specified components are disabled (overloads from 1 to 3)
+bool posDisabled = entity.HasDisabled<Position>();
+bool bothDisabled = entity.HasDisabled<Position, Velocity>();
+
+// Check that at least one is disabled (overloads from 2 to 3)
+bool anyDisabled = entity.HasDisabledAny<Position, Velocity>();
+```
+
+{: .note }
+Disabled components are excluded from standard query filters (`All`, `None`, `Any`), but their data remains in memory. Use `WithDisabled`/`OnlyDisabled` filter variants to work with disabled components.
+
+___
+
+#### Copying and moving:
+```csharp
+var source = W.NewEntity<Default>();
+var target = W.NewEntity<Default>();
+
+// Copy specified components to another entity (overloads from 1 to 5)
+// The source entity keeps its components
+// If CopyTo hook is overridden — custom copy logic is used
+// If CopyTo hook is NOT overridden — bitwise copy via Add + disabled state is preserved
+// Returns true (for single) if the source had the component
+bool copied = source.CopyTo<Position>(target);
+source.CopyTo<Position, Velocity>(target);
+
+// Move specified components to another entity (overloads from 1 to 5)
+// Performs Copy to target, then Delete from source (OnDelete is called on source)
+bool moved = source.MoveTo<Position>(target);
+source.MoveTo<Position, Velocity>(target);
+```
+
+___
+
+#### Query filters:
+```csharp
+// === Standard (work with enabled components) ===
+// All<> — requires ALL enabled components (from 1 to 8 types)
+// None<> — excludes entities with any enabled component from the specified set (from 1 to 8 types)
+// Any<> — requires at least one enabled component (from 2 to 8 types)
+
+foreach (var entity in W.Query<All<Position, Velocity>, None<Name>>().Entities()) {
+    ref var pos = ref entity.Ref<Position>();
+    ref readonly var vel = ref entity.Read<Velocity>();
+    pos.Value += vel.Value;
+}
+
+// === Including disabled (WithDisabled) ===
+// AllWithDisabled<> — requires ALL, regardless of enabled/disabled (from 1 to 8 types)
+// NoneWithDisabled<> — excludes entities with any of the specified, regardless of state (from 1 to 8 types)
+// AnyWithDisabled<> — at least one, regardless of state (from 2 to 8 types)
+
+// === Only disabled (OnlyDisabled) ===
+// AllOnlyDisabled<> — requires ALL disabled (from 1 to 8 types)
+// AnyOnlyDisabled<> — at least one disabled (from 2 to 8 types)
+
+// Example: find entities with disabled Position to re-enable them
+foreach (var entity in W.Query<AllOnlyDisabled<Position>>().Entities()) {
+    entity.Enable<Position>();
+}
+```
+
+___
+
+#### Lifecycle hooks:
+
+The `IComponent` interface provides hooks with empty default implementations — override only the ones you need.
+
+{: .important }
+Do not leave empty hook implementations. If a hook is not needed — don't implement it. Unimplemented hooks are not called and create no overhead.
+
+```csharp
+public struct Health : IComponent {
+    public float Current;
+    public float Max;
+
+    // Called after the component is added or the value is overwritten via Add(value)
+    public void OnAdd<TWorld>(World<TWorld>.Entity self) where TWorld : struct, IWorldType {
+        Current = Current <= 0 ? Max : Current; // initialize with default value
+    }
+
+    // Called before the component is removed (Delete) or before overwrite (Set with value)
+    // Also called during entity destruction for each component
+    public void OnDelete<TWorld>(World<TWorld>.Entity self, HookReason reason) where TWorld : struct, IWorldType {
+        Current = -1; // mark as invalid
+    }
+
+    // Custom copy logic for CopyTo / MoveTo / Clone
+    // If NOT overridden — bitwise copy via Add + disabled state preservation is used
+    // If overridden — completely replaces the default copy logic
+    public void CopyTo<TWorld>(World<TWorld>.Entity self, World<TWorld>.Entity other, bool disabled)
+        where TWorld : struct, IWorldType {
+        ref var otherHealth = ref other.Add<Health>();
+        otherHealth.Max = Max;
+        otherHealth.Current = Max; // on copy, reset health to max
+    }
+
+    // Serialization — write the component to a binary stream
+    // Required for EntitiesSnapshot (all types), and for non-unmanaged types in any snapshot
+    public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
+        where TWorld : struct, IWorldType {
+        writer.WriteFloat(Current);
+        writer.WriteFloat(Max);
+    }
+
+    // Deserialization — read the component from a binary stream
+    // The version parameter enables data migration between schema versions
+    public void Read<TWorld>(ref BinaryPackReader reader, World<TWorld>.Entity self, byte version, bool disabled)
+        where TWorld : struct, IWorldType {
+        Current = reader.ReadFloat();
+        Max = reader.ReadFloat();
+    }
+}
+```
+
+{: .important }
+Hook call order for `Add(value)` on an existing component: `OnDelete`(old value) → data replacement → `OnAdd`(new value). For `Delete` or entity destruction, only `OnDelete` is called.
+
+___
+
+#### Debugging:
+```csharp
+// Collect all components of an entity into a list (for inspector/debugging)
+// The list is cleared before populating
+var components = new List<IComponent>();
+entity.GetAllComponents(components);
+```
+
+---
+
+
+## Tag
+Tag is similar to a component, but carries no data — it serves as a boolean flag on an entity
+- Stored purely as a bitmask — no data arrays, minimal memory footprint
+- Does not slow down component searches and allows creating many tags
+- No hooks (`OnAdd`/`OnDelete`) and no enable/disable — a tag is either present or absent
+- Ideal for state markers (`IsPlayer`, `IsDead`, `NeedsUpdate`), query filtering, and any boolean property
+- Represented as an empty user struct with the `ITag` marker interface
+- Tags use the same API as components: `Set<T>()`, `Has<T>()`, `Delete<T>()`, and the same query filters (`All<>`, `None<>`, `Any<>`)
+
+#### Example:
+```csharp
+public struct Unit : ITag { }
+public struct Player : ITag { }
+public struct IsDead : ITag { }
+```
+
+___
+
+{: .important }
+Requires registration in the world between creation and initialization
+
+```csharp
+W.Create(WorldConfig.Default());
+//...
+W.Types()
+    .Tag<Unit>()
+    .Tag<Player>()
+    .Tag<IsDead>();
+//...
+W.Initialize();
+```
+
+___
+
+#### Setting tags:
+```csharp
+// Add a tag to an entity (overloads from 1 to 5 tags)
+// Returns true if the tag was absent and was added, false if already present
+bool added = entity.Set<Unit>();
+
+// Add multiple tags in a single call
+entity.Set<Unit, Player>();
+entity.Set<Unit, Player, IsDead>();
+// Overloads for 4 and 5 tags are also available
+```
+
+___
+
+#### Basic operations:
+```csharp
+// Get the number of tags on an entity
+int tagsCount = entity.TagsCount();
+
+// Check if a tag is present (overloads from 1 to 3 tags — checks ALL specified)
+bool hasUnit = entity.Has<Unit>();
+bool hasBoth = entity.Has<Unit, Player>();
+bool hasAll3 = entity.Has<Unit, Player, IsDead>();
+
+// Check if at least one of the specified tags is present (overloads from 2 to 3 tags)
+bool hasAny = entity.HasAny<Unit, Player>();
+bool hasAny3 = entity.HasAny<Unit, Player, IsDead>();
+
+// Remove a tag from an entity (overloads from 1 to 5 tags)
+// Returns true if the tag was present and removed, false if it wasn't there
+// Safe to use even if the tag doesn't exist
+bool deleted = entity.Delete<Unit>();
+entity.Delete<Unit, Player>();
+
+// Toggle a tag: adds if absent, removes if present (overloads from 1 to 3 tags)
+// Returns true if the tag was added, false if it was removed
+bool state = entity.Toggle<Unit>();
+entity.Toggle<Unit, Player>();
+
+// Conditionally set or remove a tag based on a boolean value (overloads from 1 to 3 tags)
+// true — tag is set, false — tag is removed
+entity.Apply<Unit>(true);
+entity.Apply<Unit, Player>(false, true); // Unit is removed, Player is set
+```
+
+___
+
+#### Copying and moving:
+```csharp
+var source = W.NewEntity<Default>();
+source.Set<Unit, Player>();
+
+var target = W.NewEntity<Default>();
+
+// Copy specified tags to another entity (overloads from 1 to 5 tags)
+// The source entity keeps its tags
+// Returns true (for single tag) if the source had the tag and it was copied
+bool copied = source.CopyTo<Unit>(target);
+source.CopyTo<Unit, Player>(target);
+
+// Move specified tags to another entity (overloads from 1 to 5 tags)
+// The tag is added on the target and removed from the source
+// Returns true (for single tag) if the tag was moved
+bool moved = source.MoveTo<Unit>(target);
+source.MoveTo<Unit, Player>(target);
+```
+
+___
+
+#### Query filters:
+```csharp
+// Tags use the same filters as components: All<>, None<>, Any<>
+
+// Example: iterate entities with Position component and both Unit and Player tags
+foreach (var entity in W.Query<All<Position, Unit, Player>>().Entities()) {
+    ref var pos = ref entity.Ref<Position>();
+    // ...
+}
+
+// Example: iterate entities with Position but without the IsDead tag (tag used in None<> just like a component)
+foreach (var entity in W.Query<All<Position>, None<IsDead>>().Entities()) {
+    ref var pos = ref entity.Ref<Position>();
+    // ...
+}
+
+// Example: iterate entities with Position and at least one of Unit or Player tags
+foreach (var entity in W.Query<All<Position>, Any<Unit, Player>>().Entities()) {
+    ref var pos = ref entity.Ref<Position>();
+    // ...
+}
+```
+
+___
+
+#### Debugging:
+```csharp
+// Collect all tags of an entity into a list (for inspector/debugging)
+// The list is cleared before populating
+var tags = new List<ITag>();
+entity.GetAllTags(tags);
+```
+
+---
+
+
+## MultiComponent
+Multi-components are optimized list-components that allow storing multiple values of the same type on a single entity
+- All elements of all multi-components of one type for all entities are stored in a unified storage — optimal memory usage
+- Capacity from 4 to 32768 values per component, automatic expansion
+- No need to create arrays or lists inside a component — zero heap allocations
+- Implements [component](component.md), all base rules apply
+- Entity [relations](relations.md) (`Links<T>`) are built on top of multi-components
+
+___
+
+## Type definition
+
+The multi-component value type must implement the interface `IMultiComponent` and be a `struct`:
+
+```csharp
+// Unmanaged type — serialization works automatically via bulk memory copy
+public struct Item : IMultiComponent {
+    public int Id;
+    public float Weight;
+}
+```
+
+Non-unmanaged (managed) types must implement `Write`/`Read` hooks for serialization:
+
+```csharp
+// Managed type — requires Write/Read hooks for serialization
+public struct NamedItem : IMultiComponent {
+    public string Name;
+    public int Count;
+
+    public void Write(ref BinaryPackWriter writer) {
+        writer.Write(in Name);
+        writer.Write(in Count);
+    }
+
+    public void Read(ref BinaryPackReader reader) {
+        Name = reader.Read<string>();
+        Count = reader.ReadInt();
+    }
+}
+```
+
+___
+
+## Serialization strategy
+
+By default, `StructPackArrayStrategy<T>` is used for element serialization (per-element via hooks).
+For unmanaged types, you can use `UnmanagedPackArrayStrategy<T>` for bulk memory copy (faster).
+
+The strategy can be specified:
+1. **Explicit parameter:** `.Multi<Item>(elementStrategy: new UnmanagedPackArrayStrategy<Item>())`
+2. **Static field/property on the type** (for `RegisterAll`): `static readonly IPackArrayStrategy<Item> PackStrategy = new UnmanagedPackArrayStrategy<Item>();`
+3. **Default:** `StructPackArrayStrategy<T>` (uses `Write`/`Read` hooks per element)
+
+___
+
+## Registration
+
+```csharp
+W.Create(WorldConfig.Default());
+
+W.Types()
+    .Multi<Item>()                                                         // default strategy
+    .Multi<Item>(elementStrategy: new UnmanagedPackArrayStrategy<Item>())   // explicit unmanaged strategy
+    .Multi<NamedItem>();                                                    // managed type with hooks
+
+W.Initialize();
+```
+
+___
+
+## Basic operations
+
+Multi-components work like regular components:
+
+```csharp
+// Add (initial capacity — 4 elements, expands automatically)
+ref var items = ref entity.Add<W.Multi<Item>>();
+
+// Get reference
+ref var items = ref entity.Ref<W.Multi<Item>>();
+
+// Check presence
+bool has = entity.Has<W.Multi<Item>>();
+
+// Delete (element list is cleared automatically)
+entity.Delete<W.Multi<Item>>();
+
+// On clone and copy — all elements are copied automatically
+var clone = entity.Clone();
+entity.CopyTo<W.Multi<Item>>(targetEntity);
+```
+
+___
+
+## Properties
+
+```csharp
+ref var items = ref entity.Ref<W.Multi<Item>>();
+
+ushort len = items.Length;       // Number of elements
+ushort cap = items.Capacity;     // Current capacity
+bool empty = items.IsEmpty;      // Empty
+bool notEmpty = items.IsNotEmpty; // Not empty
+bool full = items.IsFull;        // Filled to capacity
+
+// Index access (returns ref)
+ref var first = ref items[0];
+ref var last = ref items[items.Length - 1];
+
+// First and last element
+ref var f = ref items.First();
+ref var l = ref items.Last();
+
+// Span for direct memory access
+Span<Item> span = items.AsSpan;
+ReadOnlySpan<Item> roSpan = items.AsReadOnlySpan;
+
+// Implicit conversion to Span
+Span<Item> span = items;
+ReadOnlySpan<Item> roSpan = items;
+```
+
+___
+
+## Adding
+
+```csharp
+// Single element
+items.Add(new Item { Id = 1, Weight = 0.5f });
+
+// Multiple (from 2 to 4)
+items.Add(
+    new Item { Id = 1, Weight = 0.5f },
+    new Item { Id = 2, Weight = 1.0f }
+);
+
+items.Add(
+    new Item { Id = 1, Weight = 0.5f },
+    new Item { Id = 2, Weight = 1.0f },
+    new Item { Id = 3, Weight = 1.5f },
+    new Item { Id = 4, Weight = 2.0f }
+);
+
+// From array
+Item[] array = { new Item { Id = 5 }, new Item { Id = 6 } };
+items.Add(array);
+
+// From array slice
+items.Add(array, srcIdx: 0, len: 1);
+
+// Insert at index (remaining elements are shifted)
+items.InsertAt(idx: 1, new Item { Id = 10 });
+```
+
+#### Capacity management:
+```csharp
+// Ensure space for N additional elements
+items.EnsureSize(10);
+
+// Increase Length by N (with pre-expansion if needed)
+items.EnsureCount(5);
+
+// Set minimum capacity
+items.Resize(32);
+```
+
+___
+
+## Removing
+
+```csharp
+// By index (order-preserving — shifts elements)
+items.RemoveAt(idx: 1);
+
+// By index (swap-remove — replaces with last, faster, order not preserved)
+items.RemoveAtSwap(idx: 1);
+
+// First element
+items.RemoveFirst();       // order-preserving
+items.RemoveFirstSwap();   // swap-remove
+
+// Last element
+items.RemoveLast();
+
+// By value (returns true if found)
+bool removed = items.TryRemove(new Item { Id = 1 });
+
+// By value with swap-remove
+bool removed = items.TryRemoveSwap(new Item { Id = 1 });
+
+// Two elements by value
+items.TryRemove(new Item { Id = 1 }, new Item { Id = 2 });
+
+// Clear all elements
+items.Clear();
+
+// Reset count without clearing data (low-level operation)
+items.ResetCount();
+```
+
+___
+
+## Search
+
+```csharp
+// Element index (-1 if not found)
+int idx = items.IndexOf(new Item { Id = 1 });
+
+// Check presence
+bool exists = items.Contains(new Item { Id = 1 });
+
+// With custom comparer
+bool exists = items.Contains(new Item { Id = 1 }, comparer);
+```
+
+___
+
+## Iteration
+
+```csharp
+// foreach — mutable access by reference
+foreach (ref var item in items) {
+    item.Weight *= 2f;
+}
+
+// for — access by index
+for (int i = 0; i < items.Length; i++) {
+    ref var item = ref items[i];
+    item.Weight *= 2f;
+}
+
+// Via Span
+foreach (ref var item in items.AsSpan) {
+    item.Weight *= 2f;
+}
+```
+
+___
+
+## Copying and sorting
+
+```csharp
+// Copy to array
+var array = new Item[items.Length];
+items.CopyTo(array);
+
+// Copy slice
+items.CopyTo(array, dstIdx: 0, len: 5);
+
+// Sort
+items.Sort();
+
+// With custom comparer
+items.Sort(comparer);
+```
+
+___
+
+## Queries
+
+Multi-components are used in queries like regular components:
+
+```csharp
+// All entities with inventory
+W.Query().For(static (W.Entity entity, ref W.Multi<Item> items) => {
+    for (int i = 0; i < items.Length; i++) {
+        ref var item = ref items[i];
+        // ...
+    }
+});
+
+// With filtering
+foreach (var entity in W.Query<All<W.Multi<Item>>>().Entities()) {
+    ref var items = ref entity.Ref<W.Multi<Item>>();
+    // ...
+}
+```
+
+---
+
+
+## Relations
+Relations are a mechanism for linking entities to each other through typed link components
+- `Link<T>` — link to a single entity (wrapper over `EntityGID`)
+- `Links<T>` — link to multiple entities (dynamic collection of `Link<T>`)
+- Links are regular components and work through the standard API (`Add`, `Ref`, `Delete`, `Has`)
+- Support hooks (`OnAdd`, `OnDelete`, `CopyTo`) for automating logic (e.g., back-references)
+
+___
+
+## Link types
+
+To define a link type, implement one of the interfaces:
+
+```csharp
+// ILinkType — type for a single link (Link<T>)
+// Implement only the hooks you need
+public struct Parent : ILinkType {
+    // Called when a link is added
+    public void OnAdd<TW>(World<TW>.Entity self, EntityGID link) where TW : struct, IWorldType {
+        // self — entity to which the link was added
+        // link — GID of the target entity
+    }
+
+    // Called when a link is removed
+    public void OnDelete<TW>(World<TW>.Entity self, EntityGID link, HookReason reason) where TW : struct, IWorldType {
+        // ...
+    }
+
+    // Called when the entity is copied (Clone/CopyTo)
+    public void CopyTo<TW>(World<TW>.Entity self, World<TW>.Entity other, EntityGID link) where TW : struct, IWorldType {
+        // ...
+    }
+}
+
+// ILinksType — type for a multi-link (Links<T>)
+// Inherits from ILinkType, same hooks
+public struct Children : ILinksType {
+    public void OnAdd<TW>(World<TW>.Entity self, EntityGID link) where TW : struct, IWorldType {
+        // ...
+    }
+}
+
+// Type without hooks — simply don't implement the methods
+public struct FollowTarget : ILinkType { }
+```
+
+{: .important }
+Do not leave empty hook implementations. If a hook is not needed — don't implement it. Unimplemented hooks are not called and create no overhead.
+
+___
+
+## Link\<T\>
+
+Single link component — wrapper over `EntityGID` (8 bytes).
+
+```csharp
+// Properties
+EntityGID value = link.Value;    // GID of the target entity (read-only)
+
+// Implicit conversions
+W.Link<Parent> link = entity;              // Entity → Link<T>
+W.Link<Parent> link = entity.GID;          // EntityGID → Link<T>
+W.Link<Parent> link = entity.GIDCompact;   // EntityGIDCompact → Link<T>
+EntityGID gid = link;                      // Link<T> → EntityGID
+
+// Creation via constructor
+var link = new W.Link<Parent>(targetGID);
+
+// Creation via entity.AsLink
+W.Link<Parent> link = entity.AsLink<Parent>();
+```
+
+___
+
+## Links\<T\>
+
+Multi-component — dynamic collection of `Link<T>` with automatic memory management.
+
+#### Properties:
+```csharp
+ref var links = ref entity.Ref<W.Links<Children>>();
+
+ushort len = links.Length;       // Number of items
+ushort cap = links.Capacity;     // Current capacity
+bool empty = links.IsEmpty;      // Empty
+bool notEmpty = links.IsNotEmpty; // Not empty
+bool full = links.IsFull;        // Filled to capacity
+
+// Index access
+W.Link<Children> first = links[0];
+W.Link<Children> last = links[links.Length - 1];
+
+// First and last item
+W.Link<Children> f = links.First();
+W.Link<Children> l = links.Last();
+
+// Read-only span
+ReadOnlySpan<W.Link<Children>> span = links.AsReadOnlySpan;
+
+// Iteration
+foreach (var link in links) {
+    if (link.Value.TryUnpack<WT>(out var child)) {
+        // ...
+    }
+}
+```
+
+#### Adding:
+```csharp
+// TryAdd — does not add if already exists, returns false
+bool added = links.TryAdd(childLink);
+
+// TryAdd multiple (from 2 to 4)
+links.TryAdd(child1, child2);
+links.TryAdd(child1, child2, child3, child4);
+
+// Add — adds, throws in DEBUG on duplicate
+links.Add(childLink);
+links.Add(child1, child2);
+
+// Add from array
+links.Add(childArray);
+links.Add(childArray, srcIdx: 0, len: 3);
+```
+
+#### Removing:
+```csharp
+// By value (returns true if found)
+bool removed = links.TryRemove(childLink);
+
+// By value with swap-remove (does not preserve order, faster)
+bool removed = links.TryRemoveSwap(childLink);
+
+// By index
+links.RemoveAt(0);
+links.RemoveAtSwap(0);
+
+// First / last
+links.RemoveFirst();
+links.RemoveFirstSwap();
+links.RemoveLast();
+
+// Remove all (calls OnDelete for each item)
+links.Clear();
+```
+
+#### Search:
+```csharp
+bool exists = links.Contains(childLink);
+int idx = links.IndexOf(childLink);
+```
+
+#### Memory management:
+```csharp
+links.EnsureSize(10);        // Ensure space for 10 additional items
+links.Resize(32);            // Change capacity
+links.Sort();                // Sort
+```
+
+___
+
+## Registration
+
+Links are registered as regular components during world creation:
+
+```csharp
+W.Create(WorldConfig.Default());
+
+W.Types()
+    .Link<Parent>()
+    .Links<Children>();
+
+W.Initialize();
+```
+
+___
+
+## Working with links
+
+Links are regular components. All standard methods work:
+
+```csharp
+var parent = W.NewEntity<Default>();
+var child1 = W.NewEntity<Default>();
+var child2 = W.NewEntity<Default>();
+
+// Add a single link
+child1.Add(new W.Link<Parent>(parent));
+child2.Add(new W.Link<Parent>(parent));
+
+// Get reference
+ref var parentLink = ref child1.Ref<W.Link<Parent>>();
+EntityGID parentGID = parentLink.Value;
+
+// Check presence
+bool hasParent = child1.Has<W.Link<Parent>>();
+
+// Delete link
+child1.Delete<W.Link<Parent>>();
+
+// Add multi-link
+ref var children = ref parent.Add<W.Links<Children>>();
+children.TryAdd(child1.AsLink<Children>());
+children.TryAdd(child2.AsLink<Children>());
+
+// Read multi-link
+ref var kids = ref parent.Ref<W.Links<Children>>();
+for (int i = 0; i < kids.Length; i++) {
+    if (kids[i].Value.TryUnpack<WT>(out var childEntity)) {
+        // work with child entity
+    }
+}
+```
+
+___
+
+## Extension methods
+
+Safe link operations via `EntityGID` — automatically check whether the target entity is loaded and actual.
+
+### Link (single link):
+```csharp
+// Add Link<T> component to target entity
+LinkOppStatus status = targetGID.TryAddLink<WT, Parent>(linkEntity);
+
+// Delete Link<T> component from target entity
+LinkOppStatus status = targetGID.TryDeleteLink<WT, Parent>(linkEntity);
+
+// Deep destroy — recursively destroys chain of linked entities
+targetGID.DeepDestroyLink<WT, Parent>();
+
+// Deep copy — clones the target entity and returns link to the copy
+LinkOppStatus status = sourceGID.TryDeepCopyLink<WT, Parent>(out W.Link<Parent> copied);
+```
+
+### Links (multi-link):
+```csharp
+// Add item to Links<T> on target entity
+// Automatically creates Links<T> component if not present
+LinkOppStatus status = targetGID.TryAddLinkItem<WT, Children>(linkEntity);
+
+// Remove item from Links<T> on target entity
+// Automatically removes Links<T> component if collection becomes empty
+LinkOppStatus status = targetGID.TryDeleteLinkItem<WT, Children>(linkEntity);
+
+// Deep destroy — recursively destroys all linked entities
+targetGID.DeepDestroyLinkItem<WT, Children>();
+```
+
+### LinkOppStatus:
+```csharp
+// Operation result
+switch (status) {
+    case LinkOppStatus.Ok:                // Operation completed successfully
+    case LinkOppStatus.LinkAlreadyExists: // Link already exists (TryAdd)
+    case LinkOppStatus.LinkNotExists:     // Link not found (TryDelete)
+    case LinkOppStatus.LinkNotLoaded:     // Target entity in unloaded chunk
+    case LinkOppStatus.LinkNotActual:     // GID is stale (entity destroyed, slot reused)
+}
+```
+
+___
+
+## Link examples
+
+### Unidirectional link (no hooks)
+
+The simplest case — an entity references another without a back-reference.
+
+```csharp
+// Type without hooks
+public struct FollowTarget : ILinkType { }
+
+// Registration
+W.Types().Link<FollowTarget>();
+```
+
+```csharp
+//  A FollowTarget→ B
+
+var unit = W.NewEntity<Default>();
+var target = W.NewEntity<Default>();
+
+// Set pursuit target
+unit.Add(new W.Link<FollowTarget>(target));
+
+// In movement system
+W.Query().For(static (W.Entity entity, ref W.Link<FollowTarget> follow) => {
+    if (follow.Value.TryUnpack<WT>(out var targetEntity)) {
+        ref var myPos = ref entity.Ref<Position>();
+        ref readonly var targetPos = ref targetEntity.Read<Position>();
+        // move towards target
+    }
+});
+```
+
+___
+
+### Bidirectional one-to-one (same type)
+
+A closed pair — both entities reference each other with the same type.
+
+```csharp
+//    MarriedTo
+//  A ────────→ B
+//  A ←──────── B
+//    MarriedTo
+
+public struct MarriedTo : ILinkType {
+    public void OnAdd<TW>(World<TW>.Entity self, EntityGID link) where TW : struct, IWorldType {
+        link.TryAddLink<TW, MarriedTo>(self);
+    }
+
+    public void OnDelete<TW>(World<TW>.Entity self, EntityGID link, HookReason reason) where TW : struct, IWorldType {
+        link.TryDeleteLink<TW, MarriedTo>(self);
+    }
+}
+
+W.Types().Link<MarriedTo>();
+```
+
+```csharp
+var alice = W.NewEntity<Default>();
+var bob = W.NewEntity<Default>();
+
+// Set from one side — the back-reference is created automatically
+alice.Add(new W.Link<MarriedTo>(bob));
+// Now: alice has Link<MarriedTo> → bob
+//      bob has Link<MarriedTo> → alice
+
+// Deletion is also bidirectional
+alice.Delete<W.Link<MarriedTo>>();
+// Now: both components are removed
+```
+
+___
+
+### Bidirectional one-to-one (different types)
+
+Two entities linked with different link types.
+
+```csharp
+//  A ←Rider── Mount──→ B
+
+public struct Mount : ILinkType {
+    public void OnAdd<TW>(World<TW>.Entity self, EntityGID link) where TW : struct, IWorldType {
+        link.TryAddLink<TW, Rider>(self);
+    }
+
+    public void OnDelete<TW>(World<TW>.Entity self, EntityGID link, HookReason reason) where TW : struct, IWorldType {
+        link.TryDeleteLink<TW, Rider>(self);
+    }
+}
+
+public struct Rider : ILinkType {
+    public void OnAdd<TW>(World<TW>.Entity self, EntityGID link) where TW : struct, IWorldType {
+        link.TryAddLink<TW, Mount>(self);
+    }
+
+    public void OnDelete<TW>(World<TW>.Entity self, EntityGID link, HookReason reason) where TW : struct, IWorldType {
+        link.TryDeleteLink<TW, Mount>(self);
+    }
+}
+
+W.Types()
+    .Link<Mount>()
+    .Link<Rider>();
+```
+
+```csharp
+var player = W.NewEntity<Default>();
+var horse = W.NewEntity<Default>();
+
+player.Add(new W.Link<Mount>(horse));
+// player has Link<Mount> → horse
+// horse has Link<Rider> → player
+```
+
+___
+
+### Bidirectional one-to-many (Parent ↔ Children)
+
+Parent and children — classic hierarchy.
+
+```csharp
+//      ←Parent  Children→ child1
+//     /
+//  parent ←Parent  Children→ child2
+//     \
+//      ←Parent  Children→ child3
+
+public struct Parent : ILinkType {
+    public void OnAdd<TW>(World<TW>.Entity self, EntityGID link) where TW : struct, IWorldType {
+        link.TryAddLinkItem<TW, Children>(self);
+    }
+
+    public void OnDelete<TW>(World<TW>.Entity self, EntityGID link, HookReason reason) where TW : struct, IWorldType {
+        link.TryDeleteLinkItem<TW, Children>(self);
+    }
+}
+
+public struct Children : ILinksType {
+    public void OnAdd<TW>(World<TW>.Entity self, EntityGID link) where TW : struct, IWorldType {
+        link.TryAddLink<TW, Parent>(self);
+    }
+
+    public void OnDelete<TW>(World<TW>.Entity self, EntityGID link, HookReason reason) where TW : struct, IWorldType {
+        link.TryDeleteLink<TW, Parent>(self);
+    }
+}
+
+W.Types()
+    .Link<Parent>()
+    .Links<Children>();
+```
+
+```csharp
+var father = W.NewEntity<Default>();
+var son = W.NewEntity<Default>();
+var daughter = W.NewEntity<Default>();
+
+// Set from child side
+son.Add(new W.Link<Parent>(father));
+daughter.Add(new W.Link<Parent>(father));
+// father automatically gets Links<Children> → [son, daughter]
+
+// Or add from parent side
+ref var kids = ref father.Ref<W.Links<Children>>();
+var newChild = W.NewEntity<Default>();
+kids.TryAdd(newChild.AsLink<Children>());
+// newChild automatically gets Link<Parent> → father
+```
+
+{: .note }
+`withCyclicHooks: false` (the default) in extension methods `TryAddLink`/`TryDeleteLink`/`TryAddLinkItem`/`TryDeleteLinkItem` is an optimization: when called from a hook, there is no need to call the hook on the opposite side since it is already executing.
+
+___
+
+### Unidirectional to-many link
+
+An entity references multiple others without back-references.
+
+```csharp
+//      Targets→ B
+//     /
+//  A── Targets→ C
+//     \
+//      Targets→ D
+
+public struct Targets : ILinksType { }
+
+W.Types().Links<Targets>();
+```
+
+```csharp
+var turret = W.NewEntity<Default>();
+var enemy1 = W.NewEntity<Default>();
+var enemy2 = W.NewEntity<Default>();
+
+ref var targets = ref turret.Add<W.Links<Targets>>();
+targets.TryAdd(enemy1.AsLink<Targets>());
+targets.TryAdd(enemy2.AsLink<Targets>());
+```
+
+___
+
+### Bidirectional many-to-many
+
+Both sides store collections of references to each other.
+
+```csharp
+//      ←Owners  Memberships→ groupA
+//     /
+//  user1 ←Owners  Memberships→ groupB
+//
+//  user2 ←Owners  Memberships→ groupA
+
+public struct Memberships : ILinksType {
+    public void OnAdd<TW>(World<TW>.Entity self, EntityGID link) where TW : struct, IWorldType {
+        link.TryAddLinkItem<TW, Owners>(self);
+    }
+
+    public void OnDelete<TW>(World<TW>.Entity self, EntityGID link, HookReason reason) where TW : struct, IWorldType {
+        link.TryDeleteLinkItem<TW, Owners>(self);
+    }
+}
+
+public struct Owners : ILinksType {
+    public void OnAdd<TW>(World<TW>.Entity self, EntityGID link) where TW : struct, IWorldType {
+        link.TryAddLinkItem<TW, Memberships>(self);
+    }
+
+    public void OnDelete<TW>(World<TW>.Entity self, EntityGID link, HookReason reason) where TW : struct, IWorldType {
+        link.TryDeleteLinkItem<TW, Memberships>(self);
+    }
+}
+
+W.Types()
+    .Links<Memberships>()
+    .Links<Owners>();
+```
+
+```csharp
+var user1 = W.NewEntity<Default>();
+var user2 = W.NewEntity<Default>();
+var groupA = W.NewEntity<Default>();
+var groupB = W.NewEntity<Default>();
+
+// Add user1 to both groups
+ref var memberships = ref user1.Add<W.Links<Memberships>>();
+memberships.TryAdd(groupA.AsLink<Memberships>());
+memberships.TryAdd(groupB.AsLink<Memberships>());
+// groupA and groupB automatically get Links<Owners> → [user1]
+
+// Add user2 to groupA
+ref var memberships2 = ref user2.Add<W.Links<Memberships>>();
+memberships2.TryAdd(groupA.AsLink<Memberships>());
+// groupA now has Links<Owners> → [user1, user2]
+```
+
+___
+
+## Multithreading
+
+{: .warning }
+In `ForParallel`, only the **current** iterated entity may be modified. Link hooks that change the state of **other** entities (e.g., adding a back-reference to a parent) will cause an error in DEBUG during parallel iteration.
+
+To work with links in parallel queries, use **events** — `SendEvent` is thread-safe (when there is no concurrent reading of the same type) and can be called from any thread. Process event logic on the main thread after the parallel iteration completes.
+
+#### Example: deferred link deletion via events
+
+```csharp
+// 1. Define the event
+public struct DeleteLinkEvent<TLink> : IEvent where TLink : unmanaged, ILinkType {
+    public EntityGID Target;    // entity from which to remove the link
+    public EntityGID Link;      // link value for verification
+}
+
+// 2. Register the event and create a receiver
+W.Types().Event<DeleteLinkEvent<Parent>>();
+var deleteLinkReceiver = W.RegisterEventReceiver<DeleteLinkEvent<Parent>>();
+
+// Store the receiver in world resources for access from systems
+W.SetResource(deleteLinkReceiver);
+```
+
+```csharp
+// 3. Define link type WITHOUT hooks that modify other entities
+public struct Parent : ILinkType {
+    // In OnDelete, instead of directly modifying the parent — send an event
+    public void OnDelete<TW>(World<TW>.Entity self, EntityGID link, HookReason reason) where TW : struct, IWorldType {
+        World<TW>.SendEvent(new DeleteLinkEvent<Parent> {
+            Target = link,
+            Link = self.GID
+        });
+    }
+}
+```
+
+```csharp
+// 4. Parallel iteration — safe, hook sends event instead of direct modification
+W.Query().ForParallel(
+    static (W.Entity entity, ref W.Link<Parent> parent) => {
+        if (someCondition) {
+            entity.Delete<W.Link<Parent>>();
+            // OnDelete will send DeleteLinkEvent instead of modifying the parent
+        }
+    },
+    minEntitiesPerThread: 1000
+);
+
+// 5. On the main thread, process all events
+ref var receiver = ref W.GetResource<EventReceiver<WT, DeleteLinkEvent<Parent>>>();
+receiver.ReadAll(static (W.Event<DeleteLinkEvent<Parent>> e) => {
+    // Now it's safe to modify other entities
+    ref var data = ref e.Value;
+    data.Target.TryDeleteLinkItem<WT, Children>(data.Link.Unpack<WT>());
+});
+```
+
+___
+
+## Queries
+
+Link components are used in queries like any other components:
+
+```csharp
+// All entities with a parent
+foreach (var entity in W.Query<All<W.Link<Parent>>>().Entities()) {
+    ref var parentLink = ref entity.Ref<W.Link<Parent>>();
+    // ...
+}
+
+// All entities with children but no parent (root entities)
+W.Query<All<W.Links<Children>>, None<W.Link<Parent>>>()
+    .For(static (W.Entity entity, ref W.Links<Children> kids) => {
+        // root entities
+    });
+
+// Via delegate
+W.Query().For(static (ref W.Link<Parent> parent) => {
+    if (parent.Value.TryUnpack<WT>(out var parentEntity)) {
+        // ...
+    }
+});
+```
+
+---
+
+
+## Systems
+Systems manage world logic through a defined lifecycle
+- Nested class `World<TWorld>.Systems<SysType>` — each `ISystemsType` type creates an isolated system group within a world
+- Single `ISystem` interface with four methods (all optional)
+- Systems execute in order defined by the `order` parameter
+- Unimplemented methods are not called and create no overhead
+- Systems can be structs or classes
+
+___
+
+## ISystemsType
+
+Marker interface for isolating system groups. Each type gets its own static storage:
+
+```csharp
+public struct GameSystems : ISystemsType { }
+public struct FixedSystems : ISystemsType { }
+public struct LateSystems : ISystemsType { }
+
+// Aliases for convenient access
+public abstract class GameSys : W.Systems<GameSystems> { }
+public abstract class FixedSys : W.Systems<FixedSystems> { }
+public abstract class LateSys : W.Systems<LateSystems> { }
+```
+
+___
+
+## ISystem
+
+Single interface for all systems. Implement only the methods you need — the rest will not be called:
+
+```csharp
+public interface ISystem {
+    // Called once during Systems.Initialize()
+    void Init() { }
+
+    // Called every frame during Systems.Update()
+    void Update() { }
+
+    // Called before each Update() — false skips the update
+    bool UpdateIsActive() => true;
+
+    // Called once during Systems.Destroy()
+    void Destroy() { }
+}
+```
+
+{: .important }
+Do not leave empty method implementations. If a method is not needed — don't implement it. Unimplemented methods are detected via reflection and are not called.
+
+#### System examples:
+```csharp
+// Update-only system
+public struct MoveSystem : ISystem {
+    public void Update() {
+        W.Query().For(static (ref Position pos, in Velocity vel) => {
+            pos.Value += vel.Value;
+        });
+    }
+}
+
+// System with init and destroy
+public struct AudioSystem : ISystem {
+    public void Init() {
+        // load audio resources
+    }
+
+    public void Update() {
+        // process sounds
+    }
+
+    public void Destroy() {
+        // release resources
+    }
+}
+
+// System with conditional execution
+public struct PausableSystem : ISystem {
+    public void Update() {
+        // game logic
+    }
+
+    public bool UpdateIsActive() {
+        return !W.GetResource<GameState>().IsPaused;
+    }
+}
+```
+
+___
+
+## Lifecycle
+
+```
+Create() → Add() → Initialize() → Update() loop → Destroy()
+```
+
+```csharp
+// 1. Create system group (baseSize — initial array capacity)
+GameSys.Create(baseSize: 64);
+
+// 2. Register systems (order determines execution order)
+GameSys.Add(new InputSystem(), order: -10)
+    .Add(new MoveSystem(), order: 0)
+    .Add(new RenderSystem(), order: 10);
+
+// 3. Initialize — sorts by order, calls Init() on all systems
+GameSys.Initialize();
+
+// 4. Game loop — calls Update() every frame
+while (gameIsRunning) {
+    GameSys.Update();
+}
+
+// 5. Destroy — calls Destroy() on all systems, resets state
+GameSys.Destroy();
+```
+
+___
+
+## Registration
+
+All systems are registered with a single `Add<T>()` method:
+
+```csharp
+// Basic registration (order defaults to 0)
+GameSys.Add(new MoveSystem());
+
+// With order (lower = earlier)
+GameSys.Add(new InputSystem(), order: -10)    // executes first
+    .Add(new PhysicsSystem(), order: 0)       // then physics
+    .Add(new RenderSystem(), order: 10);      // render last
+
+// Systems with the same order execute in registration order
+GameSys.Add(new SystemA(), order: 0)  // first among order=0
+    .Add(new SystemB(), order: 0);    // second among order=0
+```
+
+___
+
+## Conditional execution
+
+The `UpdateIsActive()` method allows skipping a system's update on the current frame:
+
+```csharp
+public struct GameplaySystem : ISystem {
+    public void Update() {
+        // logic that only runs when the game is not paused
+    }
+
+    public bool UpdateIsActive() {
+        return !W.GetResource<GameState>().IsPaused;
+    }
+}
+
+public struct TutorialSystem : ISystem {
+    public void Update() {
+        // tutorial logic
+    }
+
+    public bool UpdateIsActive() {
+        return W.GetResource<PlayerProgress>().IsFirstPlay;
+    }
+}
+```
+
+___
+
+## Multiple system groups
+
+Different `ISystemsType` types create independent groups with their own lifecycle:
+
+```csharp
+public struct GameSystems : ISystemsType { }
+public struct FixedSystems : ISystemsType { }
+public abstract class GameSys : W.Systems<GameSystems> { }
+public abstract class FixedSys : W.Systems<FixedSystems> { }
+
+// Setup
+GameSys.Create();
+GameSys.Add(new InputSystem())
+    .Add(new RenderSystem());
+GameSys.Initialize();
+
+FixedSys.Create();
+FixedSys.Add(new PhysicsSystem())
+    .Add(new CollisionSystem());
+FixedSys.Initialize();
+
+// Game loop
+while (gameIsRunning) {
+    GameSys.Update();           // every frame
+
+    while (fixedTimeAccumulated) {
+        FixedSys.Update();      // fixed timestep
+    }
+}
+
+GameSys.Destroy();
+FixedSys.Destroy();
+```
+
+___
+
+## Full example
+
+```csharp
+// System types
+public struct GameSystems : ISystemsType { }
+
+// Systems
+public struct InputSystem : ISystem {
+    public void Update() {
+        // read input
+    }
+}
+
+public struct MoveSystem : ISystem {
+    public void Update() {
+        W.Query().For(static (ref Position pos, in Velocity vel) => {
+            pos.Value += vel.Value;
+        });
+    }
+}
+
+public struct DamageSystem : ISystem {
+    private EventReceiver<WT, OnDamage> _receiver;
+
+    public void Init() {
+        _receiver = W.RegisterEventReceiver<OnDamage>();
+    }
+
+    public void Update() {
+        foreach (var e in _receiver) {
+            if (e.Value.Target.TryUnpack<WT>(out var target)) {
+                ref var health = ref target.Ref<Health>();
+                health.Current -= e.Value.Amount;
+            }
+        }
+    }
+
+    public void Destroy() {
+        W.DeleteEventReceiver(ref _receiver);
+    }
+}
+
+// Startup
+W.Create(WorldConfig.Default());
+// ... register types ...
+W.Initialize();
+
+GameSys.Create();
+GameSys.Add(new InputSystem(), order: -10)
+    .Add(new MoveSystem(), order: 0)
+    .Add(new DamageSystem(), order: 5);
+GameSys.Initialize();
+
+while (gameIsRunning) {
+    GameSys.Update();
+}
+
+GameSys.Destroy();
+W.Destroy();
+```
+
+---
+
+
+## Resources
+Resources are an alternative to DI — a simple mechanism for storing and passing user data and services to systems and other methods
+- Resources are world-level singletons: shared state that doesn't belong to any specific entity
+- Ideal for configuration, time/delta-time, input state, asset caches, service references
+- Two variants: **singleton** (one per type) and **named** (multiple per type, distinguished by string key)
+- Available in both `Created` and `Initialized` world phases
+
+___
+
+## Singleton Resources
+
+A singleton resource stores exactly one instance of a given type per world.
+Internally uses static generic storage — access is O(1) with zero dictionary overhead.
+
+#### Setting a resource:
+```csharp
+// User classes and services
+public class GameConfig { public float Gravity; }
+public class InputState { public Vector2 MousePos; }
+
+// Set a resource in the world
+// By default clearOnDestroy = true — the resource will be automatically cleared on World.Destroy()
+W.SetResource(new GameConfig { Gravity = 9.81f });
+W.SetResource(new InputState(), clearOnDestroy: false); // persists across world re-creation
+
+// If SetResource is called again for the same type, the value is replaced without error
+W.SetResource(new GameConfig { Gravity = 4.0f }); // overwrites the previous value
+```
+
+{: .important }
+The `clearOnDestroy` parameter is only applied on the first registration. Replacing an existing resource preserves the original `clearOnDestroy` setting.
+
+#### Basic operations:
+```csharp
+// Check if a resource of the given type is registered
+bool has = W.HasResource<GameConfig>();
+
+// Get a mutable ref to the resource value — modifications are written directly to storage
+ref var config = ref W.GetResource<GameConfig>();
+config.Gravity = 11.0f; // modified in-place, no setter call needed
+
+// Remove the resource from the world
+W.RemoveResource<GameConfig>();
+
+// Resource<T> — zero-cost readonly struct handle for frequent access (no initialization needed)
+W.Resource<GameConfig> configHandle;
+bool registered = configHandle.IsRegistered;
+ref var cfg = ref configHandle.Value;
+```
+
+___
+
+## Named Resources
+
+Named resources allow multiple instances of the same type, distinguished by string keys.
+Internally stored in a `Dictionary<string, object>` with type-safe `Box<T>` wrappers.
+
+#### Setting a named resource:
+```csharp
+// Set named resources of the same type under different keys
+W.SetResource("player_config", new GameConfig { Gravity = 9.81f });
+W.SetResource("moon_config", new GameConfig { Gravity = 1.62f });
+
+// If SetResource is called again for an existing key, the value is replaced without error
+W.SetResource("player_config", new GameConfig { Gravity = 10.0f }); // overwrites
+```
+
+#### Basic operations:
+```csharp
+// Check if a named resource with the given key exists
+bool has = W.HasResource<GameConfig>("player_config");
+
+// Get a mutable ref to the named resource value
+ref var config = ref W.GetResource<GameConfig>("player_config");
+config.Gravity = 5.0f;
+
+// Remove a named resource by key
+W.RemoveResource("player_config");
+
+// NamedResource<T> — struct handle that caches the internal reference after the first access
+// Create a handle bound to a key (does not register the resource)
+var moonConfig = new W.NamedResource<GameConfig>("moon_config");
+bool registered = moonConfig.IsRegistered;  // always performs dictionary lookup, not cached
+ref var cfg = ref moonConfig.Value;          // first call resolves from dictionary and caches; subsequent calls are O(1)
+// The cache is automatically invalidated when the resource is removed or the world is destroyed
+```
+
+{: .warning }
+`NamedResource<T>` is a mutable struct that caches an internal reference on first `Value` access.
+Do **not** store it in a `readonly` field or pass by value after first use — the C# compiler
+will create a defensive copy, discarding the cache and causing a dictionary lookup on every access.
+Store it in a non-readonly field or local variable.
+
+___
+
+## Lifecycle
+
+```csharp
+W.Create(WorldConfig.Default());
+
+// Resources can be set after Create (no need to wait for Initialize)
+W.SetResource(new GameConfig { Gravity = 9.81f });
+W.SetResource("debug_flags", new DebugFlags(), clearOnDestroy: false);
+
+W.Initialize();
+
+// Resources remain available during the Initialized phase
+ref var config = ref W.GetResource<GameConfig>();
+
+// On Destroy: resources with clearOnDestroy=true are cleared automatically
+// Resources with clearOnDestroy=false persist and remain available after the next Create+Initialize cycle
+W.Destroy();
+```
+
+
+---
+
+
+# Query
+Queries are a mechanism for searching entities and their components in the world
+- All queries require no caching, are stack-allocated, and can be used on-the-fly
+- Support filtering by components, tags, entity status, and clusters
+- Two iteration modes: `Strict` (default, faster) and `Flexible` (allows modifying filtered types on other entities)
+
+___
+
+## Filters
+
+Types for describing filtering. Each occupies 1 byte and requires no initialization.
+
+### Components:
+```csharp
+// All — presence of ALL enabled components (from 1 to 8 types)
+All<Position, Velocity, Direction> all = default;
+
+// AllOnlyDisabled — presence of ALL disabled components
+AllOnlyDisabled<Position> disabled = default;
+
+// AllWithDisabled — presence of ALL components (any state)
+AllWithDisabled<Position, Velocity> any = default;
+
+// None — absence of enabled components (from 1 to 8 types)
+None<Position, Name> none = default;
+
+// NoneWithDisabled — absence of components (any state)
+NoneWithDisabled<Position> noneAll = default;
+
+// Any — presence of at least one enabled component (from 2 to 8 types)
+Any<Position, Velocity> any = default;
+
+// AnyOnlyDisabled — at least one disabled
+AnyOnlyDisabled<Position, Velocity> anyDis = default;
+
+// AnyWithDisabled — at least one (any state)
+AnyWithDisabled<Position, Velocity> anyAll = default;
+```
+
+### Tags:
+Tags use the same filters as components (`All<>`, `None<>`, `Any<>` and their disabled variants). Tags and components can be freely mixed in the same filter:
+```csharp
+// Tags in All<> — same as components
+All<Position, Unit, Player> allFilter = default;
+
+// Tags in None<> — exclude entities with tag
+None<IsDead> noneFilter = default;
+
+// Tags in Any<> — at least one tag present
+Any<Unit, Player> anyFilter = default;
+```
+
+### And / Or — composite filters:
+
+`And` and `Or` group multiple filters into a single type — for passing as one generic parameter, storing in fields, or building complex conditions that basic filter types cannot express.
+
+#### And — all conditions must match (from 2 to 6 filters):
+```csharp
+And<All<Position, Velocity>, None<Name>, Any<Unit, Player>> filter = default;
+
+// Via factory method (type inference)
+var filter = And.By(
+    default(All<Position, Velocity>),
+    default(None<Name>),
+    default(Any<Unit, Player>)
+);
+```
+
+#### Or — at least one condition must match (from 2 to 6 filters):
+```csharp
+// Melee fighters OR ranged fighters — completely different component sets
+Or<All<MeleeWeapon, Damage>, All<RangedWeapon, Ammo>> fighters = default;
+
+// Rebuild spatial index when Position added or removed
+Or<AllAdded<Position>, AllDeleted<Position>> spatialChanged = default;
+
+// Nesting for arbitrarily complex logic: (A and B and C) or (A and B and D)
+Or<All<A, B, C>, All<A, B, D>> complex = default;
+```
+
+___
+
+## Entity iteration
+
+```csharp
+// Iterate over all entities without filtering
+foreach (var entity in W.Query().Entities()) {
+    Console.WriteLine(entity.PrettyString);
+}
+
+// With filter via generic (from 1 to 8 filters)
+foreach (var entity in W.Query<All<Position, Velocity>>().Entities()) {
+    entity.Ref<Position>().Value += entity.Read<Velocity>().Value;
+}
+
+// With multiple filters
+foreach (var entity in W.Query<All<Position, Velocity>, None<Name>>().Entities()) {
+    entity.Ref<Position>().Value += entity.Read<Velocity>().Value;
+}
+
+// Via filter value
+var all = default(All<Position, Velocity>);
+foreach (var entity in W.Query(all).Entities()) {
+    entity.Ref<Position>().Value += entity.Read<Velocity>().Value;
+}
+
+// Via And/Or — group filters into a single type for passing to methods or storing in fields
+var filter = default(And<All<Position, Velocity>, None<Name>>);
+foreach (var entity in W.Query(filter).Entities()) {
+    entity.Ref<Position>().Value += entity.Read<Velocity>().Value;
+}
+
+// Flexible mode — allows modifying filtered types on other entities
+foreach (var entity in W.Query<All<Position>>().EntitiesFlexible()) {
+    // ...
+}
+
+// Find the first matching entity
+if (W.Query<All<Position>>().Any(out var found)) {
+    // found — first entity with Position
+}
+
+// Get the only entity (error in debug if more than one found)
+if (W.Query<All<Position>>().One(out var single)) {
+    // single — the only entity with Position
+}
+
+// Count matching entities (full scan)
+int count = W.Query<All<Position>>().EntitiesCount();
+```
+
+___
+
+## Delegate-based iteration (For)
+
+Optimized iteration via delegates — unrolls loops under the hood.
+
+```csharp
+// Over all entities
+W.Query().For(entity => {
+    Console.WriteLine(entity.PrettyString);
+});
+
+// By components (from 1 to 6 types)
+// Components in the delegate automatically act as an All filter
+W.Query().For(static (ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
+});
+
+// With entity in delegate
+W.Query().For(static (W.Entity entity, ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
+});
+
+// With user data (to avoid delegate allocations)
+W.Query().For(deltaTime, static (ref float dt, ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value * dt;
+});
+
+// With ref data (for accumulating results)
+int count = 0;
+W.Query().For(ref count, static (ref int counter, W.Entity entity, ref Position pos) => {
+    counter++;
+});
+
+// With tuple of multiple parameters
+W.Query().For((deltaTime, gravity), static (ref (float dt, float g) data, ref Position pos, ref Velocity vel) => {
+    vel.Value += data.g * data.dt;
+    pos.Value += vel.Value * data.dt;
+});
+```
+
+### With additional filtering:
+```csharp
+// Components in the delegate act as an All filter,
+// additional filters are specified directly on Query and don't require specifying delegate components
+W.Query<Any<Unit, Player>>().For(static (ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
+});
+
+// With multiple filters
+W.Query<None<Name>, Any<Unit, Player>>().For(static (ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
+});
+
+// Via value
+var filter = default(Any<Unit, Player>);
+W.Query(filter).For(static (ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
+});
+```
+
+### Entity and component status:
+```csharp
+W.Query().For(
+    static (ref Position pos, ref Velocity vel) => {
+        // ...
+    },
+    entities: EntityStatusType.Disabled,    // Enabled (default), Disabled, Any
+    components: ComponentStatus.Disabled    // Enabled (default), Disabled, Any
+);
+```
+
+___
+
+## Single entity search (Search)
+
+Iteration with early exit on first match.
+
+```csharp
+if (W.Query().Search(out W.Entity found,
+    (W.Entity entity, ref Position pos, ref Health health) => {
+        return pos.Value.x > 100 && health.Current < 50;
+    })) {
+    // found — first entity matching the condition
+}
+```
+
+___
+
+## Function structs (IQuery / IQueryBlock)
+
+Function structs instead of delegates — for optimization, state passing, or extracting logic.
+Uses fluent builder API: `Write<>()` / `Read<>()` / `Write<>().Read<>()` then `.For<F>()`.
+Max 6 components total (Write + Read).
+
+```csharp
+// All writable — IQuery.Write (from 1 to 6 components)
+readonly struct MoveFunction : W.IQuery.Write<Position, Velocity> {
+    public void Invoke(W.Entity entity, ref Position pos, ref Velocity vel) {
+        pos.Value += vel.Value;
+    }
+}
+
+W.Query().Write<Position, Velocity>().For<MoveFunction>();
+W.Query().Write<Position, Velocity>().For(new MoveFunction());
+
+// Via ref (to preserve state)
+var func = new MoveFunction();
+W.Query().Write<Position, Velocity>().For(ref func);
+
+// Mixed write/read — IQuery.Write<>.Read<>
+readonly struct ApplyVelocity : W.IQuery.Write<Position>.Read<Velocity> {
+    public void Invoke(W.Entity entity, ref Position pos, in Velocity vel) {
+        pos.Value += vel.Value;
+    }
+}
+
+W.Query().Write<Position>().Read<Velocity>().For<ApplyVelocity>();
+
+// All readonly — IQuery.Read
+readonly struct PrintPositions : W.IQuery.Read<Position, Velocity> {
+    public void Invoke(W.Entity entity, in Position pos, in Velocity vel) {
+        Console.WriteLine(pos.Value + vel.Value);
+    }
+}
+
+W.Query().Read<Position, Velocity>().For<PrintPositions>();
+
+// With additional filtering
+W.Query<None<Name>, Any<Unit, Player>>()
+    .Write<Position, Velocity>().For<MoveFunction>();
+
+// Combining system and IQuery
+public struct MoveSystem : ISystem, W.IQuery.Write<Position>.Read<Velocity> {
+    private float _speed;
+
+    public void Update() {
+        _speed = W.GetResource<GameConfig>().Speed;
+        W.Query<All<Unit>>()
+            .Write<Position>().Read<Velocity>().For(ref this);
+    }
+
+    public void Invoke(W.Entity entity, ref Position pos, in Velocity vel) {
+        pos.Value += vel.Value * _speed;
+    }
+}
+```
+
+___
+
+## Parallel processing
+
+{: .warning }
+Parallel processing requires enabling at world creation: `ParallelQueryType.MaxThreadsCount` or `ParallelQueryType.CustomThreadsCount` with `CustomThreadCount` in `WorldConfig`.
+Inside parallel iteration, only the **current** iterated entity may be modified or destroyed. Forbidden: creating entities, modifying other entities, reading events. Sending events (`SendEvent`) is thread-safe (when there is no concurrent reading of the same type). Always uses `QueryMode.Strict`.
+
+```csharp
+// Delegate is the first parameter, minEntitiesPerThread is named (default 256)
+W.Query().ForParallel(
+    static (W.Entity entity, ref Position pos, in Velocity vel) => {
+        pos.Value += vel.Value;
+    },
+    minEntitiesPerThread: 50000
+);
+
+// Without entity — components only
+W.Query().ForParallel(
+    static (ref Position pos, in Velocity vel) => {
+        pos.Value += vel.Value;
+    },
+    minEntitiesPerThread: 50000
+);
+
+// With user data
+W.Query().ForParallel(deltaTime,
+    static (ref float dt, ref Position pos, in Velocity vel) => {
+        pos.Value += vel.Value * dt;
+    },
+    minEntitiesPerThread: 50000
+);
+
+// With filtering
+W.Query<None<Name>, Any<Unit, Player>>().ForParallel(
+    static (W.Entity entity) => {
+        entity.Add<Name>();
+    },
+    minEntitiesPerThread: 50000
+);
+
+// Via function struct
+W.Query().Write<Position>().Read<Velocity>().ForParallel<ApplyVelocity>(minEntitiesPerThread: 50000);
+
+// workersLimit — limit the number of threads (0 = use all available)
+W.Query().ForParallel(
+    static (ref Position pos) => { /* ... */ },
+    minEntitiesPerThread: 10000,
+    workersLimit: 4
+);
+```
+
+___
+
+## Block iteration (ForBlock)
+
+Low-level iteration via function structs — for `unmanaged` components, provides `Block<T>` (writable) and `BlockR<T>` (readonly) wrappers with direct pointers to data arrays.
+
+```csharp
+// IQueryBlock.Write — all writable (from 1 to 6 unmanaged components)
+readonly struct MoveBlock : W.IQueryBlock.Write<Position, Velocity> {
+    public void Invoke(uint count, EntityBlock entitiesBlock, Block<Position> positions, Block<Velocity> velocities) {
+        for (uint i = 0; i < count; i++) {
+            positions[i].Value += velocities[i].Value;
+        }
+    }
+}
+
+W.Query().WriteBlock<Position, Velocity>().For<MoveBlock>();
+
+// Mixed write/read — IQueryBlock.Write<>.Read<>
+readonly struct ApplyVelocityBlock : W.IQueryBlock.Write<Position>.Read<Velocity> {
+    public void Invoke(uint count, EntityBlock entitiesBlock, Block<Position> positions, BlockR<Velocity> velocities) {
+        for (uint i = 0; i < count; i++) {
+            positions[i].Value += velocities[i].Value;
+        }
+    }
+}
+
+W.Query().WriteBlock<Position>().Read<Velocity>().For<ApplyVelocityBlock>();
+
+// Via ref (to preserve state)
+var func = new MoveBlock();
+W.Query().WriteBlock<Position, Velocity>().For(ref func);
+
+// Parallel version
+W.Query().WriteBlock<Position, Velocity>().ForParallel<MoveBlock>(minEntitiesPerThread: 50000);
+```
+
+___
+
+## Batch operations
+
+Bulk operations on all entities matching a filter — without writing a loop.
+Can be orders of magnitude faster than manual iteration via `For`: instead of per-entity processing, batch operations work with bitmasks — in the best case, adding or removing a component/tag for 64 entities is a single bitwise operation.
+Support call chaining — multiple operations can be performed in a single pass.
+
+```csharp
+// Add component to all entities (from 1 to 5 types)
+W.Query<All<Position>>().BatchSet(new Velocity { Value = 1f });
+
+// Delete component from all
+W.Query<All<Position, Velocity>>().BatchDelete<Velocity>();
+
+// Disable/enable component on all
+W.Query<All<Position>>().BatchDisable<Position>();
+W.Query<AllOnlyDisabled<Position>>().BatchEnable<Position>();
+
+// Tags: set, delete, toggle, apply by condition (from 1 to 5 types)
+W.Query<All<Position>>().BatchSet<Unit>();
+W.Query<All<Unit>>().BatchDelete<Unit>();
+W.Query<All<Position>>().BatchToggle<Unit>();
+W.Query<All<Position>>().BatchApply<Unit>(true);
+
+// Chaining
+W.Query<All<Position>>()
+    .BatchSet(new Velocity { Value = 1f })
+    .BatchSet<Unit>()
+    .BatchDisable<Position>();
+```
+
+___
+
+## Destroying and unloading entities
+
+```csharp
+// Destroy all entities matching a filter
+W.Query<All<Position>>().BatchDestroy();
+
+// With parameters
+W.Query<All<Unit>>().BatchDestroy(
+    entities: EntityStatusType.Any,
+    mode: QueryMode.Flexible
+);
+
+// Unload all entities matching a filter
+// (marks as unloaded, removes components/tags, but preserves entity IDs and versions)
+W.Query<All<Position>>().BatchUnload();
+
+// With parameters
+W.Query<All<Unit>>().BatchUnload(
+    entities: EntityStatusType.Any,
+    mode: QueryMode.Flexible
+);
+```
+
+___
+
+## Clusters
+
+{: .important }
+All query methods (`Entities`, `For`, `ForParallel`, `Search`, `Batch*`, `BatchDestroy`, `BatchUnload`) accept a `clusters` parameter:
+
+```csharp
+ReadOnlySpan<ushort> clusters = stackalloc ushort[] { 2, 5, 12 };
+
+foreach (var entity in W.Query<All<Position>>().Entities(clusters: clusters)) {
+    // iteration only over entities from clusters 2, 5, 12
+}
+
+W.Query().For(static (W.Entity entity, ref Position pos) => {
+    // ...
+}, clusters: clusters);
+```
+
+___
+
+## QueryMode
+
+For `For`, `Search`, `Entities` methods:
+
+- **`QueryMode.Strict`** (default) — forbids modifying filtered component/tag types on **other** entities during iteration. Faster.
+- **`QueryMode.Flexible`** — allows modifying filtered types on other entities, correctly controls current iteration.
+
+```csharp
+var anotherEntity = W.NewEntity<Default>();
+anotherEntity.Add<Position>();
+
+// Strict: modifying Position on another entity — error in DEBUG
+foreach (var entity in W.Query<All<Position>>().Entities()) {
+    anotherEntity.Delete<Position>(); // ERROR in DEBUG
+}
+
+// Flexible: modification allowed, iteration is stable
+foreach (var entity in W.Query<All<Position>>().EntitiesFlexible()) {
+    anotherEntity.Delete<Position>(); // OK — anotherEntity correctly excluded
+}
+
+// For For/Search via parameter
+W.Query().For(static (ref Position pos) => {
+    // ...
+}, queryMode: QueryMode.Flexible);
+```
+
+{: .note }
+`Flexible` is useful for hierarchies or caches when modifying entities from components of other entities. In other cases, prefer `Strict` for performance.
+
+---
+
+
+## Events
+Event is a mechanism for exchanging information between systems or user services
+- Represented as a user struct with data and the `IEvent` marker interface
+- "Sender → multiple receivers" model with automatic lifecycle management
+- Each receiver has an independent read cursor
+- An event is automatically deleted when all receivers have read it or it is suppressed
+
+#### Example:
+```csharp
+public struct WeatherChanged : IEvent {
+    public WeatherType WeatherType;
+}
+
+public struct OnDamage : IEvent {
+    public float Amount;
+    public EntityGID Target;
+}
+```
+
+___
+
+{: .important }
+Event type registration is available in both `Created` and `Initialized` phases
+
+```csharp
+W.Create(WorldConfig.Default());
+//...
+// Simple registration
+W.Types()
+    .Event<WeatherChanged>()
+    .Event<OnDamage>();
+
+// Registration with configuration
+W.Types().Event<WeatherChanged>(new EventTypeConfig<WeatherChanged>(
+    guid: new Guid("..."),      // stable identifier for serialization
+    version: 1,                  // data schema version for migration (default — 0)
+    readWriteStrategy: null      // binary serialization strategy (default — StructPackArrayStrategy<T>)
+));
+//...
+W.Initialize();
+```
+
+___
+
+#### Sending events:
+```csharp
+// Send an event with data
+// Returns true if the event was added to the buffer, false if no registered receivers
+bool sent = W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Sunny });
+
+// Send an event with default value
+bool sent = W.SendEvent<OnDamage>();
+```
+
+{: .warning }
+If there are no registered receivers, `SendEvent` returns `false` and the event is **not stored**. Register receivers before sending events.
+
+___
+
+#### Receiving events:
+```csharp
+// Create a receiver — each receiver has an independent read cursor
+var weatherReceiver = W.RegisterEventReceiver<WeatherChanged>();
+
+// Send events
+W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Sunny });
+W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Rainy });
+
+// Read events via foreach
+// After iteration, events are marked as read for this receiver
+foreach (var e in weatherReceiver) {
+    ref var data = ref e.Value; // ref access to event data
+    Console.WriteLine(data.WeatherType);
+}
+
+// Additional event information during iteration
+foreach (var e in weatherReceiver) {
+    // true if this receiver is the last one to read this event
+    // (the event will be deleted after reading)
+    bool last = e.IsLastReading();
+
+    // Number of receivers that haven't read this event yet (excluding current)
+    int remaining = e.UnreadCount();
+
+    // Suppress the event — immediately deletes it for all remaining receivers
+    e.Suppress();
+}
+```
+
+___
+
+#### Receiver management:
+```csharp
+// Read all events via delegate
+weatherReceiver.ReadAll(static (Event<WeatherChanged> e) => {
+    Console.WriteLine(e.Value.WeatherType);
+});
+
+// Suppress all unread events for this receiver
+// Events are deleted and other receivers can no longer read them
+weatherReceiver.SuppressAll();
+
+// Mark all events as read without processing
+// Events are not deleted — other receivers can still read them
+weatherReceiver.MarkAsReadAll();
+
+// Delete the receiver
+W.DeleteEventReceiver(ref weatherReceiver);
+```
+
+___
+
+#### Multithreading:
+
+{: .warning }
+Sending events (`SendEvent`) is thread-safe under the following conditions:
+- Multiple threads can simultaneously call `SendEvent` for the **same** event type
+- **Simultaneous reading and sending** of the same event type from different threads is **forbidden** — sending is thread-safe only when there is no concurrent reading of the same type
+- Reading events of one type (`foreach`, `ReadAll`) must be done in a **single thread**
+- Different event types can be read from **different threads simultaneously**, as each type is stored independently
+- The same event type can be read from different threads **at different times** (not concurrently)
+
+Receiver operations (`foreach`, `ReadAll`, `MarkAsReadAll`, `SuppressAll`, creating and deleting receivers) are **not supported** in multithreaded mode and must only be performed on the main thread.
+
+___
+
+#### Event lifecycle:
+
+{: .important }
+An event is automatically deleted in two cases:
+1. All registered receivers have read the event
+2. The event was suppressed (`Suppress` or `SuppressAll`)
+
+It is important that all registered receivers read their events (or call `MarkAsReadAll`/`SuppressAll`), otherwise events will accumulate in memory.
+
+```csharp
+// Lifecycle example with two receivers
+var receiverA = W.RegisterEventReceiver<WeatherChanged>();
+var receiverB = W.RegisterEventReceiver<WeatherChanged>();
+
+W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Sunny });
+// Event has UnreadCount = 2
+
+foreach (var e in receiverA) {
+    // receiverA read it, UnreadCount = 1
+}
+
+foreach (var e in receiverB) {
+    // receiverB read it, UnreadCount = 0 → event is automatically deleted
+}
+```
+
+---
+
+
+## Serialization
+Serialization is a mechanism for creating binary snapshots of the entire world or individual entities, clusters, and chunks.
+Binary serialization uses [StaticPack](https://github.com/Felid-Force-Studios/StaticPack).
+
+___
+
+## Configuring components
+
+To support component serialization:
+1. Specify a `Guid` during registration (stable type identifier)
+2. Implement `Write` and `Read` hooks on the component
+
+{: .important }
+`Write` and `Read` hooks are **required** for `EntitiesSnapshot` serialization (for all component types, including unmanaged). For world/cluster/chunk snapshots, non-unmanaged types also always use these hooks.
+
+#### Unmanaged component:
+```csharp
+public struct Position : IComponent {
+    public float X, Y, Z;
+
+    public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
+        where TWorld : struct, IWorldType {
+        writer.WriteFloat(X);
+        writer.WriteFloat(Y);
+        writer.WriteFloat(Z);
+    }
+
+    public void Read<TWorld>(ref BinaryPackReader reader, World<TWorld>.Entity self, byte version, bool disabled)
+        where TWorld : struct, IWorldType {
+        X = reader.ReadFloat();
+        Y = reader.ReadFloat();
+        Z = reader.ReadFloat();
+    }
+}
+
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
+));
+```
+
+#### Non-unmanaged component (contains reference fields):
+```csharp
+public struct Name : IComponent {
+    public string Value;
+
+    public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
+        where TWorld : struct, IWorldType {
+        writer.WriteString16(Value);
+    }
+
+    public void Read<TWorld>(ref BinaryPackReader reader, World<TWorld>.Entity self, byte version, bool disabled)
+        where TWorld : struct, IWorldType {
+        Value = reader.ReadString16();
+    }
+}
+
+W.Types().Component<Name>(new ComponentTypeConfig<Name>(
+    guid: new Guid("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3")
+));
+```
+
+#### Bulk memory copying for unmanaged types:
+
+For world/cluster/chunk snapshots, unmanaged components can be serialized as a memory block instead of per-component `Write`/`Read` calls. To enable this, **explicitly specify** `UnmanagedPackArrayStrategy<T>`:
+
+```csharp
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()  // bulk memory copy
+));
+```
+
+{: .note }
+`UnmanagedPackArrayStrategy<T>` performs direct memory copying — significantly faster than per-component serialization. Works only for unmanaged types. On version mismatch (data migration), the system automatically falls back to `Read` hooks. The default strategy is `StructPackArrayStrategy<T>`.
+
+#### Full configuration:
+```csharp
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    version: 1,                  // data schema version for migration (default — 0)
+    notClearable: true,          // skip zeroing data on deletion (default — false)
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>() // serialization strategy (default — StructPackArrayStrategy<T>)
+));
+```
+
+___
+
+## Configuring tags
+
+Tags are configured via `TagTypeConfig<T>`:
+
+```csharp
+W.Types()
+    .Tag<IsPlayer>(new TagTypeConfig<IsPlayer>(guid: new Guid("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90")))
+    .Tag<IsDead>(new TagTypeConfig<IsDead>(guid: new Guid("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30")));
+```
+
+#### Full configuration:
+```csharp
+W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
+    guid: new Guid("A1B2C3D4-..."), // stable identifier for serialization (default — default)
+    trackAdded: true,                // enable addition tracking (default — false)
+    trackDeleted: true               // enable deletion tracking (default — false)
+));
+```
+
+___
+
+## Configuring events
+
+Events use `EventTypeConfig<T>` — similar to components:
+
+```csharp
+public struct OnDamage : IEvent {
+    public float Amount;
+
+    public void Write(ref BinaryPackWriter writer) {
+        writer.WriteFloat(Amount);
+    }
+
+    public void Read(ref BinaryPackReader reader, byte version) {
+        Amount = reader.ReadFloat();
+    }
+}
+
+W.Types().Event<OnDamage>(new EventTypeConfig<OnDamage>(
+    guid: new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+));
+```
+
+___
+
+## World Snapshot
+
+Saves the full world state: all entities, components, tags, and events.
+
+#### Saving and loading during initialization:
+```csharp
+// Save the world
+byte[] worldSnapshot = W.Serializer.CreateWorldSnapshot();
+W.Destroy();
+
+// Load the world during initialization — the simplest approach
+CreateWorld(); // Create + type registration
+W.InitializeFromWorldSnapshot(worldSnapshot);
+
+// All entities and events are restored
+foreach (var entity in W.Query().Entities()) {
+    Console.WriteLine(entity.PrettyString);
+}
+```
+
+#### Saving and loading after initialization:
+```csharp
+byte[] worldSnapshot = W.Serializer.CreateWorldSnapshot();
+W.Destroy();
+
+CreateWorld();
+W.Initialize();
+// All existing entities and events are removed before loading
+W.Serializer.LoadWorldSnapshot(worldSnapshot);
+```
+
+#### Additional parameters:
+```csharp
+// Save to file
+W.Serializer.CreateWorldSnapshot("path/to/world.bin");
+
+// With GZIP compression
+byte[] compressed = W.Serializer.CreateWorldSnapshot(gzip: true);
+
+// Filter by clusters
+W.Serializer.CreateWorldSnapshot(clusters: new ushort[] { 0, 1 });
+
+// Chunk writing strategy
+W.Serializer.CreateWorldSnapshot(strategy: ChunkWritingStrategy.SelfOwner);
+
+// Without events
+W.Serializer.CreateWorldSnapshot(writeEvents: false);
+
+// Without custom data
+W.Serializer.CreateWorldSnapshot(withCustomSnapshotData: false);
+
+// Load from file
+W.Serializer.LoadWorldSnapshot("path/to/world.bin");
+
+// Load compressed data
+W.Serializer.LoadWorldSnapshot(compressed, gzip: true);
+```
+
+{: .important }
+All components and tags in the world snapshot **must** have a registered `Guid`. In DEBUG mode, an error will occur when attempting serialization without a `Guid`.
+
+___
+
+## Entities Snapshot
+
+Allows saving and loading individual entities with granular control.
+
+#### Saving entities:
+```csharp
+// Create an entity writer
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+
+// Write specific entities
+foreach (var entity in W.Query().Entities()) {
+    writer.Write(entity);
+}
+
+// Or write all entities at once
+// writer.WriteAllEntities();
+
+// Create the snapshot
+byte[] snapshot = writer.CreateSnapshot();
+
+// Or save to file
+// writer.CreateSnapshot("path/to/entities.bin");
+```
+
+#### Writing with simultaneous unloading:
+```csharp
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+
+// Write and unload — saves memory during streaming
+foreach (var entity in W.Query().Entities()) {
+    writer.WriteAndUnload(entity);
+}
+
+// Or all entities at once
+// writer.WriteAndUnloadAllEntities();
+
+byte[] snapshot = writer.CreateSnapshot();
+```
+
+___
+
+#### Loading entities (entitiesAsNew):
+
+The `entitiesAsNew` parameter determines how entities are loaded:
+
+- **`entitiesAsNew: false`** (default) — entities are restored to **the same slots** (same EntityGID). If a slot is already occupied — error in DEBUG.
+- **`entitiesAsNew: true`** — entities are loaded into **new slots** with new EntityGIDs. Links between entities (Link, Links) may point to incorrect entities.
+
+```csharp
+// Load into original slots
+W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: false);
+
+// Load as new entities
+W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: true);
+
+// With a callback for each loaded entity
+W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: true, onLoad: entity => {
+    Console.WriteLine($"Loaded: {entity.PrettyString}");
+});
+```
+
+___
+
+#### Preserving links between entities (GID Store):
+
+To correctly load entities with `entitiesAsNew: false`, save the global identifier store:
+
+```csharp
+// 1. Save entities and GID Store
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+writer.WriteAllEntities();
+byte[] entitiesSnapshot = writer.CreateSnapshot();
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+W.Destroy();
+
+// 2. Restore world with GID Store
+CreateWorld();
+W.InitializeFromGIDStoreSnapshot(gidSnapshot);
+
+// New entities won't occupy saved entity slots
+var newEntity = W.NewEntity<UnitType>().Set( new Position { X = 1 });
+
+// 3. Load entities into original slots — all links are correct
+W.Serializer.LoadEntitiesSnapshot(entitiesSnapshot, entitiesAsNew: false);
+```
+
+{: .note }
+The GID Store contains information about all issued identifiers. This guarantees that new entities won't occupy slots of unloaded entities, and all links (Link, Links, EntityGID in data) remain correct.
+
+___
+
+## GID Store
+
+```csharp
+// Save GID Store
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+
+// With GZIP compression
+byte[] gidCompressed = W.Serializer.CreateGIDStoreSnapshot(gzip: true);
+
+// To file
+W.Serializer.CreateGIDStoreSnapshot("path/to/gid.bin");
+
+// With chunk writing strategy
+W.Serializer.CreateGIDStoreSnapshot(strategy: ChunkWritingStrategy.SelfOwner);
+
+// Filter by clusters
+W.Serializer.CreateGIDStoreSnapshot(clusters: new ushort[] { 0, 1 });
+
+// Initialize world from GID Store
+CreateWorld();
+W.InitializeFromGIDStoreSnapshot(gidSnapshot);
+
+// Restore GID Store in an already initialized world
+// All entities are deleted, state is reset
+W.Serializer.RestoreFromGIDStoreSnapshot(gidSnapshot);
+```
+
+___
+
+## Cluster and chunk snapshots
+
+#### Cluster:
+```csharp
+// Save a cluster
+byte[] clusterSnapshot = W.Serializer.CreateClusterSnapshot(clusterId: 1);
+
+// With data for loading as new entities
+byte[] clusterWithEntities = W.Serializer.CreateClusterSnapshot(
+    clusterId: 1,
+    withEntitiesData: true  // required for entitiesAsNew during loading
+);
+
+// Unload the cluster from memory
+ReadOnlySpan<ushort> clusters = stackalloc ushort[] { 1 };
+W.Query().BatchUnload(EntityStatusType.Any, clusters: clusters);
+
+// Load the cluster from a snapshot
+W.Serializer.LoadClusterSnapshot(clusterSnapshot);
+
+// Load as new entities into a different cluster
+W.Serializer.LoadClusterSnapshot(clusterWithEntities,
+    new EntitiesAsNewParams(entitiesAsNew: true, clusterId: 2)
+);
+```
+
+#### Chunk:
+```csharp
+// Save a chunk
+byte[] chunkSnapshot = W.Serializer.CreateChunkSnapshot(chunkIdx: 0);
+
+// Unload the chunk from memory
+ReadOnlySpan<uint> unloadChunks = stackalloc uint[] { 0 };
+W.Query().BatchUnload(EntityStatusType.Any, unloadChunks);
+
+// Load the chunk from a snapshot
+W.Serializer.LoadChunkSnapshot(chunkSnapshot);
+```
+
+{: .important }
+By default, cluster and chunk snapshots **do not store** entity identifier data (only component data). If you need to load them as new entities (`entitiesAsNew: true`), specify `withEntitiesData: true` when creating the snapshot.
+
+___
+
+#### Comprehensive streaming example:
+```csharp
+void PrintCounts(string label) {
+    Console.WriteLine($"{label} — Total: {W.CalculateEntitiesCount()} | Loaded: {W.CalculateLoadedEntitiesCount()}");
+}
+
+// Save individual entities
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+foreach (var entity in W.Query().Entities()) {
+    writer.WriteAndUnload(entity);
+}
+byte[] entitiesSnapshot = writer.CreateSnapshot();
+PrintCounts("After unloading entities"); // Total: 2 | Loaded: 0
+
+// Create a cluster and populate it
+const ushort ZONE_CLUSTER = 1;
+W.RegisterCluster(ZONE_CLUSTER);
+W.NewEntities<UnitType>(count: 2000, clusterId: ZONE_CLUSTER);
+PrintCounts("After creating cluster"); // Total: 2002 | Loaded: 2000
+
+// Save and unload cluster
+byte[] clusterSnapshot = W.Serializer.CreateClusterSnapshot(ZONE_CLUSTER);
+ReadOnlySpan<ushort> zoneClusters = stackalloc ushort[] { ZONE_CLUSTER };
+W.Query().BatchUnload(EntityStatusType.Any, clusters: zoneClusters);
+PrintCounts("After unloading cluster"); // Total: 2002 | Loaded: 0
+
+// Create a chunk and populate it
+var chunkIdx = W.FindNextSelfFreeChunk().ChunkIdx;
+W.RegisterChunk(chunkIdx, clusterId: 0);
+for (int i = 0; i < 100; i++) {
+    W.NewEntityInChunk<UnitType>( chunkIdx: chunkIdx);
+}
+PrintCounts("After creating chunk"); // Total: 2102 | Loaded: 100
+
+// Save and unload chunk
+byte[] chunkSnapshot = W.Serializer.CreateChunkSnapshot(chunkIdx);
+ReadOnlySpan<uint> unloadChunks = stackalloc uint[] { chunkIdx };
+W.Query().BatchUnload(EntityStatusType.Any, unloadChunks);
+PrintCounts("After unloading chunk"); // Total: 2102 | Loaded: 0
+
+// Save GID Store and recreate world
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+W.Destroy();
+
+CreateWorld();
+W.InitializeFromGIDStoreSnapshot(gidSnapshot);
+
+// Load in any order
+W.Serializer.LoadClusterSnapshot(clusterSnapshot);
+PrintCounts("After loading cluster"); // Total: 2102 | Loaded: 2000
+
+W.Serializer.LoadEntitiesSnapshot(entitiesSnapshot);
+PrintCounts("After loading entities"); // Total: 2102 | Loaded: 2002
+
+W.Serializer.LoadChunkSnapshot(chunkSnapshot);
+PrintCounts("After loading chunk"); // Total: 2102 | Loaded: 2102
+```
+
+___
+
+## Data migration
+
+#### Component versioning:
+
+The `version` parameter in the `Read` hook enables data migration between schema versions:
+
+```csharp
+public struct Position : IComponent {
+    public float X, Y, Z;
+
+    public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
+        where TWorld : struct, IWorldType {
+        writer.WriteFloat(X);
+        writer.WriteFloat(Y);
+        writer.WriteFloat(Z);
+    }
+
+    public void Read<TWorld>(ref BinaryPackReader reader, World<TWorld>.Entity self, byte version, bool disabled)
+        where TWorld : struct, IWorldType {
+        X = reader.ReadFloat();
+        Y = reader.ReadFloat();
+        // Version 0 didn't have Z — use default value
+        Z = version >= 1 ? reader.ReadFloat() : 0f;
+    }
+}
+
+// Registration with the new version
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    version: 1,  // was version 0, now 1
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
+));
+```
+
+___
+
+#### Migration of removed types:
+
+If a component, tag, or event has been removed from the code, data is skipped automatically by default. For custom handling:
+
+```csharp
+// Migration for a removed component
+W.Serializer.SetComponentDeleteMigrator(
+    new Guid("guid-of-removed-component"),
+    (ref BinaryPackReader reader, W.Entity entity, byte version, bool disabled) => {
+        // Read ALL data and perform custom logic
+    }
+);
+
+// Migration for a removed tag
+W.Serializer.SetMigrator(
+    new Guid("guid-of-removed-tag"),
+    (W.Entity entity) => {
+        // Custom logic
+    }
+);
+
+// Migration for a removed event
+W.Serializer.SetEventDeleteMigrator(
+    new Guid("guid-of-removed-event"),
+    (ref BinaryPackReader reader, byte version) => {
+        // Read ALL data and perform custom logic
+    }
+);
+```
+
+{: .note }
+When new types are added, old snapshots load correctly — new components are simply absent on loaded entities.
+
+___
+
+## Callbacks
+
+#### Global callbacks:
+```csharp
+// Called for all snapshot types (World, Cluster, Chunk, Entities)
+
+// Before creating a snapshot
+W.Serializer.RegisterPreCreateSnapshotCallback(param => {
+    Console.WriteLine($"Creating snapshot of type: {param.Type}");
+});
+
+// After creating a snapshot
+W.Serializer.RegisterPostCreateSnapshotCallback(param => {
+    Console.WriteLine($"Snapshot created: {param.Type}");
+});
+
+// Before loading a snapshot
+W.Serializer.RegisterPreLoadSnapshotCallback(param => {
+    Console.WriteLine($"Loading snapshot: {param.Type}, AsNew: {param.EntitiesAsNew}");
+});
+
+// After loading a snapshot
+W.Serializer.RegisterPostLoadSnapshotCallback(param => {
+    Console.WriteLine($"Snapshot loaded: {param.Type}");
+});
+```
+
+#### Filtering by snapshot type:
+```csharp
+W.Serializer.RegisterPreCreateSnapshotCallback(param => {
+    if (param.Type == SnapshotType.World) {
+        Console.WriteLine("Saving world");
+    }
+});
+```
+
+#### Per-entity callbacks:
+```csharp
+// After saving each entity
+W.Serializer.RegisterPostCreateSnapshotEachEntityCallback((entity, param) => {
+    Console.WriteLine($"Saved: {entity.PrettyString}");
+});
+
+// After loading each entity
+W.Serializer.RegisterPostLoadSnapshotEachEntityCallback((entity, param) => {
+    Console.WriteLine($"Loaded: {entity.PrettyString}");
+});
+```
+
+___
+
+## Custom data in snapshots
+
+#### Global custom data:
+```csharp
+// Add arbitrary data to a snapshot (e.g., system or service data)
+W.Serializer.SetSnapshotHandler(
+    new Guid("57c15483-988a-47e7-919c-51b9a7b957b5"), // unique data type guid
+    version: 0,
+    writer: (ref BinaryPackWriter writer, SnapshotWriteParams param) => {
+        writer.WriteDateTime(DateTime.Now);
+    },
+    reader: (ref BinaryPackReader reader, ushort version, SnapshotReadParams param) => {
+        var savedTime = reader.ReadDateTime();
+        Console.WriteLine($"Save time: {savedTime}");
+    }
+);
+```
+
+#### Per-entity custom data:
+```csharp
+W.Serializer.SetSnapshotHandlerEachEntity(
+    new Guid("68d26594-1a9b-48f8-b2de-71c0a8b068c6"),
+    version: 0,
+    writer: (ref BinaryPackWriter writer, W.Entity entity, SnapshotWriteParams param) => {
+        // Write additional data for the entity
+    },
+    reader: (ref BinaryPackReader reader, W.Entity entity, ushort version, SnapshotReadParams param) => {
+        // Read additional data for the entity
+    }
+);
+```
+
+___
+
+## Event serialization
+
+```csharp
+// Save events
+byte[] eventsSnapshot = W.Serializer.CreateEventsSnapshot();
+
+// With GZIP compression
+byte[] eventsCompressed = W.Serializer.CreateEventsSnapshot(gzip: true);
+
+// To file
+W.Serializer.CreateEventsSnapshot("path/to/events.bin");
+
+// Load events
+W.Serializer.LoadEventsSnapshot(eventsSnapshot);
+
+// From file
+W.Serializer.LoadEventsSnapshot("path/to/events.bin");
+```
+
+{: .note }
+When using `CreateWorldSnapshot`, events are saved automatically (unless `writeEvents: false` is specified). Separate event serialization is needed when using `EntitiesSnapshot`.
+
+___
+
+## Excluding from serialization
+
+```csharp
+// Components, tags, and events without Guid are skipped during EntitiesSnapshot serialization
+W.Types().Component<DebugInfo>();     // no guid — not serialized
+W.Types().Tag<EditorOnly>();          // no guid — not serialized
+
+// For world snapshots (CreateWorldSnapshot) all Guids are required — error in DEBUG otherwise
+// For entity snapshots (EntitiesSnapshot) types without Guid are simply skipped
+
+// Example: save all entities while skipping debug data
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+writer.WriteAllEntities();
+byte[] snapshot = writer.CreateSnapshot();
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+byte[] eventsSnapshot = W.Serializer.CreateEventsSnapshot();
+```
+
+___
+
+## Compression (GZIP)
+
+All snapshot creation and loading methods support GZIP compression:
+
+```csharp
+// World
+byte[] snapshot = W.Serializer.CreateWorldSnapshot(gzip: true);
+W.Serializer.LoadWorldSnapshot(snapshot, gzip: true);
+
+// Cluster
+byte[] cluster = W.Serializer.CreateClusterSnapshot(1, gzip: true);
+W.Serializer.LoadClusterSnapshot(cluster, gzip: true);
+
+// Chunk
+byte[] chunk = W.Serializer.CreateChunkSnapshot(0, gzip: true);
+W.Serializer.LoadChunkSnapshot(chunk, gzip: true);
+
+// GID Store
+byte[] gid = W.Serializer.CreateGIDStoreSnapshot(gzip: true);
+
+// Events
+byte[] events = W.Serializer.CreateEventsSnapshot(gzip: true);
+W.Serializer.LoadEventsSnapshot(events, gzip: true);
+
+// Files
+W.Serializer.CreateWorldSnapshot("world.bin", gzip: true);
+W.Serializer.LoadWorldSnapshot("world.bin", gzip: true);
+```
+
+---
+
+
+## Compiler directives
+
+Directives control the library's compilation modes. Defined via `DefineConstants` in `.csproj` or in Unity project settings.
+
+___
+
+### FFS_ECS_ENABLE_DEBUG
+
+Enables debug mode — world state checks, entity validity, component and tag registration correctness, query blocking, and more.
+
+- **Automatically enabled** in the `DEBUG` configuration (when building via `dotnet build` without `-c Release`)
+- In Release configuration, all checks are completely removed by the compiler — zero performance impact
+
+```xml
+<!-- .csproj — explicitly enable for any configuration -->
+<PropertyGroup>
+    <DefineConstants>FFS_ECS_ENABLE_DEBUG</DefineConstants>
+</PropertyGroup>
+```
+
+{: .important }
+It is recommended to always test your project in debug mode. Debug checks catch common errors: accessing destroyed entities, unregistered components, data modification during iteration, etc.
+
+#### Examples of debug checks:
+- World is created/initialized before use
+- Entity is not destroyed and is loaded
+- Component/tag is registered before use
+- No data modification from a parallel query
+- Chunk/cluster is registered before operations
+
+___
+
+### FFS_ECS_DISABLE_DEBUG
+
+Forcefully disables debug mode, even if `DEBUG` or `FFS_ECS_ENABLE_DEBUG` is defined.
+
+```xml
+<!-- .csproj — disable debug in Debug configuration -->
+<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>FFS_ECS_DISABLE_DEBUG</DefineConstants>
+</PropertyGroup>
+```
+
+{: .note }
+Activation logic: `(DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG`. The `FFS_ECS_DISABLE_DEBUG` directive has the highest priority.
+
+___
+
+### ENABLE_IL2CPP
+
+Activates Unity IL2CPP attributes for AOT compilation optimization:
+- `[Il2CppSetOption(Option.NullChecks, false)]` — disables null checks
+- `[Il2CppSetOption(Option.ArrayBoundsChecks, false)]` — disables array bounds checks
+- `[Il2CppEagerStaticClassConstruction]` — early static class initialization
+
+{: .note }
+Defined automatically when building a Unity project for IL2CPP platforms. No manual definition required.
+
+___
+
+### ENABLE_IL2CPP_CHECKS
+
+Enables NullChecks and ArrayBoundsChecks for IL2CPP even when `ENABLE_IL2CPP` is used. By default, these checks are disabled for maximum performance.
+
+```xml
+<!-- .csproj — enable IL2CPP checks (for on-device debugging) -->
+<PropertyGroup>
+    <DefineConstants>ENABLE_IL2CPP_CHECKS</DefineConstants>
+</PropertyGroup>
+```
+
+___
+
+### Summary table
+
+| Directive | Purpose | Default |
+|-----------|---------|---------|
+| `FFS_ECS_ENABLE_DEBUG` | Enables debug checks | Enabled in `DEBUG` |
+| `FFS_ECS_DISABLE_DEBUG` | Forcefully disables debug | Not defined |
+| `ENABLE_IL2CPP` | IL2CPP optimization attributes | Automatic in Unity IL2CPP |
+| `ENABLE_IL2CPP_CHECKS` | Enables checks in IL2CPP | Not defined |
+
+---
+
+
+## Change Tracking
+
+StaticEcs provides four types of change tracking, all zero-allocation and opt-in:
+
+| Type | What it tracks | Applies to | Config location |
+|------|---------------|------------|-----------------|
+| **Added** | Component/tag was added | Components, tags | `ComponentTypeConfig` / `TagTypeConfig` |
+| **Deleted** | Component/tag was removed | Components, tags | `ComponentTypeConfig` / `TagTypeConfig` |
+| **Changed** | Component data accessed via `ref` | Components only | `ComponentTypeConfig` |
+| **Created** | New entity was created | Entities (global) | `WorldConfig.TrackCreated` |
+
+- Bitmap-based: one `ulong` per 64 entities per tracked type
+- Tracking is versioned per world tick via a ring buffer (default 8 ticks). Each system automatically sees changes since its last execution — no manual clearing needed
+- Zero overhead for types with tracking disabled
+- Zero overhead for `Created` when `WorldConfig.TrackCreated = false`
+
+___
+
+## Configuration
+
+All tracking is disabled by default and must be explicitly enabled at registration time.
+
+### Components
+
+`ComponentTypeConfig<T>` supports three tracking flags: `trackAdded`, `trackDeleted`, `trackChanged`:
+
+```csharp
+W.Create(WorldConfig.Default());
+//...
+// Enable all three tracking types
+W.Types().Component<Health>(new ComponentTypeConfig<Health>(
+    trackAdded: true,
+    trackDeleted: true,
+    trackChanged: true
+));
+
+// Enable only one direction
+W.Types().Component<Velocity>(new ComponentTypeConfig<Velocity>(
+    trackAdded: true  // track additions only
+));
+
+// Full configuration with tracking
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("..."),
+    defaultValue: default,
+    trackAdded: true,
+    trackDeleted: true,
+    trackChanged: true
+));
+//...
+W.Initialize();
+```
+
+### Tags
+
+`TagTypeConfig<T>` supports `trackAdded` and `trackDeleted`. Tags do **not** support Changed tracking.
+
+```csharp
+W.Types().Tag<Unit>(new TagTypeConfig<Unit>(
+    trackAdded: true,
+    trackDeleted: true
+));
+
+// With GUID for serialization
+W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
+    guid: new Guid("A1B2C3D4-..."),
+    trackAdded: true,
+    trackDeleted: true
+));
+```
+
+### Entity Creation
+
+Entity creation tracking is configured at the **world level** via `WorldConfig`:
+
+```csharp
+W.Create(new WorldConfig {
+    TrackCreated = true,
+    // ...other settings...
+});
+//...
+W.Initialize();
+```
+
+{: .note }
+`Created` tracks all entity creation regardless of entity type. To filter by type, combine with `EntityIs<T>`: `W.Query<Created, EntityIs<Bullet>>()`.
+
+### Auto-Registration
+
+`trackAdded`, `trackDeleted`, and `trackChanged` can be declared in a static `Config` field inside the struct — `RegisterAll()` will pick them up automatically.
+
+### Compile-Time Disable
+
+The `FFS_ECS_DISABLE_CHANGED_TRACKING` define removes all Changed tracking code paths at compile time, including `AllChanged<T>`, `NoneChanged<T>`, `AnyChanged<T>` filters and the `Mut<T>()` method.
+
+### Tick-Based Tracking
+
+`WorldConfig.TrackingBufferSize` controls the ring buffer size (default 8). Call `W.Tick()` to advance the tick and rotate the buffer.
+
+```csharp
+// Default: tick-based tracking with 8 tick history
+W.Create(WorldConfig.Default()); // TrackingBufferSize = 8
+
+// Custom buffer size
+W.Create(new WorldConfig {
+    TrackingBufferSize = 16,   // 16 ticks of history
+    // ...other settings...
+});
+```
+
+___
+
+## Tick-Based Tracking
+
+Tick-based tracking solves two common problems:
+1. Systems in the middle of a pipeline make changes that systems at the beginning cannot see next frame — if tracking is cleared at the end of the frame
+2. Different system groups (Update / FixedUpdate) cannot synchronize tracking — clearing in one group affects the other
+
+### How It Works
+
+- Each system in `W.Systems<T>.Update()` automatically gets a `LastTick` — it sees all changes in the tick range `[LastTick, CurrentTick]`
+- When a system finishes, its `LastTick` is set to `CurrentTick`
+- If a system is skipped (`UpdateIsActive() = false`), its `LastTick` is NOT updated — next time it runs, it sees all accumulated changes
+- `W.Tick()` advances the global tick counter and rotates the ring buffer — the new slot is cleared and becomes the write target for all tracking operations
+
+### Game Loop Integration
+
+{: .important }
+Call `W.Tick()` **once per frame after** the most frequently updated system group. Do not call it after each group — this wastes ring buffer slots. Per-system `LastTick` ensures that infrequent systems automatically see accumulated changes from multiple ticks.
+
+```csharp
+// Single system group
+while (running) {
+    W.Systems<GameLoop>.Update();    // each system sees changes since its LastTick
+    W.Tick();                      // advance tick, rotate ring buffer
+}
+
+// Multiple system groups (e.g., Update + FixedUpdate)
+while (running) {
+    W.Systems<Update>.Update();
+
+    // FixedUpdate may run multiple times per frame — all within the same tick
+    while (fixedTimeAccumulator >= fixedDeltaTime) {
+        W.Systems<FixedUpdate>.Update();
+        fixedTimeAccumulator -= fixedDeltaTime;
+    }
+
+    W.Tick();                      // one tick per frame
+}
+```
+
+### Per-System Tick Tracking
+
+Each system maintains its own `LastTick`. Systems that run every tick see only 1-2 ticks of changes. Systems that skip frames see all accumulated changes since their last execution:
+
+```csharp
+public struct RareSystem : ISystem {
+    private int _counter;
+
+    public bool UpdateIsActive() => ++_counter % 5 == 0; // runs every 5 ticks
+
+    public void Update() {
+        // Sees ALL changes from the last 5 ticks (or up to TrackingBufferSize)
+        foreach (var entity in W.Query<All<Position>, AllAdded<Position>>().Entities()) {
+            // process newly added positions from the last 5 ticks
+        }
+    }
+}
+```
+
+### Custom Tick Range (FromTick)
+
+All tracking filters accept an optional `fromTick` constructor parameter to override the automatic tick range:
+
+```csharp
+// Automatic — uses the system's LastTick (default, no constructor needed):
+foreach (var entity in W.Query<All<Position>, AllAdded<Position>>().Entities()) { }
+
+// Manual — see all changes from tick 5 to current:
+var filter = new AllAdded<Position>(fromTick: 5);
+foreach (var entity in W.Query<All<Position>>(filter).Entities()) { }
+```
+
+- `fromTick = 0` (default): automatic range from `CurrentLastTick` (set by `W.Systems<T>.Update()`)
+- `fromTick > 0`: manual lower bound — see changes from that tick to the current tick
+
+### Cross-Group Synchronization
+
+With tick-based tracking, different system groups work together naturally within a single tick:
+
+```csharp
+W.Systems<Update>.Update();          // systems write tracking data into tick N
+W.Systems<FixedUpdate>.Update();     // also writes to tick N's write slot
+W.Tick();                          // advance to tick N+1; tick N becomes readable history
+```
+
+Each system's `LastTick` is independent. A FixedUpdate system that skips frames will see accumulated changes from all previous ticks since its last run.
+
+### Buffer Overflow
+
+If a system does not run for more ticks than `TrackingBufferSize`, the oldest tracking data is overwritten. The system will see at most `TrackingBufferSize` ticks of history.
+
+{: .warning }
+In debug mode (`FFS_ECS_DEBUG`), a `StaticEcsException` is thrown when a system's tick range exceeds the buffer size. In release mode, the range is silently clamped. Increase `WorldConfig.TrackingBufferSize` if your systems need deeper history.
+
+___
+
+## Query Filters
+
+All tracking filters are used in the same way as standard component/tag filters:
+
+| Category | Filter | Type Params | Description |
+|----------|--------|-------------|-------------|
+| **Component Added** | `AllAdded<T0..T4>` | 1–5 | ALL listed components were added |
+| | `NoneAdded<T0..T4>` | 1–5 | Excludes entities where ANY was added |
+| | `AnyAdded<T0..T4>` | 2–5 | AT LEAST ONE was added |
+| **Component Deleted** | `AllDeleted<T0..T4>` | 1–5 | ALL listed components were deleted |
+| | `NoneDeleted<T0..T4>` | 1–5 | Excludes entities where ANY was deleted |
+| | `AnyDeleted<T0..T4>` | 2–5 | AT LEAST ONE was deleted |
+| **Component Changed** | `AllChanged<T0..T4>` | 1–5 | ALL listed components were accessed via `ref` |
+| | `NoneChanged<T0..T4>` | 1–5 | Excludes entities where ANY was changed |
+| | `AnyChanged<T0..T4>` | 2–5 | AT LEAST ONE was accessed via `ref` |
+| | | | *Added/Deleted filters also work with tags* |
+| **Entity** | `Created` | — | Entity was created (requires `WorldConfig.TrackCreated`) |
+
+### Examples
+
+```csharp
+// Entities where Position was added and is currently present
+foreach (var entity in W.Query<All<Position>, AllAdded<Position>>().Entities()) {
+    ref var pos = ref entity.Ref<Position>();
+}
+
+// Entities where both Position AND Velocity were added
+foreach (var entity in W.Query<AllAdded<Position, Velocity>>().Entities()) { }
+
+// Entities where at least one of Position or Velocity was added
+foreach (var entity in W.Query<AnyAdded<Position, Velocity>>().Entities()) { }
+
+// React to tag being set (same filters work for tags)
+foreach (var entity in W.Query<AllAdded<IsDead>>().Entities()) { }
+
+// At least one of the listed tags was added (same filters work for tags)
+foreach (var entity in W.Query<AnyAdded<Poisoned, Stunned>>().Entities()) { }
+
+// Process entities whose Position was modified (via ref)
+foreach (var entity in W.Query<All<Position>, AllChanged<Position>>().Entities()) {
+    ref readonly var pos = ref entity.Read<Position>();
+}
+
+// Only truly changed, excluding newly added
+foreach (var entity in W.Query<All<Position>, AllChanged<Position>, NoneAdded<Position>>().Entities()) {
+    ref readonly var pos = ref entity.Read<Position>();
+}
+
+// Process recently created entities that have Position
+foreach (var entity in W.Query<Created, All<Position>>().Entities()) {
+    ref var pos = ref entity.Ref<Position>();
+}
+
+// Group filters via And
+var filter = default(And<AllAdded<Position, Unit>, AllDeleted<Velocity>>);
+foreach (var entity in W.Query(filter).Entities()) { }
+```
+
+___
+
+## Semantics
+
+### Added / Deleted
+
+{: .important }
+**`AllAdded<T>` means the component was added — it does NOT guarantee the component is currently present.** If a component was added and then deleted in the same frame, it is still marked Added but the component no longer exists. Similarly, `AllDeleted<T>` means the component was deleted — but it may have been added back.
+
+**Recommended filter combinations:**
+```csharp
+// "Added AND currently present" — RECOMMENDED
+foreach (var entity in W.Query<All<Position>, AllAdded<Position>>().Entities()) {
+    ref var pos = ref entity.Ref<Position>(); // safe — All<Position> guarantees presence
+}
+
+// "Deleted AND currently absent"
+foreach (var entity in W.Query<None<Position>, AllDeleted<Position>>().Entities()) {
+    // entity is alive, Position was deleted — can clean up related resources
+}
+
+// AllAdded<Position> only — no guarantee of presence!
+foreach (var entity in W.Query<AllAdded<Position>>().Entities()) {
+    // CAUTION: the component may have already been deleted!
+    if (entity.Has<Position>()) {
+        ref var pos = ref entity.Ref<Position>();
+    }
+}
+```
+
+### Changed (Pessimistic Model)
+
+Changed tracking uses a **dirty-on-access** model: any `ref` access marks the component as Changed, regardless of whether the data was actually modified. This is by design — checking actual value changes at the field level would be too expensive for a high-performance ECS.
+
+#### Data Access Methods
+
+| Method | Returns | Marks Changed | Marks Added | Notes |
+|--------|---------|:---:|:---:|-------|
+| `Ref<T>()` | `ref T` | — | — | Fast mutable access, no tracking |
+| `Mut<T>()` | `ref T` | Yes | — | Tracked mutable access |
+| `Read<T>()` | `ref readonly T` | — | — | Read-only access |
+| `Add<T>()` (new) | `ref T` | Yes | Yes | Component is new |
+| `Add<T>()` (exists) | `ref T` | — | — | Returns ref to existing, no hooks |
+| `Set(value)` (new) | void | Yes | Yes | Component is new |
+| `Set(value)` (exists) | void | Yes | — | Overwrites existing |
+
+{: .important }
+**`Ref<T>()` does NOT mark Changed.** Use `Mut<T>()` when you need change tracking. `Ref<T>()` is the fastest way to access component data — zero overhead, no tracking branch. Use `Read<T>()` for read-only access. In query delegate iteration (`For`, `ForBlock`), `ref` parameters automatically use tracked access (`Mut` semantics), `in` parameters use read-only access (`Read` semantics).
+
+#### Query Auto-Tracking
+
+Query iteration automatically marks Changed based on access semantics:
+
+**For delegates** — `ref` marks Changed, `in` does not:
+```csharp
+// Position is marked as Changed (ref), Velocity is NOT (in)
+W.Query<All<Position, Velocity>>().For(static (ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
+});
+```
+
+**IQuery structs** — `Write<T>` marks Changed, `Read<T>` does not:
+```csharp
+public struct MoveSystem : IQuery.Write<Position>.Read<Velocity> {
+    public void Invoke(Entity entity, ref Position pos, in Velocity vel) {
+        pos.Value += vel.Value;
+    }
+}
+```
+
+**ForBlock** — `Block<T>` (mutable) marks Changed, `BlockR<T>` (read-only) does not:
+```csharp
+public struct MoveBlockSystem : IQueryBlock.Write<Position>.Read<Velocity> {
+    public void Invoke(uint count, EntityBlock entities, Block<Position> pos, BlockR<Velocity> vel) {
+        // process block
+    }
+}
+```
+
+Parallel queries follow the same rules.
+
+#### Changed + Added Interaction
+
+{: .important }
+When a component is added via `Add<T>()` or `Set(value)`, it is marked as BOTH Added AND Changed. To filter only genuinely modified entities — excluding newly added ones — combine `AllChanged<T>` with `NoneAdded<T>`:
+
+```csharp
+foreach (var entity in W.Query<All<Position>, AllChanged<Position>, NoneAdded<Position>>().Entities()) {
+    // truly changed, not just created
+}
+```
+
+### Created
+
+`Created` tracks the fact of entity creation globally. It does not carry any type information — to filter by entity type, combine with `EntityIs<T>`:
+
+```csharp
+foreach (var entity in W.Query<Created, EntityIs<Bullet>, All<Position>>().Entities()) {
+    // newly created bullets with Position
+}
+```
+
+___
+
+## Edge Cases
+
+{: .important }
+Added and Deleted states are **independent** and **do not cancel each other out**. They record all operations that occurred within the current tick. Changed is also independent from both.
+
+### Add then Delete
+```csharp
+entity.Set(new Position { X = 10 });   // Added = 1
+entity.Delete<Position>();              // Deleted = 1, Added remains
+
+// Result: entity does NOT have Position, but is marked as both Added and Deleted
+// Query<AllAdded<Position>>                    -> finds the entity
+// Query<AllDeleted<Position>>                  -> finds the entity
+// Query<All<Position>, AllAdded<Position>>     -> does NOT find (component absent)
+// Query<None<Position>, AllDeleted<Position>>  -> finds (deleted and absent)
+```
+
+### Delete then Add
+```csharp
+entity.Delete<Weapon>();                // Deleted = 1
+entity.Set(new Weapon { Damage = 50 }); // Added = 1, Deleted remains
+
+// Result: entity DOES have Weapon, marked as both Added and Deleted
+// Query<All<Weapon>, AllAdded<Weapon>>   -> finds (added and present)
+// Query<All<Weapon>, AllDeleted<Weapon>> -> finds (deleted and present again)
+```
+
+### Add, Delete, Add
+```csharp
+entity.Set(new Health { Value = 100 }); // Added = 1
+entity.Delete<Health>();                // Deleted = 1
+entity.Set(new Health { Value = 50 });  // Added already marked
+
+// Result: entity DOES have Health (Value = 50), marked as both Added and Deleted
+// Equivalent to "Delete then Add" from the tracking perspective
+```
+
+### Multiple Additions (Idempotency)
+```csharp
+// Add without value — does not overwrite existing component
+entity.Add<Position>();                 // Added = 1 (new component)
+entity.Add<Position>();                 // Added already marked, no change
+// Added is only marked on the first addition (when the component is new)
+
+// Set with value — ALWAYS overwrites
+entity.Set(new Position { X = 10 });    // Added = 1 (new)
+entity.Set(new Position { X = 20 });    // overwrite, Added not marked again
+                                         // (component already existed)
+```
+
+### Mut Without Modification
+```csharp
+ref var pos = ref entity.Mut<Position>(); // MARKED as Changed even if no write follows!
+// Changed tracking is pessimistic — it tracks access, not actual mutations
+// Use entity.Ref<Position>() if you don't need tracking — it has zero overhead
+```
+
+### Multiple Mut Calls
+```csharp
+entity.Mut<Position>(); // marked
+entity.Mut<Position>(); // already marked, no additional cost
+// Changed bit is idempotent
+```
+
+### Query Iteration Marks All Iterated Entities
+```csharp
+// ALL entities matching the query get Changed mark for ref components,
+// even if the delegate doesn't actually modify the data
+W.Query<All<Position>>().For(static (ref Position pos) => {
+    var x = pos.X; // marked Changed because of `ref`, even though we only read
+});
+
+// Use `in` to avoid this:
+W.Query<All<Position>>().For(static (in Position pos) => {
+    var x = pos.X; // NOT marked as Changed
+});
+```
+
+### Changed and Deleted Are Independent
+Changed and Deleted are independent bits. If a component was accessed via `ref` and then deleted in the same frame, both Changed and Deleted bits are set.
+
+___
+
+## Destroy and Deserialization
+
+### Destroy Behavior
+
+`entity.Destroy()` removes all components/tags — they are marked as Deleted. But the entity is dead, so the alive mask filters it out of ALL queries. Therefore `AllDeleted<T>` will **not** find destroyed entities.
+
+```csharp
+var entity = W.Entity.New<Position, Velocity>();
+entity.Destroy();
+// Query<AllDeleted<Position>> -> does NOT find (entity is dead)
+
+// If you need to react to destruction — delete components explicitly before Destroy:
+entity.Delete<Position>();  // Deleted tracking bit = 1, entity is alive
+// ... process AllDeleted<Position> ...
+entity.Destroy();
+```
+
+### After Deserialization
+
+```csharp
+// ReadChunk writes masks directly — tracking is NOT triggered
+// ReadEntity goes through Add — components are marked as Added
+// Recommended to call ClearTracking() after loading:
+W.Serializer.ReadChunk(ref reader);
+W.ClearTracking(); // reset all tracking (in tick-based mode: clears all ring buffer slots)
+```
+
+___
+
+## Clearing Tracking
+
+{: .important }
+`ClearTracking()` methods clear ALL ring buffer slots. Normally not needed — tracking is managed automatically by `W.Tick()` and `W.Systems<T>.Update()`. Use as a "nuclear option" to reset all tracking state.
+
+```csharp
+// === Full reset ===
+W.ClearTracking();                         // Everything (Added + Deleted + Changed + Created)
+
+// === By category ===
+W.ClearAllTracking();                      // All components and tags (Added + Deleted + Changed)
+W.ClearCreatedTracking();                  // Entity creation
+
+// === By tracking kind (all types) ===
+W.ClearAllAddedTracking();                 // Added for all components and tags
+W.ClearAllDeletedTracking();               // Deleted for all components and tags
+W.ClearAllChangedTracking();               // Changed for all components
+
+// === Per-type component ===
+W.ClearTracking<Position>();               // Added + Deleted + Changed for Position
+W.ClearAddedTracking<Position>();          // Added only
+W.ClearDeletedTracking<Position>();        // Deleted only
+W.ClearChangedTracking<Position>();        // Changed only
+
+// === Per-type tag (same API as components) ===
+W.ClearTracking<Unit>();                   // Added + Deleted for Unit
+W.ClearAddedTracking<Unit>();              // Added only
+W.ClearDeletedTracking<Unit>();            // Deleted only
+```
+
+{: .note }
+Standard pattern: `W.Systems.Update()` → `W.Tick()` → repeat. No manual clearing needed.
+
+___
+
+## Checking Entity State
+
+In addition to query filters, you can check tracking state on individual entities:
+
+```csharp
+// Components — ALL semantics (all specified must match)
+bool wasAdded = entity.HasAdded<Position>();
+bool bothAdded = entity.HasAdded<Position, Velocity>();       // Position AND Velocity added
+bool wasDeleted = entity.HasDeleted<Health>();
+bool wasChanged = entity.HasChanged<Position>();
+bool bothChanged = entity.HasChanged<Position, Velocity>();   // Position AND Velocity changed
+
+// Components — ANY semantics (at least one must match)
+bool anyAdded = entity.HasAnyAdded<Position, Velocity>();     // Position OR Velocity added
+bool anyDeleted = entity.HasAnyDeleted<Position, Velocity>(); // Position OR Velocity deleted
+bool anyChanged = entity.HasAnyChanged<Position, Velocity>(); // Position OR Velocity changed
+
+// Tags — same API as components (ALL semantics)
+bool tagAdded = entity.HasAdded<Unit>();
+bool tagDeleted = entity.HasDeleted<Poisoned>();
+bool bothTagsAdded = entity.HasAdded<Unit, Player>();      // Unit AND Player added
+
+// Tags — same API as components (ANY semantics)
+bool anyTagAdded = entity.HasAnyAdded<Unit, Player>();     // Unit OR Player added
+bool anyTagDeleted = entity.HasAnyDeleted<Unit, Player>(); // Unit OR Player deleted
+
+// Combine with presence check
+if (entity.HasAdded<Position>() && entity.Has<Position>()) {
+    ref var pos = ref entity.Ref<Position>();
+    // component was added and is currently present
+}
+
+// All methods accept an optional fromTick parameter for custom tick range:
+bool addedSinceTick5 = entity.HasAdded<Position>(fromTick: 5);
+bool changedRecently = entity.HasChanged<Position>(fromTick: W.CurrentTick);
+```
+
+___
+
+## Performance
+
+- Tracking masks use the same `ulong`-per-block format as component/tag presence masks
+- Components: up to 3 bands per tracked type (Added, Deleted, Changed), each one `ulong` per 64 entities
+- Tags: up to 2 bands per tracked type (Added, Deleted)
+- `Created`: 1 `ulong` per block globally, plus heuristic chunks for fast skip
+- `AllAdded<T>` / `AllDeleted<T>` / `AllChanged<T>` filters have the same cost as `All<T>` / `None<T>`: one bitmask operation per block
+- Changed tracking in queries: one batch OR per block — same cost as a single bitmask operation
+- `ClearTracking()` uses heuristic chunks to skip empty regions — O(occupied chunks), not O(entire world)
+- `Ref<T>()` has zero tracking overhead — no runtime branch, identical to pre-tracking code
+- Zero overhead for types that do not have tracking enabled
+- Zero overhead for `Created` when `WorldConfig.TrackCreated = false`
+- Compile-time elimination via `FFS_ECS_DISABLE_CHANGED_TRACKING` removes all Changed tracking code paths
+- **Tick-based write:** zero overhead (pointer swap)
+- **Tick-based read:** O(ticksToCheck) OR operations, bounded by `TrackingBufferSize`. Hierarchical filtering: first at chunk level (4096 entities), then at block level (64 entities) — only chunks/blocks with actual tracking data are checked
+- **Tick advance:** negligible per-frame cost
+- **Memory:** heuristic arrays × `TrackingBufferSize`; segment data is lazily allocated
+
+___
+
+## Use Cases
+
+**Network synchronization (delta updates):**
+```csharp
+foreach (var entity in W.Query<All<Position>, AllChanged<Position>>().Entities()) {
+    ref readonly var pos = ref entity.Read<Position>();
+    SendPositionUpdate(entity, pos);
+}
+```
+
+**Physics sync:**
+```csharp
+foreach (var entity in W.Query<All<Transform, PhysicsBody>, AllChanged<Transform>>().Entities()) {
+    ref readonly var transform = ref entity.Read<Transform>();
+    ref var body = ref entity.Ref<PhysicsBody>();
+    SyncPhysicsBody(ref body, transform);
+}
+```
+
+**Reactive initialization:**
+```csharp
+foreach (var entity in W.Query<All<Position, Unit>, AllAdded<Position>>().Entities()) {
+    ref var pos = ref entity.Ref<Position>();
+    // create visual representation for new entity
+}
+```
+
+**Entity initialization:**
+```csharp
+foreach (var entity in W.Query<Created, All<Position, Unit>>().Entities()) {
+    ref var pos = ref entity.Ref<Position>();
+    // set up visuals, physics body, etc.
+}
+```
+
+**UI updates:**
+```csharp
+// Create health bar for new entities
+foreach (var entity in W.Query<All<Health, Player>, AllAdded<Health>>().Entities()) {
+    ref var health = ref entity.Ref<Health>();
+    // create health bar UI element
+}
+
+// Update health bar only when data changes
+foreach (var entity in W.Query<All<Health, Player>, AllChanged<Health>>().Entities()) {
+    ref readonly var health = ref entity.Read<Health>();
+    // update display
+}
+```
+
+**Multiple system groups (tick-based):**
+```csharp
+void GameLoop() {
+    W.Systems<Update>.Update();          // each system sees changes since its LastTick
+    W.Systems<FixedUpdate>.Update();     // sees changes including Update systems' writes
+    W.Tick();                          // one tick per frame
+}
+```
+
+**Conditional systems (tick-based):**
+```csharp
+public struct PeriodicSync : ISystem {
+    private int _frame;
+    public bool UpdateIsActive() => ++_frame % 10 == 0;
+
+    public void Update() {
+        // Automatically sees ALL changes from the last 10 ticks
+        foreach (var entity in W.Query<All<Position>, AllChanged<Position>>().Entities()) {
+            SyncToNetwork(entity);
+        }
+    }
+}
+```
+
+---
+
+
+# Performance
+
+## Architectural advantages
+
+StaticEcs is designed for maximum performance and massive worlds:
+
+- **Entity never moves in memory** on Add/Remove — operations are bitwise O(1). In archetype-based ECS, adding or removing a component moves the entity between archetypes, copying all data. In sparse set ECS, removing a component swap-backs the last element into the removed slot
+
+- **SoA storage** (Structure of Arrays) — components of the same type are contiguous in memory, ensuring optimal CPU cache utilization during iteration. Archetype-based ECS also use SoA within archetypes, but data is fragmented across separate arrays of different archetypes, the number of which grows combinatorially. In StaticEcs, all components of the same type are stored in a single segment array — fragmentation is possible when using many entityTypes and clusters, but remains controllable. Sparse set ECS store components in dense arrays, but accessing multiple components of the same entity requires indexing through different arrays with potentially different element order
+
+- **Static generics** — data access via `Components<T>` is a direct static field access resolved at compile time. In other ECS, finding a component pool requires hash lookup by type ID or access through lookups with safety checks
+
+- **No archetype explosion problem** — in archetype-based ECS, each unique component combination creates a new archetype. With 30+ component types, the number of archetypes can reach thousands, causing memory fragmentation and iteration degradation. StaticEcs is free from this problem — the number of component types doesn't affect storage structure
+
+- **Zero allocations** on the hot path — all data structures are pre-allocated, queries return ref struct iterators. In other ECS, creating a view/filter may require allocations on first use or is managed through wrappers with safety check overhead
+
+- **Two-dimensional partitioning** (Cluster × EntityType) — built-in spatial and logical grouping at the memory level, allowing control over entity placement without changing the component set. In other ECS, grouping is only possible via query filters (tags, shared components), without direct control over memory layout
+
+- **Built-in streaming** — loading/unloading clusters and chunks without rebuilding internal structures. In archetype-based ECS, mass creation or deletion of entities causes chunk rebalancing. In sparse set ECS, mass deletion fragments dense arrays
+
+- **Predictable performance** — Add/Remove/Has operation time doesn't depend on the number of components on an entity or the total number of types in the world. In archetype-based ECS, the cost of structural changes grows with component count (all entity data is copied). In sparse set ECS, Has/Ref cost is constant, but iterating over multiple components requires set intersection
+
+___
+
+## Iteration methods (fastest to most convenient)
+
+#### 1. ForBlock — block pointers (fastest for unmanaged):
+```csharp
+readonly struct MoveBlock : W.IQueryBlock.Write<Position>.Read<Velocity> {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Invoke(uint count, W.EntityBlock entities,
+                       Block<Position> positions, BlockR<Velocity> velocities) {
+        for (uint i = 0; i < count; i++) {
+            positions[i].Value += velocities[i].Value;
+        }
+    }
+}
+
+W.Query().WriteBlock<Position>().Read<Velocity>().For<MoveBlock>();
+```
+
+#### 2. For with function struct (zero-allocation, stateful):
+```csharp
+struct MoveFunction : W.IQuery.Write<Position>.Read<Velocity> {
+    public float DeltaTime;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Invoke(W.Entity entity, ref Position pos, in Velocity vel) {
+        pos.Value += vel.Value * DeltaTime;
+    }
+}
+
+W.Query().Write<Position>().Read<Velocity>().For(new MoveFunction { DeltaTime = 0.016f });
+```
+
+#### 3. For with delegate (zero-allocation with static lambdas):
+```csharp
+// Without data
+W.Query().For(
+    static (ref Position pos, in Velocity vel) => {
+        pos.Value += vel.Value;
+    }
+);
+
+// With user data (no captures)
+W.Query().For(deltaTime,
+    static (ref float dt, ref Position pos, in Velocity vel) => {
+        pos.Value += vel.Value * dt;
+    }
+);
+```
+
+#### 4. Foreach iteration (most flexible):
+```csharp
+foreach (var entity in W.Query<All<Position, Velocity>>().Entities()) {
+    ref var pos = ref entity.Ref<Position>();
+    ref readonly var vel = ref entity.Read<Velocity>();
+    pos.Value += vel.Value;
+}
+```
+
+___
+
+## Extension methods for IL2CPP
+
+When using IL2CPP in Unity, standard generic Entity methods (`entity.Ref<T>()`, `entity.Has<T>()`) can be 10–25% slower due to AOT compilation specifics. It is recommended to create typed extension methods:
+
+```csharp
+public static class ComponentExtensions {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ref Position RefPosition(this W.Entity entity) {
+        return ref W.Components<Position>.Instance.Ref(entity);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool HasPosition(this W.Entity entity) {
+        return W.Components<Position>.Instance.Has(entity);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool HasTagPlayer(this W.Entity entity) {
+        return W.Tags<IsPlayer>.Instance.Has(entity);
+    }
+}
+```
+
+```csharp
+// Usage — convenient and fast
+ref var pos = ref entity.RefPosition();
+bool has = entity.HasPosition();
+bool isPlayer = entity.HasTagPlayer();
+```
+
+{: .note }
+In Mono/CoreCLR the difference is minimal due to aggressive JIT inlining. This optimization is specifically relevant for IL2CPP.
+
+___
+
+## Parallel execution
+
+To enable multithreaded queries, specify the mode in world configuration:
+
+```csharp
+W.Create(new WorldConfig {
+    ParallelQueryType = ParallelQueryType.MaxThreadsCount,
+    // or
+    // ParallelQueryType = ParallelQueryType.CustomThreadsCount,
+    // CustomThreadCount = 8,
+});
+```
+
+```csharp
+// Parallel iteration
+W.Query().ForParallel(
+    static (ref Position pos, in Velocity vel) => {
+        pos.Value += vel.Value;
+    },
+    minEntitiesPerThread: 50000  // minimum entities per thread
+);
+```
+
+{: .important }
+Parallel iteration constraints: only the current entity may be modified/destroyed. No entity creation, no modification of other entities. `SendEvent` is thread-safe (when there is no concurrent reading of the same type).
+
+___
+
+## Entity type (IEntityType)
+
+`entityType` groups logically similar entities in adjacent memory segments, improving cache locality:
+
+```csharp
+const byte UNIT_TYPE = 1;
+const byte BULLET_TYPE = 2;
+const byte EFFECT_TYPE = 3;
+
+// Units are co-located in memory
+W.NewEntity<UnitType>();
+
+// Bullets — in their own segments
+W.NewEntity<BulletType>();
+```
+
+Queries automatically iterate over contiguous memory blocks — the more homogeneous the data, the more efficient the CPU cache.
+
+___
+
+## Cluster-scoped queries
+
+Limiting queries to specific clusters skips unrelated chunks:
+
+```csharp
+const ushort ACTIVE_ZONE = 1;
+ReadOnlySpan<ushort> clusters = stackalloc ushort[] { ACTIVE_ZONE };
+
+// Iterate only over specified clusters
+W.Query().For(
+    static (ref Position pos) => { pos.Value.Y -= 9.8f * 0.016f; },
+    clusters: clusters
+);
+```
+
+___
+
+## Batch operations
+
+Batch operations work at the bitmask level — a single bitwise operation affects up to 64 entities at once. This is orders of magnitude faster than per-entity iteration.
+
+#### Available operations:
+
+| Method | Description |
+|--------|-------------|
+| `BatchAdd<T>()` | Add components (default values, 1–5 types) |
+| `BatchSet<T>(value)` | Add components with values (1–5 types) |
+| `BatchSet<T>()` | Set tags (1–5 types) |
+| `BatchDelete<T>()` | Remove components or tags (1–5 types) |
+| `BatchEnable<T>()` | Enable components (1–5 types) |
+| `BatchDisable<T>()` | Disable components (1–5 types) |
+| `BatchToggle<T>()` | Toggle tags (1–5 types) |
+| `BatchApply<T>(bool)` | Set or unset tag by condition (1–5 types) |
+| `BatchDestroy()` | Destroy all matching entities |
+| `BatchUnload()` | Unload all matching entities |
+| `EntitiesCount()` | Count matching entities |
+
+#### Examples:
+```csharp
+// Chain operations — add component, set tag, disable component
+W.Query<All<Position>>()
+    .BatchSet(new Velocity { Value = Vector3.One })
+    .BatchSet<IsMovable>()
+    .BatchDisable<Position>();
+
+// Destroy all entities with the IsDead tag
+W.Query<All<Health, IsDead>>().BatchDestroy();
+
+// Count entities
+int count = W.Query<All<Position, Velocity>>().EntitiesCount();
+
+// Filter by clusters and entity status
+ReadOnlySpan<ushort> clusters = stackalloc ushort[] { 1, 2 };
+W.Query<All<Position>>().BatchDelete<Velocity>(
+    entities: EntityStatusType.Any,
+    clusters: clusters
+);
+
+// Toggle tag — entities that had it will lose it; those without will get it
+W.Query<All<Position>>().BatchToggle<IsVisible>();
+```
+
+{: .note }
+All batch operations support filtering by `EntityStatusType` (Enabled/Disabled/Any) and `clusters`. Methods return `WorldQuery` for chaining.
+
+___
+
+## QueryMode
+
+The default is `QueryMode.Strict` — the fastest mode. Use `QueryMode.Flexible` only when you need to modify filtered components/tags on **other** entities during iteration:
+
+```csharp
+// Strict (default) — fast path for full blocks
+W.Query().For(
+    static (ref Position pos) => { /* ... */ }
+);
+
+// Flexible — re-checks bitmasks on each iteration
+W.Query().For(
+    static (W.Entity entity, ref Position pos) => {
+        // Can modify Position on other entities
+    },
+    queryMode: QueryMode.Flexible
+);
+```
+
+___
+
+## Recommendations
+
+| Practice | Reason |
+|----------|--------|
+| Use `ForBlock` for critical loops | Direct pointers, minimal overhead |
+| Use `static` lambdas in `For` | Zero allocations, JIT inlining |
+| Group entities by `entityType` | Cache locality |
+| Scope queries to clusters | Skip unrelated chunks |
+| `QueryMode.Strict` by default | 10–40% faster than Flexible |
+| Batch operations for bulk changes | Single operation per 64 entities |
+| `UnmanagedPackArrayStrategy<T>` for serialization | Bulk memory copy |
+| Typed extension methods for IL2CPP | 10–25% faster than generic Entity wrappers |
+
+---
+
+
+### ⚙️ **[Unity editor module](https://github.com/Felid-Force-Studios/StaticEcs-Unity)** ⚙️
+
+# Unity integration
+
+Example of StaticEcs integration with Unity:
+
+```csharp
+using System;
+using FFS.Libraries.StaticEcs;
+using FFS.Libraries.StaticEcs.Unity;
+using UnityEngine;
+using Object = UnityEngine.Object;
+using Random = UnityEngine.Random;
+
+// Define world type with editor name
+[StaticEcsEditorName("World")]
+public struct WT : IWorldType { }
+public abstract class W : World<WT> { }
+
+// Define systems
+public struct GameSystems : ISystemsType { }
+public abstract class GameSys : W.Systems<GameSystems> { }
+
+// Components
+public struct Position : IComponent {
+    public Transform Value;
+}
+
+public struct Direction : IComponent {
+    public Vector3 Value;
+}
+
+public struct Velocity : IComponent {
+    public float Value;
+}
+
+// Scene data — passed from MonoBehaviour via resource
+[Serializable]
+public class SceneData {
+    public GameObject EntityPrefab;
+}
+
+// Entity creation system
+public struct CreateRandomEntities : ISystem {
+    public void Init() {
+        ref var sceneData = ref W.GetResource<SceneData>();
+        for (var i = 0; i < 100; i++) {
+            var go = Object.Instantiate(sceneData.EntityPrefab);
+            go.transform.position = new Vector3(Random.Range(0, 50), 0, Random.Range(0, 50));
+            W.NewEntity<Default>(
+                new Position { Value = go.transform },
+                new Direction { Value = new Vector3(Random.Range(-1f, 1f), 0, Random.Range(-1f, 1f)) },
+                new Velocity { Value = 2f }
+            );
+        }
+    }
+}
+
+// Position update system
+public struct UpdatePositions : ISystem {
+    public void Update() {
+        W.Query().For(
+            static (ref Position position, in Velocity velocity, in Direction direction) => {
+                position.Value.position += direction.Value * (Time.deltaTime * velocity.Value);
+            }
+        );
+    }
+}
+
+// MonoBehaviour entry point
+public class Startup : MonoBehaviour {
+    public SceneData sceneData;
+
+    private void Start() {
+        // Create the world
+        W.Create(WorldConfig.Default());
+
+        // Register all types and connect debug (Unity module)
+        W.Types().RegisterAll();
+        EcsDebug<WT>.AddWorld();
+
+        // Initialize the world
+        W.Initialize();
+
+        // Pass scene data via resource
+        W.SetResource(sceneData);
+
+        // Create and configure systems
+        GameSys.Create();
+        GameSys.Add(new CreateRandomEntities(), order: -10)
+            .Add(new UpdatePositions(), order: 0);
+        GameSys.Initialize();
+
+        // Connect system debugging
+        EcsDebug<WT>.AddSystem<GameSystems>();
+    }
+
+    private void Update() {
+        GameSys.Update();
+    }
+
+    private void OnDestroy() {
+        GameSys.Destroy();
+        W.Destroy();
+    }
+}
+```
+
+---
+
+
+# Common Pitfalls
+
+A list of frequent mistakes when using StaticEcs. Useful for both developers and AI coding assistants.
+
+___
+
+## Lifecycle Errors
+
+### Forgetting type registration
+ALL component, tag, event, link, and multi-component types MUST be registered between `W.Create()` and `W.Initialize()`. Using an unregistered type causes a runtime error.
+```csharp
+// WRONG: component not registered
+W.Create(WorldConfig.Default());
+W.Initialize();
+var e = W.NewEntity<Default>();
+e.Add<Position>(); // RuntimeError — Position not registered!
+
+// CORRECT — manual registration
+W.Create(WorldConfig.Default());
+W.Types().Component<Position>();
+W.Initialize();
+var e = W.NewEntity<Default>();
+e.Add<Position>(); // OK
+
+// CORRECT — auto-registration of all types from the assembly
+W.Create(WorldConfig.Default());
+W.Types().RegisterAll();
+W.Initialize();
+```
+
+### Entity operations before Initialize
+`NewEntity`, queries, and all entity operations only work after `W.Initialize()`. Calling them during the `Created` phase (between `Create` and `Initialize`) will fail.
+
+### Calling Create twice
+Calling `W.Create()` without `W.Destroy()` first is an error. The world must be destroyed before re-creating.
+
+___
+
+## Entity Handle Errors
+
+### Using Entity after Destroy
+`Entity` is a 4-byte uint slot handle with no generation counter. After `Destroy()`, the slot is immediately available for reuse. The old handle now silently points to a completely different entity — or to garbage.
+```csharp
+var entity = W.NewEntity<Default>();
+entity.Destroy();
+// entity is now INVALID — any use is undefined behavior
+entity.Ref<Position>(); // DANGER: may access a different entity's data
+```
+
+### Storing Entity across frames
+Since Entity has no generation counter, it cannot detect staleness. Never store `Entity` in fields, lists, or other persistent structures. Use `EntityGID` instead.
+```csharp
+// WRONG
+class MySystem { Entity targetEntity; } // Stale after target is destroyed
+
+// CORRECT
+class MySystem { EntityGID targetGid; } // Safe — version check detects staleness
+// Usage:
+if (targetGid.TryUnpack<WT>(out var entity)) {
+    // entity is valid and alive
+}
+```
+
+### Comparing Entity for identity
+`Entity` equality is by IdWithOffset (uint) only. Two entities created at different times in the same slot have the same Entity value. Use `EntityGID` for identity comparison.
+
+___
+
+## Component Errors
+
+### Add vs Set semantics
+`Add<T>()` without a value is **idempotent** — if the component already exists, it returns a ref to the existing data with NO hooks called. This is NOT an overwrite.
+
+`Set(value)` **always overwrites** — calls OnDelete on old value, overwrites data, calls OnAdd on new value.
+
+```csharp
+entity.Set(new Position { Value = Vector3.Zero }); // Sets position
+entity.Add<Position>(); // Does NOTHING — returns ref to existing {0,0,0}
+entity.Set(new Position { Value = Vector3.One }); // Overwrites: OnDelete(old) → set → OnAdd(new)
+```
+
+### Implementing empty hook methods
+`ComponentTypeInfo<T>` uses reflection at startup to detect which hooks are implemented. If any hook has a non-empty body, hook dispatch is enabled for ALL instances of that component type. Don't override hooks with empty bodies.
+```csharp
+// WRONG: empty hook body still causes hook dispatch overhead
+public struct Foo : IComponent {
+    public void OnAdd<TW>(World<TW>.Entity self) where TW : struct, IWorldType { }
+}
+
+// CORRECT: don't implement hooks you don't need (default interface methods are already empty)
+public struct Foo : IComponent { }
+```
+
+### HasOnDelete vs Clearable
+OnDelete hook and Clearable (`= default` zeroing) are mutually exclusive cleanup paths. If a component has an OnDelete hook, the hook handles cleanup — the data is NOT zeroed. Clearable zeroing only applies to components without OnDelete.
+
+___
+
+## Query Errors
+
+### Strict mode violations
+In the default Strict query mode, modifying filtered component/tag types on OTHER entities during iteration is forbidden. This includes Add/Delete/Enable/Disable of filtered types on entities other than the current one.
+```csharp
+// WRONG in Strict mode:
+foreach (var e in W.Query<All<Position>>().Entities()) {
+    otherEntity.Delete<Position>(); // Modifies filtered type on another entity!
+}
+
+// CORRECT: use Flexible mode
+foreach (var e in W.Query<All<Position>>().EntitiesFlexible()) {
+    otherEntity.Delete<Position>(); // OK in Flexible mode
+}
+```
+
+### Parallel iteration constraints
+During `ForParallel`, only modify the CURRENT entity's data. Do not create/destroy entities, modify other entities, or perform structural changes.
+
+### Unnecessary Flexible mode
+Flexible mode re-checks bitmasks on every entity, making it significantly slower than Strict. Only use Flexible when you actually need to modify filtered types on other entities during iteration.
+
+___
+
+## Registration Errors
+
+### MultiComponent without Multi wrapper
+`IMultiComponent` types must be registered via `W.Types().Multi<Item>()`, not as regular components. They are stored internally as `Multi<Item>` which is the actual component.
+
+### Missing serialization setup
+Serialization requires:
+1. FFS.StaticPack dependency
+2. Guid registration for all serializable types: `W.Types().Component<T>(new ComponentTypeConfig<T> { Guid = ... })`
+3. Non-unmanaged components need `Write`/`Read` hook implementations
+4. Unmanaged components can use `UnmanagedPackArrayStrategy<T>` for efficient bulk copy
+
+___
+
+## Resource Errors
+
+### NamedResource caching issue
+`NamedResource<T>` caches its internal box reference on first access. If stored as `readonly` or passed by value after first use, the cache copy becomes stale.
+```csharp
+// WRONG
+readonly NamedResource<Config> config = new("main"); // readonly breaks cache
+
+// CORRECT
+NamedResource<Config> config = new("main"); // mutable — cache works
+```
+
+---
+
+
+## Migration from 1.2.x to 2.0.0
+
+For migration details, see [Migration guide v2.0.0](https://felid-force-studios.github.io/StaticEcs/en/migrationguide.html)

@@ -4,772 +4,674 @@ parent: Features
 nav_order: 15
 ---
 
-### Serialization
-Serialization is a mechanism for taking binary snapshots of the whole world or of specific entities  
-Binary serialization uses [StaticPack](https://github.com/Felid-Force-Studios/StaticPack)
+## Serialization
+Serialization is a mechanism for creating binary snapshots of the entire world or individual entities, clusters, and chunks.
+Binary serialization uses [StaticPack](https://github.com/Felid-Force-Studios/StaticPack).
 
-### How it works:
+___
 
-Let's define a few components:
-> To support serialization in [component configuration](configs.md)
-> GUID, Writer, and Reader must be defined as a minimum.
+## Configuring components
 
+To support component serialization:
+1. Specify a `Guid` during registration (stable type identifier)
+2. Implement `Write` and `Read` hooks on the component
+
+{: .important }
+`Write` and `Read` hooks are **required** for `EntitiesSnapshot` serialization (for all component types, including unmanaged). For world/cluster/chunk snapshots, non-unmanaged types also always use these hooks.
+
+#### Unmanaged component:
 ```csharp
-using FFS.Libraries.StaticEcs;
-using FFS.Libraries.StaticPack;
+public struct Position : IComponent {
+    public float X, Y, Z;
 
-// Сomponent with reference data
+    public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
+        where TWorld : struct, IWorldType {
+        writer.WriteFloat(X);
+        writer.WriteFloat(Y);
+        writer.WriteFloat(Z);
+    }
+
+    public void Read<TWorld>(ref BinaryPackReader reader, World<TWorld>.Entity self, byte version, bool disabled)
+        where TWorld : struct, IWorldType {
+        X = reader.ReadFloat();
+        Y = reader.ReadFloat();
+        Z = reader.ReadFloat();
+    }
+}
+
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
+));
+```
+
+#### Non-unmanaged component (contains reference fields):
+```csharp
 public struct Name : IComponent {
     public string Value;
 
-    public Name(string value) => Value = value;
+    public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
+        where TWorld : struct, IWorldType {
+        writer.WriteString16(Value);
+    }
 
-    public override string ToString() => Value;
-
-    public class Config<WorldType> : DefaultComponentConfig<Name, WorldType> where WorldType : struct, IWorldType {
-        public override Guid Id() => new("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3");
-
-        public override BinaryWriter<Name> Writer() => (ref BinaryPackWriter writer, in Name value) => writer.WriteString16(value.Value);
-
-        public override BinaryReader<Name> Reader() => (ref BinaryPackReader reader) => new Name(reader.ReadString16());
+    public void Read<TWorld>(ref BinaryPackReader reader, World<TWorld>.Entity self, byte version, bool disabled)
+        where TWorld : struct, IWorldType {
+        Value = reader.ReadString16();
     }
 }
 
-// Component with structures
-public struct Position : IComponent {
-    public float X, Y, Z;
-
-    public Position(float x, float y, float z) {
-        X = x; Y = y; Z = z;
-    }
-
-    public override string ToString() => $"X: {X}, Y: {Y}, Z: {Z}";
-
-    public class Config<WorldType> : DefaultComponentConfig<Position, WorldType> where WorldType : struct, IWorldType {
-        public override Guid Id() => new("b121594c-456e-4712-9b64-b75dbb37e611");
-
-        public override BinaryWriter<Position> Writer() {
-            return (ref BinaryPackWriter w, in Position value) => {
-                w.WriteFloat(value.X);
-                w.WriteFloat(value.Y);
-                w.WriteFloat(value.Z);
-            };
-        }
-
-        public override BinaryReader<Position> Reader() => (ref BinaryPackReader r) => 
-            new Position(r.ReadFloat(), r.ReadFloat(), r.ReadFloat());
-
-        public override IPackArrayStrategy<Position> ReadWriteStrategy() => new UnmanagedPackArrayStrategy<Position>();
-    }
-}
-
-// Multi component
-public struct Items : IMultiComponent<Items, int> {
-    public Multi<int> Values;
-
-    public ref Multi<int> RefValue(ref Items component) => ref component.Values;
-
-    public override string ToString() => Values.ToString();
-
-    public class Config<WorldType> : DefaultComponentConfig<Items, WorldType> where WorldType : struct, IWorldType {
-        public override Guid Id() => new("c54de753-ff4e-4620-b2ce-6de5c4870db0");
-
-        public override BinaryWriter<Items> Writer() => (ref BinaryPackWriter writer, in Items value) => writer.WriteMulti(value.Values);
-
-        public override BinaryReader<Items> Reader() => (ref BinaryPackReader reader) => new Items {
-            Values = reader.ReadMulti<WorldType, int>()
-        };
-    }
-}
-
-// Component-relationship
-public struct Parent : IEntityLinkComponent<Parent> {
-    public EntityGID Link;
-
-    ref EntityGID IRefProvider<Parent, EntityGID>.RefValue(ref Parent component) => ref component.Link;
-    
-    public override string ToString() => Link.ToString();
-
-    public class Config<WorldType> : DefaultComponentConfig<Parent, WorldType>
-        where WorldType : struct, IWorldType {
-        public override Guid Id() => new("90a9bb9a-6b86-4041-9a39-2682d5801881");
-
-        public override BinaryWriter<Parent> Writer() => (ref BinaryPackWriter writer, in Parent value) => writer.Write(value.Link);
-
-        public override BinaryReader<Parent> Reader() => (ref BinaryPackReader reader) => new Parent {
-            Link = reader.Read<EntityGID>()
-        };
-    }
-}
-
-// Component-relationship
-public struct Childs: IEntityLinksComponent<Childs> {
-    public ROMulti<EntityGID> Links;
-
-    ref ROMulti<EntityGID> IRefProvider<Childs, ROMulti<EntityGID>>.RefValue(ref Childs component) => ref component.Links;
-    
-    public override string ToString() => Links.ToString();
-
-    public class Config<WorldType> : DefaultComponentConfig<Childs, WorldType>
-        where WorldType : struct, IWorldType {
-        public override Guid Id() => new("15c875b7-c35f-4e25-a040-e71c8b25103e");
-
-        public override BinaryWriter<Childs> Writer() => (ref BinaryPackWriter writer, in Childs value) => writer.WriteROMulti(value.Links);
-
-        public override BinaryReader<Childs> Reader() => (ref BinaryPackReader reader) => new Childs {
-            Links = reader.ReadROMulti<WorldType, EntityGID>()
-        };
-    }
-}
-
-// Some kind of tags
-public struct Tag1 : ITag {}
-public struct Tag2 : ITag {}
-public struct Tag3 : ITag {}
+W.Types().Component<Name>(new ComponentTypeConfig<Name>(
+    guid: new Guid("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3")
+));
 ```
 
-Let's define the world and the method of creation:
+#### Bulk memory copying for unmanaged types:
+
+For world/cluster/chunk snapshots, unmanaged components can be serialized as a memory block instead of per-component `Write`/`Read` calls. To enable this, **explicitly specify** `UnmanagedPackArrayStrategy<T>`:
 
 ```csharp
-public struct WT : IWorldType { }
-
-public abstract class W : World<WT> { }
-
-public static void InitWorld(GIDStoreSnapshot? snapshot = null) {
-    W.Create(WorldConfig.Default());
-    W.RegisterComponentType<Name>(new Name.Config<WT>());
-    W.RegisterComponentType<Position>(new Position.Config<WT>());
-    W.RegisterMultiComponentType<Items, int>(4, new Items.Config<WT>());
-    W.RegisterOneToManyRelationType<Parent, Childs>(4, leftConfig: new Parent.Config<WT>(), rightConfig: new Childs.Config<WT>());
-
-    W.RegisterTagType<Tag1>(new("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90"));
-    W.RegisterTagType<Tag2>(new("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30"));
-    W.RegisterTagType<Tag3>(new("7f0cbf47-2ac3-4cd0-b5ec-b1f38d08c2aa"));
-
-    // Let's define the debugging method
-    Utils.EntityGidToString = gid => gid.TryUnpack<WT>(out var e) 
-        ? $"{gid.Id}:{gid.Version} - {e.Ref<Name>().Value}" 
-        : $"GID {gid.Id} : Version {gid.Version}";
-}
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()  // bulk memory copy
+));
 ```
 
-Let's define a method for creating test entities:
+{: .note }
+`UnmanagedPackArrayStrategy<T>` performs direct memory copying — significantly faster than per-component serialization. Works only for unmanaged types. On version mismatch (data migration), the system automatically falls back to `Read` hooks. The default strategy is `StructPackArrayStrategy<T>`.
+
+#### Bulk segment serialization for Multi and Links:
+
+Multi-components and Links store their values in shared segment storage. By default, each entity's values are serialized individually. For bulk segment serialization of the underlying storage (requires unmanaged value types):
 
 ```csharp
-public static void CreateEntities() {
-    var alex = W.Entity.New();
-    alex.Add<Name>().Value = "Alex";
-    alex.Add<Position>() = new (1.22f, 77.23131f, 54.232f);
-    alex.SetTag<Tag1>();
-    ref var alexItems = ref alex.Add<Items>().Values;
-    alexItems.Add(1);
-    alexItems.Add(2);
-    alexItems.Add(3);
-    
-    var jack = W.Entity.New();
-    jack.Add<Name>().Value = "Jack";
-    jack.Add<Position>() = new (2.57f, 3.23131f, 5.232f);
-    jack.SetTag<Tag3>();
-    jack.SetLink<Parent>(alex);
-    jack.Disable<Position>();
-}
+// Multi-component with bulk segment strategy
+W.Types().Multi<Item>(new ComponentTypeConfig<W.Multi<Item>>(
+    guid: new Guid("..."),
+    readWriteStrategy: new MultiUnmanagedPackArrayStrategy<MyWorld, Item>()
+));
+
+// Links with bulk segment strategy
+W.Types().Links<MyLinkType>(new ComponentTypeConfig<W.Links<MyLinkType>>(
+    guid: new Guid("..."),
+    readWriteStrategy: new LinksUnmanagedPackArrayStrategy<MyWorld, MyLinkType>()
+));
 ```
 
-#### Let's look at some examples:
+#### Full configuration:
+```csharp
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    version: 1,                  // data schema version for migration (default — 0)
+    noDataLifecycle: true,       // disable framework data management (default — false)
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>() // serialization strategy (default — StructPackArrayStrategy<T>)
+));
+```
 
-Example with saving and loading the full world during world initialization
+___
+
+## Configuring tags
+
+Tags are configured via `TagTypeConfig<T>`:
 
 ```csharp
-CreateWorld();
-W.Initialize();
-CreateEntities();
-Console.WriteLine("Created entities:");
-foreach (var entity in W.Query.Entities()) {
-    Console.WriteLine(entity.PrettyString);
+W.Types()
+    .Tag<IsPlayer>(new TagTypeConfig<IsPlayer>(guid: new Guid("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90")))
+    .Tag<IsDead>(new TagTypeConfig<IsDead>(guid: new Guid("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30")));
+```
+
+#### Full configuration:
+```csharp
+W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
+    guid: new Guid("A1B2C3D4-..."), // stable identifier for serialization (default — default)
+    trackAdded: true,                // enable addition tracking (default — false)
+    trackDeleted: true               // enable deletion tracking (default — false)
+));
+```
+
+{: .note }
+For automatic registration, `RegisterAll()` picks up a static `Guid` field inside the tag struct. The `trackAdded` / `trackDeleted` parameters are not set during automatic registration — use manual registration with `TagTypeConfig<T>` for tracking.
+
+___
+
+## Configuring events
+
+Events use `EventTypeConfig<T>` — similar to components:
+
+```csharp
+public struct OnDamage : IEvent {
+    public float Amount;
+
+    public void Write(ref BinaryPackWriter writer) {
+        writer.WriteFloat(Amount);
+    }
+
+    public void Read(ref BinaryPackReader reader, byte version) {
+        Amount = reader.ReadFloat();
+    }
 }
-// When saving a snapshot of the world, all entities and events are saved
-// Saving the world to a byte array
+
+W.Types().Event<OnDamage>(new EventTypeConfig<OnDamage>(
+    guid: new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+));
+```
+
+___
+
+## World Snapshot
+
+Saves the full world state: all entities, components, tags, and events.
+
+#### Saving and loading during initialization:
+```csharp
+// Save the world
 byte[] worldSnapshot = W.Serializer.CreateWorldSnapshot();
-// Or saving the world to a file
-// W.Serializer.CreateWorldSnapshot("Path/to/save/data/world.bin");
 W.Destroy();
 
-CreateWorld();
+// Load the world during initialization — the simplest approach
+CreateWorld(); // Create + type registration
 W.InitializeFromWorldSnapshot(worldSnapshot);
-// Or loading the world from a file
-// W.InitializeFromWorldSnapshot("Path/to/save/data/world.bin");
-Console.WriteLine("Loaded entities:");
-foreach (var entity in W.Query.Entities()) {
+
+// All entities and events are restored
+foreach (var entity in W.Query().Entities()) {
     Console.WriteLine(entity.PrettyString);
 }
-W.Destroy();
 ```
 
-Example with saving and loading the full world AFTER world initialization
-
+#### Saving and loading after initialization:
 ```csharp
-CreateWorld();
-W.Initialize();
-CreateEntities();
-Console.WriteLine("Created entities:");
-foreach (var entity in W.Query.Entities()) {
-    Console.WriteLine(entity.PrettyString);
-}
-// When saving a snapshot of the world, all entities and events are saved
-// Saving the world to a byte array
 byte[] worldSnapshot = W.Serializer.CreateWorldSnapshot();
-// Or saving the world to a file
-// W.Serializer.CreateWorldSnapshot("Path/to/save/data/world.bin");
 W.Destroy();
 
 CreateWorld();
 W.Initialize();
-// When loading a world snapshot, all entities and events are removed before loading, and loaded from the snapshot
-// Loading a world from a byte array
+// All existing entities and events are removed before loading
 W.Serializer.LoadWorldSnapshot(worldSnapshot);
-// Or download the world from a file
-// W.Serializer.LoadWorldSnapshot("Path/to/save/data/world.bin");
-Console.WriteLine("Loaded entities:");
-foreach (var entity in W.Query.Entities()) {
-    Console.WriteLine(entity.PrettyString);
-}
-W.Destroy();
 ```
 
-Example with saving and loading entities (as new ones)
-
+#### Additional parameters:
 ```csharp
-CreateWorld();
-W.Initialize();
-CreateEntities();
-Console.WriteLine("Created entities:");
+// Save to file
+W.Serializer.CreateWorldSnapshot("path/to/world.bin");
 
-// Creating an entity writer
-// It writes down the necessary information for entity recovery
-using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
-foreach (var entity in W.Query.Entities()) {
-    // Write the entity
-    entitiesWriter.Write(entity);
-    Console.WriteLine(entity.PrettyString);
+// With GZIP compression
+byte[] compressed = W.Serializer.CreateWorldSnapshot(gzip: true);
+
+// Filter by clusters
+W.Serializer.CreateWorldSnapshot(clusters: new ushort[] { 0, 1 });
+
+// Chunk writing strategy
+W.Serializer.CreateWorldSnapshot(strategy: ChunkWritingStrategy.SelfOwner);
+
+// Without events
+W.Serializer.CreateWorldSnapshot(writeEvents: false);
+
+// Without custom data
+W.Serializer.CreateWorldSnapshot(withCustomSnapshotData: false);
+
+// Load from file
+W.Serializer.LoadWorldSnapshot("path/to/world.bin");
+
+// Load compressed data
+W.Serializer.LoadWorldSnapshot(compressed, gzip: true);
+```
+
+{: .important }
+All components and tags in the world snapshot **must** have a registered `Guid`. In DEBUG mode, an error will occur when attempting serialization without a `Guid`.
+
+___
+
+## Entities Snapshot
+
+Allows saving and loading individual entities with granular control.
+
+#### Saving entities:
+```csharp
+// Create an entity writer
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+
+// Write specific entities
+foreach (var entity in W.Query().Entities()) {
+    writer.Write(entity);
 }
 
-// Saving entities to a byte array
-byte[] snapshot = entitiesWriter.CreateSnapshot();
+// Or write all entities at once
+// writer.WriteAllEntities();
 
-// Or saving entities to a file
-// entitiesWriter.CreateSnapshot("Path/to/save/data/entities.bin");
-W.Destroy();
+// Create the snapshot
+byte[] snapshot = writer.CreateSnapshot();
 
-//   Created entities:                              
-//   Entity ID: 0 Version: 1
-//   Components:
-//    - [0] Name ( Alex )
-//    - [1] Position ( X: 1,22, Y: 77,23131, Z: 54,232 )
-//    - [2] Items ( 1, 2, 3 )
-//    - [4] Childs ( 1:1 - Jack )
-//   Tags:
-//    - [0] Tag1
-//   
-//   Entity ID: 1 Version: 1
-//   Components:
-//    - [0] Name ( Jack )
-//    - [1] [Disabled] Position ( X: 2,57, Y: 3,23131, Z: 5,232 )
-//    - [3] Parent ( 0:1 - Alex )
-//   Tags:
+// Or save to file
+// writer.CreateSnapshot("path/to/entities.bin");
+```
 
+#### Writing with simultaneous unloading:
+```csharp
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
 
-CreateWorld();
-W.Initialize();
-var someEntity1 = W.Entity.New(new Position(1, 2, 3), new Name("someEntity1"));
-var someEntity2 = W.Entity.New(new Position(2, 3, 4), new Name("someEntity2"));
+// Write and unload — saves memory during streaming
+foreach (var entity in W.Query().Entities()) {
+    writer.WriteAndUnload(entity);
+}
 
-// entitiesAsNew indicates whether to load entities as new and assign a new EntityGID (more on this later)
-// If entitiesAsNew = true, it means that all the component-relationships in the loaded entities may have incorrect values.
-// Let's see how to avoid this in the following example
-// Loading entities from a byte array
+// Or all entities at once
+// writer.WriteAndUnloadAllEntities();
+
+byte[] snapshot = writer.CreateSnapshot();
+```
+
+___
+
+#### Loading entities (entitiesAsNew):
+
+The `entitiesAsNew` parameter determines how entities are loaded:
+
+- **`entitiesAsNew: false`** (default) — entities are restored to **the same slots** (same EntityGID). If a slot is already occupied — error in DEBUG.
+- **`entitiesAsNew: true`** — entities are loaded into **new slots** with new EntityGIDs. Links between entities (Link, Links) may point to incorrect entities.
+
+```csharp
+// Load into original slots
+W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: false);
+
+// Load as new entities
 W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: true);
-// If we specified entitiesAsNew: false, we would get an error in DEBUG. (World<WT>.Entity, method `LoadEntity`: EntityGID ID: 0, Version 1, ClusterId 0. Already loaded.)
 
-// Or loading entities from a file
-// W.Serializer.LoadEntitiesSnapshot("Path/to/save/data/entities.bin", entitiesAsNew: true);
-
-Console.WriteLine("Loaded entities:");
-foreach (var entity in W.Query.Entities()) {
-    Console.WriteLine(entity.PrettyString);
-}
-
-W.Destroy();
-
-// We can see that the Parent and Childs components in the loaded entities point to someEntity1 and someEntity2 instead of the desired entities
-// We will fix this in the next example
-
-//  Created entities:                              
-//  Entity ID: 0 Version: 1
-//  Components:
-//   - [0] Name ( someEntity1 )
-//   - [1] Position ( X: 1, Y: 2, Z: 3 )
-//  Tags:
-//  
-//  Entity ID: 1 Version: 1
-//  Components:
-//   - [0] Name ( someEntity2 )
-//   - [1] Position ( X: 2, Y: 3, Z: 4 )
-//  Tags:
-
-//  Loaded entities:
-//  Entity ID: 2 Version: 1
-//  Components:
-//   - [0] Name ( Alex )
-//   - [1] Position ( X: 1,22, Y: 77,23131, Z: 54,232 )
-//   - [2] Items ( 1, 2, 3 )
-//   - [4] Childs ( 1:1 - someEntity2 )
-//  Tags:
-//   - [0] Tag1
-//  
-//  Entity ID: 3 Version: 1
-//  Components:
-//   - [0] Name ( Jack )
-//   - [1] [Disabled] Position ( X: 2,57, Y: 3,23131, Z: 5,232 )
-//   - [3] Parent ( 0:1 - someEntity1 )
-//  Tags:
-//   - [2] Tag3
-```
-
-Example with saving and loading entities (with global identifiers preserved)
-
-```csharp
-CreateWorld();
-W.Initialize();
-CreateEntities();
-Console.WriteLine("Created entities:");
-using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
-foreach (var entity in W.Query.Entities()) {
-    entitiesWriter.Write(entity);
-    Console.WriteLine(entity.PrettyString);
-}
-
-byte[] snapshot = entitiesWriter.CreateSnapshot();
-
-// Save the global identifiers repository into a separate array\file
-// Global identifiers repository, contains sequence and all information about issued identifiers
-// which makes it possible not to use identifiers of entities that are currently unloaded.
-byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
-W.Destroy();
-
-//   Created entities:                              
-//   Entity ID: 0 Version: 1
-//   Components:
-//    - [0] Name ( Alex )
-//    - [1] Position ( X: 1,22, Y: 77,23131, Z: 54,232 )
-//    - [2] Items ( 1, 2, 3 )
-//    - [4] Childs ( 1:1 - Jack )
-//   Tags:
-//    - [0] Tag1
-//   
-//   Entity ID: 1 Version: 1
-//   Components:
-//    - [0] Name ( Jack )
-//    - [1] [Disabled] Position ( X: 2,57, Y: 3,23131, Z: 5,232 )
-//    - [3] Parent ( 0:1 - Alex )
-//   Tags:
-//    - [2] Tag3
-
-
-CreateWorld();
-W.InitializeFromGIDStoreSnapshot(gidSnapshot);
-var someEntity1 = W.Entity.New(new Position(1, 2, 3), new Name("someEntity1"));
-var someEntity2 = W.Entity.New(new Position(2, 3, 4), new Name("someEntity2"));
-
-// We can now specify entitiesAsNew: false because the entity identifiers were restored when the world was initialized
-W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: false);
-
-Console.WriteLine("Loaded entities:");
-foreach (var entity in W.Query.Entities()) {
-    Console.WriteLine(entity.PrettyString);
-}
-
-W.Destroy();
-
-// Now we can see that all links between entities are correct
-// Since when creating someEntity1 and someEntity2, the identifiers of the entities to be loaded were not used
-// This approach allows loading and saving different bundles of entities, for example, when streaming the world or loading different locations.
-// and ensure that the saved identifiers in components and events are not mixed up.
-
-//  Loaded entities:
-//  Entity ID: 0 Version: 1
-//  Components:
-//   - [0] Name ( Alex )
-//   - [1] Position ( X: 1,22, Y: 77,23131, Z: 54,232 )
-//   - [2] Items ( 1, 2, 3 )
-//   - [4] Childs ( 1:1 - Jack )
-//  Tags:
-//   - [0] Tag1
-//  
-//  Entity ID: 1 Version: 1
-//  Components:
-//   - [0] Name ( Jack )
-//   - [1] [Disabled] Position ( X: 2,57, Y: 3,23131, Z: 5,232 )
-//   - [3] Parent ( 0:1 - Alex )
-//  Tags:
-//   - [2] Tag3
-
-//  Created entities:                              
-//  Entity ID: 2 Version: 1
-//  Components:
-//   - [0] Name ( someEntity1 )
-//   - [1] Position ( X: 1, Y: 2, Z: 3 )
-//  Tags:
-//  
-//  Entity ID: 3 Version: 1
-//  Components:
-//   - [0] Name ( someEntity2 )
-//   - [1] Position ( X: 2, Y: 3, Z: 4 )
-//  Tags:
-```
-
-### End-to-end example with saving and loading clusters, chunks:
-
-```csharp
-public static void PrintEntitiesCount(string text) {
-    Console.WriteLine($"{text} - Total {W.CalculateEntitiesCount()} | Loaded {W.CalculateLoadedEntitiesCount()}");
-}
-
-CreateWorld();
-W.Initialize();
-CreateEntities();
-
-using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
-foreach (var entity in W.Query.Entities()) {
-    entitiesWriter.Write(entity);
-    entity.Unload(); // We unload the entity from memory (you can use the optimized method entitiesWriter.WriteAndUnload()).
-}
-
-byte[] individualEntitiesSnapshot = entitiesWriter.CreateSnapshot();
-
-PrintEntitiesCount("After creating a snapshot of specific entities:"); // Total 2 | Loaded 0
-
-// Let's create and register a new entity cluster
-const ushort SOME_NEW_CLUSTER = 1;
-W.RegisterCluster(SOME_NEW_CLUSTER);
-
-// Let's create 2000 new entities in the cluster
-for (int i = 0; i < 2000; i++) {
-    W.Entity.New(
-        new Position(i, i, i),
-        new Name($"MovableCluster entity {i}"),
-        clusterId: SOME_NEW_CLUSTER // Specify the cluster
-    );
-}
-
-PrintEntitiesCount("After creating an entity cluster:"); // Total 2002 | Loaded 2000
-
-byte[] clusterSnapshot = W.Serializer.CreateClusterSnapshot(SOME_NEW_CLUSTER); // We are saving a cluster with 2000 entities.
-W.UnloadCluster(SOME_NEW_CLUSTER);                                             // Unloading the cluster from memory
-
-PrintEntitiesCount("After unloading the entity cluster:"); // Total 2002 | Loaded 0
-
-// Let's create and register a new entity chunk in a default cluster. 
-var chunkIdx = W.FindNextSelfFreeChunk().ChunkIdx;
-W.RegisterChunk(chunkIdx, W.DEFAULT_CLUSTER);
-
-// СLet's create 100 new entities in the chunk.
-for (int i = 0; i < 100; i++) {
-    var entity = W.Entity.New(chunkIdx: chunkIdx);
-    entity.Add(
-        new Position(i, i, i),
-        new Name($"Chunk {chunkIdx} entity {i}")
-    );
-}
-
-PrintEntitiesCount("After creating a chunk of entities:"); // Total 2102 | Loaded 100
-
-byte[] chunkSnapshot = W.Serializer.CreateChunkSnapshot(chunkIdx); // Save a chunk with 100 entities
-W.UnloadChunk(chunkIdx);                                           // Unloading a chunk from memory
-
-PrintEntitiesCount("After unloading the chunk of entities:"); // Total 2102 | Loaded 0
-
-// Save the global identifiers repository into a separate array\file
-// Global identifiers repository, contains sequence and all information about issued identifiers
-// which makes it possible not to use identifiers of entities that are currently unloaded.
-// IMPORTANT! In this example, we destroy the world and create a GIDStoreSnapshot, but in reality, this is not necessary in this case; we could simply load entities from previously saved snapshots.
-byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
-W.Destroy();
-
-
-CreateWorld();
-W.InitializeFromGIDStoreSnapshot(gidSnapshot);
-
-// We can load entities from a cluster, chunk, or individually in any sequence.
-// IMPORTANT! By default, ClusterSnapshot and ChunkSnapshot do not store entity IDs, only component data.
-// If you need to load chunks or clusters as new entities when creating snapshots, you must specify withEntitiesData = true.
-
-W.Serializer.LoadClusterSnapshot(clusterSnapshot);
-PrintEntitiesCount("After loading the entity cluster:"); // Total 2102 | Loaded 2000
-
-W.Serializer.LoadEntitiesSnapshot(individualEntitiesSnapshot);
-PrintEntitiesCount("After loading specific entities:"); // Total 2102 | Loaded 2002
-
-W.Serializer.LoadChunkSnapshot(chunkSnapshot);
-PrintEntitiesCount("After loading the chunk of entities:"); // Total 2102 | Loaded 2102
-
-W.Destroy();
-```
-
-### Q&A:
-
-- I have changed the order\type of data in a component, can I download a snapshot of the old version of the world?
-
-```csharp
-// To load a snapshot you need to write a migration of an old version component to a new one
-// Example:
-// Let's imagine that originally there was a position component with X and Y
-public struct Position : IComponent {
-    public float X, Y;
-
-    public class Config<WorldType> : DefaultComponentConfig<Position, WorldType> where WorldType : struct, IWorldType {
-        public override Guid Id() => new("b121594c-456e-4712-9b64-b75dbb37e611");
-
-        public override BinaryWriter<Position> Writer() {
-            return (ref BinaryPackWriter w, in Position value) => {
-                w.WriteFloat(value.X);
-                w.WriteFloat(value.Y);
-            };
-        }
-
-        public override BinaryReader<Position> Reader() => (ref BinaryPackReader r) => 
-            new Position(r.ReadFloat(), r.ReadFloat());
-    }
-}
-
-// Then the Z coordinate appeared and we need to bring up the component version and write a migration
-public struct Position : IComponent {
-    public float X, Y, Z;
-
-    public class Config<WorldType> : DefaultComponentConfig<Position, WorldType> where WorldType : struct, IWorldType {
-        public override Guid Id() => new("b121594c-456e-4712-9b64-b75dbb37e611");
-
-        public override BinaryWriter<Position> Writer() {
-            return (ref BinaryPackWriter w, in Position value) => {
-                w.WriteFloat(value.X);
-                w.WriteFloat(value.Y);
-                w.WriteFloat(value.Z); // Actualizing the writer for Z
-            };
-        }
-
-        public override BinaryReader<Position> Reader() => (ref BinaryPackReader r) => 
-            new Position(r.ReadFloat(), r.ReadFloat(), r.ReadFloat()); // Actualizing the reader for Z
-
-        // Change the version to the following (default version is 0)
-        public override byte Version() => 1;
-
-        // Write a migration where for version 0 (old) we read only X and Y and set Z to 0
-        public override EcsComponentMigrationReader<Position, WorldType> MigrationReader() {
-            return (ref BinaryPackReader reader, World<WorldType>.Entity entity, byte version, bool disabled) => {
-                if (version == 0) {
-                    return new Position(reader.ReadFloat(), reader.ReadFloat(), 0);
-                }
-
-                throw new Exception("Unknown version");
-            };
-        }
-    }
-}
-```
-
-- I have deleted/added a component, can I upload a snapshot of the version world before the change?
-
-```csharp
-// If new components are added, the old snapshot should load correctly, restoration will happen automatically
-// By default, if a component has been deleted, it will be skipped automatically when loading, nothing additional is required
-
-// If you need to handle deletion in a special way, you need to register a function with the GUID of the old component
-
-// Example for components
-W.Serializer.SetComponentDeleteMigrator(
-    new("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90"),
-    (ref BinaryPackReader reader, World<WT>.Entity entity, byte version, bool disabled) => {
-        // Here you need to read ALL the data correctly and execute the custom logic
-    }
-);
-
-// Example for tags
-W.Serializer.SetTagDeleteMigrator(
-    new("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90"),
-    (World<WT>.Entity entity) => {
-        // Здесь необходимо выполнить кастомную логику
-    }
-);
-
-// Example for events
-W.Serializer.SetEventDeleteMigrator(
-    new("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90"),
-    (ref BinaryPackReader reader, byte version) => {
-        // Here you need to read ALL the data correctly and execute the custom logic
-    });
-```
-
-
-- Can components/masks/tags be excluded from serialization?
-
-```csharp
-// When using serialization via the CreateWorldSnapshot method, the full state of the world is saved
-// and there is no possibility to exclude individual components (DEBUG will have an error when calling that the serializer is not registered).
-
-// But when using EntitiesSnapshot there is such a possibility, for this purpose it is necessary not to configure GUID when registering a component/tag/event.
-// When saving entities, all components/tags/events for which GUID is not defined will be skipped during serialization.
-// For example, to preserve the WHOLE world including events and relationships between entities, the following code can be used:
-using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
-entitiesWriter.WriteAllEntities();
-byte[] snapshot = entitiesWriter.CreateSnapshot();
-byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
-byte[] eventsSnapshot = W.Events.CreateSnapshot();
-
-
-// Deserialization:
-var gidStoreSnapshot = BinaryPack.ReadFromBytes<GIDStoreSnapshot>(gidSnapshot);
-InitWorld(gidStoreSnapshot);
-W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: false);
-W.Events.LoadSnapshot(eventsSnapshot);
-```
-
-- Is it possible to reduce the size of serialized data/files?
-
-```csharp
-// GZIP compression is available out of the box and can be applied as follows
-byte[] snapshot = W.Serializer.CreateWorldSnapshot(gzip: true);
-W.Serializer.CreateWorldSnapshot("Path/to/save/data/world.bin", gzip: true);
-
-// If the array or file was compressed, it is also necessary to specify in parameters
-W.Serializer.LoadWorldSnapshot(snapshot, gzip: true);
-W.Serializer.LoadWorldSnapshot("Path/to/save/data/world.bin", gzip: true);
-```
-
-- How to automate the response to save/load the world\entities?
-
-```csharp
-// Any number of callbacks can be registered.
-// These functions will be called when calling
-// W.Serializer.CreateWorldSnapshot() / W.Serializer.LoadWorldSnapshot(snapshot)
-// W.Serializer.CreateClusterSnapshot() / W.Serializer.LoadClusterSnapshot(snapshot)
-// W.Serializer.CreateChunkSnapshot() / W.Serializer.LoadChunkSnapshot(snapshot)
-// entitiesWriter.CreateSnapshot() / W.Serializer.LoadEntitiesSnapshot()
-
-// Before creating a snapshot
-W.Serializer.RegisterPreCreateSnapshotCallback(param => Console.WriteLine("Entities or world `CreateSnapshot` start"));
-// After creating a snapshot
-W.Serializer.RegisterPostCreateSnapshotCallback(param => Console.WriteLine("Entities or world `CreateSnapshot` finish"));
-
-// Before loading a snapshot
-W.Serializer.RegisterPreLoadSnapshotCallback(param => Console.WriteLine("Entities or world `LoadSnapshot` start"));
-// After loading a snapshot
-W.Serializer.RegisterPostLoadSnapshotCallback(param => Console.WriteLine("Entities or world `LoadSnapshot` finish"));
-
-// How can I make functions be called when saving/loading only the world or only entities?
-// When registering a callbacks, you can check param -> Type.
-W.Serializer.RegisterPreCreateSnapshotCallback(param => {
-    if (param.Type == SnapshotType.Entities) {
-        Console.WriteLine("Entities `CreateSnapshot` start");
-    }
-});
-W.Serializer.RegisterPostCreateSnapshotCallback(param => {
-    if (param.Type == SnapshotType.World) {
-        Console.WriteLine("World `CreateSnapshot` finish");
-    }
-});
-```
-
-- How to perform post processing of saved/loaded entities?
-
-```csharp
-// You can register any number of callbacks for entities
-
-// After creating a snapshot
-W.Serializer.RegisterPostCreateSnapshotEachEntityCallback((entity, param) => Console.WriteLine($"Saved {entity.PrettyString}"));
-// After loading a snapshot
-W.Serializer.RegisterPostLoadSnapshotEachEntityCallback((entity, param) => Console.WriteLine($"Loaded {entity.PrettyString}"));
-
-// These functions will be called when use
-// W.Serializer.CreateWorldSnapshot() / W.Serializer.LoadWorldSnapshot(snapshot)
-// W.Serializer.CreateClusterSnapshot() / W.Serializer.LoadClusterSnapshot(snapshot)
-// W.Serializer.CreateChunkSnapshot() / W.Serializer.LoadChunkSnapshot(snapshot)
-// entitiesWriter.CreateSnapshot() / W.Serializer.LoadEntitiesSnapshot()
-
-// How can I make functions be called when saving/loading only the world or only entities?
-// When registering a callbacks, you can check param -> Type.
-W.Serializer.RegisterPostCreateSnapshotEachEntityCallback((entity, param) => {
-    if (param.Type == SnapshotType.Entities) {
-        Console.WriteLine($"Saved {entity.PrettyString}");
-    }
-});
-W.Serializer.RegisterPostLoadSnapshotEachEntityCallback((entity, param) => {
-    if (param.Type == SnapshotType.World) {
-        Console.WriteLine($"Loaded {entity.PrettyString}");
-    }
-});
-
-// You can also pass the entity post-processing function to a method when loading an entity snapshot
+// With a callback for each loaded entity
 W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: true, onLoad: entity => {
-    Console.WriteLine($"Loaded {entity.PrettyString}");
+    Console.WriteLine($"Loaded: {entity.PrettyString}");
 });
 ```
 
-- How do I add special data to a snapshot of the world\entities (e.g. data from systems or services)?
+___
+
+#### Preserving links between entities (GID Store):
+
+To correctly load entities with `entitiesAsNew: false`, save the global identifier store:
 
 ```csharp
-// Any number of callbacks can be registered.
-// These functions will be called when calling
-// W.Serializer.CreateWorldSnapshot() / W.Serializer.LoadWorldSnapshot(snapshot)
-// W.Serializer.CreateClusterSnapshot() / W.Serializer.LoadClusterSnapshot(snapshot)
-// W.Serializer.CreateChunkSnapshot() / W.Serializer.LoadChunkSnapshot(snapshot)
-// entitiesWriter.CreateSnapshot() / W.Serializer.LoadEntitiesSnapshot()
-// For example:
-W.Serializer.SetSnapshotHandler(
-    new ("57c15483-988a-47e7-919c-51b9a7b957b5"), // Unique data type guid
-    version: 0,                                   // Version
-    (ref BinaryPackWriter writer, SnapshotWriteParams param) => {            // ПCustom Data Writer
-        writer.WriteDateTime(DateTime.Now);
-        Console.WriteLine("Saved current time");
-    },
-    (ref BinaryPackReader reader, ushort version, SnapshotReadParams param) => { // Custom Data Reader
-        var time = reader.ReadDateTime();
-        Console.WriteLine($"Save dateTime is {time}");
-    }
-);
+// 1. Save entities and GID Store
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+writer.WriteAllEntities();
+byte[] entitiesSnapshot = writer.CreateSnapshot();
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+W.Destroy();
+
+// 2. Restore world with GID Store
+CreateWorld();
+W.InitializeFromGIDStoreSnapshot(gidSnapshot);
+
+// New entities won't occupy saved entity slots
+var newEntity = W.NewEntity<Default>();
+newEntity.Set(new Position { X = 1 });
+
+// 3. Load entities into original slots — all links are correct
+W.Serializer.LoadEntitiesSnapshot(entitiesSnapshot, entitiesAsNew: false);
 ```
 
-- How do I add special data for each entity in the entity world snapshot?
+{: .note }
+The GID Store contains information about all issued identifiers. This guarantees that new entities won't occupy slots of unloaded entities, and all links (Link, Links, EntityGID in data) remain correct.
+
+___
+
+## GID Store
 
 ```csharp
-// Any number of callbacks can be registered.
-// These functions will be called when calling
-// W.Serializer.CreateWorldSnapshot() / W.Serializer.LoadWorldSnapshot(snapshot)
-// W.Serializer.CreateClusterSnapshot() / W.Serializer.LoadClusterSnapshot(snapshot)
-// W.Serializer.CreateChunkSnapshot() / W.Serializer.LoadChunkSnapshot(snapshot)
-// entitiesWriter.CreateSnapshot() / W.Serializer.LoadEntitiesSnapshot()
-// Например:
-W.Serializer.SetSnapshotHandlerEachEntity(
-    new ("57c15483-988a-47e7-919c-51b9a7b957b5"), // Unique data type guid
-    version: 0,                                   // Version
-    (ref BinaryPackWriter writer, W.Entity entity, SnapshotWriteParams param) => {
-        // Write custom entity data
-    },
-    (ref BinaryPackReader reader, W.Entity entity, ushort version, SnapshotReadParams param) => {
-        // Read custom entity data
-    }
-);
-```
+// Save GID Store
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
 
-- У I have gidSnapshot. How can I restore the state of the world using it?
+// With GZIP compression
+byte[] gidCompressed = W.Serializer.CreateGIDStoreSnapshot(gzip: true);
 
-```csharp
-// All entities will be deleted and the world state will be reset to its initial state.
+// To file
+W.Serializer.CreateGIDStoreSnapshot("path/to/gid.bin");
+
+// With chunk writing strategy
+W.Serializer.CreateGIDStoreSnapshot(strategy: ChunkWritingStrategy.SelfOwner);
+
+// Filter by clusters
+W.Serializer.CreateGIDStoreSnapshot(clusters: new ushort[] { 0, 1 });
+
+// Initialize world from GID Store
+CreateWorld();
+W.InitializeFromGIDStoreSnapshot(gidSnapshot);
+
+// Restore GID Store in an already initialized world
+// All entities are deleted, state is reset
 W.Serializer.RestoreFromGIDStoreSnapshot(gidSnapshot);
 ```
 
-- Can I save and download event data?
+___
+
+## Cluster and chunk snapshots
+
+#### Cluster:
+```csharp
+// Save a cluster
+byte[] clusterSnapshot = W.Serializer.CreateClusterSnapshot(clusterId: 1);
+
+// With data for loading as new entities
+byte[] clusterWithEntities = W.Serializer.CreateClusterSnapshot(
+    clusterId: 1,
+    withEntitiesData: true  // required for entitiesAsNew during loading
+);
+
+// Unload the cluster from memory
+ReadOnlySpan<ushort> clusters = stackalloc ushort[] { 1 };
+W.Query().BatchUnload(EntityStatusType.Any, clusters: clusters);
+
+// Load the cluster from a snapshot
+W.Serializer.LoadClusterSnapshot(clusterSnapshot);
+
+// Load as new entities into a different cluster
+W.Serializer.LoadClusterSnapshot(clusterWithEntities,
+    new EntitiesAsNewParams(entitiesAsNew: true, clusterId: 2)
+);
+```
+
+#### Chunk:
+```csharp
+// Save a chunk
+byte[] chunkSnapshot = W.Serializer.CreateChunkSnapshot(chunkIdx: 0);
+
+// Unload the chunk from memory
+ReadOnlySpan<uint> unloadChunks = stackalloc uint[] { 0 };
+W.Query().BatchUnload(EntityStatusType.Any, unloadChunks);
+
+// Load the chunk from a snapshot
+W.Serializer.LoadChunkSnapshot(chunkSnapshot);
+```
+
+{: .important }
+By default, cluster and chunk snapshots **do not store** entity identifier data (only component data). If you need to load them as new entities (`entitiesAsNew: true`), specify `withEntitiesData: true` when creating the snapshot.
+
+___
+
+#### Comprehensive streaming example:
+```csharp
+void PrintCounts(string label) {
+    Console.WriteLine($"{label} — Total: {W.CalculateEntitiesCount()} | Loaded: {W.CalculateLoadedEntitiesCount()}");
+}
+
+// Save individual entities
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+foreach (var entity in W.Query().Entities()) {
+    writer.WriteAndUnload(entity);
+}
+byte[] entitiesSnapshot = writer.CreateSnapshot();
+PrintCounts("After unloading entities"); // Total: 2 | Loaded: 0
+
+// Create a cluster and populate it
+const ushort ZONE_CLUSTER = 1;
+W.RegisterCluster(ZONE_CLUSTER);
+struct ZoneEntityType : IEntityType { }
+W.NewEntities<ZoneEntityType>(count: 2000, clusterId: ZONE_CLUSTER);
+PrintCounts("After creating cluster"); // Total: 2002 | Loaded: 2000
+
+// Save and unload cluster
+byte[] clusterSnapshot = W.Serializer.CreateClusterSnapshot(ZONE_CLUSTER);
+ReadOnlySpan<ushort> zoneClusters = stackalloc ushort[] { ZONE_CLUSTER };
+W.Query().BatchUnload(EntityStatusType.Any, clusters: zoneClusters);
+PrintCounts("After unloading cluster"); // Total: 2002 | Loaded: 0
+
+// Create a chunk and populate it
+var chunkIdx = W.FindNextSelfFreeChunk().ChunkIdx;
+W.RegisterChunk(chunkIdx, clusterId: 0);
+for (int i = 0; i < 100; i++) {
+    W.NewEntityInChunk<ZoneEntityType>(chunkIdx: chunkIdx);
+}
+PrintCounts("After creating chunk"); // Total: 2102 | Loaded: 100
+
+// Save and unload chunk
+byte[] chunkSnapshot = W.Serializer.CreateChunkSnapshot(chunkIdx);
+ReadOnlySpan<uint> unloadChunks = stackalloc uint[] { chunkIdx };
+W.Query().BatchUnload(EntityStatusType.Any, unloadChunks);
+PrintCounts("After unloading chunk"); // Total: 2102 | Loaded: 0
+
+// Save GID Store and recreate world
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+W.Destroy();
+
+CreateWorld();
+W.InitializeFromGIDStoreSnapshot(gidSnapshot);
+
+// Load in any order
+W.Serializer.LoadClusterSnapshot(clusterSnapshot);
+PrintCounts("After loading cluster"); // Total: 2102 | Loaded: 2000
+
+W.Serializer.LoadEntitiesSnapshot(entitiesSnapshot);
+PrintCounts("After loading entities"); // Total: 2102 | Loaded: 2002
+
+W.Serializer.LoadChunkSnapshot(chunkSnapshot);
+PrintCounts("After loading chunk"); // Total: 2102 | Loaded: 2102
+```
+
+___
+
+## Data migration
+
+#### Component versioning:
+
+The `version` parameter in the `Read` hook enables data migration between schema versions:
 
 ```csharp
-// Loading and saving of events is performed via methods
- W.Events.CreateSnapshot();
- W.Events.LoadSnapshot();
+public struct Position : IComponent {
+    public float X, Y, Z;
+
+    public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
+        where TWorld : struct, IWorldType {
+        writer.WriteFloat(X);
+        writer.WriteFloat(Y);
+        writer.WriteFloat(Z);
+    }
+
+    public void Read<TWorld>(ref BinaryPackReader reader, World<TWorld>.Entity self, byte version, bool disabled)
+        where TWorld : struct, IWorldType {
+        X = reader.ReadFloat();
+        Y = reader.ReadFloat();
+        // Version 0 didn't have Z — use default value
+        Z = version >= 1 ? reader.ReadFloat() : 0f;
+    }
+}
+
+// Registration with the new version
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    version: 1,  // was version 0, now 1
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
+));
+```
+
+___
+
+#### Migration of removed types:
+
+If a component, tag, or event has been removed from the code, data is skipped automatically by default. For custom handling:
+
+```csharp
+// Migration for a removed component
+W.Serializer.SetComponentDeleteMigrator(
+    new Guid("guid-of-removed-component"),
+    (ref BinaryPackReader reader, W.Entity entity, byte version, bool disabled) => {
+        // Read ALL data and perform custom logic
+    }
+);
+
+// Migration for a removed tag
+W.Serializer.SetMigrator(
+    new Guid("guid-of-removed-tag"),
+    (W.Entity entity) => {
+        // Custom logic
+    }
+);
+
+// Migration for a removed event
+W.Serializer.SetEventDeleteMigrator(
+    new Guid("guid-of-removed-event"),
+    (ref BinaryPackReader reader, byte version) => {
+        // Read ALL data and perform custom logic
+    }
+);
+```
+
+{: .note }
+When new types are added, old snapshots load correctly — new components are simply absent on loaded entities.
+
+___
+
+## Callbacks
+
+#### Global callbacks:
+```csharp
+// Called for all snapshot types (World, Cluster, Chunk, Entities)
+
+// Before creating a snapshot
+W.Serializer.RegisterPreCreateSnapshotCallback(param => {
+    Console.WriteLine($"Creating snapshot of type: {param.Type}");
+});
+
+// After creating a snapshot
+W.Serializer.RegisterPostCreateSnapshotCallback(param => {
+    Console.WriteLine($"Snapshot created: {param.Type}");
+});
+
+// Before loading a snapshot
+W.Serializer.RegisterPreLoadSnapshotCallback(param => {
+    Console.WriteLine($"Loading snapshot: {param.Type}, AsNew: {param.EntitiesAsNew}");
+});
+
+// After loading a snapshot
+W.Serializer.RegisterPostLoadSnapshotCallback(param => {
+    Console.WriteLine($"Snapshot loaded: {param.Type}");
+});
+```
+
+#### Filtering by snapshot type:
+```csharp
+W.Serializer.RegisterPreCreateSnapshotCallback(param => {
+    if (param.Type == SnapshotType.World) {
+        Console.WriteLine("Saving world");
+    }
+});
+```
+
+#### Per-entity callbacks:
+```csharp
+// After saving each entity
+W.Serializer.RegisterPostCreateSnapshotEachEntityCallback((entity, param) => {
+    Console.WriteLine($"Saved: {entity.PrettyString}");
+});
+
+// After loading each entity
+W.Serializer.RegisterPostLoadSnapshotEachEntityCallback((entity, param) => {
+    Console.WriteLine($"Loaded: {entity.PrettyString}");
+});
+```
+
+___
+
+## Custom data in snapshots
+
+#### Global custom data:
+```csharp
+// Add arbitrary data to a snapshot (e.g., system or service data)
+W.Serializer.SetSnapshotHandler(
+    new Guid("57c15483-988a-47e7-919c-51b9a7b957b5"), // unique data type guid
+    version: 0,
+    writer: (ref BinaryPackWriter writer, SnapshotWriteParams param) => {
+        writer.WriteDateTime(DateTime.Now);
+    },
+    reader: (ref BinaryPackReader reader, ushort version, SnapshotReadParams param) => {
+        var savedTime = reader.ReadDateTime();
+        Console.WriteLine($"Save time: {savedTime}");
+    }
+);
+```
+
+#### Per-entity custom data:
+```csharp
+W.Serializer.SetSnapshotHandlerEachEntity(
+    new Guid("68d26594-1a9b-48f8-b2de-71c0a8b068c6"),
+    version: 0,
+    writer: (ref BinaryPackWriter writer, W.Entity entity, SnapshotWriteParams param) => {
+        // Write additional data for the entity
+    },
+    reader: (ref BinaryPackReader reader, W.Entity entity, ushort version, SnapshotReadParams param) => {
+        // Read additional data for the entity
+    }
+);
+```
+
+___
+
+## Event serialization
+
+```csharp
+// Save events
+byte[] eventsSnapshot = W.Serializer.CreateEventsSnapshot();
+
+// With GZIP compression
+byte[] eventsCompressed = W.Serializer.CreateEventsSnapshot(gzip: true);
+
+// To file
+W.Serializer.CreateEventsSnapshot("path/to/events.bin");
+
+// Load events
+W.Serializer.LoadEventsSnapshot(eventsSnapshot);
+
+// From file
+W.Serializer.LoadEventsSnapshot("path/to/events.bin");
+```
+
+{: .note }
+When using `CreateWorldSnapshot`, events are saved automatically (unless `writeEvents: false` is specified). Separate event serialization is needed when using `EntitiesSnapshot`.
+
+___
+
+## Excluding from serialization
+
+```csharp
+// Components, tags, and events without Guid are skipped during EntitiesSnapshot serialization
+W.Types().Component<DebugInfo>();     // no guid — not serialized
+W.Types().Tag<EditorOnly>();          // no guid — not serialized
+
+// For world snapshots (CreateWorldSnapshot) all Guids are required — error in DEBUG otherwise
+// For entity snapshots (EntitiesSnapshot) types without Guid are simply skipped
+
+// Example: save all entities while skipping debug data
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+writer.WriteAllEntities();
+byte[] snapshot = writer.CreateSnapshot();
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+byte[] eventsSnapshot = W.Serializer.CreateEventsSnapshot();
+```
+
+___
+
+## Compression (GZIP)
+
+All snapshot creation and loading methods support GZIP compression:
+
+```csharp
+// World
+byte[] snapshot = W.Serializer.CreateWorldSnapshot(gzip: true);
+W.Serializer.LoadWorldSnapshot(snapshot, gzip: true);
+
+// Cluster
+byte[] cluster = W.Serializer.CreateClusterSnapshot(1, gzip: true);
+W.Serializer.LoadClusterSnapshot(cluster, gzip: true);
+
+// Chunk
+byte[] chunk = W.Serializer.CreateChunkSnapshot(0, gzip: true);
+W.Serializer.LoadChunkSnapshot(chunk, gzip: true);
+
+// GID Store
+byte[] gid = W.Serializer.CreateGIDStoreSnapshot(gzip: true);
+
+// Events
+byte[] events = W.Serializer.CreateEventsSnapshot(gzip: true);
+W.Serializer.LoadEventsSnapshot(events, gzip: true);
+
+// Files
+W.Serializer.CreateWorldSnapshot("world.bin", gzip: true);
+W.Serializer.LoadWorldSnapshot("world.bin", gzip: true);
 ```

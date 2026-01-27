@@ -6,38 +6,39 @@ nav_order: 9
 
 ## WorldType
 World identifier type-tag, used to isolate static data when creating different worlds in the same process
-- Represented as a user structure without data with a marker interface `IWorldType`
+- Represented as a user struct with no data and the `IWorldType` marker interface
+- Each unique `IWorldType` gets its own fully isolated static storage
 
 #### Example:
-```c#
+```csharp
 public struct MainWorldType : IWorldType { }
 public struct MiniGameWorldType : IWorldType { }
 ```
-___
 
+___
 
 ## World
 Library entry point responsible for accessing, creating, initializing, operating, and destroying world data
 - Represented as a static class `World<T>` parameterized by `IWorldType`
 
 {: .important }
-> Since the type-identifier `IWorldType` defines access to a specific world   
-> There are three ways to work with the framework:
+> Since the `IWorldType` type-identifier defines access to a specific world,
+> there are three ways to work with the framework:
 
 ___
 
-#### The first way is as is via full address (very inconvenient):
-```c#
+#### First way — full qualification:
+```csharp
 public struct WT : IWorldType { }
 
 World<WT>.Create(WorldConfig.Default());
 World<WT>.CalculateEntitiesCount();
 
-var entity = World<WT>.Entity.New<Position>();
+var entity = World<WT>.NewEntity<Default>();
 ```
 
-#### The second way is a little more convenient, use static imports or static aliases (you'll have to write in each file)
-```c#
+#### Second way — static imports:
+```csharp
 using static FFS.Libraries.StaticEcs.World<WT>;
 
 public struct WT : IWorldType { }
@@ -45,12 +46,12 @@ public struct WT : IWorldType { }
 Create(WorldConfig.Default());
 CalculateEntitiesCount();
 
-var entity = Entity.New<Position>();
+var entity = NewEntity<Default>();
 ```
 
-#### The third way is the most convenient, use type-aliases in the root namespace (no need to write in every file)
-This is the method that will be used everywhere in the examples
-```c#
+#### Third way — type alias in the root namespace:
+This is the method used in all examples
+```csharp
 public struct WT : IWorldType { }
 
 public abstract class W : World<WT> { }
@@ -58,271 +59,426 @@ public abstract class W : World<WT> { }
 W.Create(WorldConfig.Default());
 W.CalculateEntitiesCount();
 
-var entity = W.Entity.New<Position>();
+var entity = W.NewEntity<Default>();
 ```
 
 ___
 
-#### Basic operations:
-```c#
-// Defining the world ID
+## Lifecycle
+
+```
+Create() → Type registration → Initialize() → Work → Destroy()
+```
+
+#### WorldStatus:
+- `NotCreated` — world not created or destroyed
+- `Created` — structures allocated, type registration available
+- `Initialized` — world fully operational, entity operations available
+
+___
+
+#### Creating the world:
+```csharp
+// Define the world identifier
 public struct WT : IWorldType { }
+public abstract class W : World<WT> { }
 
-// Register types - aliases
-public abstract class World : World<WT> { }
-
-// Creating a world with a default configuration
+// Create with default configuration
 W.Create(WorldConfig.Default());
-// Or a custom one
-W.Create(new() {
-            // Indicates whether the world is independent or dependent (see the "Chunk" section for more details).
-            Independent = true   
-            // Base size of all component types (number of component types)
-            BaseComponentTypesCount = 64                        
-            // Base size of all varieties of tag types (number of tag types)
-            BaseTagTypesCount = 64,                             
-            // Operation mode of multithreaded processing 
-            // (Disabled - no threads are created, MaxThreadsCount - maximum available number of threads is created, CustomThreadsCount - specified number of threads)
-            ParallelQueryType = ParallelQueryType.Disabled,
-            // Number of threads at ParallelQueryType.CustomThreadsCount
-            CustomThreadCount = 4,
-            // Strict Query default mode of operation, optionally in the Queries section
-            DefaultQueryModeStrict = true
-        });
 
-W.Entity.    // Entity access for MainWorldType (world ID)
-W.Context.   // Access to context for MainWorldType (world ID)
-W.Components.// Access to components for MainWorldType (world ID)
-W.Tags.      // Access to tags for MainWorldType (world ID)
-W.Events.    // Access to events
+// Or with custom configuration
+W.Create(new WorldConfig {
+    // Independent world (manages chunks automatically) or dependent (requires manual chunk management)
+    Independent = true,
+    // Initial capacity for component types (default — 64)
+    BaseComponentTypesCount = 64,
+    // Initial capacity for clusters (minimum 16, default — 16)
+    BaseClustersCapacity = 16,
+    // Multithreading mode
+    // Disabled — no threads created
+    // MaxThreadsCount — maximum available threads
+    // CustomThreadsCount — specified number of threads
+    ParallelQueryType = ParallelQueryType.Disabled,
+    // Thread count when using CustomThreadsCount
+    CustomThreadCount = 4,
+    // Worker spin iterations before blocking (default — 256)
+    WorkerSpinCount = 256,
+    // Enable entity creation tracking for the Created query filter (default — false)
+    TrackCreated = true,
+});
+```
 
-// Initialization of the world
-W.Initialize(baseEntitiesCapacity = 4096);
-// Initialize the world by loading previously saved identifiers
+{: .note }
+`WorldConfig` provides factory methods:
+- `WorldConfig.Default()` — standard settings (single-threaded, independent)
+- `WorldConfig.MaxThreads()` — all available CPU threads
+Both accept `bool independent = true`.
+
+___
+
+#### Type registration:
+```csharp
+W.Create(WorldConfig.Default());
+
+// Register components, tags, and events — only between Create() and Initialize()
+W.Types()
+    .EntityType<Bullet>(Bullet.Id)
+    .Component<Position>()
+    .Component<Velocity>()
+    .Tag<IsPlayer>()
+    .Event<OnDamage>();
+
+// Initialize the world
+W.Initialize();
+```
+
+{: .important }
+Type registration (`Types().Component<T>()`, `Types().Tag<T>()`, `Types().EntityType<T>(id)`) is only available in the `Created` state — after `Create()` and before `Initialize()`. Event registration (`Types().Event<T>()`) is also available after initialization.
+
+___
+
+#### Auto-registration of types:
+Instead of manually registering each type, you can use automatic assembly scanning.
+`RegisterAll()` discovers all structs implementing ECS interfaces and registers them automatically:
+
+```csharp
+W.Create(WorldConfig.Default());
+
+// Auto-register all types from the calling assembly
+W.Types().RegisterAll();
+
+// Or specify particular assemblies
+W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
+
+// Can be combined with manual registration (e.g. to set serialization GUID)
+W.Types()
+    .RegisterAll()
+    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent> { Guid = myGuid });
+
+W.Initialize();
+```
+
+Detected interfaces:
+
+| Interface | Registration |
+|-----------|-------------|
+| `IComponent` | `Types().Component<T>()` |
+| `ITag` | `Types().Tag<T>()` |
+| `IEvent` | `Types().Event<T>()` |
+| `ILinkType` | Wrapped in `Link<T>` and registered as a component |
+| `ILinksType` | Wrapped in `Links<T>` and registered as a component |
+| `IMultiComponent` | Wrapped in `Multi<T>` and registered as a component |
+| `IEntityType` | `Types().EntityType<T>(T.Id)` |
+
+{: .note }
+- If no assemblies are specified, only the calling assembly is scanned (not all loaded assemblies)
+- The StaticEcs framework assembly itself is always excluded from scanning
+- `RegisterAll()` searches for a static field or property of the matching config type inside each struct and uses it if found. Otherwise, default configuration is used. Lookup rules:
+  - `IComponent` — looks for `ComponentTypeConfig<T>` (prefers name `Config`)
+  - `IEvent` — looks for `EventTypeConfig<T>` (prefers name `Config`)
+  - `ITag` — looks for `TagTypeConfig<T>` (prefers name `Config`)
+  - `IEntityType` — looks for `byte` (prefers name `Id`)
+- Both fields and properties are supported
+- A struct implementing multiple interfaces (e.g. both `IComponent` and `IMultiComponent`) will be registered for each one
+
+___
+
+#### Initialization:
+```csharp
+// Standard initialization (baseEntitiesCapacity — initial entity capacity)
+W.Initialize(baseEntitiesCapacity: 4096);
+
+// Initialize with restored entity identifiers (EntityGID versions)
 W.InitializeFromGIDStoreSnapshot(snapshot);
-// Initializing the world from saved data
-W.InitializeFromWorldSnapshot(snapshot);
 
-// Destroying and deleting the world's data
+// Initialize with full world restoration from a snapshot
+W.InitializeFromWorldSnapshot(snapshot);
+```
+
+{: .note }
+`InitializeFromGIDStoreSnapshot` restores only entity identifier metadata (GID versions). `InitializeFromWorldSnapshot` restores the full world state, including all entities and their data.
+
+___
+
+#### Destruction:
+```csharp
+// Destroy the world and release all resources
 W.Destroy();
+```
+
+___
+
+## Basic operations
+
+```csharp
+// Current world status
+WorldStatus status = W.Status;
 
 // true if the world is initialized
-bool initialized = W.IsInitialized();
+bool initialized = W.IsWorldInitialized;
 
 // true if the world is independent
-bool independent = W.IsIndependent();
+bool independent = W.IsIndependent;
 
-// number of entities created in the world (active + unloaded)
-int entitiesCount = W.CalculateEntitiesCount();
+// Entity count in the world (active + unloaded)
+uint entitiesCount = W.CalculateEntitiesCount();
 
-// number of entities loaded in the world
-int loadedEntitiesCount = W.CalculateLoadedEntitiesCount();
+// Loaded entity count
+uint loadedCount = W.CalculateLoadedEntitiesCount();
 
-// current capacity for entities
-int entitiesCapacity = W.CalculateEntitiesCapacity();
+// Current entity capacity
+uint capacity = W.CalculateEntitiesCapacity();
 
-// Destroys all entities in the world
-W.DestroyAllEntities();
+// Destroy all entities in the world (world remains initialized)
+W.DestroyAllLoadedEntities();
 ```
 
 ___
 
-## Cluster:
-A cluster is a set of entity chunks. Entities belonging to the same cluster are grouped together and stored in memory in a segmented manner.  
-A cluster is represented by a ushort value between 0 and 65535. By default, when the world is initialized, a single cluster with the identifier 0 is created, and all entities are created in it by default.  
+For details on creating entities and entity operations — see [Entity](entity).
+
+For details on world resources — see [Resources](resources).
 
 ___
 
-#### Main operations:
-```c#
-// Cluster registration can be called after creation or after world initialization.
-const ushort NPC_CLUSTER = 1;
-const ushort ENVIRONMENT_CLUSTER = 2;
-W.RegisterCluster(NPC_CLUSTER);
-W.RegisterCluster(ENVIRONMENT_CLUSTER);
+## Cluster
 
-// Check if the cluster is registered
-bool clusterIsRegistered = W.ClusterIsRegistered(NPC_CLUSTER);
+A cluster is a group of entity chunks for spatial segmentation of the world. Entities in the same cluster are grouped together and stored in memory in a segmented manner.
+- Represented as a `ushort` value (0–65535)
+- By default, cluster 0 is created on world initialization
+- All entities are created in cluster 0 by default
+- A cluster can be disabled — entities from disabled clusters are excluded from iteration
 
-// Enable or disable a cluster; entities from disabled clusters are not included in the iteration.
-W.SetActiveCluster(ENVIRONMENT_CLUSTER, false);
-
-// Check if the cluster is enabled
-bool active = W.ClusterIsActive(ENVIRONMENT_CLUSTER);
-
-// Release the cluster; all entities in the cluster will be deleted, all chunks and the cluster ID will be released (an error will occur if the cluster is not registered).
-W.FreeCluster(ENVIRONMENT_CLUSTER);
-
-// Release the cluster if it is registered
-bool free = W.TryFreeCluster(ENVIRONMENT_CLUSTER);
-
-// Destroy all entities in the cluster
-W.DestroyAllEntitiesInCluster(NPC_CLUSTER);
-
-// Take a snapshot of the cluster that stores all entity data in this cluster.
-// There are method overloads for writing to disk, compression, etc.
-// More examples in the "serialization" section.
-byte[] clusterSnapshot = W.Serializer.CreateClusterSnapshot(NPC_CLUSTER);
-
-// Unload the cluster from memory, all component and tag chunks will be deleted,
-// entities will be marked as unloaded, and only information about identifiers will be saved; entities will not be received in queries.
-W.UnloadCluster(NPC_CLUSTER);
-
-// Load from the snapshot of the entity cluster into the world
-W.Serializer.LoadClusterSnapshot(clusterSnapshot);
-
-// Get all chunks in the cluster (including empty chunks where there are no loaded entities)
-ReadOnlySpan<uint> chunks = W.GetClusterChunks(NPC_CLUSTER);
-
-// Get all chunks in the cluster that have at least one entity loaded
-ReadOnlySpan<uint> loadedChunks = W.GetClusterLoadedChunks(NPC_CLUSTER);
-
-// When creating an entity, you can pass the cluster ID (by default, the entity is created in the default cluster W.DEFAULT_CLUSTER = 0).
-var npc = W.Entity.New(clusterId: W.DEFAULT_CLUSTER);
-
-// Attempt to create an entity in the cluster; if the world is dependent and there are no free entity identifiers left in it, false will be returned.
-var created = W.Entity.TryNew(out var ent, clusterId: ENVIRONMENT_CLUSTER);
-
-// An optional cluster identifier parameter has been added for all overloads.
-W.Entity.New(
-    new Position(),
-    new Name(),
-    clusterId: NPC_CLUSTER
-);
-
-// Get entity cluster
-ushort entityClusterId = npc.ClusterId();
-
-// Get the entity cluster at EntityGID
-ushort gidClusterId = npc.Gid().ClusterId;
-```
-
-___
-
-## Chunk:
-A chunk is a group of entities with a size of 4096; the entire world consists of chunks. A chunk always belongs to a cluster.  
-A world can be dependent or independent; this parameter is set in the world configuration when creating `W.Create(new() { Independent = true })`.  
-By default, an independent world manages entity IDs and all chunks automatically, creating new chunks when entities are created with `W.Entity.New()` when needed.   
-A dependent world does not have entity and chunk IDs available for creating entities via `W.Entity.New()` when created; the world must be told which chunks are available.  
-Next, we will look at some examples.  
-
+{: .note }
+Clusters are designed for **spatial grouping**: levels, map zones, game rooms. For **logical** grouping (units, bullets, effects) use `entityType`.
 
 ___
 
 #### Basic operations:
-```c#
-// Find a free chunk that does not belong to any cluster.
-// For an independent world, if there is no free chunk, a new one will be created.
-// For a dependent world, if there is no free chunk, an error will occur.
-EntitiesChunkInfo chunkInfo = W.FindNextSelfFreeChunk();
-uint chunkIdx = chunkInfo.ChunkIdx; // Chunk index
-// chunkInfo.EntitiesFrom - first entity identifier in the cluster
-// chunkInfo.EntitiesCapacity - chunk size (always 4096)
+```csharp
+// Register clusters (can be called after Create() or after Initialize())
+const ushort LEVEL_1_CLUSTER = 1;
+const ushort LEVEL_2_CLUSTER = 2;
+W.RegisterCluster(LEVEL_1_CLUSTER);
+W.RegisterCluster(LEVEL_2_CLUSTER);
 
-// Try to find a free chunk that does not belong to any cluster.
-// For an independent world, if there is no free chunk, a new one will be created (the result is always true).
-// For a dependent world, if there is no free chunk, the result will be false.
-bool hasFreeChunk = W.TryFindNextSelfFreeChunk(out EntitiesChunkInfo info);
+// Check if a cluster is registered
+bool registered = W.ClusterIsRegistered(LEVEL_1_CLUSTER);
 
-// Register a free chunk in the cluster (if the chunk is already registered, an error will occur)
-W.RegisterChunk(chunkIdx, clusterId: NPC_CLUSTER);
-// Register a free chunk in the cluster and assign an ownership type (details below) (If the chunk is already registered, an error will occur)
-W.RegisterChunk(chunkIdx, owner: ChunkOwnerType.Self, clusterId: NPC_CLUSTER);
+// Enable or disable a cluster — entities from disabled clusters are excluded from iteration
+W.SetActiveCluster(LEVEL_2_CLUSTER, false);
 
-// Attempt to register a free chunk in the cluster (if the chunk is already registered, false will be returned)
-bool chunkRegistered = W.TryRegisterChunk(chunkIdx, NPC_CLUSTER);
+// Check if a cluster is active
+bool active = W.ClusterIsActive(LEVEL_2_CLUSTER);
 
-// Check if the chunk is registered
-bool registered = W.ChunkIsRegistered(chunkIdx);
+// Destroy all entities in a cluster
+W.DestroyAllEntitiesInCluster(LEVEL_1_CLUSTER);
 
-// Get the ID of the cluster to which the chunk belongs
-ushort chunkClusterId = W.GetChunkClusterId(chunkIdx);
+// Free a cluster — all entities are deleted, chunks and the identifier are released
+W.FreeCluster(LEVEL_2_CLUSTER);
 
-// Change the chunk cluster; all entities within the chunk will belong to another cluster.
-W.ChangeChunkCluster(chunkIdx, ENVIRONMENT_CLUSTER);
-
-// Check if there are entities in the chunk (active + unloaded)
-bool hasEntitiesInChunk = W.HasEntitiesInChunk(chunkIdx);
-
-// Check if there are any loaded entities in the chunk
-bool hasLoadedEntitiesInChunk = W.HasLoadedEntitiesInChunk(chunkIdx);
-
-// Free up the chunk; all entities in the chunk will be deleted, and the chunk identifier will be freed up.
-W.FreeChunk(chunkIdx);
-
-// Destroy all entities in the chunk
-W.DestroyAllEntitiesInChunk(chunkIdx);
-
-// Take a snapshot of the chunk that stores all entity data in this chunk.
-// There are method overloads for writing to disk, compression, etc.
-// More examples in the "serialization" section.
-byte[] chunkSnapshot = W.Serializer.CreateChunkSnapshot(chunkIdx);
-
-// Unload the chunk from memory, all components and tags will be removed,
-// entities will be marked as unloaded, and only information about identifiers will be saved; entities will not be received in queries.
-W.UnloadChunk(chunkIdx);
-
-// Load from the snapshot of the essence into the world
-W.Serializer.LoadChunkSnapshot(chunkSnapshot);
-
-// When creating an entity, you can pass the chunk index (without specifying it; the chunk selection is determined by the world).
-var entity = W.Entity.New(chunkIdx: chunkIdx);
-
-// Попытаться создать сущность в чанке, если чанк полон вернется false
-var created = W.Entity.TryNew(out var ent, chunkIdx: chunkIdx);
-
-
-// Check the chunk owner
-// ChunkOwnerType.Self means that the chunk is managed by this world; only chunks with Self ownership are used to create entities via Entity.New()
-//    - The independent world by default has all chunks with Self ownership.
-// ChunkOwnerType.Other - means that the chunk is not managed by this world, entities created via Entity.New() will never be created in these chunks.
-//    - The dependent world by default has all chunks with Other ownership.
-ChunkOwnerType owner = W.GetChunkOwner(chunkIdx);
-
-// Change the type of ownership of a chunk
-W.ChangeChunkOwner(chunkIdx, ChunkOwnerType.Other);
- 
-// Creating entities via Entity.New(gid) is only available for chunks with `Other` ownership type.
-// Creating entities via Entity.New(chunkIdx) is only available for chunks with the Self ownership type.
+// Safe free — returns false if the cluster is not registered
+bool freed = W.TryFreeCluster(LEVEL_2_CLUSTER);
 ```
 
 ___
 
-## Examples of cluster and chunk usage:
+#### Cluster snapshots and unloading:
+```csharp
+// Create a cluster snapshot (stores all entity data)
+// Overloads available for writing to disk, compression, etc.
+byte[] snapshot = W.Serializer.CreateClusterSnapshot(LEVEL_1_CLUSTER);
 
-Clusters can be used for any user logic, for example:
-- Different clusters can define different types of entities, such as a unit cluster, a game environment cluster, an item cluster, or an effect cluster.
-    - This reduces memory consumption and fragmentation, speeds up iteration, and helps with world serialization and game logic.
-    - For example, with a large game map that is loaded and unloaded as the player moves, different clusters greatly save memory.
-- Another example is using clusters for different game levels and loading/unloading clusters when changing levels.
-- The cluster ID can also define the game session. Combined with parallel iteration, it is possible to create a multi-world emulation within a single world.
+// Unload a cluster from memory
+// Component and tag data is removed, entities are marked as unloaded
+// Only identifier information is preserved, entities are excluded from queries
+ReadOnlySpan<ushort> clusters = stackalloc ushort[] { LEVEL_1_CLUSTER };
+W.Query().BatchUnload(EntityStatusType.Any, clusters: clusters);
 
-
-Chunk management can be used, for example, for:
-- World streaming, allowing chunks to be loaded and unloaded during gameplay
-- Custom entity ID management
-- Quick selection and clearing of large numbers of entities, as an arena memory for temporary entities
-
-Chunk ownership management can be used for client-server interactions, for example:
-
-```c#
-// On the server side in the Independent world
-// Find a free chunk and register it
-EntitiesChunkInfo chunkInfo = WServer.FindNextSelfFreeChunk();
-// Set the ownership type of the chunk to `Other`, so that the server will never create entities in this range of identifiers.
-WServer.RegisterChunk(chunkInfo.ChunkIdx, ChunkOwnerType.Other);
-
-// Send the chunk ID to the client
-
-// On the client side in the Dependent world
-// We receive the chunk ID from the server
-// Register a chunk with the `Self` ownership type
-WClient.RegisterChunk(ChunkIdxFromServer, ChunkOwnerType.Self);
-
-// Now there are 4096 free identifiers available for entities on the client.
-// Client entities can be created using W.Entity.New().
-// For example, for UI or VFX.
-
-// Similarly, it can be used for p2p network formats
-// where there is one Independent host and N Dependent clients
+// Load a cluster from a snapshot
+W.Serializer.LoadClusterSnapshot(snapshot);
 ```
+
+___
+
+#### Cluster chunks:
+```csharp
+// Get all chunks in a cluster (including empty ones)
+ReadOnlySpan<uint> chunks = W.GetClusterChunks(LEVEL_1_CLUSTER);
+
+// Get chunks that have at least one loaded entity
+ReadOnlySpan<uint> loadedChunks = W.GetClusterLoadedChunks(LEVEL_1_CLUSTER);
+```
+
+___
+
+#### Creating entities in a cluster:
+```csharp
+// Specify a cluster when creating an entity (default — cluster 0)
+struct UnitType : IEntityType { }
+var entity = W.NewEntity<UnitType>(clusterId: LEVEL_1_CLUSTER);
+
+// The clusterId parameter is available in all overloads
+W.NewEntity<UnitType>(
+    new UnitType(),  // entity type instance (can carry config data for OnCreate)
+    clusterId: LEVEL_1_CLUSTER
+);
+
+// Get the entity's cluster
+ushort entityClusterId = entity.ClusterId;
+
+// Get the cluster from EntityGID
+ushort gidClusterId = entity.GID.ClusterId;
+```
+
+___
+
+## Chunk
+
+A chunk is a block of 4096 entities. The entire world consists of chunks. Each chunk belongs to a cluster.
+
+- **Independent world** (`Independent = true`) — manages chunks automatically, creates new ones as needed
+- **Dependent world** (`Independent = false`) — has no chunks available for entity creation via `NewEntity()`, chunks must be explicitly assigned
+
+___
+
+#### Basic operations:
+```csharp
+// Find a free chunk not belonging to any cluster
+// Independent world: if none available — creates a new one
+// Dependent world: if none available — error
+EntitiesChunkInfo chunkInfo = W.FindNextSelfFreeChunk();
+uint chunkIdx = chunkInfo.ChunkIdx;
+// chunkInfo.EntitiesFrom — first entity identifier in the chunk
+// chunkInfo.EntitiesCapacity — chunk size (always 4096)
+
+// Safe variant (returns false if no free chunks)
+bool found = W.TryFindNextSelfFreeChunk(out EntitiesChunkInfo info);
+
+// Register a chunk in a cluster
+W.RegisterChunk(chunkIdx, clusterId: LEVEL_1_CLUSTER);
+
+// Register a chunk with a specific ownership type
+W.RegisterChunk(chunkIdx, owner: ChunkOwnerType.Self, clusterId: LEVEL_1_CLUSTER);
+
+// Safe registration (returns false if the chunk is already registered)
+bool registered = W.TryRegisterChunk(chunkIdx, clusterId: LEVEL_1_CLUSTER);
+
+// Check if a chunk is registered
+bool isRegistered = W.ChunkIsRegistered(chunkIdx);
+
+// Get the cluster a chunk belongs to
+ushort clusterId = W.GetChunkClusterId(chunkIdx);
+
+// Move a chunk to another cluster
+W.ChangeChunkCluster(chunkIdx, LEVEL_2_CLUSTER);
+
+// Check for entities in a chunk
+bool hasEntities = W.HasEntitiesInChunk(chunkIdx);           // active + unloaded
+bool hasLoaded = W.HasLoadedEntitiesInChunk(chunkIdx);       // loaded only
+
+// Destroy all entities in a chunk
+W.DestroyAllEntitiesInChunk(chunkIdx);
+
+// Free a chunk — all entities are deleted, the identifier is released
+W.FreeChunk(chunkIdx);
+```
+
+___
+
+#### Chunk snapshots and unloading:
+```csharp
+// Create a chunk snapshot
+byte[] snapshot = W.Serializer.CreateChunkSnapshot(chunkIdx);
+
+// Unload a chunk from memory (data removed, entities marked as unloaded)
+ReadOnlySpan<uint> chunks = stackalloc uint[] { chunkIdx };
+W.Query().BatchUnload(EntityStatusType.Any, chunks);
+
+// Load a chunk from a snapshot
+W.Serializer.LoadChunkSnapshot(snapshot);
+```
+
+___
+
+#### Creating entities in a specific chunk:
+```csharp
+// Create an entity in a specific chunk
+struct UnitType : IEntityType { }
+var entity = W.NewEntityInChunk<UnitType>(chunkIdx: chunkIdx);
+
+// Safe variant (returns false if the chunk is full)
+bool created = W.TryNewEntityInChunk<UnitType>(out var entity, chunkIdx: chunkIdx);
+
+// Non-generic variant (entity type known at runtime as byte)
+byte entityTypeId = EntityTypeInfo<UnitType>.Id;
+var entity = W.NewEntityInChunk(entityTypeId, chunkIdx: chunkIdx);
+```
+
+___
+
+## Chunk ownership (ChunkOwnerType)
+
+The ownership type determines how the world uses a chunk for entity creation:
+
+- **`ChunkOwnerType.Self`** — chunk is managed by this world. Entities created via `NewEntity()` are placed in these chunks
+  - Independent worlds have all chunks with `Self` ownership by default
+- **`ChunkOwnerType.Other`** — chunk is not managed by this world. `NewEntity()` will never place entities in these chunks
+  - Dependent worlds have all chunks with `Other` ownership by default
+
+```csharp
+// Get the chunk's ownership type
+ChunkOwnerType owner = W.GetChunkOwner(chunkIdx);
+
+// Change ownership
+// Self → Other: chunk becomes unavailable for NewEntity()
+// Other → Self: chunk becomes available for NewEntity()
+W.ChangeChunkOwner(chunkIdx, ChunkOwnerType.Other);
+```
+
+{: .important }
+Entity creation via `NewEntityByGID<TEntityType>(gid)` is only available for chunks with `Other` ownership.
+Entity creation via `NewEntityInChunk<TEntityType>(chunkIdx)` is only available for chunks with `Self` ownership.
+
+___
+
+#### Client-server example:
+
+```csharp
+// === Server side (Independent world) ===
+// Find a free chunk and register with Other ownership
+// The server will not create its own entities in this identifier range
+EntitiesChunkInfo chunkInfo = WServer.FindNextSelfFreeChunk();
+WServer.RegisterChunk(chunkInfo.ChunkIdx, ChunkOwnerType.Other);
+// Send the chunk identifier to the client
+
+// === Client side (Dependent world) ===
+// Receive the chunk identifier from the server
+// Register with Self ownership — now 4096 entity slots are available
+WClient.RegisterChunk(chunkIdxFromServer, ChunkOwnerType.Self);
+
+// The client can create entities via NewEntity()
+// For example, for UI or VFX
+var vfx = WClient.NewEntity<VfxType>();
+
+// Similarly works for P2P:
+// one Independent host + N Dependent clients
+```
+
+___
+
+## Cluster and chunk usage examples
+
+#### Clusters:
+- **Levels and map zones** — different clusters for different parts of the game world. As the player moves, clusters can be loaded and unloaded to save memory
+- **Game levels** — load/unload clusters when changing levels
+- **Game sessions** — cluster identifier defines a session. Combined with parallel iteration, multi-world emulation within a single world is possible
+
+#### Chunks:
+- **World streaming** — loading and unloading chunks during gameplay
+- **Custom identifier management** — control over EntityGID distribution
+- **Arena memory** — fast allocation and cleanup of large numbers of temporary entities
+
+#### Chunk ownership:
+- **Client-server interaction** — server allocates identifier ranges to clients
+- **P2P network formats** — one Independent host and N Dependent clients

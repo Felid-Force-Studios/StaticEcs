@@ -4,81 +4,168 @@ parent: Features
 nav_order: 13
 ---
 
-### Events
-Event - used to exchange information between systems or user services
-- Presented as a custom structure with data
-
-___
+## Events
+Event is a mechanism for exchanging information between systems or user services
+- Represented as a user struct with data and the `IEvent` marker interface
+- "Sender → multiple receivers" model with automatic lifecycle management
+- Each receiver has an independent read cursor
+- An event is automatically deleted when all receivers have read it or it is suppressed
 
 #### Example:
-```c#
-public struct WeatherChanged : IEvent { 
+```csharp
+public struct WeatherChanged : IEvent {
     public WeatherType WeatherType;
+}
+
+public struct OnDamage : IEvent {
+    public float Amount;
+    public EntityGID Target;
 }
 ```
 
 ___
 
 {: .important }
-Requires registration in the world between creation and initialization
+Event type registration is available in both `Created` and `Initialized` phases
 
-```c#
+```csharp
 W.Create(WorldConfig.Default());
 //...
-W.Events.RegisterEventType<WeatherChanged>()
+// Simple registration
+W.Types()
+    .Event<WeatherChanged>()
+    .Event<OnDamage>();
+
+// Registration with configuration
+W.Types().Event<WeatherChanged>(new EventTypeConfig<WeatherChanged>(
+    guid: new Guid("..."),      // stable identifier for serialization
+    version: 1,                  // data schema version for migration (default — 0)
+    readWriteStrategy: null      // binary serialization strategy (default — StructPackArrayStrategy<T>)
+));
 //...
 W.Initialize();
 ```
 
+{: .note }
+Instead of passing configuration manually, you can declare a static field or property of type `EventTypeConfig<T>` inside the event struct. `RegisterAll()` will discover it automatically (preferring the name `Config`):
+
+```csharp
+public struct WeatherChanged : IEvent {
+    public WeatherType WeatherType;
+    public static readonly EventTypeConfig<WeatherChanged> Config = new(
+        guid: new Guid("..."),
+        version: 1
+    );
+}
+// RegisterAll() will use WeatherChanged.Config automatically
+```
+
 ___
 
-#### Creation and basic operations:
-```c#
-// The event system will be created when World.Create is called and destroyed when World.Destroy is called
-W.Create(WorldConfig.Default());
-W.Initialize();
-//...
+#### Sending events:
+```csharp
+// Send an event with data
+// Returns true if the event was added to the buffer, false if no registered receivers
+bool sent = W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Sunny });
 
-// Before sending an event, the receiver of the event must be registered, otherwise the event will not be sent.
-// Receiver can be registered after calling World.Create (e.g. in the Init method of the system).
-var weatherChangedEventReceiver = W.Events.RegisterEventReceiver<WeatherChanged>();
+// Send an event with default value
+bool sent = W.SendEvent<OnDamage>();
+```
 
-// Deleting an event receiver
-W.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
+{: .warning }
+If there are no registered receivers, `SendEvent` returns `false` and the event is **not stored**. Register receivers before sending events.
 
-// Important! The lifecycle of an event: the event will be deleted in two cases:
-// 1) when it's been read by all registered receivers.
-// 2) when it will be suppressed on reading (by calling Suppress or SuppressAll method (information below) ) )
-// So it is important that all registered listeners read the events or the event is suppressed by any listener so that there is no accumulation of them
+___
 
-// Sending an event
-W.Events.Send(new WeatherChanged { WeatherType = WeatherType.Sunny });
+#### Receiving events:
+```csharp
+// Create a receiver — each receiver has an independent read cursor
+var weatherReceiver = W.RegisterEventReceiver<WeatherChanged>();
 
-// Sending default event value
-W.Events.Send<WeatherChanged>();
+// Send events
+W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Sunny });
+W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Rainy });
 
-// Receiving events
-foreach (var weatherEvent in weatherChangedEventReceiver) {
-    Console.WriteLine("Weather is " + weatherEvent.Value.WeatherType);
+// Read events via foreach
+// After iteration, events are marked as read for this receiver
+foreach (var e in weatherReceiver) {
+    ref var data = ref e.Value; // ref access to event data
+    Console.WriteLine(data.WeatherType);
 }
 
+// Additional event information during iteration
+foreach (var e in weatherReceiver) {
+    // true if this receiver is the last one to read this event
+    // (the event will be deleted after reading)
+    bool last = e.IsLastReading();
 
-foreach (var weatherEvent in weatherChangedEventReceiver) {
-    // True if this listener is the last listener to read this event (means that the event will be deleted after reading).
-    bool last = weatherEvent.IsLastReading();
-    // Returns the number of unread listeners other than the given listener at the moment
-    int unreadCount = weatherEvent.UnreadCount();
+    // Number of receivers that haven't read this event yet (excluding current)
+    int remaining = e.UnreadCount();
+
+    // Suppress the event — immediately deletes it for all remaining receivers
+    e.Suppress();
+}
+```
+
+___
+
+#### Receiver management:
+```csharp
+// Read all events via delegate
+weatherReceiver.ReadAll(static (Event<WeatherChanged> e) => {
+    Console.WriteLine(e.Value.WeatherType);
+});
+
+// Suppress all unread events for this receiver
+// Events are deleted and other receivers can no longer read them
+weatherReceiver.SuppressAll();
+
+// Mark all events as read without processing
+// Events are not deleted — other receivers can still read them
+weatherReceiver.MarkAsReadAll();
+
+// Delete the receiver
+W.DeleteEventReceiver(ref weatherReceiver);
+```
+
+___
+
+#### Multithreading:
+
+{: .warning }
+Sending events (`SendEvent`) is thread-safe under the following conditions:
+- Multiple threads can simultaneously call `SendEvent` for the **same** event type
+- **Simultaneous reading and sending** of the same event type from different threads is **forbidden** — sending is thread-safe only when there is no concurrent reading of the same type
+- Reading events of one type (`foreach`, `ReadAll`) must be done in a **single thread**
+- Different event types can be read from **different threads simultaneously**, as each type is stored independently
+- The same event type can be read from different threads **at different times** (not concurrently)
+
+Receiver operations (`foreach`, `ReadAll`, `MarkAsReadAll`, `SuppressAll`, creating and deleting receivers) are **not supported** in multithreaded mode and must only be performed on the main thread.
+
+___
+
+#### Event lifecycle:
+
+{: .important }
+An event is automatically deleted in two cases:
+1. All registered receivers have read the event
+2. The event was suppressed (`Suppress` or `SuppressAll`)
+
+It is important that all registered receivers read their events (or call `MarkAsReadAll`/`SuppressAll`), otherwise events will accumulate in memory.
+
+```csharp
+// Lifecycle example with two receivers
+var receiverA = W.RegisterEventReceiver<WeatherChanged>();
+var receiverB = W.RegisterEventReceiver<WeatherChanged>();
+
+W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Sunny });
+// Event has UnreadCount = 2
+
+foreach (var e in receiverA) {
+    // receiverA read it, UnreadCount = 1
 }
 
-foreach (var weatherEvent in weatherChangedEventReceiver) {
-    // Event suppression - the event will be deleted and other receivers will no longer be able to read it
-    weatherEvent.Suppress();
+foreach (var e in receiverB) {
+    // receiverB read it, UnreadCount = 0 → event is automatically deleted
 }
-
-// Suppress all events for a given receiver
-weatherChangedEventReceiver.SuppressAll();
-
-// Marks the reading of all events for this receiver
-weatherChangedEventReceiver.MarkAsReadAll();
-
 ```

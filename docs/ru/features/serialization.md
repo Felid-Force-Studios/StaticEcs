@@ -4,774 +4,675 @@ parent: Возможности
 nav_order: 15
 ---
 
-### Сериализация
-Сериализация - механизм позволяющий делать бинарные снимки мира целиком или конкретных сущностей  
-Для бинарной сериализации используется [StaticPack](https://github.com/Felid-Force-Studios/StaticPack)  
+## Сериализация
+Сериализация — механизм создания бинарных снимков мира целиком или отдельных сущностей, кластеров, чанков.
+Для бинарной сериализации используется [StaticPack](https://github.com/Felid-Force-Studios/StaticPack).
 
-### Как это работает:
+___
 
-Определим несколько компонентов:  
-> Для поддержки сериализации в [конфигурации компонента](configs.md) 
-> необходимо определить как минимум GUID, Writer и Reader.
+## Настройка компонентов
 
+Для поддержки сериализации компонентов необходимо:
+1. Указать `Guid` при регистрации (стабильный идентификатор типа)
+2. Реализовать хуки `Write` и `Read` на компоненте
+
+{: .importantru }
+Хуки `Write` и `Read` **обязательны** для сериализации через `EntitiesSnapshot` (для всех типов компонентов, включая unmanaged). Для снимков мира/кластера/чанка non-unmanaged типы также всегда используют эти хуки.
+
+#### Unmanaged компонент:
 ```csharp
-using FFS.Libraries.StaticEcs;
-using FFS.Libraries.StaticPack;
+public struct Position : IComponent {
+    public float X, Y, Z;
 
-// Компонент с ссылочными данными
+    public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
+        where TWorld : struct, IWorldType {
+        writer.WriteFloat(X);
+        writer.WriteFloat(Y);
+        writer.WriteFloat(Z);
+    }
+
+    public void Read<TWorld>(ref BinaryPackReader reader, World<TWorld>.Entity self, byte version, bool disabled)
+        where TWorld : struct, IWorldType {
+        X = reader.ReadFloat();
+        Y = reader.ReadFloat();
+        Z = reader.ReadFloat();
+    }
+}
+
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
+));
+```
+
+#### Non-unmanaged компонент (содержит ссылочные поля):
+```csharp
 public struct Name : IComponent {
     public string Value;
 
-    public Name(string value) => Value = value;
+    public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
+        where TWorld : struct, IWorldType {
+        writer.WriteString16(Value);
+    }
 
-    public override string ToString() => Value;
-
-    public class Config<WorldType> : DefaultComponentConfig<Name, WorldType> where WorldType : struct, IWorldType {
-        public override Guid Id() => new("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3");
-
-        public override BinaryWriter<Name> Writer() => (ref BinaryPackWriter writer, in Name value) => writer.WriteString16(value.Value);
-
-        public override BinaryReader<Name> Reader() => (ref BinaryPackReader reader) => new Name(reader.ReadString16());
+    public void Read<TWorld>(ref BinaryPackReader reader, World<TWorld>.Entity self, byte version, bool disabled)
+        where TWorld : struct, IWorldType {
+        Value = reader.ReadString16();
     }
 }
 
-// Компонент с структурами
-public struct Position : IComponent {
-    public float X, Y, Z;
-
-    public Position(float x, float y, float z) {
-        X = x; Y = y; Z = z;
-    }
-
-    public override string ToString() => $"X: {X}, Y: {Y}, Z: {Z}";
-
-    public class Config<WorldType> : DefaultComponentConfig<Position, WorldType> where WorldType : struct, IWorldType {
-        public override Guid Id() => new("b121594c-456e-4712-9b64-b75dbb37e611");
-
-        public override BinaryWriter<Position> Writer() {
-            return (ref BinaryPackWriter w, in Position value) => {
-                w.WriteFloat(value.X);
-                w.WriteFloat(value.Y);
-                w.WriteFloat(value.Z);
-            };
-        }
-
-        public override BinaryReader<Position> Reader() => (ref BinaryPackReader r) => 
-            new Position(r.ReadFloat(), r.ReadFloat(), r.ReadFloat());
-
-        public override IPackArrayStrategy<Position> ReadWriteStrategy() => new UnmanagedPackArrayStrategy<Position>();
-    }
-}
-
-// Мульти компонент
-public struct Items : IMultiComponent<Items, int> {
-    public Multi<int> Values;
-
-    public ref Multi<int> RefValue(ref Items component) => ref component.Values;
-
-    public override string ToString() => Values.ToString();
-
-    public class Config<WorldType> : DefaultComponentConfig<Items, WorldType> where WorldType : struct, IWorldType {
-        public override Guid Id() => new("c54de753-ff4e-4620-b2ce-6de5c4870db0");
-
-        public override BinaryWriter<Items> Writer() => (ref BinaryPackWriter writer, in Items value) => writer.WriteMulti(value.Values);
-
-        public override BinaryReader<Items> Reader() => (ref BinaryPackReader reader) => new Items {
-            Values = reader.ReadMulti<WorldType, int>()
-        };
-    }
-}
-
-// Компонент-отношений
-public struct Parent : IEntityLinkComponent<Parent> {
-    public EntityGID Link;
-
-    ref EntityGID IRefProvider<Parent, EntityGID>.RefValue(ref Parent component) => ref component.Link;
-    
-    public override string ToString() => Link.ToString();
-
-    public class Config<WorldType> : DefaultComponentConfig<Parent, WorldType>
-        where WorldType : struct, IWorldType {
-        public override Guid Id() => new("90a9bb9a-6b86-4041-9a39-2682d5801881");
-
-        public override BinaryWriter<Parent> Writer() => (ref BinaryPackWriter writer, in Parent value) => writer.Write(value.Link);
-
-        public override BinaryReader<Parent> Reader() => (ref BinaryPackReader reader) => new Parent {
-            Link = reader.Read<EntityGID>()
-        };
-    }
-}
-
-// Компонент-отношений
-public struct Childs: IEntityLinksComponent<Childs> {
-    public ROMulti<EntityGID> Links;
-
-    ref ROMulti<EntityGID> IRefProvider<Childs, ROMulti<EntityGID>>.RefValue(ref Childs component) => ref component.Links;
-    
-    public override string ToString() => Links.ToString();
-
-    public class Config<WorldType> : DefaultComponentConfig<Childs, WorldType>
-        where WorldType : struct, IWorldType {
-        public override Guid Id() => new("15c875b7-c35f-4e25-a040-e71c8b25103e");
-
-        public override BinaryWriter<Childs> Writer() => (ref BinaryPackWriter writer, in Childs value) => writer.WriteROMulti(value.Links);
-
-        public override BinaryReader<Childs> Reader() => (ref BinaryPackReader reader) => new Childs {
-            Links = reader.ReadROMulti<WorldType, EntityGID>()
-        };
-    }
-}
-
-// Какие то теги
-public struct Tag1 : ITag {}
-public struct Tag2 : ITag {}
-public struct Tag3 : ITag {}
+W.Types().Component<Name>(new ComponentTypeConfig<Name>(
+    guid: new Guid("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3")
+));
 ```
 
-Определим мир и метод создания:
+#### Блочное копирование для unmanaged типов:
+
+Для снимков мира/кластера/чанка unmanaged компоненты могут быть сериализованы блоком памяти вместо поэлементных вызовов `Write`/`Read`. Для этого нужно **явно указать** `UnmanagedPackArrayStrategy<T>`:
 
 ```csharp
-public struct WT : IWorldType { }
-
-public abstract class W : World<WT> { }
-
-public static void CreateWorld() {
-    W.Create(WorldConfig.Default());
-    W.RegisterComponentType<Name>(new Name.Config<WT>());
-    W.RegisterComponentType<Position>(new Position.Config<WT>());
-    W.RegisterMultiComponentType<Items, int>(4, new Items.Config<WT>());
-    W.RegisterOneToManyRelationType<Parent, Childs>(4, leftConfig: new Parent.Config<WT>(), rightConfig: new Childs.Config<WT>());
-
-    W.RegisterTagType<Tag1>(new("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90"));
-    W.RegisterTagType<Tag2>(new("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30"));
-    W.RegisterTagType<Tag3>(new("7f0cbf47-2ac3-4cd0-b5ec-b1f38d08c2aa"));
-
-    // Определим отладочный метод
-    Utils.EntityGidToString = gid => gid.TryUnpack<WT>(out var e) 
-        ? $"{gid.Id}:{gid.Version} - {e.Ref<Name>().Value}" 
-        : $"GID {gid.Id} : Version {gid.Version}";
-}
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()  // блочное копирование
+));
 ```
 
-Определим метод создания тестовых сущностей:
+{: .noteru }
+`UnmanagedPackArrayStrategy<T>` выполняет прямое копирование памяти — значительно быстрее поэлементной сериализации. Работает только для unmanaged типов. При несовпадении версий (миграция данных) система автоматически переключается на хуки `Read`. Стратегия по умолчанию — `StructPackArrayStrategy<T>`.
+
+#### Блочная сериализация сегментов для Multi и Links:
+
+Мульти-компоненты и Links хранят значения в общем сегментном хранилище. По умолчанию значения каждой сущности сериализуются индивидуально. Для блочной сериализации сегментов хранилища (требуются unmanaged типы значений):
 
 ```csharp
-public static void CreateEntities() {
-    var alex = W.Entity.New();
-    alex.Add<Name>().Value = "Alex";
-    alex.Add<Position>() = new (1.22f, 77.23131f, 54.232f);
-    alex.SetTag<Tag1>();
-    ref var alexItems = ref alex.Add<Items>().Values;
-    alexItems.Add(1);
-    alexItems.Add(2);
-    alexItems.Add(3);
-    
-    var jack = W.Entity.New();
-    jack.Add<Name>().Value = "Jack";
-    jack.Add<Position>() = new (2.57f, 3.23131f, 5.232f);
-    jack.SetTag<Tag3>();
-    jack.SetLink<Parent>(alex);
-    jack.Disable<Position>();
-}
+// Мульти-компонент с блочной стратегией
+W.Types().Multi<Item>(new ComponentTypeConfig<W.Multi<Item>>(
+    guid: new Guid("..."),
+    readWriteStrategy: new MultiUnmanagedPackArrayStrategy<MyWorld, Item>()
+));
+
+// Links с блочной стратегией
+W.Types().Links<MyLinkType>(new ComponentTypeConfig<W.Links<MyLinkType>>(
+    guid: new Guid("..."),
+    readWriteStrategy: new LinksUnmanagedPackArrayStrategy<MyWorld, MyLinkType>()
+));
 ```
 
-#### Рассмотрим примеры:
+#### Полная конфигурация:
+```csharp
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    version: 1,                  // версия схемы данных для миграции (по умолчанию — 0)
+    noDataLifecycle: true,       // отключить управление данными фреймворком (по умолчанию — false)
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>() // стратегия сериализации (по умолчанию — StructPackArrayStrategy<T>)
+));
+```
 
-Пример с сохранением и загрузкой всего мира при инициализации мира
+___
+
+## Настройка тегов
+
+Теги настраиваются через `TagTypeConfig<T>`:
 
 ```csharp
-CreateWorld();
-W.Initialize();
-CreateEntities();
-Console.WriteLine("Созданные сущности:");
-foreach (var entity in W.Query.Entities()) {
-    Console.WriteLine(entity.PrettyString);
+W.Types()
+    .Tag<IsPlayer>(new TagTypeConfig<IsPlayer>(guid: new Guid("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90")))
+    .Tag<IsDead>(new TagTypeConfig<IsDead>(guid: new Guid("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30")));
+```
+
+#### Полная конфигурация:
+```csharp
+W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
+    guid: new Guid("A1B2C3D4-..."), // стабильный идентификатор для сериализации (по умолчанию — default)
+    trackAdded: true,                // включить отслеживание добавления (по умолчанию — false)
+    trackDeleted: true               // включить отслеживание удаления (по умолчанию — false)
+));
+```
+
+{: .noteru }
+Для автоматической регистрации `RegisterAll()` подхватывает статическое поле `Guid` внутри структуры тега. Параметры `trackAdded` / `trackDeleted` при автоматической регистрации не устанавливаются — для отслеживания используйте ручную регистрацию с `TagTypeConfig<T>`.
+
+___
+
+## Настройка событий
+
+Для событий используется `EventTypeConfig<T>` — аналогично компонентам:
+
+```csharp
+public struct OnDamage : IEvent {
+    public float Amount;
+
+    public void Write(ref BinaryPackWriter writer) {
+        writer.WriteFloat(Amount);
+    }
+
+    public void Read(ref BinaryPackReader reader, byte version) {
+        Amount = reader.ReadFloat();
+    }
 }
-// При сохранении снимка мира, все сущности и события сохраняются
-// Сохранение мира в байтовый массив
+
+W.Types().Event<OnDamage>(new EventTypeConfig<OnDamage>(
+    guid: new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+));
+```
+
+___
+
+## Снимок мира (World Snapshot)
+
+Сохраняет полное состояние мира: все сущности, компоненты, теги и события.
+
+#### Сохранение и загрузка при инициализации:
+```csharp
+// Сохранение мира
 byte[] worldSnapshot = W.Serializer.CreateWorldSnapshot();
-// Или сохранение мира в файл
-// W.Serializer.CreateWorldSnapshot("Path/to/save/data/world.bin");
 W.Destroy();
 
-CreateWorld();
+// Загрузка мира при инициализации — самый простой способ
+CreateWorld(); // Create + регистрация типов
 W.InitializeFromWorldSnapshot(worldSnapshot);
-// Или загрузка мира из файла
-// W.InitializeFromWorldSnapshot("Path/to/save/data/world.bin");
-Console.WriteLine("Загруженые сущности:");
-foreach (var entity in W.Query.Entities()) {
+
+// Все сущности и события восстановлены
+foreach (var entity in W.Query().Entities()) {
     Console.WriteLine(entity.PrettyString);
 }
-W.Destroy();
 ```
 
-Пример с сохранением и загрузкой всего мира ПОСЛЕ инициализации мира
-
+#### Сохранение и загрузка после инициализации:
 ```csharp
-CreateWorld();
-W.Initialize();
-CreateEntities();
-Console.WriteLine("Созданные сущности:");
-foreach (var entity in W.Query.Entities()) {
-    Console.WriteLine(entity.PrettyString);
-}
-// При сохранении снимка мира, все сущности и события сохраняются
-// Сохранение мира в байтовый массив
 byte[] worldSnapshot = W.Serializer.CreateWorldSnapshot();
-// Или сохранение мира в файл
-// W.Serializer.CreateWorldSnapshot("Path/to/save/data/world.bin");
 W.Destroy();
 
 CreateWorld();
 W.Initialize();
-// При загрузке снимка мира, все сущности и события удаляются перед загрузкой, и загружаются из снимка
-// Загрузка мира из байтового массива
+// Все существующие сущности и события удаляются перед загрузкой
 W.Serializer.LoadWorldSnapshot(worldSnapshot);
-// Или загрузка мира из файла
-// W.Serializer.LoadWorldSnapshot("Path/to/save/data/world.bin");
-Console.WriteLine("Загруженые сущности:");
-foreach (var entity in W.Query.Entities()) {
-    Console.WriteLine(entity.PrettyString);
-}
-W.Destroy();
 ```
 
-Пример с сохранением и загрузкой сущностей (как новые)
-
+#### Дополнительные параметры:
 ```csharp
-CreateWorld();
-W.Initialize();
-CreateEntities();
-Console.WriteLine("Созданные сущности:");
+// Сохранение в файл
+W.Serializer.CreateWorldSnapshot("path/to/world.bin");
 
-// Создаем писателя сущностей
-// Он записывает необходимую информацию для восстановления сущностей
-using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
-foreach (var entity in W.Query.Entities()) {
-    // Записываем сущность
-    entitiesWriter.Write(entity);
-    Console.WriteLine(entity.PrettyString);
+// С GZIP сжатием
+byte[] compressed = W.Serializer.CreateWorldSnapshot(gzip: true);
+
+// Фильтрация по кластерам
+W.Serializer.CreateWorldSnapshot(clusters: new ushort[] { 0, 1 });
+
+// Стратегия записи чанков
+W.Serializer.CreateWorldSnapshot(strategy: ChunkWritingStrategy.SelfOwner);
+
+// Без событий
+W.Serializer.CreateWorldSnapshot(writeEvents: false);
+
+// Без кастомных данных
+W.Serializer.CreateWorldSnapshot(withCustomSnapshotData: false);
+
+// Загрузка из файла
+W.Serializer.LoadWorldSnapshot("path/to/world.bin");
+
+// Загрузка сжатых данных
+W.Serializer.LoadWorldSnapshot(compressed, gzip: true);
+```
+
+{: .importantru }
+Все компоненты и теги, участвующие в снимке мира, **должны** иметь зарегистрированный `Guid`. В DEBUG-режиме будет ошибка при попытке сериализации без `Guid`.
+
+___
+
+## Снимок сущностей (Entities Snapshot)
+
+Позволяет сохранять и загружать отдельные сущности с гранулярным контролем.
+
+#### Сохранение сущностей:
+```csharp
+// Создаём писатель сущностей
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+
+// Записываем конкретные сущности
+foreach (var entity in W.Query().Entities()) {
+    writer.Write(entity);
 }
 
-// Сохранение сущностей в байтовый массив
-byte[] snapshot = entitiesWriter.CreateSnapshot();
+// Или записываем все сущности сразу
+// writer.WriteAllEntities();
 
-// Или сохранение сущностей в файл
-// entitiesWriter.CreateSnapshot("Path/to/save/data/entities.bin");
-W.Destroy();
+// Создаём снимок
+byte[] snapshot = writer.CreateSnapshot();
 
-//   Созданные сущности:                              
-//   Entity ID: 0 Version: 1
-//   Components:
-//    - [0] Name ( Alex )
-//    - [1] Position ( X: 1,22, Y: 77,23131, Z: 54,232 )
-//    - [2] Items ( 1, 2, 3 )
-//    - [4] Childs ( 1:1 - Jack )
-//   Tags:
-//    - [0] Tag1
-//   
-//   Entity ID: 1 Version: 1
-//   Components:
-//    - [0] Name ( Jack )
-//    - [1] [Disabled] Position ( X: 2,57, Y: 3,23131, Z: 5,232 )
-//    - [3] Parent ( 0:1 - Alex )
-//   Tags:
+// Или сохраняем в файл
+// writer.CreateSnapshot("path/to/entities.bin");
+```
 
+#### Запись с одновременной выгрузкой:
+```csharp
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
 
-CreateWorld();
-W.Initialize();
-var someEntity1 = W.Entity.New(new Position(1, 2, 3), new Name("someEntity1"));
-var someEntity2 = W.Entity.New(new Position(2, 3, 4), new Name("someEntity2"));
+// Записать и выгрузить — экономит память при стриминге
+foreach (var entity in W.Query().Entities()) {
+    writer.WriteAndUnload(entity);
+}
 
-// entitiesAsNew указывает нужно ли загрузить сущности как новые и присвоить новый EntityGID (об этом далее)
-// если entitiesAsNew = true, это значит что все компоненты-отношения в загруженных сущностях могут иметь неправильные значения
-// как этого избежать рассмотрим в следующем примере
-// Загрузка сущностей из байтового массива
+// Или все сущности сразу
+// writer.WriteAndUnloadAllEntities();
+
+byte[] snapshot = writer.CreateSnapshot();
+```
+
+___
+
+#### Загрузка сущностей (entitiesAsNew):
+
+Параметр `entitiesAsNew` определяет, как загружаются сущности:
+
+- **`entitiesAsNew: false`** (по умолчанию) — сущности восстанавливаются в **те же слоты** (тот же EntityGID). Если слот уже занят — ошибка в DEBUG.
+- **`entitiesAsNew: true`** — сущности загружаются в **новые слоты** с новыми EntityGID. Связи между сущностями (Link, Links) могут указывать на неверные сущности.
+
+```csharp
+// Загрузка в оригинальные слоты
+W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: false);
+
+// Загрузка как новые сущности
 W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: true);
-//Если бы мы указали entitiesAsNew: false, то получили бы ошибку в DEBUG (World<WT>.Entity, method `LoadEntity`: EntityGID ID: 0, Version 1, ClusterId 0. Already loaded.)
 
-// Или загрузка сущностей из файла
-// W.Serializer.LoadEntitiesSnapshot("Path/to/save/data/entities.bin", entitiesAsNew: true);
-
-Console.WriteLine("Загруженые сущности:");
-foreach (var entity in W.Query.Entities()) {
-    Console.WriteLine(entity.PrettyString);
-}
-
-W.Destroy();
-
-// Мы можем увидеть что компоненты Parent и Childs в загруженных сущностях указывают на someEntity1 и someEntity2 а не на нужные сущности
-// Мы исправим это в следующем примере
-
-//  Созданные сущности:                              
-//  Entity ID: 0 Version: 1
-//  Components:
-//   - [0] Name ( someEntity1 )
-//   - [1] Position ( X: 1, Y: 2, Z: 3 )
-//  Tags:
-//  
-//  Entity ID: 1 Version: 1
-//  Components:
-//   - [0] Name ( someEntity2 )
-//   - [1] Position ( X: 2, Y: 3, Z: 4 )
-//  Tags:
-
-//  Загруженые сущности:
-//  Entity ID: 2 Version: 1
-//  Components:
-//   - [0] Name ( Alex )
-//   - [1] Position ( X: 1,22, Y: 77,23131, Z: 54,232 )
-//   - [2] Items ( 1, 2, 3 )
-//   - [4] Childs ( 1:1 - someEntity2 )
-//  Tags:
-//   - [0] Tag1
-//  
-//  Entity ID: 3 Version: 1
-//  Components:
-//   - [0] Name ( Jack )
-//   - [1] [Disabled] Position ( X: 2,57, Y: 3,23131, Z: 5,232 )
-//   - [3] Parent ( 0:1 - someEntity1 )
-//  Tags:
-//   - [2] Tag3
-```
-
-Пример с сохранением и загрузкой сущностей (с сохранением глобальных идентификаторов)
-
-```csharp
-CreateWorld();
-W.Initialize();
-CreateEntities();
-Console.WriteLine("Созданные сущности:");
-using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
-foreach (var entity in W.Query.Entities()) {
-    entitiesWriter.Write(entity);
-    Console.WriteLine(entity.PrettyString);
-}
-
-byte[] snapshot = entitiesWriter.CreateSnapshot();
-
-// Сохраняем в отдельный массив\файл хранилище глобальных идентификаторов
-// Хранилище глобальных идентификаторов, содержит последовательность и всю информацию о выданных идентификаторах
-// что дает возможность не использовать идентификаторы сущностей которые выгруженны в данный момент
-byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
-W.Destroy();
-
-//   Созданные сущности:                              
-//   Entity ID: 0 Version: 1
-//   Components:
-//    - [0] Name ( Alex )
-//    - [1] Position ( X: 1,22, Y: 77,23131, Z: 54,232 )
-//    - [2] Items ( 1, 2, 3 )
-//    - [4] Childs ( 1:1 - Jack )
-//   Tags:
-//    - [0] Tag1
-//   
-//   Entity ID: 1 Version: 1
-//   Components:
-//    - [0] Name ( Jack )
-//    - [1] [Disabled] Position ( X: 2,57, Y: 3,23131, Z: 5,232 )
-//    - [3] Parent ( 0:1 - Alex )
-//   Tags:
-//    - [2] Tag3
-
-
-CreateWorld();
-W.InitializeFromGIDStoreSnapshot(gidSnapshot);
-var someEntity1 = W.Entity.New(new Position(1, 2, 3), new Name("someEntity1"));
-var someEntity2 = W.Entity.New(new Position(2, 3, 4), new Name("someEntity2"));
-
-// Теперь мы можем указать entitiesAsNew: false потому что идентифиакторы сущностей были восстановлены при инициализации мира
-W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: false);
-
-Console.WriteLine("Загруженые сущности:");
-foreach (var entity in W.Query.Entities()) {
-    Console.WriteLine(entity.PrettyString);
-}
-
-W.Destroy();
-
-// Теперь мы можем увидеть что все связи между сущностями корректны
-// Так как при создании someEntity1 и someEntity2 не были использованы идентификаторы загружаемых сущностей
-// Такой подход позволяет, загружать и сохранять разные пачки сущностей, например при стриминге мира, или загрузке разных локаций
-// и гарантировать что сохраненные идентификаторы в компонентах и событиях не будут перепутаны
-
-//  Загруженые сущности:
-//  Entity ID: 0 Version: 1
-//  Components:
-//   - [0] Name ( Alex )
-//   - [1] Position ( X: 1,22, Y: 77,23131, Z: 54,232 )
-//   - [2] Items ( 1, 2, 3 )
-//   - [4] Childs ( 1:1 - Jack )
-//  Tags:
-//   - [0] Tag1
-//  
-//  Entity ID: 1 Version: 1
-//  Components:
-//   - [0] Name ( Jack )
-//   - [1] [Disabled] Position ( X: 2,57, Y: 3,23131, Z: 5,232 )
-//   - [3] Parent ( 0:1 - Alex )
-//  Tags:
-//   - [2] Tag3
-
-//  Созданные сущности:                              
-//  Entity ID: 2 Version: 1
-//  Components:
-//   - [0] Name ( someEntity1 )
-//   - [1] Position ( X: 1, Y: 2, Z: 3 )
-//  Tags:
-//  
-//  Entity ID: 3 Version: 1
-//  Components:
-//   - [0] Name ( someEntity2 )
-//   - [1] Position ( X: 2, Y: 3, Z: 4 )
-//  Tags:
-```
-
-### Комплексный пример с сохранением и загрузкой кластеров, чанков:
-
-```csharp
-public static void PrintEntitiesCount(string text) {
-    Console.WriteLine($"{text} - Всего {W.CalculateEntitiesCount()} | Загруженных {W.CalculateLoadedEntitiesCount()}");
-}
-
-CreateWorld();
-W.Initialize();
-CreateEntities();
-
-using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
-foreach (var entity in W.Query.Entities()) {
-    entitiesWriter.Write(entity);
-    entity.Unload(); // Мы выгружаем сущность из памяти (можно воспользоваться оптимизированным методом entitiesWriter.WriteAndUnload())
-}
-
-byte[] individualEntitiesSnapshot = entitiesWriter.CreateSnapshot();
-
-PrintEntitiesCount("После создания снимка конкретных сущностей:"); // Всего 2 | Загруженных 0
-
-// Создадим и зарегистрируем новый кластер сущностей
-const ushort SOME_NEW_CLUSTER = 1;
-W.RegisterCluster(SOME_NEW_CLUSTER);
-
-// Создадим 2000 новых сущностей в кластере
-for (int i = 0; i < 2000; i++) {
-    W.Entity.New(
-        new Position(i, i, i),
-        new Name($"MovableCluster entity {i}"),
-        clusterId: SOME_NEW_CLUSTER // Указываем кластер
-    );
-}
-
-PrintEntitiesCount("После создания кластера сущностей:"); // Всего 2002 | Загруженных 2000
-
-byte[] clusterSnapshot = W.Serializer.CreateClusterSnapshot(SOME_NEW_CLUSTER); // Сохраняем кластер с 2000 сущностями
-W.UnloadCluster(SOME_NEW_CLUSTER);                                             // Выгружаем кластер из памяти
-
-PrintEntitiesCount("После выгрузки кластера сущностей:"); // Всего 2002 | Загруженных 0
-
-// Создадим и зарегистрируем новый чанк сущностей в стандартном кластере 
-var chunkIdx = W.FindNextSelfFreeChunk().ChunkIdx;
-W.RegisterChunk(chunkIdx, W.DEFAULT_CLUSTER);
-
-// Создадим 100 новых сущностей в чанке
-for (int i = 0; i < 100; i++) {
-    var entity = W.Entity.New(chunkIdx: chunkIdx);
-    entity.Add(
-        new Position(i, i, i),
-        new Name($"Chunk {chunkIdx} entity {i}")
-    );
-}
-
-PrintEntitiesCount("После создания чанка сущностей:"); // Всего 2102 | Загруженных 100
-
-byte[] chunkSnapshot = W.Serializer.CreateChunkSnapshot(chunkIdx); // Сохраняем чанк с 100 сущностями
-W.UnloadChunk(chunkIdx);                                           // Выгружаем чанк из памяти
-
-PrintEntitiesCount("После выгрузки чанка сущностей:"); // Всего 2102 | Загруженных 0
-
-// Сохраняем в отдельный массив\файл хранилище глобальных идентификаторов
-// Хранилище глобальных идентификаторов, содержит последовательность и всю информацию о выданных идентификаторах
-// что дает возможность не использовать идентификаторы сущностей которые выгруженны в данный момент
-// ВАЖНО! в данном пример мы уничтожаем мир и делаем GIDStoreSnapshot, но на самом деле в данном случае это необязательно, мы могли бы просто загрузить сущности из ранее сохраненных снэпшотов
-byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
-W.Destroy();
-
-
-CreateWorld();
-W.InitializeFromGIDStoreSnapshot(gidSnapshot);
-
-// Мы можем загружать сущности из кластера, чанка или индивидуально в любой последовательности
-// ВАЖНО! ClusterSnapshot, ChunkSnapshot по умолчанию не хранят идентификаторы сущностей, а только данные компонентов
-// если требуется загружать чанки или кластеры как новые сущности при создании синмков требуется указать withEntitiesData = true
-
-W.Serializer.LoadClusterSnapshot(clusterSnapshot);
-PrintEntitiesCount("После загрузки кластера сущностей:"); // Всего 2102 | Загруженных 2000
-
-W.Serializer.LoadEntitiesSnapshot(individualEntitiesSnapshot);
-PrintEntitiesCount("После загрузки конкретных сущностей:"); // Всего 2102 | Загруженных 2002
-
-W.Serializer.LoadChunkSnapshot(chunkSnapshot);
-PrintEntitiesCount("После загрузки чанка сущностей:"); // Всего 2102 | Загруженных 2102
-
-W.Destroy();
-```
-
-### Вопрос-ответ:
-
-- У меня изменился порядок\набор данных в компоненте, могу ли я загрузить снимок мира\сущностей старой версии?
-
-```csharp
-// Чтобы загрузить снимок необходимо написать миграцию компонента старой версии в новую
-// Пример:
-// Представим что изначально был компонент позиции с X и Y
-public struct Position : IComponent {
-    public float X, Y;
-
-    public class Config<WorldType> : DefaultComponentConfig<Position, WorldType> where WorldType : struct, IWorldType {
-        public override Guid Id() => new("b121594c-456e-4712-9b64-b75dbb37e611");
-
-        public override BinaryWriter<Position> Writer() {
-            return (ref BinaryPackWriter w, in Position value) => {
-                w.WriteFloat(value.X);
-                w.WriteFloat(value.Y);
-            };
-        }
-
-        public override BinaryReader<Position> Reader() => (ref BinaryPackReader r) => 
-            new Position(r.ReadFloat(), r.ReadFloat());
-    }
-}
-
-// Затем появилась координата Z, и нам требуется поднять версию компонента и написать миграцию
-public struct Position : IComponent {
-    public float X, Y, Z;
-
-    public class Config<WorldType> : DefaultComponentConfig<Position, WorldType> where WorldType : struct, IWorldType {
-        public override Guid Id() => new("b121594c-456e-4712-9b64-b75dbb37e611");
-
-        public override BinaryWriter<Position> Writer() {
-            return (ref BinaryPackWriter w, in Position value) => {
-                w.WriteFloat(value.X);
-                w.WriteFloat(value.Y);
-                w.WriteFloat(value.Z); // Актуализируем писатель для Z
-            };
-        }
-
-        public override BinaryReader<Position> Reader() => (ref BinaryPackReader r) => 
-            new Position(r.ReadFloat(), r.ReadFloat(), r.ReadFloat()); // Актуализируем читатель для Z
-
-        // Меняем версию на следующую (по умолчанию версия 0)
-        public override byte Version() => 1;
-
-        // Пишем миграцию, где для версии 0 (старой) мы читаем только X и Y а Z устанавливаем в 0
-        public override EcsComponentMigrationReader<Position, WorldType> MigrationReader() {
-            return (ref BinaryPackReader reader, World<WorldType>.Entity entity, byte version, bool disabled) => {
-                if (version == 0) {
-                    return new Position(reader.ReadFloat(), reader.ReadFloat(), 0);
-                }
-
-                throw new Exception("Unknown version");
-            };
-        }
-    }
-}
-```
-
-- У меня удалился\добавился компонент, могу ли я загрузить снимок мира\сущностей версии созданный до изменений?
-
-```csharp
-// В случае добавления новых компонентов, старый снимок должен корректно загрузиться, восстановление произойдет автоматически
-// По умолчанию если компонент был удален то при загрузке он будет пропущен автоматически, ничего дополнительно не требуется
-
-// Если требуется обработать удаление особым образом то требуется зарегистрировать функцию с GUID старого компонента
-
-// Пример для компонентов
-W.Serializer.SetComponentDeleteMigrator(
-    new("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90"),
-    (ref BinaryPackReader reader, World<WT>.Entity entity, byte version, bool disabled) => {
-        // Здесь необходимо корректно прочитать ВСЕ данные и выполнить кастомную логику
-    }
-);
-
-// Пример для тегов
-W.Serializer.SetTagDeleteMigrator(
-    new("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90"),
-    (World<WT>.Entity entity) => {
-        // Здесь необходимо выполнить кастомную логику
-    }
-);
-
-// Пример для событий
-W.Serializer.SetEventDeleteMigrator(
-    new("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90"),
-    (ref BinaryPackReader reader, byte version) => {
-        // Здесь необходимо корректно прочитать ВСЕ данные и выполнить кастомную логику
-    });
-```
-
-- Можно ли исключить компоненты\теги из сериализации?
-
-```csharp
-// При использовании сериализации через метод CreateWorldSnapshot сохраняется все состояние мира 
-// и нет возможности исключить отдельные компоненты (в DEBUG будет ошибка при вызове что сериализатор не зарегестрирован)
-
-// Но при использовании EntitiesSnapshot такая возможость есть, для этого необходимо не конфигурировать GUID при регистрации компонента\тега\события
-// при сохранении сущностей все компоненты\теги\события для которых не определен GUID будут пропущенны при сериализации
-// Например чтобы сохранить ВЕСЬ мир включая события и отношения между сущностями, может использоваться следующий код:
-using var entitiesWriter = W.Serializer.CreateEntitiesSnapshotWriter();
-entitiesWriter.WriteAllEntities();
-byte[] snapshot = entitiesWriter.CreateSnapshot();
-byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
-byte[] eventsSnapshot = W.Events.CreateSnapshot();
-
-
-// Десериализация:
-var gidStoreSnapshot = BinaryPack.ReadFromBytes<GIDStoreSnapshot>(gidSnapshot);
-InitWorld(gidStoreSnapshot);
-W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: false);
-W.Events.LoadSnapshot(eventsSnapshot);
-```
-
-- Можно ли уменьшить размер сериализованных данных\файлов?
-
-```csharp
-// Из коробки доступно GZIP сжатие, возможно применять следующим образом
-byte[] snapshot = W.Serializer.CreateWorldSnapshot(gzip: true);
-W.Serializer.CreateWorldSnapshot("Path/to/save/data/world.bin", gzip: true);
-
-// При загрузке если файл\массив был сжат, также необходимо указать в параметрах
-W.Serializer.LoadWorldSnapshot(snapshot, gzip: true);
-W.Serializer.LoadWorldSnapshot("Path/to/save/data/world.bin", gzip: true);
-```
-
-- Как автоматизировать реагирование на сохранение\загрузку мира\сущностей?
-
-```csharp
-// Можно зарегистрировать любое количество колбеков
-// Данные функции будут вызвына при вызове
-// W.Serializer.CreateWorldSnapshot() / W.Serializer.LoadWorldSnapshot(snapshot)
-// W.Serializer.CreateClusterSnapshot() / W.Serializer.LoadClusterSnapshot(snapshot)
-// W.Serializer.CreateChunkSnapshot() / W.Serializer.LoadChunkSnapshot(snapshot)
-// entitiesWriter.CreateSnapshot() / W.Serializer.LoadEntitiesSnapshot()
-
-// Перед созданием снимка
-W.Serializer.RegisterPreCreateSnapshotCallback(param => Console.WriteLine("Entities or world `CreateSnapshot` start"));
-// После созданием снимка
-W.Serializer.RegisterPostCreateSnapshotCallback(param => Console.WriteLine("Entities or world `CreateSnapshot` finish"));
-
-// Перед загрузкой снимка
-W.Serializer.RegisterPreLoadSnapshotCallback(param => Console.WriteLine("Entities or world `LoadSnapshot` start"));
-// После загрузки снимка
-W.Serializer.RegisterPostLoadSnapshotCallback(param => Console.WriteLine("Entities or world `LoadSnapshot` finish"));
-
-// Данные функции будут вызвына при вызове
-// W.Serializer.CreateWorldSnapshot(), W.Serializer.LoadWorldSnapshot(snapshot) или entitiesWriter.CreateSnapshot(), W.Serializer.LoadEntitiesSnapshot()
-
-// Как сделать так чтобы функции вызывались при сохранении\загрузке только мира\кластера\чанка\сущностей?
-// При регистрации колбека можн проверить тип снепшота, например
-W.Serializer.RegisterPreCreateSnapshotCallback(param => {
-    if (param.Type == SnapshotType.Entities) {
-        Console.WriteLine("Entities `CreateSnapshot` start");
-    }
-});
-W.Serializer.RegisterPostCreateSnapshotCallback(param => {
-    if (param.Type == SnapshotType.World) {
-        Console.WriteLine("World `CreateSnapshot` finish");
-    }
-});
-```
-
-- Как выполнить post обработку сохраняемых\загружаемых сущностей?
-
-```csharp
-// Можно зарегистрировать любое количество колбеков для сущностей
-
-// После созданием снимка
-W.Serializer.RegisterPostCreateSnapshotEachEntityCallback((entity, param) => Console.WriteLine($"Saved {entity.PrettyString}"));
-// После загрузки снимка
-W.Serializer.RegisterPostLoadSnapshotEachEntityCallback((entity, param) => Console.WriteLine($"Loaded {entity.PrettyString}"));
-
-// Данные функции будут вызвына при вызове
-// W.Serializer.CreateWorldSnapshot() / W.Serializer.LoadWorldSnapshot(snapshot)
-// W.Serializer.CreateClusterSnapshot() / W.Serializer.LoadClusterSnapshot(snapshot)
-// W.Serializer.CreateChunkSnapshot() / W.Serializer.LoadChunkSnapshot(snapshot)
-// entitiesWriter.CreateSnapshot() / W.Serializer.LoadEntitiesSnapshot()
-
-// Как сделать так чтобы функции вызывались при сохранении\загрузке только мира\кластера\чанка\сущностей?
-// При регистрации колбека можн проверить тип снепшота, например
-W.Serializer.RegisterPostCreateSnapshotEachEntityCallback((entity, param) => {
-    if (param.Type == SnapshotType.Entities) {
-        Console.WriteLine($"Saved {entity.PrettyString}");
-    }
-});
-W.Serializer.RegisterPostLoadSnapshotEachEntityCallback((entity, param) => {
-    if (param.Type == SnapshotType.World) {
-        Console.WriteLine($"Loaded {entity.PrettyString}");
-    }
-});
-
-// Также при загрузке снимка сущностей можно передать функцию постобработки сущностей в метод
+// С колбеком для каждой загруженной сущности
 W.Serializer.LoadEntitiesSnapshot(snapshot, entitiesAsNew: true, onLoad: entity => {
-    Console.WriteLine($"Loaded {entity.PrettyString}");
+    Console.WriteLine($"Loaded: {entity.PrettyString}");
 });
 ```
 
-- Как добавить специальные данные в снимок мира\кластера\чанка\сущностей (например данные из систем или сервисов)?
+___
+
+#### Сохранение связей между сущностями (GID Store):
+
+Чтобы корректно загружать сущности с `entitiesAsNew: false`, нужно сохранить хранилище глобальных идентификаторов:
 
 ```csharp
-// Можно зарегистрировать любое количество кастомных обработчиков
-// Данные функции будут вызвына при вызове
-// W.Serializer.CreateWorldSnapshot() / W.Serializer.LoadWorldSnapshot(snapshot)
-// W.Serializer.CreateClusterSnapshot() / W.Serializer.LoadClusterSnapshot(snapshot)
-// W.Serializer.CreateChunkSnapshot() / W.Serializer.LoadChunkSnapshot(snapshot)
-// entitiesWriter.CreateSnapshot() / W.Serializer.LoadEntitiesSnapshot()
-// Например:
-W.Serializer.SetSnapshotHandler(
-    new ("57c15483-988a-47e7-919c-51b9a7b957b5"), // Уникальный гуид типа данных
-    version: 0,                                   // Версия
-    (ref BinaryPackWriter writer, SnapshotWriteParams param) => {            // Писатель кастомных данных
-        writer.WriteDateTime(DateTime.Now);
-        Console.WriteLine("Saved current time");
-    },
-    (ref BinaryPackReader reader, ushort version, SnapshotReadParams param) => { // Читатель кастомных данных
-        var time = reader.ReadDateTime();
-        Console.WriteLine($"Save dateTime is {time}");
-    }
-);
+// 1. Сохраняем сущности и GID Store
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+writer.WriteAllEntities();
+byte[] entitiesSnapshot = writer.CreateSnapshot();
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+W.Destroy();
+
+// 2. Восстанавливаем мир с GID Store
+CreateWorld();
+W.InitializeFromGIDStoreSnapshot(gidSnapshot);
+
+// Новые сущности не займут слоты сохранённых
+var newEntity = W.NewEntity<Default>();
+newEntity.Set(new Position { X = 1 });
+
+// 3. Загружаем сущности в оригинальные слоты — все связи корректны
+W.Serializer.LoadEntitiesSnapshot(entitiesSnapshot, entitiesAsNew: false);
 ```
 
-- Как добавить специальные данные для каждой сущности в снимок мира\кластера\чанка\сущностей?
+{: .noteru }
+GID Store хранит информацию обо всех выданных идентификаторах. Это гарантирует, что новые сущности не займут слоты выгруженных сущностей, и все связи (Link, Links, EntityGID в данных) останутся корректными.
+
+___
+
+## Хранилище GID (GID Store)
 
 ```csharp
-// Можно зарегистрировать любое количество кастомных обработчиков для сущнсотей
-// Данные функции будут вызвына при вызове
-// W.Serializer.CreateWorldSnapshot() / W.Serializer.LoadWorldSnapshot(snapshot)
-// W.Serializer.CreateClusterSnapshot() / W.Serializer.LoadClusterSnapshot(snapshot)
-// W.Serializer.CreateChunkSnapshot() / W.Serializer.LoadChunkSnapshot(snapshot)
-// entitiesWriter.CreateSnapshot() / W.Serializer.LoadEntitiesSnapshot()
-// Например:
-W.Serializer.SetSnapshotHandlerEachEntity(
-    new ("57c15483-988a-47e7-919c-51b9a7b957b5"), // Уникальный гуид типа данных
-    version: 0,                                   // Версия
-    (ref BinaryPackWriter writer, W.Entity entity, SnapshotWriteParams param) => {
-        // Write custom entity data
-    },
-    (ref BinaryPackReader reader, W.Entity entity, ushort version, SnapshotReadParams param) => {
-        // Read custom entity data
-    }
-);
-```
+// Сохранить GID Store
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
 
-- У меня есть gidSnapshot как мне восстановить состояние мира через него?
+// С GZIP сжатием
+byte[] gidCompressed = W.Serializer.CreateGIDStoreSnapshot(gzip: true);
 
-```csharp
-// Все сущности будут удалены и состоние мира будет сброшено до начального
+// В файл
+W.Serializer.CreateGIDStoreSnapshot("path/to/gid.bin");
+
+// Со стратегией записи чанков
+W.Serializer.CreateGIDStoreSnapshot(strategy: ChunkWritingStrategy.SelfOwner);
+
+// Фильтрация по кластерам
+W.Serializer.CreateGIDStoreSnapshot(clusters: new ushort[] { 0, 1 });
+
+// Инициализация мира из GID Store
+CreateWorld();
+W.InitializeFromGIDStoreSnapshot(gidSnapshot);
+
+// Восстановление GID Store в уже инициализированном мире
+// Все сущности удаляются, состояние сбрасывается
 W.Serializer.RestoreFromGIDStoreSnapshot(gidSnapshot);
 ```
 
-- Могу ли я сохранить и загрузить данные событий?
+___
+
+## Снимки кластеров и чанков
+
+#### Кластер:
+```csharp
+// Сохранить кластер
+byte[] clusterSnapshot = W.Serializer.CreateClusterSnapshot(clusterId: 1);
+
+// С данными для загрузки как новые сущности
+byte[] clusterWithEntities = W.Serializer.CreateClusterSnapshot(
+    clusterId: 1,
+    withEntitiesData: true  // необходимо для entitiesAsNew при загрузке
+);
+
+// Выгрузить кластер из памяти
+ReadOnlySpan<ushort> clusters = stackalloc ushort[] { 1 };
+W.Query().BatchUnload(EntityStatusType.Any, clusters: clusters);
+
+// Загрузить кластер из снимка
+W.Serializer.LoadClusterSnapshot(clusterSnapshot);
+
+// Загрузить как новые сущности в другой кластер
+W.Serializer.LoadClusterSnapshot(clusterWithEntities,
+    new EntitiesAsNewParams(entitiesAsNew: true, clusterId: 2)
+);
+```
+
+#### Чанк:
+```csharp
+// Сохранить чанк
+byte[] chunkSnapshot = W.Serializer.CreateChunkSnapshot(chunkIdx: 0);
+
+// Выгрузить чанк из памяти
+ReadOnlySpan<uint> unloadChunks = stackalloc uint[] { 0 };
+W.Query().BatchUnload(EntityStatusType.Any, unloadChunks);
+
+// Загрузить чанк из снимка
+W.Serializer.LoadChunkSnapshot(chunkSnapshot);
+```
+
+{: .importantru }
+По умолчанию снимки кластеров и чанков **не хранят** данные идентификаторов сущностей (только данные компонентов). Если нужно загружать их как новые сущности (`entitiesAsNew: true`), при создании снимка укажите `withEntitiesData: true`.
+
+___
+
+#### Комплексный пример стриминга:
+```csharp
+void PrintCounts(string label) {
+    Console.WriteLine($"{label} — Всего: {W.CalculateEntitiesCount()} | Загружено: {W.CalculateLoadedEntitiesCount()}");
+}
+
+// Сохраняем отдельные сущности
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+foreach (var entity in W.Query().Entities()) {
+    writer.WriteAndUnload(entity);
+}
+byte[] entitiesSnapshot = writer.CreateSnapshot();
+PrintCounts("После выгрузки сущностей"); // Всего: 2 | Загружено: 0
+
+// Создаём кластер и наполняем его
+const ushort ZONE_CLUSTER = 1;
+W.RegisterCluster(ZONE_CLUSTER);
+struct ZoneEntityType : IEntityType { }
+W.NewEntities<ZoneEntityType>(count: 2000, clusterId: ZONE_CLUSTER);
+PrintCounts("После создания кластера"); // Всего: 2002 | Загружено: 2000
+
+// Сохраняем и выгружаем кластер
+byte[] clusterSnapshot = W.Serializer.CreateClusterSnapshot(ZONE_CLUSTER);
+ReadOnlySpan<ushort> zoneClusters = stackalloc ushort[] { ZONE_CLUSTER };
+W.Query().BatchUnload(EntityStatusType.Any, clusters: zoneClusters);
+PrintCounts("После выгрузки кластера"); // Всего: 2002 | Загружено: 0
+
+// Создаём чанк и наполняем его
+var chunkIdx = W.FindNextSelfFreeChunk().ChunkIdx;
+W.RegisterChunk(chunkIdx, clusterId: 0);
+for (int i = 0; i < 100; i++) {
+    W.NewEntityInChunk<ZoneEntityType>(chunkIdx: chunkIdx);
+}
+PrintCounts("После создания чанка"); // Всего: 2102 | Загружено: 100
+
+// Сохраняем и выгружаем чанк
+byte[] chunkSnapshot = W.Serializer.CreateChunkSnapshot(chunkIdx);
+ReadOnlySpan<uint> unloadChunks = stackalloc uint[] { chunkIdx };
+W.Query().BatchUnload(EntityStatusType.Any, unloadChunks);
+PrintCounts("После выгрузки чанка"); // Всего: 2102 | Загружено: 0
+
+// Сохраняем GID Store и пересоздаём мир
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+W.Destroy();
+
+CreateWorld();
+W.InitializeFromGIDStoreSnapshot(gidSnapshot);
+
+// Загружаем в любом порядке
+W.Serializer.LoadClusterSnapshot(clusterSnapshot);
+PrintCounts("После загрузки кластера"); // Всего: 2102 | Загружено: 2000
+
+W.Serializer.LoadEntitiesSnapshot(entitiesSnapshot);
+PrintCounts("После загрузки сущностей"); // Всего: 2102 | Загружено: 2002
+
+W.Serializer.LoadChunkSnapshot(chunkSnapshot);
+PrintCounts("После загрузки чанка"); // Всего: 2102 | Загружено: 2102
+```
+
+___
+
+## Миграция данных
+
+#### Версионирование компонентов:
+
+Параметр `version` в хуке `Read` позволяет мигрировать данные между версиями схемы:
 
 ```csharp
-// Загрзука и сохранение событий выполняется через методы
- W.Events.CreateSnapshot();
- W.Events.LoadSnapshot();
+public struct Position : IComponent {
+    public float X, Y, Z;
+
+    public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
+        where TWorld : struct, IWorldType {
+        writer.WriteFloat(X);
+        writer.WriteFloat(Y);
+        writer.WriteFloat(Z);
+    }
+
+    public void Read<TWorld>(ref BinaryPackReader reader, World<TWorld>.Entity self, byte version, bool disabled)
+        where TWorld : struct, IWorldType {
+        X = reader.ReadFloat();
+        Y = reader.ReadFloat();
+        // В версии 0 не было Z — задаём значение по умолчанию
+        Z = version >= 1 ? reader.ReadFloat() : 0f;
+    }
+}
+
+// Регистрация с новой версией
+W.Types().Component<Position>(new ComponentTypeConfig<Position>(
+    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+    version: 1,  // была версия 0, теперь 1
+    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
+));
+```
+
+___
+
+#### Миграция удалённых типов:
+
+Если компонент, тег или событие было удалено из кода, по умолчанию данные пропускаются автоматически. Для кастомной обработки:
+
+```csharp
+// Миграция удалённого компонента
+W.Serializer.SetComponentDeleteMigrator(
+    new Guid("guid-удалённого-компонента"),
+    (ref BinaryPackReader reader, W.Entity entity, byte version, bool disabled) => {
+        // Прочитать ВСЕ данные и выполнить кастомную логику
+    }
+);
+
+// Миграция удалённого тега
+W.Serializer.SetMigrator(
+    new Guid("guid-удалённого-тега"),
+    (W.Entity entity) => {
+        // Кастомная логика
+    }
+);
+
+// Миграция удалённого события
+W.Serializer.SetEventDeleteMigrator(
+    new Guid("guid-удалённого-события"),
+    (ref BinaryPackReader reader, byte version) => {
+        // Прочитать ВСЕ данные и выполнить кастомную логику
+    }
+);
+```
+
+{: .noteru }
+При добавлении новых типов старые снимки загружаются корректно — новые компоненты просто отсутствуют на загруженных сущностях.
+
+___
+
+## Колбеки
+
+#### Глобальные колбеки:
+```csharp
+// Вызываются при всех типах снимков (World, Cluster, Chunk, Entities)
+
+// Перед созданием снимка
+W.Serializer.RegisterPreCreateSnapshotCallback(param => {
+    Console.WriteLine($"Создание снимка типа: {param.Type}");
+});
+
+// После создания снимка
+W.Serializer.RegisterPostCreateSnapshotCallback(param => {
+    Console.WriteLine($"Снимок создан: {param.Type}");
+});
+
+// Перед загрузкой снимка
+W.Serializer.RegisterPreLoadSnapshotCallback(param => {
+    Console.WriteLine($"Загрузка снимка: {param.Type}, AsNew: {param.EntitiesAsNew}");
+});
+
+// После загрузки снимка
+W.Serializer.RegisterPostLoadSnapshotCallback(param => {
+    Console.WriteLine($"Снимок загружен: {param.Type}");
+});
+```
+
+#### Фильтрация по типу снимка:
+```csharp
+W.Serializer.RegisterPreCreateSnapshotCallback(param => {
+    if (param.Type == SnapshotType.World) {
+        Console.WriteLine("Сохранение мира");
+    }
+});
+```
+
+#### Колбеки для каждой сущности:
+```csharp
+// После сохранения каждой сущности
+W.Serializer.RegisterPostCreateSnapshotEachEntityCallback((entity, param) => {
+    Console.WriteLine($"Сохранена: {entity.PrettyString}");
+});
+
+// После загрузки каждой сущности
+W.Serializer.RegisterPostLoadSnapshotEachEntityCallback((entity, param) => {
+    Console.WriteLine($"Загружена: {entity.PrettyString}");
+});
+```
+
+___
+
+## Кастомные данные в снимках
+
+#### Глобальные кастомные данные:
+```csharp
+// Добавить произвольные данные в снимок (например, данные систем или сервисов)
+W.Serializer.SetSnapshotHandler(
+    new Guid("57c15483-988a-47e7-919c-51b9a7b957b5"), // уникальный guid типа данных
+    version: 0,
+    writer: (ref BinaryPackWriter writer, SnapshotWriteParams param) => {
+        writer.WriteDateTime(DateTime.Now);
+    },
+    reader: (ref BinaryPackReader reader, ushort version, SnapshotReadParams param) => {
+        var savedTime = reader.ReadDateTime();
+        Console.WriteLine($"Время сохранения: {savedTime}");
+    }
+);
+```
+
+#### Кастомные данные для каждой сущности:
+```csharp
+W.Serializer.SetSnapshotHandlerEachEntity(
+    new Guid("68d26594-1a9b-48f8-b2de-71c0a8b068c6"),
+    version: 0,
+    writer: (ref BinaryPackWriter writer, W.Entity entity, SnapshotWriteParams param) => {
+        // Записать дополнительные данные для сущности
+    },
+    reader: (ref BinaryPackReader reader, W.Entity entity, ushort version, SnapshotReadParams param) => {
+        // Прочитать дополнительные данные для сущности
+    }
+);
+```
+
+___
+
+## Сериализация событий
+
+```csharp
+// Сохранить события
+byte[] eventsSnapshot = W.Serializer.CreateEventsSnapshot();
+
+// С GZIP сжатием
+byte[] eventsCompressed = W.Serializer.CreateEventsSnapshot(gzip: true);
+
+// В файл
+W.Serializer.CreateEventsSnapshot("path/to/events.bin");
+
+// Загрузить события
+W.Serializer.LoadEventsSnapshot(eventsSnapshot);
+
+// Из файла
+W.Serializer.LoadEventsSnapshot("path/to/events.bin");
+```
+
+{: .noteru }
+При использовании `CreateWorldSnapshot` события сохраняются автоматически (если не указано `writeEvents: false`). Отдельная сериализация событий нужна при использовании `EntitiesSnapshot`.
+
+___
+
+## Исключение из сериализации
+
+```csharp
+// Компоненты, теги и события без Guid пропускаются при сериализации через EntitiesSnapshot
+W.Types()
+    .Component<DebugInfo>()               // без guid — не сериализуется
+    .Tag<EditorOnly>();                   // без guid — не сериализуется
+
+// Для сохранения мира (CreateWorldSnapshot) требуются все Guid — иначе ошибка в DEBUG
+// Для сохранения сущностей (EntitiesSnapshot) типы без Guid просто пропускаются
+
+// Пример: сохранение всех сущностей с пропуском отладочных данных
+using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
+writer.WriteAllEntities();
+byte[] snapshot = writer.CreateSnapshot();
+byte[] gidSnapshot = W.Serializer.CreateGIDStoreSnapshot();
+byte[] eventsSnapshot = W.Serializer.CreateEventsSnapshot();
+```
+
+___
+
+## Сжатие (GZIP)
+
+Все методы создания и загрузки снимков поддерживают GZIP сжатие:
+
+```csharp
+// Мир
+byte[] snapshot = W.Serializer.CreateWorldSnapshot(gzip: true);
+W.Serializer.LoadWorldSnapshot(snapshot, gzip: true);
+
+// Кластер
+byte[] cluster = W.Serializer.CreateClusterSnapshot(1, gzip: true);
+W.Serializer.LoadClusterSnapshot(cluster, gzip: true);
+
+// Чанк
+byte[] chunk = W.Serializer.CreateChunkSnapshot(0, gzip: true);
+W.Serializer.LoadChunkSnapshot(chunk, gzip: true);
+
+// GID Store
+byte[] gid = W.Serializer.CreateGIDStoreSnapshot(gzip: true);
+
+// События
+byte[] events = W.Serializer.CreateEventsSnapshot(gzip: true);
+W.Serializer.LoadEventsSnapshot(events, gzip: true);
+
+// Файлы
+W.Serializer.CreateWorldSnapshot("world.bin", gzip: true);
+W.Serializer.LoadWorldSnapshot("world.bin", gzip: true);
 ```

@@ -5,13 +5,20 @@ nav_order: 6
 ---
 
 ## Tag
-Tag - similar to a component, but does not contain any data, serves to label an entity
-- Optimized storage, doesn't store massive amounts of data, doesn't slow down component searches, allows you to create multiple tags
-- Represented as a user structure without data with a marker interface `ITag`
+Tag is similar to a component, but carries no data — it serves as a boolean flag on an entity
+- Internally unified with components — stored in `Components<T>` with the `IsTag` flag, sharing the same storage infrastructure
+- Stored purely as a bitmask — no data arrays, minimal memory footprint
+- Does not slow down component searches and allows creating many tags
+- No hooks (`OnAdd`/`OnDelete`) and no enable/disable — a tag is either present or absent
+- Ideal for state markers (`IsPlayer`, `IsDead`, `NeedsUpdate`), query filtering, and any boolean property
+- Represented as an empty user struct with the `ITag` marker interface
+- Uses the same query filters as components (`All<>`, `None<>`, `Any<>`) — no separate tag filter types
 
 #### Example:
-```c#
+```csharp
 public struct Unit : ITag { }
+public struct Player : ITag { }
+public struct IsDead : ITag { }
 ```
 
 ___
@@ -19,48 +26,128 @@ ___
 {: .important }
 Requires registration in the world between creation and initialization
 
-```c#
+```csharp
 W.Create(WorldConfig.Default());
 //...
-W.RegisterTagType<Unit>();
+W.Types()
+    .Tag<Unit>()
+    .Tag<Player>()
+    .Tag<IsDead>();
 //...
 W.Initialize();
 ```
 
+{: .note }
+For serialization, tags can have a stable GUID. You can pass it manually or declare a static `Guid` field/property inside the tag struct — `RegisterAll()` will discover it automatically (preferring the name `Guid`):
+
+```csharp
+// Manual registration with GUID
+W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(guid: new Guid("A1B2C3D4-...")));
+
+// Or declare a static field — RegisterAll() will pick it up
+public struct Poisoned : ITag {
+    public static readonly Guid Guid = new("A1B2C3D4-...");
+}
+```
+
+{: .note }
+To enable change tracking for tags, use `TagTypeConfig<T>` with `trackAdded` / `trackDeleted` parameters (see [Change Tracking](tracking) for details):
+
+```csharp
+W.Types().Tag<Unit>(new TagTypeConfig<Unit>(
+    trackAdded: true,    // enable addition tracking (default — false)
+    trackDeleted: true   // enable deletion tracking (default — false)
+));
+
+// Full configuration with GUID and tracking
+W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
+    guid: new Guid("A1B2C3D4-..."),
+    trackAdded: true,
+    trackDeleted: true
+));
+```
+
 ___
 
-#### Creation:
-```c#
-// Adding a tag to an entity (overload methods from 1-5 tags) (Returns true if a tag was missing and was added)
-bool added = entity.SetTag<Unit>();
-entity.SetTag<Unit, Player>();
+#### Setting tags:
+```csharp
+// Add a tag to an entity (overloads from 1 to 5 tags)
+// Returns true if the tag was absent and was added, false if already present
+bool added = entity.Set<Unit>();
+
+// Add multiple tags in a single call
+entity.Set<Unit, Player>();
+entity.Set<Unit, Player, IsDead>();
+// Overloads for 4 and 5 tags are also available
 ```
 
 ___
 
 #### Basic operations:
-```c#
-// Get the count of tags on an entity
+```csharp
+// Get the number of tags on an entity
 int tagsCount = entity.TagsCount();
 
-// Check for the presence of ALL specified tags (overload methods from 1-3 tags)
-entity.HasAllOfTags<Unit>();
-entity.HasAllOfTags<Unit, Player>();
+// Check if a tag is present (overloads from 1 to 3 tags — checks ALL specified)
+bool hasUnit = entity.Has<Unit>();
+bool hasBoth = entity.Has<Unit, Player>();
+bool hasAll3 = entity.Has<Unit, Player, IsDead>();
 
-// Check for the presence of at least one specified tag (overload methods from 2-3 tags)
-entity.HasAnyOfTags<Unit, Player>();
+// Check if at least one of the specified tags is present (overloads from 2 to 3 tags)
+bool hasAny = entity.HasAny<Unit, Player>();
+bool hasAny3 = entity.HasAny<Unit, Player, IsDead>();
 
-// Remove tag from entity (Returns true if tag was present and was removed)
-// Can be safely used even if the tag did not exist
-bool deleted = entity.DeleteTag<Unit>();
-entity.DeleteTag<Unit, Player>();
+// Remove a tag from an entity (overloads from 1 to 5 tags)
+// Returns true if the tag was present and removed, false if it wasn't there
+// Safe to use even if the tag doesn't exist
+bool deleted = entity.Delete<Unit>();
+entity.Delete<Unit, Player>();
 
-// If a tag is not present on an entity, it is added, if it is present, it is removed (overload methods from 1-3 tags)
-// (Returns the current state, true if the tag was added, false if the tag was removed)
-bool state = entity.ToggleTag<Unit>();
-entity.ToggleTag<Unit, Player>();
+// Toggle a tag: adds if absent, removes if present (overloads from 1 to 3 tags)
+// Returns true if the tag was added, false if it was removed
+bool state = entity.Toggle<Unit>();
+entity.Toggle<Unit, Player>();
 
-// Depending on the passed value, either the tag is set (true) or removed (false) (overload methods from 1-3 tags)
-entity.ApplyTag<Unit>(true);
-entity.ApplyTag<Unit, Player>(false, true);
+// Conditionally set or remove a tag based on a boolean value (overloads from 1 to 3 tags)
+// true — tag is set, false — tag is removed
+entity.Apply<Unit>(true);
+entity.Apply<Unit, Player>(false, true); // Unit is removed, Player is set
+```
+
+___
+
+#### Copying and moving:
+```csharp
+var source = W.Entity.New<Position>();
+source.Set<Unit, Player>();
+
+var target = W.Entity.New<Position>();
+
+// Copy specified tags to another entity (overloads from 1 to 5 tags)
+// The source entity keeps its tags
+// Returns true (for single tag) if the source had the tag and it was copied
+bool copied = source.CopyTo<Unit>(target);
+source.CopyTo<Unit, Player>(target);
+
+// Move specified tags to another entity (overloads from 1 to 5 tags)
+// The tag is added on the target and removed from the source
+// Returns true (for single tag) if the tag was moved
+bool moved = source.MoveTo<Unit>(target);
+source.MoveTo<Unit, Player>(target);
+```
+
+___
+
+#### Query filters:
+
+Tags use the same query filters as components: `All<>`, `None<>`, `Any<>` and their variants. See the [Queries](query.md) section for details.
+
+___
+
+#### Debugging:
+```csharp
+// Collect all tags of an entity into a list (for inspector/debugging)
+// The list is cleared before populating
+var tags = new List<ITag>();
+entity.GetAllTags(tags);
 ```

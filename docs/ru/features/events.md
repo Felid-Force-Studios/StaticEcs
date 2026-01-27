@@ -4,80 +4,168 @@ parent: Возможности
 nav_order: 13
 ---
 
-### События
-Событие - cлужит для обмена информацией между системами или пользовательскими сервисами
-- Представлено в виде пользовательской структуры с данными
-
-___
+## Events
+Событие — механизм обмена информацией между системами или пользовательскими сервисами
+- Представлено в виде пользовательской структуры с данными и маркер-интерфейсом `IEvent`
+- Модель «отправитель → множество получателей» с автоматическим управлением жизненным циклом
+- Каждый получатель имеет независимый курсор чтения
+- Событие автоматически удаляется, когда все получатели его прочитали или оно подавлено
 
 #### Пример:
-```c#
-public struct WeatherChanged : IEvent { 
+```csharp
+public struct WeatherChanged : IEvent {
     public WeatherType WeatherType;
+}
+
+public struct OnDamage : IEvent {
+    public float Amount;
+    public EntityGID Target;
 }
 ```
 
 ___
 
 {: .importantru }
-Требуется регистрация в мире между созданием и инициализацией
+Регистрация типа события доступна как в фазе `Created`, так и в `Initialized`
 
-```c#
+```csharp
 W.Create(WorldConfig.Default());
 //...
-W.Events.RegisterEventType<WeatherChanged>()
+// Простая регистрация
+W.Types()
+    .Event<WeatherChanged>()
+    .Event<OnDamage>();
+
+// Регистрация с конфигурацией
+W.Types().Event<WeatherChanged>(new EventTypeConfig<WeatherChanged>(
+    guid: new Guid("..."),      // стабильный идентификатор для сериализации
+    version: 1,                  // версия схемы данных для миграции (по умолчанию — 0)
+    readWriteStrategy: null      // стратегия бинарной сериализации (по умолчанию — StructPackArrayStrategy<T>)
+));
 //...
 W.Initialize();
 ```
 
+{: .noteru }
+Вместо передачи конфигурации вручную можно объявить статическое поле или свойство типа `EventTypeConfig<T>` внутри структуры события. `RegisterAll()` автоматически найдёт его по типу (предпочитая имя `Config`):
+
+```csharp
+public struct WeatherChanged : IEvent {
+    public WeatherType WeatherType;
+    public static readonly EventTypeConfig<WeatherChanged> Config = new(
+        guid: new Guid("..."),
+        version: 1
+    );
+}
+// RegisterAll() автоматически использует WeatherChanged.Config
+```
+
 ___
 
-#### Создание и базовые операции:
-```c#
-// Система событий будет создана при вызове World.Create и уничтожена при World.Destroy
-W.Create(WorldConfig.Default());
-W.Initialize();
-//...
+#### Отправка событий:
+```csharp
+// Отправить событие с данными
+// Вернёт true если событие добавлено в буфер, false если нет зарегистрированных слушателей
+bool sent = W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Sunny });
 
-// Прежде чем отправлять событие следует зарегистрировать слушателя данного события, иначе событие не будет отправлено
-// Слушатель может быть зарегистрирован после выозова World.Create (например в Init методе системы)
-var weatherChangedEventReceiver = W.Events.RegisterEventReceiver<WeatherChanged>();
+// Отправить событие с default-значением
+bool sent = W.SendEvent<OnDamage>();
+```
 
-// Удаление слушателя событий
-W.Events.DeleteEventReceiver(ref weatherChangedEventReceiver);
+{: .warningru }
+Если нет зарегистрированных слушателей, `SendEvent` вернёт `false` и событие **не будет сохранено**. Регистрируйте слушателей до отправки событий.
 
-// Важно! Жизненый цикл события: событие будет удалено в двух случаях:
-// 1) когда оно будет прочитано всеми зарегистрированными слушателями
-// 2) когда оно будет подавленно при прочтении (при вызове Suppress или SuppressAll метода (информация ниже) )
-// Таким образом важно чтобы все зарегистрированные слушатели читали события или событие подавлялось каким либо слушателем, чтобы не было их накопления
+___
 
-// Отправка события
-W.Events.Send(new WeatherChanged { WeatherType = WeatherType.Sunny });
+#### Получение событий:
+```csharp
+// Создать слушателя — каждый слушатель имеет независимый курсор чтения
+var weatherReceiver = W.RegisterEventReceiver<WeatherChanged>();
 
-// Отправка дефолтного значения события
-W.Events.Send<WeatherChanged>();
+// Отправить события
+W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Sunny });
+W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Rainy });
 
-// Получение событий
-foreach (var weatherEvent in weatherChangedEventReceiver) {
-    Console.WriteLine("Weather is " + weatherEvent.Value.WeatherType);
+// Чтение событий через foreach
+// После итерации события помечаются как прочитанные для данного слушателя
+foreach (var e in weatherReceiver) {
+    ref var data = ref e.Value; // ref-доступ к данным события
+    Console.WriteLine(data.WeatherType);
 }
 
-foreach (var weatherEvent in weatherChangedEventReceiver) {
-    // True если данный слушатель последний из всех слушателей читавших это событий (значит что событие будет удалено после прочтения)
-    bool last = weatherEvent.IsLastReading();
-    // Возвращает число непрочитавших слушателей не считая данного в данный момент
-    int unreadCount = weatherEvent.UnreadCount();
+// Дополнительная информация о событии при итерации
+foreach (var e in weatherReceiver) {
+    // true если данный слушатель последний, кто читает это событие
+    // (событие будет удалено после прочтения)
+    bool last = e.IsLastReading();
+
+    // Количество слушателей, ещё не прочитавших это событие (без текущего)
+    int remaining = e.UnreadCount();
+
+    // Подавить событие — немедленно удаляет его для всех оставшихся слушателей
+    e.Suppress();
+}
+```
+
+___
+
+#### Управление слушателями:
+```csharp
+// Чтение всех событий через делегат
+weatherReceiver.ReadAll(static (Event<WeatherChanged> e) => {
+    Console.WriteLine(e.Value.WeatherType);
+});
+
+// Подавить все непрочитанные события для данного слушателя
+// События удаляются и другие слушатели больше не смогут их прочитать
+weatherReceiver.SuppressAll();
+
+// Пометить все события как прочитанные без обработки
+// События не удаляются — другие слушатели всё ещё могут их прочитать
+weatherReceiver.MarkAsReadAll();
+
+// Удалить слушателя
+W.DeleteEventReceiver(ref weatherReceiver);
+```
+
+___
+
+#### Многопоточность:
+
+{: .warningru }
+Отправка событий (`SendEvent`) потокобезопасна при соблюдении следующих условий:
+- Несколько потоков могут одновременно вызывать `SendEvent` для **одного и того же** типа событий
+- **Одновременное чтение и отправка** одного типа событий из разных потоков **запрещены** — отправка потокобезопасна только при отсутствии одновременного чтения того же типа
+- Чтение событий одного типа (`foreach`, `ReadAll`) должно выполняться в **одном потоке**
+- Разные типы событий можно читать из **разных потоков одновременно**, так как каждый тип хранится независимо
+- Один и тот же тип событий можно читать из разных потоков **в разное время** (не одновременно)
+
+Операции со слушателями (`foreach`, `ReadAll`, `MarkAsReadAll`, `SuppressAll`, создание и удаление слушателей) **не поддерживаются** в многопоточном режиме и должны выполняться только в основном потоке.
+
+___
+
+#### Жизненный цикл события:
+
+{: .importantru }
+Событие удаляется автоматически в двух случаях:
+1. Все зарегистрированные слушатели прочитали событие
+2. Событие было подавлено (`Suppress` или `SuppressAll`)
+
+Важно, чтобы все зарегистрированные слушатели читали свои события (или вызывали `MarkAsReadAll`/`SuppressAll`), иначе события будут накапливаться в памяти.
+
+```csharp
+// Пример жизненного цикла с двумя слушателями
+var receiverA = W.RegisterEventReceiver<WeatherChanged>();
+var receiverB = W.RegisterEventReceiver<WeatherChanged>();
+
+W.SendEvent(new WeatherChanged { WeatherType = WeatherType.Sunny });
+// Событие имеет UnreadCount = 2
+
+foreach (var e in receiverA) {
+    // receiverA прочитал, UnreadCount = 1
 }
 
-foreach (var weatherEvent in weatherChangedEventReceiver) {
-    // Подвление события - событие будет удалено и другие слушатели больше не смогут его прочитать
-    weatherEvent.Suppress();
+foreach (var e in receiverB) {
+    // receiverB прочитал, UnreadCount = 0 → событие автоматически удаляется
 }
-
-// Подавление всех событий для данного слушателя
-weatherChangedEventReceiver.SuppressAll();
-
-// Пометка о прочтении всех событий для данного слушателя
-weatherChangedEventReceiver.MarkAsReadAll();
-
 ```

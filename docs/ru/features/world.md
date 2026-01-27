@@ -6,13 +6,15 @@ nav_order: 9
 
 ## WorldType
 Тип-тег-идентификатор мира, служит для изоляции статических данных при создании разных миров в одном процессе
-- Представлен в виде пользовательской структуры без данных с маркер интерфейсом `IWorldType`
+- Представлен в виде пользовательской структуры без данных с маркер-интерфейсом `IWorldType`
+- Каждый уникальный `IWorldType` получает полностью изолированное статическое хранилище
 
 #### Пример:
-```c#
+```csharp
 public struct MainWorldType : IWorldType { }
 public struct MiniGameWorldType : IWorldType { }
 ```
+
 ___
 
 ## World
@@ -20,23 +22,23 @@ ___
 - Представлен в виде статического класса `World<T>` параметризованного `IWorldType`
 
 {: .importantru }
-> Так как тип-идентификатор `IWorldType` определяет доступ к конкретному миру  
-> Есть три способа работы с библиотекой:
+> Так как тип-идентификатор `IWorldType` определяет доступ к конкретному миру,
+> есть три способа работы с библиотекой:
 
 ___
 
-#### Первый способ - как есть через полное обращение (очень неудобно):
-```c#
+#### Первый способ — полное обращение:
+```csharp
 public struct WT : IWorldType { }
 
 World<WT>.Create(WorldConfig.Default());
 World<WT>.CalculateEntitiesCount();
 
-var entity = World<WT>.Entity.New<Position>();
+var entity = World<WT>.NewEntity<Default>();
 ```
 
-#### Второй способ - чуть более удобный, использовать статические импорты или статические алиасы (придется писать в каждом файле)
-```c#
+#### Второй способ — статические импорты:
+```csharp
 using static FFS.Libraries.StaticEcs.World<WT>;
 
 public struct WT : IWorldType { }
@@ -44,12 +46,12 @@ public struct WT : IWorldType { }
 Create(WorldConfig.Default());
 CalculateEntitiesCount();
 
-var entity = Entity.New<Position>();
+var entity = NewEntity<Default>();
 ```
 
-#### Трейтий способ - самый удобный, использовать типы-алиасы в корневом неймспейсе (не требуется писать в каждом файле)
+#### Третий способ — тип-алиас в корневом неймспейсе:
 Везде в примерах будет использован именно этот способ
-```c#
+```csharp
 public struct WT : IWorldType { }
 
 public abstract class W : World<WT> { }
@@ -57,271 +59,426 @@ public abstract class W : World<WT> { }
 W.Create(WorldConfig.Default());
 W.CalculateEntitiesCount();
 
-var entity = W.Entity.New<Position>();
+var entity = W.NewEntity<Default>();
 ```
 
 ___
 
-#### Основные операции:
-```c#
-// Определяем ID мира
+## Жизненный цикл
+
+```
+Create() → Регистрация типов → Initialize() → Работа → Destroy()
+```
+
+#### WorldStatus:
+- `NotCreated` — мир не создан или уничтожен
+- `Created` — структуры выделены, доступна регистрация типов
+- `Initialized` — мир полностью готов к работе, доступны операции с сущностями
+
+___
+
+#### Создание мира:
+```csharp
+// Определяем идентификатор мира
 public struct WT : IWorldType { }
+public abstract class W : World<WT> { }
 
-// Регестрируем типы - алиасы
-public abstract class World : World<WT> { }
-
-// Создание мира с дефолтной конфигурацие
+// Создание мира с конфигурацией по умолчанию
 W.Create(WorldConfig.Default());
-// Или кастомной
-W.Create(new() {
-            // Указывает независимый мир или зависимый (Подробнее в разделе "Чанк")
-            Independent = true   
-            // Базовый размер всех разновидностей типов компонентов (количество типов компонент)
-            BaseComponentTypesCount = 64                        
-            // Базовый размер всех разновидностей типов тегов (количество типов тегов)
-            BaseTagTypesCount = 64,                             
-            // Режим работы многопоточной обработки 
-            // (Disabled - потоки не создаются, MaxThreadsCount - создается максимально доступное количество потоков, CustomThreadsCount - указанное количество потоков)
-            ParallelQueryType = ParallelQueryType.Disabled,
-            // Количество потоков при ParallelQueryType.CustomThreadsCount
-            CustomThreadCount = 4,
-            // Строгий режим работы Query по умолчанию, дополнительно в разделе "Запросы"
-            DefaultQueryModeStrict = true
-        });
 
-W.Entity.    // Доступ к сущности для MainWorldType (ID мира)
-W.Context.   // Доступ к контексту для MainWorldType (ID мира)
-W.Components.// Доступ к компонентам для MainWorldType (ID мира)
-W.Tags.      // Доступ к тегам для MainWorldType (ID мира)
-W.Events.    // Доступ к событиям
+// Или с пользовательской конфигурацией
+W.Create(new WorldConfig {
+    // Независимый мир (управляет чанками самостоятельно) или зависимый (требует ручного управления чанками)
+    Independent = true,
+    // Начальная ёмкость для типов компонентов (по умолчанию — 64)
+    BaseComponentTypesCount = 64,
+    // Начальная ёмкость для кластеров (минимум 16, по умолчанию — 16)
+    BaseClustersCapacity = 16,
+    // Режим многопоточности
+    // Disabled — потоки не создаются
+    // MaxThreadsCount — максимально доступное количество потоков
+    // CustomThreadsCount — указанное количество потоков
+    ParallelQueryType = ParallelQueryType.Disabled,
+    // Количество потоков при CustomThreadsCount
+    CustomThreadCount = 4,
+    // Количество итераций ожидания потока перед блокировкой (по умолчанию — 256)
+    WorkerSpinCount = 256,
+    // Включить отслеживание создания сущностей для фильтра Created (по умолчанию — false)
+    TrackCreated = true,
+});
+```
+
+{: .noteru }
+`WorldConfig` предоставляет фабричные методы:
+- `WorldConfig.Default()` — стандартные настройки (однопоточный, независимый)
+- `WorldConfig.MaxThreads()` — все доступные потоки CPU
+Оба принимают `bool independent = true`.
+
+___
+
+#### Регистрация типов:
+```csharp
+W.Create(WorldConfig.Default());
+
+// Регистрация компонентов, тегов и событий — только между Create() и Initialize()
+W.Types()
+    .EntityType<Bullet>(Bullet.Id)
+    .Component<Position>()
+    .Component<Velocity>()
+    .Tag<IsPlayer>()
+    .Event<OnDamage>();
 
 // Инициализация мира
-W.Initialize(baseEntitiesCapacity = 4096);
-// Инициализация мира с загрузкой сохраненных ранее идентификаторов
+W.Initialize();
+```
+
+{: .importantru }
+Регистрация типов (`.Component<T>()`, `.Tag<T>()`, `.EntityType<T>(id)`) доступна только в состоянии `Created` — после `Create()` и до `Initialize()`. Регистрация событий (`.Event<T>()`) доступна также после инициализации.
+
+___
+
+#### Авторегистрация типов:
+Вместо ручной регистрации каждого типа можно использовать автоматическое сканирование сборок.
+`RegisterAll()` находит все структуры, реализующие ECS-интерфейсы, и регистрирует их автоматически:
+
+```csharp
+W.Create(WorldConfig.Default());
+
+// Авторегистрация всех типов из вызывающей сборки
+W.Types().RegisterAll();
+
+// Или указать конкретные сборки
+W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
+
+// Можно комбинировать с ручной регистрацией (например, для задания GUID сериализации)
+W.Types()
+    .RegisterAll()
+    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent> { Guid = myGuid });
+
+W.Initialize();
+```
+
+Обнаруживаемые интерфейсы:
+
+| Интерфейс | Регистрация |
+|-----------|-------------|
+| `IComponent` | `Types().Component<T>()` |
+| `ITag` | `Types().Tag<T>()` |
+| `IEvent` | `Types().Event<T>()` |
+| `ILinkType` | Оборачивается в `Link<T>` и регистрируется как компонент |
+| `ILinksType` | Оборачивается в `Links<T>` и регистрируется как компонент |
+| `IMultiComponent` | Оборачивается в `Multi<T>` и регистрируется как компонент |
+| `IEntityType` | `Types().EntityType<T>(T.Id)` |
+
+{: .noteru }
+- Если сборки не указаны, сканируется только вызывающая сборка (не все загруженные)
+- Сборка самого фреймворка StaticEcs всегда исключается из сканирования
+- `RegisterAll()` ищет статическое поле или свойство соответствующего типа конфига внутри каждой структуры и использует его, если найдено. Иначе используется конфигурация по умолчанию. Правила поиска:
+  - `IComponent` — ищет `ComponentTypeConfig<T>` (предпочитает имя `Config`)
+  - `IEvent` — ищет `EventTypeConfig<T>` (предпочитает имя `Config`)
+  - `ITag` — ищет `TagTypeConfig<T>` (предпочитает имя `Config`)
+  - `IEntityType` — ищет `byte` (предпочитает имя `Id`)
+- Поддерживаются и поля (field), и свойства (property)
+- Структура, реализующая несколько интерфейсов (например, `IComponent` и `IMultiComponent`), будет зарегистрирована для каждого
+
+___
+
+#### Инициализация:
+```csharp
+// Стандартная инициализация (baseEntitiesCapacity — начальная ёмкость для сущностей)
+W.Initialize(baseEntitiesCapacity: 4096);
+
+// Инициализация с восстановлением сохранённых идентификаторов (версии EntityGID)
 W.InitializeFromGIDStoreSnapshot(snapshot);
-// Инициализация мира из сохраненных данных
+
+// Инициализация с полным восстановлением мира из снимка
 W.InitializeFromWorldSnapshot(snapshot);
+```
 
-// Уничтожение и очистка данных мира
+{: .noteru }
+`InitializeFromGIDStoreSnapshot` восстанавливает только метаданные идентификаторов сущностей (версии GID). `InitializeFromWorldSnapshot` восстанавливает полное состояние мира, включая все сущности и их данные.
+
+___
+
+#### Уничтожение:
+```csharp
+// Уничтожить мир и освободить все ресурсы
 W.Destroy();
-
-// true если мир инициализирован
-bool initialized = W.IsInitialized();
-
-// true если мир независимый
-bool independent = W.IsIndependent();
-
-// количество созданных сущностей в мире (активных + незагруженных)
-int entitiesCount = W.CalculateEntitiesCount();
-
-// количество загруженных сущностей в мире
-int loadedEntitiesCount = W.CalculateLoadedEntitiesCount();
-
-// текущая емкость для сущностей
-int entitiesCapacity = W.CalculateEntitiesCapacity();
-
-// Уничтожает всех сущностей в мире
-W.DestroyAllEntities();
 ```
 
 ___
 
-## Кластер:
-Кластер - это множество чанков сущностей, сущности принадлежащие одному кластеру сгруппированы и располагаются в памяти сегментировано
-Кластер представлен значением ushort 0-65535, по умолчанию при инициализации мира создается один кластер с идентификатором 0 и все сущности по умолчанию создаются в нем.  
+## Основные операции
+
+```csharp
+// Текущий статус мира
+WorldStatus status = W.Status;
+
+// true если мир инициализирован
+bool initialized = W.IsWorldInitialized;
+
+// true если мир независимый
+bool independent = W.IsIndependent;
+
+// Количество сущностей в мире (активные + незагруженные)
+uint entitiesCount = W.CalculateEntitiesCount();
+
+// Количество загруженных сущностей
+uint loadedCount = W.CalculateLoadedEntitiesCount();
+
+// Текущая ёмкость для сущностей
+uint capacity = W.CalculateEntitiesCapacity();
+
+// Уничтожить все сущности в мире (мир остаётся инициализированным)
+W.DestroyAllLoadedEntities();
+```
+
+___
+
+Подробнее о создании сущностей и операциях с ними — см. [Сущность](entity).
+
+Подробнее о ресурсах мира — см. [Ресурсы](resources).
+
+___
+
+## Кластер
+
+Кластер — это группа чанков сущностей для пространственной сегментации мира. Сущности одного кластера сгруппированы и располагаются в памяти сегментировано.
+- Представлен значением `ushort` (0–65535)
+- По умолчанию при инициализации мира создаётся кластер с идентификатором 0
+- Все сущности по умолчанию создаются в кластере 0
+- Кластер можно отключить — сущности из отключённых кластеров не попадают в итерацию
+
+{: .noteru }
+Кластеры предназначены для **пространственной группировки**: уровни, зоны карты, игровые комнаты. Для **логической** группировки (юниты, снаряды, эффекты) используйте `entityType`.
 
 ___
 
 #### Основные операции:
-```c#
-// Регистрация кластера, может быть вызван после создания или после инициализации мира
-const ushort NPC_CLUSTER = 1;
-const ushort ENVIRONMENT_CLUSTER = 2;
-W.RegisterCluster(NPC_CLUSTER);
-W.RegisterCluster(ENVIRONMENT_CLUSTER);
+```csharp
+// Регистрация кластеров (можно вызывать после Create() или после Initialize())
+const ushort LEVEL_1_CLUSTER = 1;
+const ushort LEVEL_2_CLUSTER = 2;
+W.RegisterCluster(LEVEL_1_CLUSTER);
+W.RegisterCluster(LEVEL_2_CLUSTER);
 
 // Проверить зарегистрирован ли кластер
-bool clusterIsRegistered = W.ClusterIsRegistered(NPC_CLUSTER);
+bool registered = W.ClusterIsRegistered(LEVEL_1_CLUSTER);
 
-// Включить или отключить кластер, сущности из отключенных кластеров не попадают в итерацию
-W.SetActiveCluster(ENVIRONMENT_CLUSTER, false);
+// Включить или отключить кластер — сущности из отключённых кластеров не попадают в итерацию
+W.SetActiveCluster(LEVEL_2_CLUSTER, false);
 
-// Проверить включен ли кластер
-bool active = W.ClusterIsActive(ENVIRONMENT_CLUSTER);
-
-// Освободить кластер, все сущности в кластере будут удалены, все чанки и идентификатор кластера освобождены (Будет ошибка если кластер не зарегистрирован)
-W.FreeCluster(ENVIRONMENT_CLUSTER);
-
-// Освободить кластер если он зарегистрирован
-bool free = W.TryFreeCluster(ENVIRONMENT_CLUSTER);
+// Проверить включён ли кластер
+bool active = W.ClusterIsActive(LEVEL_2_CLUSTER);
 
 // Уничтожить все сущности в кластере
-W.DestroyAllEntitiesInCluster(NPC_CLUSTER);
+W.DestroyAllEntitiesInCluster(LEVEL_1_CLUSTER);
 
-// Сделать снимок кластера, который хранит все данные сущностей в этом кластере
-// Существуют перегрузки метода, для записи на диск, сжатию и тд
-// Больше примеров в разделе "сериализация"
-byte[] clusterSnapshot = W.Serializer.CreateClusterSnapshot(NPC_CLUSTER);
+// Освободить кластер — все сущности удаляются, чанки и идентификатор освобождаются
+W.FreeCluster(LEVEL_2_CLUSTER);
 
-// Выгрузить кластер из памяти, все чанки компонентов и тегов будут удалены,
-// сущности будут помечены как незагруженные и сохранится только информации об идентификаторах, сущности не будут получены в запросах
-W.UnloadCluster(NPC_CLUSTER);
+// Безопасное освобождение — вернёт false если кластер не зарегистрирован
+bool freed = W.TryFreeCluster(LEVEL_2_CLUSTER);
+```
 
-// Загрузить из снимка кластера сущности в мир
-W.Serializer.LoadClusterSnapshot(clusterSnapshot);
+___
 
-// Получить все чанки в кластере (включая пустые чанки где нет загруженных сущностей)
-ReadOnlySpan<uint> chunks = W.GetClusterChunks(NPC_CLUSTER);
+#### Снимки и выгрузка кластеров:
+```csharp
+// Создать снимок кластера (хранит все данные сущностей)
+// Существуют перегрузки для записи на диск, сжатия и т.д.
+byte[] snapshot = W.Serializer.CreateClusterSnapshot(LEVEL_1_CLUSTER);
 
-// Получить все чанки в кластере в которых как минимум одна сущность загружена
-ReadOnlySpan<uint> loadedChunks = W.GetClusterLoadedChunks(NPC_CLUSTER);
+// Выгрузить кластер из памяти
+// Данные компонентов и тегов удаляются, сущности помечаются как незагруженные
+// Сохраняется только информация об идентификаторах, сущности не попадают в запросы
+ReadOnlySpan<ushort> clusters = stackalloc ushort[] { LEVEL_1_CLUSTER };
+W.Query().BatchUnload(EntityStatusType.Any, clusters: clusters);
 
-// При создании сущности можно передать идентификатор кластера (по умолчанию сущность создается в дефолтном кластере W.DEFAULT_CLUSTER = 0)
-var npc = W.Entity.New(clusterId: W.DEFAULT_CLUSTER);
+// Загрузить кластер из снимка
+W.Serializer.LoadClusterSnapshot(snapshot);
+```
 
-// Попытаться создать сущность в кластере, если мир зависим и в нем не осталось свободных идентификаторов сущностей то вернутся false
-var created = W.Entity.TryNew(out var ent, clusterId: ENVIRONMENT_CLUSTER);
+___
 
-// Для всех перегрузок добавлен опциональный параметр идентификатора кластера
-W.Entity.New(
-    new Position(),
-    new Name(),
-    clusterId: NPC_CLUSTER
+#### Чанки кластера:
+```csharp
+// Получить все чанки в кластере (включая пустые)
+ReadOnlySpan<uint> chunks = W.GetClusterChunks(LEVEL_1_CLUSTER);
+
+// Получить чанки, в которых есть хотя бы одна загруженная сущность
+ReadOnlySpan<uint> loadedChunks = W.GetClusterLoadedChunks(LEVEL_1_CLUSTER);
+```
+
+___
+
+#### Создание сущностей в кластере:
+```csharp
+// При создании сущности можно указать кластер (по умолчанию — кластер 0)
+struct UnitType : IEntityType { }
+var entity = W.NewEntity<UnitType>(clusterId: LEVEL_1_CLUSTER);
+
+// Для всех перегрузок доступен параметр clusterId
+W.NewEntity<UnitType>(
+    new UnitType(),  // экземпляр типа сущности (может содержать данные для OnCreate)
+    clusterId: LEVEL_1_CLUSTER
 );
 
 // Получить кластер сущности
-ushort entityClusterId = npc.ClusterId();
+ushort entityClusterId = entity.ClusterId;
 
-// Получить кластер сущности у EntityGID
-ushort gidClusterId = npc.Gid().ClusterId;
+// Получить кластер из EntityGID
+ushort gidClusterId = entity.GID.ClusterId;
 ```
 
 ___
 
-## Чанк:
-Чанк - это группировка сущностей размером 4096, весь мир состоит из чанков. Чанк всегда принадлежит какому-либо кластеру.  
-Мир может быть зависимым или независимым, параметр устанавливается в конфигурации мира при создании `W.Create(new() { Independent = true })`  
-Независимый мир по умолчанию управляет идентификаторами сущностей и всеми чанками автоматически, создает новые чанки при создании сущностей `W.Entity.New()` когда требуется.  
-Зависимый мир при создании не имеет идентификаторов сущностей и чанков доступных для создания сущностей через `W.Entity.New()`, миру необходимо указать какие чанки доступны.
-Далее мы рассмотрим примеры.  
+## Чанк
+
+Чанк — это блок на 4096 сущностей. Весь мир состоит из чанков. Каждый чанк принадлежит какому-либо кластеру.
+
+- **Независимый мир** (`Independent = true`) — управляет чанками автоматически, создаёт новые при необходимости
+- **Зависимый мир** (`Independent = false`) — не имеет чанков для создания сущностей через `NewEntity()`, необходимо явно указать какие чанки доступны
 
 ___
 
 #### Основные операции:
-```c#
+```csharp
 // Найти свободный чанк, не принадлежащий никакому кластеру
-// Для независимого мира в случае отсутствия свободного чанка будет создан новый
-// Для зависимого мира в случае отсутствия свободного чанка будет ошибка
+// Независимый мир: если нет свободного — создаст новый
+// Зависимый мир: если нет свободного — ошибка
 EntitiesChunkInfo chunkInfo = W.FindNextSelfFreeChunk();
-uint chunkIdx = chunkInfo.ChunkIdx; // индекс чанка
-// chunkInfo.EntitiesFrom - первый идентификатор сущности в кластере
-// chunkInfo.EntitiesCapacity - размер чанка (всегда 4096)
+uint chunkIdx = chunkInfo.ChunkIdx;
+// chunkInfo.EntitiesFrom — первый идентификатор сущности в чанке
+// chunkInfo.EntitiesCapacity — размер чанка (всегда 4096)
 
-// Попробовать найти свободный чанк, не принадлежащий никакому кластеру
-// Для независимого мира в случае отсутствия свободного чанка будет создан новый (результат всегда true)
-// Для зависимого мира в случае отсутствия свободного чанка результат будет false
-bool hasFreeChunk = W.TryFindNextSelfFreeChunk(out EntitiesChunkInfo info);
+// Безопасный вариант (вернёт false если нет свободных чанков)
+bool found = W.TryFindNextSelfFreeChunk(out EntitiesChunkInfo info);
 
-// Зарегистрировать свободный чанк в кластере (Если чанк уже зарегистрирован будет ошибка)
-W.RegisterChunk(chunkIdx, clusterId: NPC_CLUSTER);
-// Зарегистрировать свободный чанк в кластере и присвоить тип владения (подробности ниже) (Если чанк уже зарегистрирован будет ошибка)
-W.RegisterChunk(chunkIdx, owner: ChunkOwnerType.Self, clusterId: NPC_CLUSTER);
+// Зарегистрировать чанк в кластере
+W.RegisterChunk(chunkIdx, clusterId: LEVEL_1_CLUSTER);
 
-// Попытаться зарегистрировать свободный чанк в кластере (Если чанк уже зарегистрирован вернется false)
-bool chunkRegistered = W.TryRegisterChunk(chunkIdx, NPC_CLUSTER);
+// Зарегистрировать чанк с указанием типа владения
+W.RegisterChunk(chunkIdx, owner: ChunkOwnerType.Self, clusterId: LEVEL_1_CLUSTER);
+
+// Безопасная регистрация (вернёт false если чанк уже зарегистрирован)
+bool registered = W.TryRegisterChunk(chunkIdx, clusterId: LEVEL_1_CLUSTER);
 
 // Проверить зарегистрирован ли чанк
-bool registered = W.ChunkIsRegistered(chunkIdx);
+bool isRegistered = W.ChunkIsRegistered(chunkIdx);
 
-// Получить идентификатор кластера которому принадлежит чанк
-ushort chunkClusterId = W.GetChunkClusterId(chunkIdx);
+// Получить кластер чанка
+ushort clusterId = W.GetChunkClusterId(chunkIdx);
 
-// Изменить кластер чанка, все сущности внутри чанка будут принадлежать другому кластеру
-W.ChangeChunkCluster(chunkIdx, ENVIRONMENT_CLUSTER);
+// Переместить чанк в другой кластер
+W.ChangeChunkCluster(chunkIdx, LEVEL_2_CLUSTER);
 
-// Проверить есть ли сущности в чанке (активные + незагруженные)
-bool hasEntitiesInChunk = W.HasEntitiesInChunk(chunkIdx);
-
-// Проверить есть ли загруженные сущности в чанке
-bool hasLoadedEntitiesInChunk = W.HasLoadedEntitiesInChunk(chunkIdx);
-
-// Освободить чанк, все сущности в чанке будут удалены, дентификатор чанка будет освобожден
-W.FreeChunk(chunkIdx);
+// Проверить наличие сущностей в чанке
+bool hasEntities = W.HasEntitiesInChunk(chunkIdx);           // активные + незагруженные
+bool hasLoaded = W.HasLoadedEntitiesInChunk(chunkIdx);       // только загруженные
 
 // Уничтожить все сущности в чанке
 W.DestroyAllEntitiesInChunk(chunkIdx);
 
-// Сделать снимок чанка, который хранит все данные сущностей в этом чанке
-// Существуют перегрузки метода, для записи на диск, сжатию и тд
-// Больше примеров в разделе "сериализация"
-byte[] chunkSnapshot = W.Serializer.CreateChunkSnapshot(chunkIdx);
-
-// Выгрузить чанк из памяти, все компонентов и теги будут удалены,
-// сущности будут помечены как незагруженные и сохранится только информации об идентификаторах, сущности не будут получены в запросах
-W.UnloadChunk(chunkIdx);
-
-// Загрузить из снимка чанка сущности в мир
-W.Serializer.LoadChunkSnapshot(chunkSnapshot);
-
-// При создании сущности можно передать индекс чанка (без указания, выбор чанка определяется миром)
-var entity = W.Entity.New(chunkIdx: chunkIdx);
-
-// Попытаться создать сущность в чанке, если чанк полон вернется false
-var created = W.Entity.TryNew(out var ent, chunkIdx: chunkIdx);
-
-
-// Проверить владельца чанка
-// ChunkOwnerType.Self - значит что чанк управляется данным миром, только чанки с Self владением используются для создания сущностей через Entity.New()
-//     - независимый мир по умолчанию имеет все чанки с Self владением
-// ChunkOwnerType.Other - значит что чанк не управляется данным миром, сущности созданные через Entity.New() никогда не будут созданы в этих чанках
-//     - зависимы мир по умолчанию имеет все чанки с Other владением
-ChunkOwnerType owner = W.GetChunkOwner(chunkIdx);
-
-// Изменить тип владения чанка
-// Если владение меняется с Other на Self то чанк становится доступен для создания сущностей через Entity.New()
-// Если владение меняется с Self на Other то чанк становится недоступен для создания сущностей через Entity.New()
-W.ChangeChunkOwner(chunkIdx, ChunkOwnerType.Other);
- 
-// Создание сущностей через Entity.New(gid) доступно для чанков только с типом владения Other
-// Создание сущностей через Entity.New(chunkIdx) доступно для чанков только с типом владения Self
+// Освободить чанк — все сущности удаляются, идентификатор освобождается
+W.FreeChunk(chunkIdx);
 ```
 
 ___
 
-## Примеры применения кластеров и чанков:
+#### Снимки и выгрузка чанков:
+```csharp
+// Создать снимок чанка
+byte[] snapshot = W.Serializer.CreateChunkSnapshot(chunkIdx);
 
-Кластеры могут использоваться для любой пользовательской логики, например:
-- Разные кластеры могут определять разные типы сущностей, например кластер юнитов, кластер игрового окружения, кластер предметов, кластер эффектов  
-  - Это позволяет уменьшить потребление и фрагментацию памяти, ускорить итерацию, и помогает в сериализации мира и игровой логике   
-  - Например при большой игровой карте, которая подгружается и выгружается по мере движения игрока, разные кластеры сильно экономят память  
-- Другой пример это использование кластеров для разных игровых уровней, можно загружать\выгружать кластеры при смене уровня  
-- Также идентификатор кластера может определять игровую сессию, в сочетании с параллельной итерацией возможно в рамках одного мира создать эмуляцию мультимиров  
+// Выгрузить чанк из памяти (данные удаляются, сущности помечаются как незагруженные)
+ReadOnlySpan<uint> chunks = stackalloc uint[] { chunkIdx };
+W.Query().BatchUnload(EntityStatusType.Any, chunks);
 
-Управление чанками может использоваться например для:  
-- Стриминга мира, можно загружать и выгружать чанки в процессе игры  
-- Пользовательского управления идентификаторами сущностей  
-- Быстрого выделения и очистки большого количества сущностей, как арена-память для временных сущностей
-
-Управление владением чанков может использоваться для клиент-серверных взаимодействий, например:  
-
-```c#
-// На стороне сервера в Independent мире
-// Находим свободный чанк и регистрируем
-EntitiesChunkInfo chunkInfo = W.FindNextSelfFreeChunk();
-// Устанавливаем тип владения чанка на Other, таким образом сервер никогда не будет создвать сущности в этом диапазоне идентификаторов
-W.RegisterChunk(chunkInfo.ChunkIdx, ChunkOwnerType.Other);
-
-// Отправляем идентификатор чанка на клиент
-
-// На стороне клиента в Dependent мире
-// Получаем идентификатор чанка от сервера
-W.RegisterChunk(ChunkIdxFromServer, ChunkOwnerType.Self);
-
-// теперь на клиенте доступно 4096 свободных идентификаторов для сущностей
-// и можно создавать клиентские сущности через W.Entity.New()
-// например для UI или VFX
-
-// Аналогично можно использовать для p2p сетевых форматов
-// где есть один Independent хост и N Dependent клиентов
+// Загрузить чанк из снимка
+W.Serializer.LoadChunkSnapshot(snapshot);
 ```
 
+___
+
+#### Создание сущностей в конкретном чанке:
+```csharp
+// Создать сущность в указанном чанке
+struct UnitType : IEntityType { }
+var entity = W.NewEntityInChunk<UnitType>(chunkIdx: chunkIdx);
+
+// Безопасный вариант (вернёт false если чанк заполнен)
+bool created = W.TryNewEntityInChunk<UnitType>(out var entity, chunkIdx: chunkIdx);
+
+// Не-дженерик вариант (тип сущности известен в runtime как byte)
+byte entityTypeId = EntityTypeInfo<UnitType>.Id;
+var entity = W.NewEntityInChunk(entityTypeId, chunkIdx: chunkIdx);
+```
+
+___
+
+## Владение чанками (ChunkOwnerType)
+
+Тип владения определяет, как мир использует чанк для создания сущностей:
+
+- **`ChunkOwnerType.Self`** — чанк управляется данным миром. Сущности, создаваемые через `NewEntity()`, размещаются в этих чанках
+  - Независимый мир по умолчанию имеет все чанки с `Self` владением
+- **`ChunkOwnerType.Other`** — чанк не управляется данным миром. `NewEntity()` никогда не будет размещать сущности в этих чанках
+  - Зависимый мир по умолчанию имеет все чанки с `Other` владением
+
+```csharp
+// Получить тип владения чанка
+ChunkOwnerType owner = W.GetChunkOwner(chunkIdx);
+
+// Изменить тип владения
+// Self → Other: чанк становится недоступен для NewEntity()
+// Other → Self: чанк становится доступен для NewEntity()
+W.ChangeChunkOwner(chunkIdx, ChunkOwnerType.Other);
+```
+
+{: .importantru }
+Создание сущностей через `NewEntityByGID<TEntityType>(gid)` доступно только для чанков с владением `Other`.
+Создание сущностей через `NewEntityInChunk<TEntityType>(chunkIdx)` доступно только для чанков с владением `Self`.
+
+___
+
+#### Клиент-серверный пример:
+
+```csharp
+// === Серверная сторона (Independent мир) ===
+// Находим свободный чанк и регистрируем с владением Other
+// Сервер не будет создавать свои сущности в этом диапазоне идентификаторов
+EntitiesChunkInfo chunkInfo = WServer.FindNextSelfFreeChunk();
+WServer.RegisterChunk(chunkInfo.ChunkIdx, ChunkOwnerType.Other);
+// Отправляем идентификатор чанка клиенту
+
+// === Клиентская сторона (Dependent мир) ===
+// Получаем идентификатор чанка от сервера
+// Регистрируем с владением Self — теперь доступно 4096 слотов для сущностей
+WClient.RegisterChunk(chunkIdxFromServer, ChunkOwnerType.Self);
+
+// Клиент может создавать сущности через NewEntity()
+// Например, для UI или VFX
+var vfx = WClient.NewEntity<VfxType>();
+
+// Аналогично работает для P2P:
+// один Independent хост + N Dependent клиентов
+```
+
+___
+
+## Примеры применения кластеров и чанков
+
+#### Кластеры:
+- **Уровни и зоны карты** — разные кластеры для разных частей игрового мира. При движении игрока можно загружать и выгружать кластеры, экономя память
+- **Игровые уровни** — загрузка/выгрузка кластеров при смене уровня
+- **Игровые сессии** — идентификатор кластера определяет сессию. В сочетании с параллельной итерацией возможна эмуляция мультимиров в рамках одного мира
+
+#### Чанки:
+- **Стриминг мира** — загрузка и выгрузка чанков в процессе игры
+- **Пользовательское управление идентификаторами** — контроль над распределением EntityGID
+- **Арена-память** — быстрое выделение и очистка большого количества временных сущностей
+
+#### Владение чанками:
+- **Клиент-серверное взаимодействие** — сервер выделяет диапазоны идентификаторов клиентам
+- **P2P сетевые форматы** — один Independent хост и N Dependent клиентов

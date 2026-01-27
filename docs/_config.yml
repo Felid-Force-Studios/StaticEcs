@@ -19,6 +19,15 @@ callouts:
   warningru:
     title: Внимание
     color: red
+  importantzh:
+    title: 重要
+    color: yellow
+  notezh:
+    title: 注意
+    color: blue
+  warningzh:
+    title: 警告
+    color: red
 nav_external_links:
   - title: Static ECS - GitHub
     url: https://github.com/Felid-Force-Studios/StaticEcs

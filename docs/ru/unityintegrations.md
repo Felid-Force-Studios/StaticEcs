@@ -6,10 +6,10 @@ nav_order: 5
 
 ### ⚙️ **[Unity editor module](https://github.com/Felid-Force-Studios/StaticEcs-Unity)** ⚙️
 
-
 # Unity интеграция
 
-Пример:
+Пример интеграции StaticEcs с Unity:
+
 ```csharp
 using System;
 using FFS.Libraries.StaticEcs;
@@ -18,13 +18,16 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
+// Определяем тип мира с именем для редактора
 [StaticEcsEditorName("World")]
 public struct WT : IWorldType { }
 public abstract class W : World<WT> { }
-public abstract class WEvents : World<WT>.Events { }
-public struct SystemsType : ISystemsType { }
-public abstract class Systems : W.Systems<SystemsType> { }
 
+// Определяем системы
+public struct GameSystems : ISystemsType { }
+public abstract class GameSys : W.Systems<GameSystems> { }
+
+// Компоненты
 public struct Position : IComponent {
     public Transform Value;
 }
@@ -37,66 +40,77 @@ public struct Velocity : IComponent {
     public float Value;
 }
 
+// Данные сцены — передаются из MonoBehaviour через ресурс
 [Serializable]
-public class WSceneData {
+public class SceneData {
     public GameObject EntityPrefab;
 }
 
-public struct CreateRandomEntities : IInitSystem {
+// Система создания сущностей
+public struct CreateRandomEntities : ISystem {
     public void Init() {
+        ref var sceneData = ref W.GetResource<SceneData>();
         for (var i = 0; i < 100; i++) {
-            var go = Object.Instantiate(W.Context<WSceneData>.Get().EntityPrefab);
+            var go = Object.Instantiate(sceneData.EntityPrefab);
             go.transform.position = new Vector3(Random.Range(0, 50), 0, Random.Range(0, 50));
-            W.Entity.New(
-                new Position { Value = gameObject.transform },
+            W.NewEntity<Default>().Set(
+                new Position { Value = go.transform },
                 new Direction { Value = new Vector3(Random.Range(-1f, 1f), 0, Random.Range(-1f, 1f)) },
-                new Velocity { Value = 2f });
+                new Velocity { Value = 2f }
+            );
         }
     }
 }
 
-public struct UpdatePositions : IUpdateSystem {
+// Система обновления позиций
+public struct UpdatePositions : ISystem {
     public void Update() {
-        W.Query.For((W.Entity entity, ref Position position, ref Velocity velocity, ref Direction direction) => {
-            position.Value.position += direction.Value * (Time.deltaTime * velocity.Value);
-        });
+        W.Query().For(
+            static (ref Position position, in Velocity velocity, in Direction direction) => {
+                position.Value.position += direction.Value * (Time.deltaTime * velocity.Value);
+            }
+        );
     }
 }
 
+// MonoBehaviour точка входа
 public class Startup : MonoBehaviour {
-    public WSceneData sceneData;
+    public SceneData sceneData;
 
     private void Start() {
+        // Создаём мир
         W.Create(WorldConfig.Default());
 
-        W.RegisterComponentType<Position>();
-        W.RegisterComponentType<Direction>();
-        W.RegisterComponentType<Velocity>();
+        // Регистрируем все типы и подключаем отладку (Unity модуль)
+        W.Types().RegisterAll();
+        UnityEventTypes.Register<WT>(); // Регистрирует все события и компоненты Unity
+        EcsDebug<WT>.AddWorld<GameSystems>();
 
-        EcsDebug<WT>.AddWorld();
-        AutoRegister<WT>.Apply();
-
+        // Инициализируем мир
         W.Initialize();
 
-        W.Context<WSceneData>.Set(sceneData);
+        // Передаём данные сцены через ресурс
+        W.SetResource(sceneData);
 
-        Systems.Create();
-        
-        Systems.AddCallOnce(new CreateRandomEntities());
-        Systems.AddUpdate(new UpdatePositions());
-        
-        Systems.Initialize();
-        EcsDebug<WT>.AddSystem<SystemsType>();
+        // Создаём и настраиваем системы
+        GameSys.Create();
+        GameSys.Add(new CreateRandomEntities(), order: -10)
+            .Add(new UpdatePositions(), order: 0);
+        GameSys.Initialize();
+
+        // Подключаем отладку систем
+        EcsDebug<WT>.AddSystem<GameSystems>();
     }
 
     private void Update() {
-        Systems.Update();
+        GameSys.Update();
+        // Продвижение трекинга изменений (изменения видны в следующем кадре)
+        W.Tick();
     }
 
     private void OnDestroy() {
-        Systems.Destroy();
+        GameSys.Destroy();
         W.Destroy();
     }
-
 }
 ```

@@ -1,421 +1,702 @@
 ---
-title: Query
+title: Queries
 parent: Features
 nav_order: 12
 ---
 
 # Query
-Queries are a mechanism to search for entities and their components in the world
+Queries are a mechanism for searching entities and their components in the world
+- All queries require no caching, are stack-allocated, and can be used on-the-fly
+- Support filtering by components, tags, entity status, and clusters
+- Two iteration modes: `Strict` (default, faster) and `Flexible` (allows modifying filtered types on other entities)
 
 ___
 
-## Query Methods
-Types allowing to describe filtering by components/tags used in [QueryEntities](#query-entities) and [Query](#query-components)  
-All of the types below do not require explicit initialization, do not require caching, each takes 1 byte and can be used on the fly
+## Filters
+
+Types for describing filtering. Each occupies 1 byte and requires no initialization.
+
+```csharp
+// Given 5 entities in the world:
+//             Components                 Tags           EntityType
+// Entity 1:  Position, Velocity         Unit           Npc
+// Entity 2:  Position, Name             Player         Npc
+// Entity 3:  Position, Velocity, Name   Unit, Player   Npc
+// Entity 4:  Velocity                   —              Bullet
+// Entity 5:  Position■, Velocity        Unit           Bullet
+//            (■ = disabled)
+//
+// Examples below show which entities pass each filter
+```
 
 ### Components:
-`All` - filters entities for the presence of all specified included components (overload from 1 to 8)
-```c#
-All<Position, Direction, Velocity> all = default;
-```
+```csharp
+// All — presence of ALL enabled components (from 1 to 8 types)
+All<Position, Velocity, Direction> all = default;
 
-`AllOnlyDisabled` - filters entities for the presence of all specified disabled components (overload from 1 to 8)
-```c#
-AllOnlyDisabled<Position, Direction, Velocity> all = default;
-```
+// AllOnlyDisabled — presence of ALL disabled components
+AllOnlyDisabled<Position> disabled = default;
 
-`AllWithDisabled` - filters entities for the presence of all specified (enabled and disabled) components (overload from 1 to 8)
-```c#
-AllWithDisabled<Position, Direction, Velocity> all = default;
-```
+// AllWithDisabled — presence of ALL components (any state)
+AllWithDisabled<Position, Velocity> any = default;
 
-`None` - filters entities for the absence of all specified included components (can only be used as part of other methods) (overloading from 1 to 8)
-```c#
+// None — absence of enabled components (from 1 to 8 types)
 None<Position, Name> none = default;
-```
 
-`NoneWithDisabled` - filters entities for the absence of all specified (enabled and disabled) components (can only be used as part of other methods) (overload from 1 to 8)
-```c#
-NoneWithDisabled<Position, Direction, Velocity> none = default;
-```
+// NoneWithDisabled — absence of components (any state)
+NoneWithDisabled<Position> noneAll = default;
 
-`Any` - filters entities for the presence of any of the specified included components (can only be used as part of other methods) (overloading from 1 to 8)
-```c#
-Any<Position, Direction, Velocity> any = default;
-```
+// Any — presence of at least one enabled component (from 2 to 8 types)
+Any<Position, Velocity> any = default;
 
-`AnyOnlyDisabled` - filters entities for the presence of any of the specified disabled components (can only be used as part of other methods) (overload from 1 to 8)
-```c#
-AnyOnlyDisabled<Position, Direction, Velocity> any = default;
-```
+// AnyOnlyDisabled — at least one disabled
+AnyOnlyDisabled<Position, Velocity> anyDis = default;
 
-`AnyWithDisabled` - filters entities for the presence of any of the specified (enabled and disabled) components (can only be used as part of other methods) (overload from 1 to 8)
-```c#
-AnyWithDisabled<Position, Direction, Velocity> any = default;
+// AnyWithDisabled — at least one (any state)
+AnyWithDisabled<Position, Velocity> anyAll = default;
+
+// Results for the entities above:
+// All<Position, Velocity>              → 1, 3
+// AllOnlyDisabled<Position>            → 5
+// AllWithDisabled<Position, Velocity>  → 1, 3, 5
+// None<Name>                           → 1, 4, 5
+// NoneWithDisabled<Position>           → 4
+// Any<Position, Name>                  → 1, 2, 3
+// AnyOnlyDisabled<Position, Velocity>  → 5
+// AnyWithDisabled<Position, Name>      → 1, 2, 3, 5
 ```
 
 ### Tags:
-`TagAll` - filters entities for the presence of all specified tags (overload from 1 to 8)
-```c#
-All<Unit, Player> all = default;
+
+Tags use the same filters as components — `All<>`, `None<>`, `Any<>` and their variants. No separate tag filter types exist.
+
+```csharp
+// All — presence of ALL specified tags (from 1 to 8 types)
+All<Unit, Player> tagAll = default;
+
+// None — absence of specified tags (from 1 to 8 types)
+None<Unit, Player> tagNone = default;
+
+// Any — at least one of the specified tags (from 2 to 8 types)
+Any<Unit, Player> tagAny = default;
+
+// Results for the entities above:
+// All<Unit, Player>  → 3
+// None<Unit>         → 2, 4
+// Any<Unit, Player>  → 1, 2, 3, 5
 ```
 
-`TagNone` - filters entities for the absence of all specified tags (can be used only as part of other methods) (overloading from 1 to 8)
-```c#
-TagNone<Unit, Player> none = default;
-```
+### Change tracking:
+```csharp
+// AllAdded — ALL specified components were added since last ClearTracking (from 1 to 5 types)
+AllAdded<Position> added = default;
+AllAdded<Position, Velocity> addedMulti = default;
 
-`TagAny` - filters entities for the presence of any of the specified tags (can only be used as part of other methods) (overloading from 1 to 8)
-```c#
-TagAny<Unit, Player> any = default;
-```
-___
+// AnyAdded — AT LEAST ONE of the specified components was added (from 2 to 5 types)
+AnyAdded<Position, Velocity> anyAdded = default;
 
-## Query Entities
-Classic query for entities in the world with specified components/tags  
-All query methods below are cache-free, allocated on the stack and can be used on-the-fly.
+// NoneAdded — NONE of the specified components were added (from 1 to 5 types)
+NoneAdded<Position> noneAdded = default;
 
-```c#
-// Iterate over all active entities in the world without filtering:
-foreach (var entity in W.Query.Entities()) {
-    Console.WriteLine(entity.PrettyString);
-}
+// AllDeleted — ALL specified components were deleted since last ClearTracking (from 1 to 5 types)
+AllDeleted<Position> deleted = default;
 
-// Different sets of filtering methods can be applied to the World.Query.Entities() method for example:
-// Option with 1 method via generic
-foreach (var entity in W.Query.Entities<All<Position, Velocity, Direction>>()) {
-    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
-}
+// AnyDeleted — AT LEAST ONE was deleted (from 2 to 5 types)
+AnyDeleted<Position, Velocity> anyDeleted = default;
 
-// Option with 1 method via value
-var all = default(All<Position, Direction, Velocity>);
-foreach (var entity in W.Query.Entities(all)) {
-    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
-}
+// NoneDeleted — NONE were deleted (from 1 to 5 types)
+NoneDeleted<Position> noneDeleted = default;
 
-// Option with 2 methods via common
-foreach (var entity in W.Query.Entities<
-             All<Position, Velocity, Name>,
-             None<Name>>()) {
-    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
-}
+// AllChanged — ALL specified components were accessed via ref since last ClearChangedTracking (from 1 to 5 types)
+// Requires ComponentTypeConfig.TrackChanged = true
+AllChanged<Position> changed = default;
 
-// Option with 2 methods (All and None) through the common, it is possible to specify up to 8 filtering methods
-foreach (var entity in W.Query.Entities<All<Position, Direction, Velocity>, None<Name>>()) {
-    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
-}
+// AnyChanged — AT LEAST ONE was changed (from 2 to 5 types)
+AnyChanged<Position, Velocity> anyChanged = default;
 
-// Option with 2 methods via value
-All<Position, Direction, Velocity> all2 = default;
-None<Name> none2 = default;
-foreach (var entity in W.Query.Entities(all2, none2)) {
-    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
+// NoneChanged — NONE were changed (from 1 to 5 types)
+NoneChanged<Position> noneChanged = default;
+
+// AllAdded / AnyAdded / NoneAdded / AllDeleted / AnyDeleted / NoneDeleted
+// also work with tags — use the same filters for both components and tags
+
+// Created — entity was created since last ClearCreatedTracking
+// (requires WorldConfig.TrackCreated = true, no type parameters)
+Created created = default;
+
+// Combination with other filters
+foreach (var entity in W.Query<AllAdded<Position>, All<Velocity, Unit>>().Entities()) {
+    ref var pos = ref entity.Ref<Position>();
+    // process newly added entities with Position
 }
 ```
 
-Also, all filtering methods can be grouped into a With type  
-which can be applied to the `World.Query.Entities()` method, for example:
+{: .note }
+In delegate-based iteration (`For`), `ref` parameters mark the component as Changed, while `in` parameters do not. Use `in` for read-only access to avoid unnecessary Changed marks. See [Changed Tracking](tracking#changed-tracking) for details.
 
-```c#
-// Option 1 via generic
-foreach (var entity in W.Query.Entities<With<
-             All<Position, Velocity, Direction>,
-             None<Name>,
-             TagAny<Unit, Player>
-         >>()) {
-    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
-}
+### Entity types:
+```csharp
+// EntityIs — exactly this entity type (1 type parameter)
+EntityIs<Bullet> entityIs = default;
 
-// Option 2 via value
-With<
-    All<Position, Velocity, Direction>,
-    None<Name>,
-    TagAny<Unit, Player>
-> with = default;
-foreach (var entity in W.Query.Entities(with)) {
-    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
-}
+// EntityIsNot — exclude entity types (from 1 to 5 types)
+EntityIsNot<Effect> entityIsNot = default;
 
-// Option 3 through values alternative
-var with2 = With.Create(
-    default(All<Position, Velocity, Direction>),
+// EntityIsAny — match any of the specified entity types (from 2 to 5 types)
+EntityIsAny<Bullet, Rocket> entityIsAny = default;
+
+// Results for the entities above:
+// EntityIs<Npc>              → 1, 2, 3
+// EntityIsNot<Bullet>        → 1, 2, 3
+// EntityIsAny<Npc, Bullet>   → 1, 2, 3, 4, 5
+```
+
+### And / Or — composite filters:
+
+`And` and `Or` allow grouping multiple filters into a single type. This is useful for:
+- **Passing a complex filter as one generic parameter** — store in a field, pass to a method, or use as a type argument
+- **Building filters that basic types cannot express** — e.g., "entities with component set A **or** component set B"
+
+#### And — all conditions must match (from 2 to 6 filters):
+```csharp
+And<All<Position, Velocity>, None<Name>, Any<Unit, Player>> filter = default;
+
+// Via factory method (type inference)
+var filter = And.By(
+    default(All<Position, Velocity>),
     default(None<Name>),
-    default(TagAny<Unit, Player>)
+    default(Any<Unit, Player>)
 );
-foreach (var entity in W.Query.Entities(with2)) {
-    entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
+
+// Use case: pass a composite filter to a helper method
+void ProcessMovable(And<All<Position, Velocity>, None<Frozen>> filter) {
+    foreach (var entity in W.Query(filter).Entities()) {
+        entity.Ref<Position>().Value += entity.Read<Velocity>().Value;
+    }
 }
+```
+
+#### Or — at least one condition must match (from 2 to 6 filters):
+
+`Or` enables combinationally complex filtering that basic filter types cannot express.
+
+```csharp
+// Melee fighters OR ranged fighters — completely different component sets,
+// cannot be expressed with a single All/Any/None combination
+Or<All<MeleeWeapon, Damage>, All<RangedWeapon, Ammo>> fighters = default;
+
+// Rebuild spatial index when Position was added, removed, or modified
+Or<AllAdded<Position>, AllDeleted<Position>, AllChanged<Position>> spatialChanged = default;
+
+// Process both UI buttons (ClickArea + Label) and world interactables (Collider + Interaction)
+Or<All<ClickArea, Label>, All<Collider, Interaction>> clickable = default;
+
+// Via factory method
+var filter = Or.By(
+    default(All<MeleeWeapon, Damage>),
+    default(All<RangedWeapon, Ammo>)
+);
+
+// Results for the entities above:
+// Or<All<Position, Velocity>, All<Position, Name>>
+// Entity 1: Pos✓ Vel✓         → ✓ (passes first)
+// Entity 2: Pos✓ Name✓        → ✓ (passes second)
+// Entity 3: Pos✓ Vel✓ Name✓   → ✓ (passes both)
+// Entity 4: Pos✗              → ✗
+// → Result: 1, 2, 3, 5
+```
+
+#### Nesting:
+```csharp
+// And and Or can be nested for arbitrarily complex logic
+// (A and B and C) or (A and B and D):
+Or<All<A, B, C>, All<A, B, D>> complex = default;
+
+// All visible entities that are either alive units or active effects:
+And<All<Visible>, Or<All<Unit, Alive>, All<Effect, Active>>> visibleAlive = default;
 ```
 
 ___
 
-## Query Components
-Optimized search for entities and components in the world using delegates  
-This "under the hood" method deploys loops and is a more convenient and efficient way of doing things  
-All query methods below, do not require caching, are allocated on the stack and can be used on-the-fly  
+## Entity iteration
 
-- An example of searching for all active entities in the world:
-```c#
-W.Query.For(entity => {
+```csharp
+// Iterate over all entities without filtering
+foreach (var entity in W.Query().Entities()) {
+    Console.WriteLine(entity.PrettyString);
+}
+
+// With filter via generic (from 1 to 8 filters)
+foreach (var entity in W.Query<All<Position, Velocity>>().Entities()) {
+    entity.Ref<Position>().Value += entity.Read<Velocity>().Value;
+}
+
+// With multiple filters
+foreach (var entity in W.Query<All<Position, Velocity>, None<Name>>().Entities()) {
+    entity.Ref<Position>().Value += entity.Read<Velocity>().Value;
+}
+
+// Via filter value
+var all = default(All<Position, Velocity>);
+foreach (var entity in W.Query(all).Entities()) {
+    entity.Ref<Position>().Value += entity.Read<Velocity>().Value;
+}
+
+// Via And/Or — group filters into a single type for passing to methods or storing in fields
+var filter = default(And<All<Position, Velocity>, None<Name>>);
+foreach (var entity in W.Query(filter).Entities()) {
+    entity.Ref<Position>().Value += entity.Read<Velocity>().Value;
+}
+
+// Flexible mode — allows modifying filtered types on other entities
+foreach (var entity in W.Query<All<Position>>().EntitiesFlexible()) {
+    // ...
+}
+
+// Find the first matching entity
+if (W.Query<All<Position>>().Any(out var found)) {
+    // found — first entity with Position
+}
+
+// Get the only entity (error in debug if more than one found)
+if (W.Query<All<Position>>().One(out var single)) {
+    // single — the only entity with Position
+}
+
+// Count matching entities (full scan)
+int count = W.Query<All<Position>>().EntitiesCount();
+```
+
+___
+
+## Delegate-based iteration (For)
+
+Optimized iteration via delegates — unrolls loops under the hood.
+
+```csharp
+// Over all entities
+W.Query().For(entity => {
     Console.WriteLine(entity.PrettyString);
 });
-```
 
-
-- Example search for all entities with specified components, 1 to 8 component types can be specified:
-```c#
-W.Query.For(static (ref Position pos, ref Velocity vel, ref Direction dir) => {
-    pos.Value += dir.Value * vel.Value;
-});
-```
-
-
-- It is possible to specify an entity before the components if it is required:
-```c#
-W.Query.For(static (W.Entity ent, ref Position pos, ref Velocity vel, ref Direction dir) => {
-    pos.Value += dir.Value * vel.Value;
-});
-```
-
-
-
-- To avoid delegate allocations, it is possible to pass any custom data type as the first param:
-
-```c#
-
-W.Query.For(deltaTime, static (ref float dt, W.Entity ent /* Optional */, ref Position pos, ref Velocity vel, ref Direction dir) => {
-    pos.Value += dir.Value * vel.Value * dt;
+// By components (from 1 to 6 types)
+// Components in the delegate automatically act as an All filter
+W.Query().For(static (ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
 });
 
-// It is possible to use tuples for multiple parameters
-W.Query.For((deltaTime, fixedDeltaTime), static (ref (float dt, float fdt) data, W.Entity entity /* Optional */, ref Position pos, ref Velocity vel, ref Direction dir) => {
-    // ...
+// With entity in delegate
+W.Query().For(static (W.Entity entity, ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
 });
 
-// It is also possible to pass ref the value of any custom type
+// With user data (to avoid delegate allocations)
+W.Query().For(deltaTime, static (ref float dt, ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value * dt;
+});
+
+// With ref data (for accumulating results)
 int count = 0;
-W.Query.For(ref count, static (ref int counter, W.Entity ent /* Optional */, ref Position pos, ref Velocity vel, ref Direction dir) => {
-    pos.Value += dir.Value * vel.Value;
+W.Query().For(ref count, static (ref int counter, W.Entity entity, ref Position pos) => {
     counter++;
 });
+
+// With tuple of multiple parameters
+W.Query().For((deltaTime, gravity), static (ref (float dt, float g) data, ref Position pos, ref Velocity vel) => {
+    vel.Value += data.g * data.dt;
+    pos.Value += vel.Value * data.dt;
+});
 ```
 
+### Readonly components (Read):
 
-- Additionally, it is possible to specify in which status you want to search for entities or components:
+When a component is only read and not modified, use `in` instead of `ref` in delegates. This tells the change tracking system not to mark the component as changed.
 
-```c#
-W.Query.For(
-    static (ref Position pos, ref Velocity vel, ref Direction dir) => {
+```csharp
+// Last N components as readonly via `in`
+W.Query().For(static (ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;  // Position — writable (ref), Velocity — readonly (in)
+});
+
+// All components readonly
+W.Query().For(static (in Position pos, in Velocity vel) => {
+    Console.WriteLine(pos.Value + vel.Value);
+});
+
+// With entity
+W.Query().For(static (W.Entity entity, ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
+});
+
+// With user data
+W.Query().For(ref result, static (ref float res, in Position pos, in Velocity vel) => {
+    res += pos.Value.Length;
+});
+```
+
+{: .note }
+Read variants are available when changed tracking is enabled (default). Can be disabled via `FFS_ECS_DISABLE_CHANGED_TRACKING` define.
+
+### With additional filtering:
+```csharp
+// Components in the delegate act as an All filter,
+// additional filters are specified directly on Query and don't require specifying delegate components
+W.Query<Any<Unit, Player>>().For(static (ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
+});
+
+// With multiple filters
+W.Query<None<Name>, Any<Unit, Player>>().For(static (ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
+});
+
+// Via value
+var filter = default(Any<Unit, Player>);
+W.Query(filter).For(static (ref Position pos, in Velocity vel) => {
+    pos.Value += vel.Value;
+});
+```
+
+### Entity and component status:
+```csharp
+W.Query().For(
+    static (ref Position pos, ref Velocity vel) => {
         // ...
     },
-    entities: EntityStatusType.Disabled, // (Enabled, Disabled, Any) Default Enabled
-    components: ComponentStatus.Disabled // (Enabled, Disabled, Any) Default Enabled
+    entities: EntityStatusType.Disabled,    // Enabled (default), Disabled, Any
+    components: ComponentStatus.Disabled    // Enabled (default), Disabled, Any
 );
 ```
 
+___
 
-- It is also possible to use With() for additional filtering of entities  
-> It should be noted that the components that are specified in the delegate are considered as All filter  
-> This means that With() only completes the filtering and does not require specifying the components used in the delegate.
+## Single entity search (Search)
 
-```c#
-W.Query.With<TagAny<Unit, Player>>().For((ref Position pos, ref Velocity vel, ref Direction dir) => {
-    pos.Value += dir.Value * vel.Value;
-});
+Iteration with early exit on first match. All components in search delegates are readonly (`in`).
 
-// or
-TagAny<Unit, Player> any = default;
-W.Query.With(any).For((ref Position pos, ref Velocity vel, ref Direction dir) => {
-    pos.Value += dir.Value * vel.Value;
-});
-
-// or it is possible to use With
-With<
-    None<Name>,
-    TagAny<Unit, Player>
-> with = default;
-
-W.Query.With(with).For((ref Position pos, ref Velocity vel, ref Direction dir) => {
-    pos.Value += dir.Value * vel.Value;
-});
-```
-
-
-### Parallel
-There is a possibility of multithreaded processing:  
-Important! Within an iteration always works `QueryMode.Strict` which means that modification of other (non-iterated) entities is forbidden (There will be an error in DEBUG).
-It is temporarily not possible in multithreaded processing to create new entities, extend multicomponents, and send or read events (Will be improved in future versions) (There will be a bug in DEBUG)  
-Multithreading service is disabled by default, to enable it you should specify `ParallelQueryType` as `MaxThreadsCount` in the config when creating a world.  
-or (`CustomThreadsCount` and specify the maximum number of threads) - useful when you want to specify different numbers for different worlds.  
-All the query methods below do not require caching, are allocated on the stack and can be used on the fly  
-
-`minChunkSize` - the value defines the minimum number of potential entities after which the function will use several threads.  
-
-Examples:  
-
-```c#
-W.Query.Parallel.For(minChunkSize: 50000, (W.Entity ent /* Optional */, ref Position pos, ref Velocity vel, ref Direction dir) => {
-    pos.Value += dir.Value * vel.Value;
-});
-
-W.Query.Parallel.For(minChunkSize: 50000, deltaTime, (ref float dt, W.Entity ent /* Optional */, ref Position pos, ref Velocity vel, ref Direction dir) => {
-    pos.Value += dir.Value * vel.Value * dt;
-});
-
-With<
-    None<Name>,
-    TagAny<Unit, Player>
-> with = default;
-W.Query.Parallel.With(with).For(minChunkSize: 50000, (ref Position pos, ref Velocity vel, ref Direction dir) => {
-    pos.Value += dir.Value * vel.Value;
-});
-```
-
----
-
-### Query Function
-`Query` allows you to define function structures instead of delegates  
-Can be used for optimization, passing state to a structure, or for passing logic.  
-
-```c#
-// Let's define a structure-function for which we can replace the delegate
-// It should implement the World.IQueryFunction interface with the specification of 1-8 components
-readonly struct StructFunction : W.IQueryFunction<Position, Velocity, Direction> {
-    public void Run(W.Entity entity, ref Position pos, ref Velocity vel, ref Direction dir) {
-        pos.Value += dir.Value * vel.Value;
-    }
-}
-
-// Option 1 with indication of generic (default The structure is created automatically)
-W.Query.For<Position, Velocity, Direction, StructFunction>();
-
-// Option 1 with value transfer
-W.Query.For<Position, Velocity, Direction, StructFunction>(new StructFunction());
-
-// Option 1 with ref value transfer
-var func = new StructFunction();
-W.Query.For<Position, Velocity, Direction, StructFunction>(ref func);
-
-// Option 2 with With via generic
-W.Query.With<With<
-    None<Name>,
-    TagAny<Unit, Player>
->>().For<Position, Velocity, Direction, StructFunction>();
-
-// Option 2 with `With` via value
-With<
-    None<Name>,
-    TagAny<Unit, Player>
-> with = default;
-W.Query.With(with).For<Position, Velocity, Direction, StructFunction>();
-
-// It is also possible to combine system and IQueryFunction for example:
-// it can improve code perception and increase performance + it allows you to access non-static members of the system
-public struct SomeFunctionSystem : IInitSystem, IUpdateSystem, W.IQueryFunction<Position, Velocity, Direction> {
-    private UserService1 _userService1;
-    
-    With<
-        None<Name>,
-        TagAny<Unit, Player>
-    > with;
-    
-    public void Init() {
-        _userService1 = W.Context<UserService1>.Get();
-    }
-    
-   public void Update() {
-       W.Query
-            .With(with)
-            .For<Position, Velocity, Direction, SomeFunctionSystem>(ref this); // Pass a reference to a function (system)
-   }
-    
-    // Define the function
-    public void Run(W.Entity entity, ref Position pos, ref Velocity vel, ref Direction dir) {
-        pos.Value += dir.Value * vel.Value;
-        _userService1.CallSomeMethod(entity);
-    }
+```csharp
+if (W.Query().Search(out W.Entity found,
+    (W.Entity entity, in Position pos, in Health health) => {
+        return pos.Value.x > 100 && health.Current < 50;
+    })) {
+    // found — first entity matching the condition
 }
 ```
 
 ___
 
-## Search
-There is an option for optimized iteration to search for a specific entity:  
-This function allows you to use early exit delegates when the search condition is first matched.  
+## Function structs (IQuery / IQueryBlock)
 
-Example:
+Function structs instead of delegates — for optimization, state passing, or extracting logic.
+Function structs use a **fluent builder API** on `WorldQuery` — unlike delegates, component types are not specified via generic parameters on `For`, but via the builder chain.
 
-```c#
-if (W.Query.Search(out W.Entity foundEntity, (W.Entity entity, ref Position position, ref Health health) => {
-        return position.Val.x > 100 && health.Val < 50;
-    })) {
-    // foundEntity logic ...
+### IQuery — per-entity callback:
+
+The interface hierarchy uses nested types for write/read access control (from 1 to 6 components total):
+- `IQuery.Write<T0, T1>` — all components writable (`ref`)
+- `IQuery.Read<T0, T1>` — all components readonly (`in`)
+- `IQuery.Write<T0>.Read<T1>` — first writable, rest readonly
+
+```csharp
+// All writable — IQuery.Write
+readonly struct MoveFunction : W.IQuery.Write<Position, Velocity> {
+    public void Invoke(W.Entity entity, ref Position pos, ref Velocity vel) {
+        pos.Value += vel.Value;
+    }
 }
+
+// Fluent API: Write<...>() specifies writable components, then For<TFunction>() executes
+W.Query().Write<Position, Velocity>().For<MoveFunction>();
+
+// With a value
+W.Query().Write<Position, Velocity>().For(new MoveFunction());
+
+// Via ref (to preserve state after iteration)
+var func = new MoveFunction();
+W.Query().Write<Position, Velocity>().For(ref func);
+
+// Mixed write/read — IQuery.Write<>.Read<>
+readonly struct ApplyVelocity : W.IQuery.Write<Position>.Read<Velocity> {
+    public void Invoke(W.Entity entity, ref Position pos, in Velocity vel) {
+        pos.Value += vel.Value;
+    }
+}
+
+// Chain: Write<writable>().Read<readonly>().For<TFunction>()
+W.Query().Write<Position>().Read<Velocity>().For<ApplyVelocity>();
+
+// All readonly — IQuery.Read
+readonly struct PrintPositions : W.IQuery.Read<Position, Velocity> {
+    public void Invoke(W.Entity entity, in Position pos, in Velocity vel) {
+        Console.WriteLine(pos.Value + vel.Value);
+    }
+}
+
+W.Query().Read<Position, Velocity>().For<PrintPositions>();
+
+// With additional filtering
+W.Query<None<Name>, Any<Unit, Player>>()
+    .Write<Position, Velocity>().For<MoveFunction>();
+
+// Combining system and IQuery
+public struct MoveSystem : ISystem, W.IQuery.Write<Position>.Read<Velocity> {
+    private float _speed;
+
+    public void Update() {
+        _speed = W.GetResource<GameConfig>().Speed;
+        W.Query<All<Unit>>()
+            .Write<Position>().Read<Velocity>().For(ref this);
+    }
+
+    public void Invoke(W.Entity entity, ref Position pos, in Velocity vel) {
+        pos.Value += vel.Value * _speed;
+    }
+}
+```
+
+### WorldQuery methods
+
+#### Delegates — component types are inferred from the lambda:
+
+| Method | Components |
+|--------|------------|
+| `For(delegate)` | 1–6, `ref` or `in` per component |
+| `ForParallel(delegate)` | 1–6, `ref` or `in` per component |
+| `Search(out entity, delegate)` | 1–6, all `in` |
+
+#### Function structs — component access via builder:
+
+| Method | Components | Access |
+|--------|------------|--------|
+| `Write<1‑6>()` | 1–6 | all `ref` |
+| `Write<1‑5>().Read<1‑5>()` | 2–6 total | first `ref`, rest `in` |
+| `Read<1‑6>()` | 1–6 | all `in` |
+
+#### Block function structs — same pattern, `unmanaged` only:
+
+| Method | Components | Access |
+|--------|------------|--------|
+| `WriteBlock<1‑6>()` | 1–6 | all `Block<T>` |
+| `WriteBlock<1‑5>().Read<1‑5>()` | 2–6 total | `Block<T>` + `BlockR<T>` |
+| `ReadBlock<1‑6>()` | 1–6 | all `BlockR<T>` |
+
+Each builder provides `For<F>()` and `ForParallel<F>()`.
+`Read` / `ReadBlock` require change tracking (enabled by default, disable via `FFS_ECS_DISABLE_CHANGED_TRACKING`).
+
+___
+
+## Parallel processing
+
+{: .warning }
+Parallel processing requires enabling at world creation: `ParallelQueryType.MaxThreadsCount` or `ParallelQueryType.CustomThreadsCount` with `CustomThreadCount` in `WorldConfig`.
+Inside parallel iteration, only the **current** iterated entity may be modified or destroyed. Forbidden: creating entities, modifying other entities, reading events. Sending events (`SendEvent`) is thread-safe (when there is no concurrent reading of the same type, see [Events](events#multithreading) for details). Always uses `QueryMode.Strict`.
+
+```csharp
+// Delegate — the first parameter, minEntitiesPerThread is named (default 256)
+W.Query().ForParallel(
+    static (W.Entity entity, ref Position pos, in Velocity vel) => {
+        pos.Value += vel.Value;
+    },
+    minEntitiesPerThread: 50000
+);
+
+// Without entity — components only
+W.Query().ForParallel(
+    static (ref Position pos, in Velocity vel) => {
+        pos.Value += vel.Value;
+    },
+    minEntitiesPerThread: 50000
+);
+
+// With user data
+W.Query().ForParallel(deltaTime,
+    static (ref float dt, ref Position pos, in Velocity vel) => {
+        pos.Value += vel.Value * dt;
+    },
+    minEntitiesPerThread: 50000
+);
+
+// With filtering
+W.Query<None<Name>, Any<Unit, Player>>().ForParallel(
+    static (W.Entity entity) => {
+        entity.Add<Name>();
+    },
+    minEntitiesPerThread: 50000
+);
+
+// Via function struct
+W.Query().Write<Position>().Read<Velocity>().ForParallel<ApplyVelocity>(
+    minEntitiesPerThread: 50000
+);
+
+// workersLimit — limit the number of threads (0 = use all available)
+W.Query().ForParallel(
+    static (ref Position pos) => { /* ... */ },
+    minEntitiesPerThread: 10000,
+    workersLimit: 4
+);
+```
+
+___
+
+## Block iteration (ForBlock)
+
+Low-level iteration via function structs — for `unmanaged` components, provides `Block<T>` (writable) and `BlockR<T>` (readonly) wrappers with direct pointers to data arrays.
+
+The interface hierarchy mirrors `IQuery` (from 1 to 6 unmanaged components total):
+- `IQueryBlock.Write<T0, T1>` — all components writable (`Block<T>`)
+- `IQueryBlock.Read<T0, T1>` — all components readonly (`BlockR<T>`)
+- `IQueryBlock.Write<T0>.Read<T1>` — first writable, rest readonly
+
+```csharp
+// All writable — IQueryBlock.Write
+readonly struct MoveBlock : W.IQueryBlock.Write<Position, Velocity> {
+    public void Invoke(uint count, EntityBlock entitiesBlock,
+                       Block<Position> positions, Block<Velocity> velocities) {
+        for (uint i = 0; i < count; i++) {
+            positions[i].Value += velocities[i].Value;
+        }
+    }
+}
+
+// Fluent API: WriteBlock<...>().For<TFunction>()
+W.Query().WriteBlock<Position, Velocity>().For<MoveBlock>();
+
+// Mixed write/read — WriteBlock<>.Read<>
+readonly struct ApplyVelocityBlock : W.IQueryBlock.Write<Position>.Read<Velocity> {
+    public void Invoke(uint count, EntityBlock entitiesBlock,
+                       Block<Position> positions, BlockR<Velocity> velocities) {
+        for (uint i = 0; i < count; i++) {
+            positions[i].Value += velocities[i].Value;
+        }
+    }
+}
+
+W.Query().WriteBlock<Position>().Read<Velocity>().For<ApplyVelocityBlock>();
+
+// All readonly — ReadBlock<>
+readonly struct SumPositionsBlock : W.IQueryBlock.Read<Position> {
+    public void Invoke(uint count, EntityBlock entitiesBlock, BlockR<Position> positions) {
+        for (uint i = 0; i < count; i++) {
+            // read-only access
+        }
+    }
+}
+
+W.Query().ReadBlock<Position>().For<SumPositionsBlock>();
+
+// Via ref (to preserve state)
+var func = new MoveBlock();
+W.Query().WriteBlock<Position, Velocity>().For(ref func);
+
+// Parallel version
+W.Query().WriteBlock<Position, Velocity>().ForParallel<MoveBlock>(minEntitiesPerThread: 50000);
+```
+
+___
+
+## Batch operations
+
+Bulk operations on all entities matching a filter — without writing a loop.
+Can be orders of magnitude faster than manual iteration via `For`: instead of per-entity processing, batch operations work with bitmasks — in the best case, adding or removing a component/tag for 64 entities is a single bitwise operation.
+Support call chaining — multiple operations can be performed in a single pass.
+
+```csharp
+// Add component to all entities (from 1 to 5 types)
+W.Query<All<Position>>().BatchSet(new Velocity { Value = 1f });
+
+// Delete component from all
+W.Query<All<Position, Velocity>>().BatchDelete<Velocity>();
+
+// Disable/enable component on all
+W.Query<All<Position>>().BatchDisable<Position>();
+W.Query<AllOnlyDisabled<Position>>().BatchEnable<Position>();
+
+// Tags: set, delete, toggle, apply by condition (from 1 to 5 types)
+W.Query<All<Position>>().BatchSet<Unit>();
+W.Query<All<Unit>>().BatchDelete<Unit>();
+W.Query<All<Position>>().BatchToggle<Unit>();
+W.Query<All<Position>>().BatchApply<Unit>(true);
+
+// Chaining
+W.Query<All<Position>>()
+    .BatchSet(new Velocity { Value = 1f })
+    .BatchSet<Unit>()
+    .BatchDisable<Position>();
+```
+
+___
+
+## Destroying and unloading entities
+
+```csharp
+// Destroy all entities matching a filter
+W.Query<All<Position>>().BatchDestroy();
+
+// With parameters
+W.Query<All<Unit>>().BatchDestroy(
+    entities: EntityStatusType.Any,
+    mode: QueryMode.Flexible
+);
+
+// Unload all entities matching a filter
+// (marks as unloaded, removes components/tags, but preserves entity IDs and versions)
+W.Query<All<Position>>().BatchUnload();
+
+// With parameters
+W.Query<All<Unit>>().BatchUnload(
+    entities: EntityStatusType.Any,
+    mode: QueryMode.Flexible
+);
 ```
 
 ___
 
 ## Clusters
 
-
 {: .important }
-For each filtering method  `Query.For()`, `Query.Parallel.For()`, `Query.Search()`, `Query.Entities()`  
-You can specify specific clusters in which iteration will be performed:
+All query methods (`Entities`, `For`, `ForParallel`, `Search`, `Batch*`, `BatchDestroy`, `BatchUnload`) accept a `clusters` parameter:
 
-```c#
-ReadOnlySpan<ushort> clusters = stackalloc ushort[3] { 2, 5, 12 };
+```csharp
+ReadOnlySpan<ushort> clusters = stackalloc ushort[] { 2, 5, 12 };
 
-W.Query.Entities<All<Position>>(clusters: clusters)
-    
-W.Query.For<Position>((W.Entity entity, ref Position position) => {
-    position.Val *= velocity.Val;
+foreach (var entity in W.Query<All<Position>>().Entities(clusters: clusters)) {
+    // iteration only over entities from clusters 2, 5, 12
+}
+
+W.Query().For(static (W.Entity entity, ref Position pos) => {
+    // ...
 }, clusters: clusters);
-```
-
----
-
-
-## Query Mode
-For each filtering method `Query.For()`, `Query.Search()`, `Query.Entities()`
-it is possible to specify the strictness of treatment of non-iterated entities
-Options available:
-- `QueryMode.Default` - By default if in the world configuration `WorldConfig.DefaultQueryModeStrict = true`: will be `Strict` otherwise `Flexible`.
-- `QueryMode.Strict` - Forbid modification of filtered component/tag types in other entities (Iteration works slightly faster than Flexible)
-- `QueryMode.Flexible` - Allows modification of filtered types of components/tags from other entities, and correctly controls the correctness of the current iteration
-
-Examples:
-
-```c#
-var anotherEntity = ...;
-
-for (var entity : W.Query.Entities<All<Position>>(queryMode: QueryMode.Strict)) {
-    anotherEntity.Delete<Position>(); // There will be an error in DEBUG because Strict mode and we are trying to modify another entity with the iterated component type
-}
-
-for (var entity : W.Query.Entities<All<Position>>(queryMode: QueryMode.Flexible)) {
-    anotherEntity.Delete<Position>(); // There will be no error and anotherEntity will be correctly excluded from the current iteration
-}
-
-for (var entity : W.Query.Entities<None<Position>>(queryMode: QueryMode.Flexible)) {
-    anotherEntity.Add<Position>(); // There will be no error and anotherEntity will be correctly excluded from the current iteration
-}
-
-// Similarly for all other types of filtering, All, Any, None, etc - in Flexible mode iteration will be stable.
-// Flexible mode is useful for example for hierarchies or caches, when we access and modify entities from components of other entities or from stored values.
-// in other cases Strict mode is preferable for performance reasons
 ```
 
 ___
 
+## QueryMode
 
-{: .important }
-For each filtering method  `Query.For()`, `Query.Parallel.For()`, `Query.Search()`, `Query.Entities()`  
-you can specify filtering by entity status, for example:
+For `For`, `Search`, `Entities` methods:
 
-```c#
-W.Query.Entities<All<Position>>(entities: EntityStatusType.Disabled)
-    
-W.Query.For<Position>((W.Entity entity, ref Position position) => {
-    position.Val *= velocity.Val;
-}, entities: EntityStatusType.Disabled);
+- **`QueryMode.Strict`** (default) — forbids modifying filtered component/tag types on **other** entities during iteration. Faster.
+- **`QueryMode.Flexible`** — allows modifying filtered types on other entities, correctly controls current iteration.
+
+```csharp
+var anotherEntity = W.NewEntity<Default>();
+anotherEntity.Add<Position>();
+
+// Strict: modifying Position on another entity — error in DEBUG
+foreach (var entity in W.Query<All<Position>>().Entities()) {
+    anotherEntity.Delete<Position>(); // ERROR in DEBUG
+}
+
+// Flexible: modification allowed, iteration is stable
+foreach (var entity in W.Query<All<Position>>().EntitiesFlexible()) {
+    anotherEntity.Delete<Position>(); // OK — anotherEntity correctly excluded
+}
+
+// For For/Search via parameter
+W.Query().For(static (ref Position pos) => {
+    // ...
+}, queryMode: QueryMode.Flexible);
 ```
+
+{: .note }
+`Flexible` is useful for hierarchies or caches when modifying entities from components of other entities. In other cases, prefer `Strict` for performance.

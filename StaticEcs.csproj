@@ -2,17 +2,17 @@
 
     <PropertyGroup>
         <OutputType>library</OutputType>
-        <TargetFrameworks>net9.0;net8.0;net7.0;net6.0;netstandard2.1</TargetFrameworks>
+        <TargetFrameworks>net10.0;net9.0;net8.0;net7.0;net6.0;netstandard2.1</TargetFrameworks>
         <LangVersion>9</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>disable</Nullable>
         <RootNamespace>FFS.Libraries.StaticEcs</RootNamespace>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>1.2.14</Version>
+        <Version>2.0.0</Version>
         <Authors>Felid-Force-Studios</Authors>
         <Description>C# Hierarchical Inverted Bitmap ECS framework</Description>
         <Copyright>Felid-Force-Studios</Copyright>
-        <PackageLicenseUrl>https://github.com/Felid-Force-Studios/StaticEcs/blob/master/LICENSE.md</PackageLicenseUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageTags>ecs; gamedev; unity; staticecs</PackageTags>
         <RepositoryUrl>https://github.com/Felid-Force-Studios/StaticEcs</RepositoryUrl>
         <IncludeSymbols>true</IncludeSymbols>
@@ -55,10 +55,10 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-        <PackageReference Include="FFS.StaticPack.Debug" Version="1.0.6" />
+        <PackageReference Include="FFS.StaticPack.Debug" Version="1.1.0" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(Configuration)' == 'Release'">
-        <PackageReference Include="FFS.StaticPack" Version="1.0.6" />
+        <PackageReference Include="FFS.StaticPack" Version="1.1.0" />
     </ItemGroup>
 </Project>

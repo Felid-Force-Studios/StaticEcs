@@ -1,8 +1,5 @@
-﻿#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
+#if ((DEBUG || FFS_ECS_ENABLE_DEBUG) && !FFS_ECS_DISABLE_DEBUG)
 #define FFS_ECS_DEBUG
-#endif
-#if FFS_ECS_DEBUG || FFS_ECS_ENABLE_DEBUG_EVENTS
-#define FFS_ECS_EVENTS
 #endif
 
 using System;
@@ -15,2315 +12,263 @@ using Unity.IL2CPP.CompilerServices;
 #endif
 
 namespace FFS.Libraries.StaticEcs {
-    
-    #if ENABLE_IL2CPP
-    [Il2CppSetOption(Option.NullChecks, false)]
-    [Il2CppSetOption(Option.ArrayBoundsChecks, false)]
-    #endif
-    public struct BlockMaskCache {
-        public ulong EntitiesMask;
-        public int NextGlobalBlock;
-    }
 
+    /// <summary>
+    /// Flexible (re-checking) entity iterator returned by
+    /// <see cref="World{TWorld}.WorldQuery{TFilter}.EntitiesFlexible"/>.
+    /// <para>
+    /// Unlike <see cref="QueryStrictIterator{TWorld,TFilter}"/>, this iterator re-evaluates
+    /// the entity bitmask on every block transition, allowing safe iteration even when the
+    /// filtered component or tag types are modified on <b>other</b> entities during the loop.
+    /// This makes it slightly slower than the strict variant but tolerant of concurrent mutations.
+    /// </para>
+    /// <para>
+    /// This is a <c>ref struct</c> — it cannot be boxed, stored in fields, or used across
+    /// <c>await</c> boundaries. Use it in a <c>foreach</c> loop.
+    /// </para>
+    /// </summary>
+    /// <typeparam name="TWorld">World type identifying the static ECS world to iterate.</typeparam>
+    /// <typeparam name="TFilter">Query filter constraining which entities are visited.</typeparam>
     #if ENABLE_IL2CPP
-    [Il2CppSetOption (Option.NullChecks, false)]
-    [Il2CppSetOption (Option.ArrayBoundsChecks, false)]
+    [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     #endif
-    public ref struct QueryEntitiesIterator<WorldType, QM> where QM : struct, IQueryMethod where WorldType : struct, IWorldType {
-        private QueryData qd;                    //8
-        private World<WorldType>.Entity current; //4
-        private int idx;                         //4
-        private int end;                         //4
-        private int firstGlobalBlockIdx;         //4
-        private QM _with;                        //???
-        private bool loopMode;                   //1
-        private bool strict;                     //1
-        private EntityStatusType _entities;
-        #if FFS_ECS_DEBUG
-        private bool disposed; //1
-        #endif
+    public ref struct QueryFlexibleIterator<TWorld, TFilter>
+        where TFilter : struct, IQueryFilter
+        where TWorld : struct, IWorldType {
 
+        private readonly QueryData _queryData;
+        private ulong _availableMask;
+        private World<TWorld>.Entity _current;
+        private int _firstGlobalBlockIdx;
+        private World<TWorld>.WorldQuery<TFilter> _query;
+        private readonly EntityStatusType _entities;
+
+        /// <summary>Creates a flexible iterator over entities in the specified clusters.</summary>
+        /// <param name="clusters">Cluster IDs to iterate. Pass <c>default</c> for all active clusters.</param>
+        /// <param name="filter">Query filter instance.</param>
+        /// <param name="entities">Which entity status to include (enabled, disabled, or both).</param>
         [MethodImpl(AggressiveInlining)]
         [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
-        public QueryEntitiesIterator(ReadOnlySpan<ushort> clusters, QM with, EntityStatusType entities, QueryMode queryMode) {
+        public QueryFlexibleIterator(ReadOnlySpan<ushort> clusters, TFilter filter, EntityStatusType entities) {
             #if FFS_ECS_DEBUG
-            World<WorldType>.AssertNotNestedParallelQuery(World<WorldType>.WorldTypeName);
-            with.Assert<WorldType>();
+            World<TWorld>.AssertNotNestedParallelQuery(World<TWorld>.WorldTypeName);
+            filter.Assert<TWorld>();
             #endif
 
             _entities = entities;
-            _with = with;
-            qd = default;
-            firstGlobalBlockIdx = -1;
-            loopMode = false;
-            #if FFS_ECS_DEBUG
-            disposed = false;
-            #endif
-            strict = queryMode == QueryMode.Strict || (queryMode == QueryMode.Default && World<WorldType>.config.DefaultQueryModeStrict);
-            idx = 0;
-            end = 0;
-            current = default;
-            
-            #if FFS_ECS_DEBUG
-            var modeVal = strict ? (byte) 1 : (byte) 2;
-            World<WorldType>.AssertSameQueryMode(World<WorldType>.WorldTypeName, modeVal);
-            World<WorldType>.CurrentQuery.QueryMode = modeVal;
-            #endif
-
-            var entitiesChunks = World<WorldType>.Entities.Value.chunks;
-            BlockMaskCache[] filteredBlocks = null;
-            
-            #if NET6_0_OR_GREATER
-            ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
-            #else
-            var deBruijn = Utils.DeBruijn;
-            #endif
-
-            var previousGlobalBlockIdx = -1;
-
-            var entitiesClusters = World<WorldType>.Entities.Value.clusters;
-
-            for (var i = 0; i < clusters.Length; i++) {
-                var clusterIdx = clusters[i];
-                ref var cluster = ref entitiesClusters[clusterIdx];
-                if (cluster.disabled) {
-                    continue;
-                }
-                for (uint chunkMapIdx = 0; chunkMapIdx < cluster.loadedChunksCount; chunkMapIdx++) {
-                    var chunkIdx = cluster.loadedChunks[chunkMapIdx];
-
-                    ref var chE = ref entitiesChunks[chunkIdx];
-                    
-                    var chunkMask = chE.notEmptyBlocks;
-                    _with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
-
-                    var lMask = chE.loadedEntities;
-                    var aMask = chE.entities;
-
-                    var dMask = chE.disabledEntities;
-
-                    while (chunkMask > 0) {
-                        var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
-                        chunkMask &= chunkMask - 1;
-                        var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-                        var entitiesMask = entities switch {
-                            EntityStatusType.Enabled  => lMask[blockIdx] & aMask[blockIdx] & ~dMask[blockIdx],
-                            EntityStatusType.Disabled => lMask[blockIdx] & dMask[blockIdx],
-                            _                         => lMask[blockIdx] & aMask[blockIdx]
-                        };
-                        _with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
-
-                        if (entitiesMask > 0) {
-                            if (previousGlobalBlockIdx >= 0) {
-                                filteredBlocks[previousGlobalBlockIdx].NextGlobalBlock = (int) globalBlockIdx;
-                            } else {
-                                qd = World<WorldType>.CurrentQuery.RegisterQuery();
-
-                                if (!strict) {
-                                    _with.IncQ<WorldType>(qd);
-                                    switch (_entities) {
-                                        case EntityStatusType.Enabled:  World<WorldType>.Entities.Value.IncQDisable(qd); break;
-                                        case EntityStatusType.Disabled: World<WorldType>.Entities.Value.IncQEnable(qd); break;
-                                    }
-                                    World<WorldType>.Entities.Value.IncQDestroy(qd);
-                                }
-                                #if FFS_ECS_DEBUG
-                                else {
-                                    const int b = 1;
-                                    _with.BlockQ<WorldType>(b);
-                                    switch (_entities) {
-                                        case EntityStatusType.Enabled:  World<WorldType>.Entities.Value.BlockDisable(b); break;
-                                        case EntityStatusType.Disabled: World<WorldType>.Entities.Value.BlockEnable(b); break;
-                                    }
-                                    World<WorldType>.Entities.Value.BlockDestroy(b);
-                                }
-                                #endif
-
-                                filteredBlocks = qd.Blocks;
-                                firstGlobalBlockIdx = (int) globalBlockIdx;
-                                loopMode = entitiesMask.CheckBitDensity(out idx, out end);
-                            }
-
-                            filteredBlocks[globalBlockIdx].EntitiesMask = entitiesMask;
-                            filteredBlocks[globalBlockIdx].NextGlobalBlock = -1;
-                            previousGlobalBlockIdx = (int) globalBlockIdx;
-                        }
-                    }
-                }
-            }
+            _current = default;
+            _query = World<TWorld>.Query(filter);
+            _query.Prepare(_query.Filter, clusters, entities, false, out _queryData, out _firstGlobalBlockIdx);
+            _availableMask = _firstGlobalBlockIdx >= 0 ? ulong.MaxValue : 0;
         }
 
         [MethodImpl(AggressiveInlining)]
         [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
-        public QueryEntitiesIterator(ReadOnlySpan<uint> chunks, QM with, EntityStatusType entities, QueryMode queryMode) {
+        internal QueryFlexibleIterator(ReadOnlySpan<uint> chunks, TFilter filter, EntityStatusType entities) {
             #if FFS_ECS_DEBUG
-            World<WorldType>.AssertNotNestedParallelQuery(World<WorldType>.WorldTypeName);
-            with.Assert<WorldType>();
+            World<TWorld>.AssertNotNestedParallelQuery(World<TWorld>.WorldTypeName);
+            filter.Assert<TWorld>();
             #endif
 
             _entities = entities;
-            _with = with;
-            qd = default;
-            firstGlobalBlockIdx = -1;
-            loopMode = false;
-            #if FFS_ECS_DEBUG
-            disposed = false;
-            #endif
-            strict = queryMode == QueryMode.Strict || (queryMode == QueryMode.Default && World<WorldType>.config.DefaultQueryModeStrict);
-            idx = 0;
-            end = 0;
-            current = default;
-
-            #if FFS_ECS_DEBUG
-            var modeVal = strict ? (byte) 1 : (byte) 2;
-            World<WorldType>.AssertSameQueryMode(World<WorldType>.WorldTypeName, modeVal);
-            World<WorldType>.CurrentQuery.QueryMode = modeVal;
-            #endif
-
-            var entitiesChunks = World<WorldType>.Entities.Value.chunks;
-            BlockMaskCache[] filteredBlocks = null;
-
-            #if NET6_0_OR_GREATER
-            ReadOnlySpan<byte> deBruijn = new(Utils.DeBruijn);
-            #else
-            var deBruijn = Utils.DeBruijn;
-            #endif
-
-            var previousGlobalBlockIdx = -1;
-
-            for (var chunkMapIdx = 0; chunkMapIdx < chunks.Length; chunkMapIdx++) {
-                var chunkIdx = chunks[chunkMapIdx];
-
-                ref var chE = ref entitiesChunks[chunkIdx];
-
-                var chunkMask = chE.notEmptyBlocks;
-                _with.CheckChunk<WorldType>(ref chunkMask, chunkIdx);
-
-                var lMask = chE.loadedEntities;
-                var aMask = chE.entities;
-
-                var dMask = chE.disabledEntities;
-
-                while (chunkMask > 0) {
-                    var blockIdx = (uint) deBruijn[(int) (((chunkMask & (ulong) -(long) chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
-                    chunkMask &= chunkMask - 1;
-                    var globalBlockIdx = blockIdx + (chunkIdx << Const.BLOCK_IN_CHUNK_SHIFT);
-                    var entitiesMask = entities switch {
-                        EntityStatusType.Enabled  => lMask[blockIdx] & aMask[blockIdx] & ~dMask[blockIdx],
-                        EntityStatusType.Disabled => lMask[blockIdx] & dMask[blockIdx],
-                        _                         => lMask[blockIdx] & aMask[blockIdx]
-                    };
-                    _with.CheckEntities<WorldType>(ref entitiesMask, chunkIdx, (int) blockIdx);
-
-                    if (entitiesMask > 0) {
-                        if (previousGlobalBlockIdx >= 0) {
-                            filteredBlocks[previousGlobalBlockIdx].NextGlobalBlock = (int) globalBlockIdx;
-                        } else {
-                            qd = World<WorldType>.CurrentQuery.RegisterQuery();
-
-                            if (!strict) {
-                                _with.IncQ<WorldType>(qd);
-                                switch (_entities) {
-                                    case EntityStatusType.Enabled:  World<WorldType>.Entities.Value.IncQDisable(qd); break;
-                                    case EntityStatusType.Disabled: World<WorldType>.Entities.Value.IncQEnable(qd); break;
-                                }
-
-                                World<WorldType>.Entities.Value.IncQDestroy(qd);
-                            }
-                            #if FFS_ECS_DEBUG
-                            else {
-                                const int b = 1;
-                                _with.BlockQ<WorldType>(b);
-                                switch (_entities) {
-                                    case EntityStatusType.Enabled:  World<WorldType>.Entities.Value.BlockDisable(b); break;
-                                    case EntityStatusType.Disabled: World<WorldType>.Entities.Value.BlockEnable(b); break;
-                                }
-
-                                World<WorldType>.Entities.Value.BlockDestroy(b);
-                            }
-                            #endif
-
-                            filteredBlocks = qd.Blocks;
-                            firstGlobalBlockIdx = (int) globalBlockIdx;
-                            loopMode = entitiesMask.CheckBitDensity(out idx, out end);
-                        }
-
-                        filteredBlocks[globalBlockIdx].EntitiesMask = entitiesMask;
-                        filteredBlocks[globalBlockIdx].NextGlobalBlock = -1;
-                        previousGlobalBlockIdx = (int) globalBlockIdx;
-                    }
-                }
-            }
+            _current = default;
+            _query = World<TWorld>.Query(filter);
+            _query.Prepare(_query.Filter, chunks, entities, false, out _queryData, out _firstGlobalBlockIdx);
+            _availableMask = _firstGlobalBlockIdx >= 0 ? ulong.MaxValue : 0;
         }
 
-        public readonly World<WorldType>.Entity Current {
-            [MethodImpl(AggressiveInlining)] get => current;
+        /// <summary>The entity at the current iterator position.</summary>
+        public readonly World<TWorld>.Entity Current {
+            [MethodImpl(AggressiveInlining)] get => _current;
         }
 
         [MethodImpl(AggressiveInlining)]
         public bool MoveNext() {
-            while (firstGlobalBlockIdx >= 0) {
-                ref var entitiesMask = ref qd.Blocks[firstGlobalBlockIdx].EntitiesMask;
-        
-                if (loopMode) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            current.id = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            #if FFS_ECS_DEBUG
-                            World<WorldType>.CurrentQuery.SetCurrentEntity(current.id);
-                            #endif
-                            return true;
-                        }
-                    }
-                } else if (entitiesMask > 0) {
-                    idx = Utils.PopLsb(ref entitiesMask);
-                    current.id = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx + Const.ENTITY_ID_OFFSET);
+            if (_firstGlobalBlockIdx >= 0) {
+                var mask = _queryData.Blocks[_firstGlobalBlockIdx].EntitiesMask & _availableMask;
+                if (mask != 0) {
+                    var isolatedBit = mask & (ulong)-(long)mask;
+                    _availableMask = ~(isolatedBit | (isolatedBit - 1));
+                    #if NET6_0_OR_GREATER
+                    var bitIdx = (uint)System.Numerics.BitOperations.TrailingZeroCount(mask);
+                    #else
+                    var bitIdx = (uint)Utils.DeBruijn[(uint)((isolatedBit * 0x37E84A99DAE458FUL) >> 58)];
+                    #endif
+                    _current.IdWithOffset = (uint)(_firstGlobalBlockIdx << Const.ENTITIES_IN_BLOCK_SHIFT) + Const.ENTITY_ID_OFFSET + bitIdx;
                     #if FFS_ECS_DEBUG
-                    World<WorldType>.CurrentQuery.SetCurrentEntity(current.id);
+                    World<TWorld>.Data.Instance.SetCurrentQueryEntity(_current.IdWithOffset);
                     #endif
                     return true;
                 }
-                
-                firstGlobalBlockIdx = qd.Blocks[firstGlobalBlockIdx].NextGlobalBlock;
-                if (firstGlobalBlockIdx >= 0) {
-                    loopMode = qd.Blocks[firstGlobalBlockIdx].EntitiesMask.CheckBitDensity(out idx, out end);
-                }
+                return Advance();
             }
-        
             return false;
         }
 
+        [MethodImpl(NoInlining)]
+        private bool Advance() {
+            while (true) {
+                _firstGlobalBlockIdx = _queryData.Blocks[_firstGlobalBlockIdx].NextGlobalBlock;
+                if (_firstGlobalBlockIdx < 0) return false;
+                _availableMask = ulong.MaxValue;
+                var mask = _queryData.Blocks[_firstGlobalBlockIdx].EntitiesMask;
+                if (mask != 0) {
+                    var isolatedBit = mask & (ulong)-(long)mask;
+                    _availableMask = ~(isolatedBit | (isolatedBit - 1));
+                    #if NET6_0_OR_GREATER
+                    var bitIdx = (uint)System.Numerics.BitOperations.TrailingZeroCount(mask);
+                    #else
+                    var bitIdx = (uint)Utils.DeBruijn[(uint)((isolatedBit * 0x37E84A99DAE458FUL) >> 58)];
+                    #endif
+                    _current.IdWithOffset = (uint)(_firstGlobalBlockIdx << Const.ENTITIES_IN_BLOCK_SHIFT) + Const.ENTITY_ID_OFFSET + bitIdx;
+                    #if FFS_ECS_DEBUG
+                    World<TWorld>.Data.Instance.SetCurrentQueryEntity(_current.IdWithOffset);
+                    #endif
+                    return true;
+                }
+            }
+        }
+
         [MethodImpl(AggressiveInlining)]
-        public readonly QueryEntitiesIterator<WorldType, QM> GetEnumerator() => this;
+        public readonly QueryFlexibleIterator<TWorld, TFilter> GetEnumerator() => this;
 
         [MethodImpl(AggressiveInlining)]
         public void Dispose() {
-            DisposePart1();
-            DisposePart2();
-        }
-        
-        #if FFS_ECS_DEBUG
-        private void AssertIsNotDisposed([CallerMemberName] string method = "") {
-            if (disposed) {
-                throw new StaticEcsException(World<WorldType>.WorldTypeName, method, "Iterator already disposed.");
+            if (_queryData.Blocks != null) {
+                _query.Dispose(_query.Filter, _entities, false, _queryData);
             }
         }
-        #endif
+    }
+
+    /// <summary>
+    /// Strict (fast-path) entity iterator returned by
+    /// <see cref="World{TWorld}.WorldQuery{TFilter}.Entities"/>.
+    /// <para>
+    /// The strict iterator assumes that the filtered component and tag types are <b>not</b>
+    /// modified on other entities during iteration. This allows it to skip per-block bitmask
+    /// re-evaluation, making it faster than <see cref="QueryFlexibleIterator{TWorld,TFilter}"/>.
+    /// Additionally, it uses a sequential bit-scan optimization: when the next entity is
+    /// adjacent in the bitmask, it advances with a single shift + increment instead of a
+    /// full trailing-zero-count scan.
+    /// </para>
+    /// <para>
+    /// This is a <c>ref struct</c> — it cannot be boxed, stored in fields, or used across
+    /// <c>await</c> boundaries. Use it in a <c>foreach</c> loop.
+    /// </para>
+    /// </summary>
+    /// <typeparam name="TWorld">World type identifying the static ECS world to iterate.</typeparam>
+    /// <typeparam name="TFilter">Query filter constraining which entities are visited.</typeparam>
+    #if ENABLE_IL2CPP
+    [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
+    [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    public ref struct QueryStrictIterator<TWorld, TFilter>
+        where TFilter : struct, IQueryFilter
+        where TWorld : struct, IWorldType {
+
+        private readonly QueryData _queryData;
+        private ulong _entitiesMask;
+        private ulong _isolatedBit;
+        private World<TWorld>.Entity _current;
+        private int _firstGlobalBlockIdx;
+        private World<TWorld>.WorldQuery<TFilter> _query;
+        private readonly EntityStatusType _entities;
+
+        /// <summary>Creates a strict iterator over entities in the specified clusters.</summary>
+        /// <param name="clusters">Cluster IDs to iterate. Pass <c>default</c> for all active clusters.</param>
+        /// <param name="filter">Query filter instance.</param>
+        /// <param name="entities">Which entity status to include (enabled, disabled, or both).</param>
+        [MethodImpl(AggressiveInlining)]
+        [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+        public QueryStrictIterator(ReadOnlySpan<ushort> clusters, TFilter filter, EntityStatusType entities) {
+            #if FFS_ECS_DEBUG
+            World<TWorld>.AssertNotNestedParallelQuery(World<TWorld>.WorldTypeName);
+            filter.Assert<TWorld>();
+            #endif
+
+            _entities = entities;
+            _current = default;
+            _query = World<TWorld>.Query(filter);
+            _query.Prepare(_query.Filter, clusters, entities, true, out _queryData, out _firstGlobalBlockIdx);
+
+            _isolatedBit = 0;
+            _entitiesMask = _firstGlobalBlockIdx >= 0 ? _queryData.Blocks[_firstGlobalBlockIdx].EntitiesMask : 0;
+        }
 
         [MethodImpl(AggressiveInlining)]
-        private void DisposePart1() {
-            if (qd.Blocks != null) {
-                if (!strict) {
-                    _with.DecQ<WorldType>();
-                    switch (_entities) {
-                        case EntityStatusType.Enabled:  World<WorldType>.Entities.Value.DecQDisable(); break;
-                        case EntityStatusType.Disabled: World<WorldType>.Entities.Value.DecQEnable(); break;
-                    }
-                    World<WorldType>.Entities.Value.DecQDestroy();
-                }
+        [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+        internal QueryStrictIterator(ReadOnlySpan<uint> chunks, TFilter filter, EntityStatusType entities) {
+            #if FFS_ECS_DEBUG
+            World<TWorld>.AssertNotNestedParallelQuery(World<TWorld>.WorldTypeName);
+            filter.Assert<TWorld>();
+            #endif
+
+            _entities = entities;
+            _current = default;
+            _query = World<TWorld>.Query(filter);
+            _query.Prepare(_query.Filter, chunks, entities, true, out _queryData, out _firstGlobalBlockIdx);
+
+            _isolatedBit = 0;
+            _entitiesMask = _firstGlobalBlockIdx >= 0 ? _queryData.Blocks[_firstGlobalBlockIdx].EntitiesMask : 0;
+        }
+
+        /// <summary>The entity at the current iterator position.</summary>
+        public readonly World<TWorld>.Entity Current {
+            [MethodImpl(AggressiveInlining)] get => _current;
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public bool MoveNext() {
+            var nextBit = _isolatedBit << 1;
+            if ((_entitiesMask & nextBit) != 0) {
+                _isolatedBit = nextBit;
+                ++_current.IdWithOffset;
                 #if FFS_ECS_DEBUG
-                else {
-                    const int b = -1;
-                    _with.BlockQ<WorldType>(b);
-                    switch (_entities) {
-                        case EntityStatusType.Enabled:  World<WorldType>.Entities.Value.BlockDisable(b); break;
-                        case EntityStatusType.Disabled: World<WorldType>.Entities.Value.BlockEnable(b); break;
-                    }
-                    World<WorldType>.Entities.Value.BlockDestroy(b);
-                }
-                World<WorldType>.CurrentQuery.SetCurrentEntity(0);
+                World<TWorld>.Data.Instance.SetCurrentQueryEntity(_current.IdWithOffset);
                 #endif
+                return true;
+            }
+            return Advance();
+        }
+
+        [MethodImpl(NoInlining)]
+        private bool Advance() {
+            if (_isolatedBit != 0) {
+                _entitiesMask &= ~(_isolatedBit | (_isolatedBit - 1));
+            }
+
+            while (true) {
+                if (_entitiesMask != 0) {
+                    var isolatedBit = _entitiesMask & (ulong)-(long)_entitiesMask;
+                    #if NET6_0_OR_GREATER
+                    var bitIndex = (uint)System.Numerics.BitOperations.TrailingZeroCount(_entitiesMask);
+                    #else
+                    var bitIndex = (uint)Utils.DeBruijn[(uint)((isolatedBit * 0x37E84A99DAE458FUL) >> 58)];
+                    #endif
+                    _isolatedBit = isolatedBit;
+                    _current.IdWithOffset = (uint)(_firstGlobalBlockIdx << Const.ENTITIES_IN_BLOCK_SHIFT) + Const.ENTITY_ID_OFFSET + bitIndex;
+                    #if FFS_ECS_DEBUG
+                    World<TWorld>.Data.Instance.SetCurrentQueryEntity(_current.IdWithOffset);
+                    #endif
+                    return true;
+                }
+
+                if (_firstGlobalBlockIdx < 0) return false;
+                _firstGlobalBlockIdx = _queryData.Blocks[_firstGlobalBlockIdx].NextGlobalBlock;
+                if (_firstGlobalBlockIdx < 0) return false;
+                _entitiesMask = _queryData.Blocks[_firstGlobalBlockIdx].EntitiesMask;
             }
         }
 
         [MethodImpl(AggressiveInlining)]
-        private void DisposePart2() {
-            if (qd.Blocks != null) {
-                World<WorldType>.CurrentQuery.UnregisterQuery(qd);
-                qd = default;
-            }
-            #if FFS_ECS_DEBUG
-            disposed = true;
-            if (World<WorldType>.CurrentQuery.QueryDataCount == 0) {
-                World<WorldType>.CurrentQuery.QueryMode = 0;
-            }
-            #endif
-        }
+        public readonly QueryStrictIterator<TWorld, TFilter> GetEnumerator() => this;
 
         [MethodImpl(AggressiveInlining)]
-        public void DestroyAllEntities() {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            entity.Destroy();
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask) + Const.ENTITY_ID_OFFSET);
-                        entity.Destroy();
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
+        public void Dispose() {
+            if (_queryData.Blocks != null) {
+                _query.Dispose(_query.Filter, _entities, true, _queryData);
             }
-
-            DisposePart2();
         }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool First(out World<WorldType>.Entity entity) {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            var moveNext = MoveNext();
-            entity = Current;
-            Dispose();
-            return moveNext;
-        }
-
-        [MethodImpl(AggressiveInlining)]
-        public bool FirstStrict(out World<WorldType>.Entity entity) {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            var moveNext = MoveNext();
-            entity = Current;
-            if (MoveNext()) throw new StaticEcsException($"QueryEntitiesIterator<{typeof(WorldType)}, {typeof(QM)}> found more than one entity");
-            Dispose();
-            return moveNext;
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public int EntitiesCount() {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            var count = 0;
-            
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                count += cache.EntitiesMask.PopCnt();
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            Dispose();
-            return count;
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        internal void WriteEntitySnapshotData(ref BinaryPackWriter writer, CustomSnapshotEntityDataWriter<WorldType> snapshotDataEntityWriter, SnapshotWriteParams snapshotParams) {
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            snapshotDataEntityWriter(ref writer, entity, snapshotParams);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        snapshotDataEntityWriter(ref writer, entity, snapshotParams);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        internal void ReadEntitySnapshotData(ref BinaryPackReader reader, CustomSnapshotEntityDataReader<WorldType> snapshotDataEntityReader, ushort version, SnapshotReadParams snapshotParams) {
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            snapshotDataEntityReader(ref reader, entity, version, snapshotParams);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        snapshotDataEntityReader(ref reader, entity, version, snapshotParams);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-
-            DisposePart2();
-        }
-
-        #region COMPONENTS
-        [MethodImpl(AggressiveInlining)]
-        public void AddForAll<T1>() where T1 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var components = ref World<WorldType>.Components<T1>.Value;
-            
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            components.Add(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        components.Add(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void AddForAll<T1, T2>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent{
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Add(entity);
-                            container2.Add(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Add(entity);
-                        container2.Add(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void AddForAll<T1, T2, T3>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Add(entity);
-                            container2.Add(entity);
-                            container3.Add(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Add(entity);
-                        container2.Add(entity);
-                        container3.Add(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void AddForAll<T1, T2, T3, T4>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Add(entity);
-                            container2.Add(entity);
-                            container3.Add(entity);
-                            container4.Add(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Add(entity);
-                        container2.Add(entity);
-                        container3.Add(entity);
-                        container4.Add(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void AddForAll<T1, T2, T3, T4, T5>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-            where T5 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            ref var container5 = ref World<WorldType>.Components<T5>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Add(entity);
-                            container2.Add(entity);
-                            container3.Add(entity);
-                            container4.Add(entity);
-                            container5.Add(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Add(entity);
-                        container2.Add(entity);
-                        container3.Add(entity);
-                        container4.Add(entity);
-                        container5.Add(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryAddForAll<T1>() where T1 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var components = ref World<WorldType>.Components<T1>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            components.TryAdd(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        components.TryAdd(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryAddForAll<T1, T2>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent{
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryAdd(entity);
-                            container2.TryAdd(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryAdd(entity);
-                        container2.TryAdd(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryAddForAll<T1, T2, T3>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryAdd(entity);
-                            container2.TryAdd(entity);
-                            container3.TryAdd(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryAdd(entity);
-                        container2.TryAdd(entity);
-                        container3.TryAdd(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryAddForAll<T1, T2, T3, T4>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryAdd(entity);
-                            container2.TryAdd(entity);
-                            container3.TryAdd(entity);
-                            container4.TryAdd(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryAdd(entity);
-                        container2.TryAdd(entity);
-                        container3.TryAdd(entity);
-                        container4.TryAdd(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryAddForAll<T1, T2, T3, T4, T5>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-            where T5 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            ref var container5 = ref World<WorldType>.Components<T5>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryAdd(entity);
-                            container2.TryAdd(entity);
-                            container3.TryAdd(entity);
-                            container4.TryAdd(entity);
-                            container5.TryAdd(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryAdd(entity);
-                        container2.TryAdd(entity);
-                        container3.TryAdd(entity);
-                        container4.TryAdd(entity);
-                        container5.TryAdd(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void AddForAll<T1>(T1 t1) 
-            where T1 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Add(entity, t1);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Add(entity, t1);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void AddForAll<T1, T2>(T1 t1, T2 t2) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Add(entity, t1);
-                            container2.Add(entity, t2);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Add(entity, t1);
-                        container2.Add(entity, t2);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void AddForAll<T1, T2, T3>(T1 t1, T2 t2, T3 t3) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Add(entity, t1);
-                            container2.Add(entity, t2);
-                            container3.Add(entity, t3);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Add(entity, t1);
-                        container2.Add(entity, t2);
-                        container3.Add(entity, t3);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void AddForAll<T1, T2, T3, T4>(T1 t1, T2 t2, T3 t3, T4 t4) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Add(entity, t1);
-                            container2.Add(entity, t2);
-                            container3.Add(entity, t3);
-                            container4.Add(entity, t4);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Add(entity, t1);
-                        container2.Add(entity, t2);
-                        container3.Add(entity, t3);
-                        container4.Add(entity, t4);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void AddForAll<T1, T2, T3, T4, T5>(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-            where T5 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            ref var container5 = ref World<WorldType>.Components<T5>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Add(entity, t1);
-                            container2.Add(entity, t2);
-                            container3.Add(entity, t3);
-                            container4.Add(entity, t4);
-                            container5.Add(entity, t5);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Add(entity, t1);
-                        container2.Add(entity, t2);
-                        container3.Add(entity, t3);
-                        container4.Add(entity, t4);
-                        container5.Add(entity, t5);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryAddForAll<T1>(T1 t1) 
-            where T1 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryAdd(entity) = t1;
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryAdd(entity) = t1;
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryAddForAll<T1, T2>(T1 t1, T2 t2) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryAdd(entity) = t1;
-                            container2.TryAdd(entity) = t2;
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryAdd(entity) = t1;
-                        container2.TryAdd(entity) = t2;
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryAddForAll<T1, T2, T3>(T1 t1, T2 t2, T3 t3) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryAdd(entity) = t1;
-                            container2.TryAdd(entity) = t2;
-                            container3.TryAdd(entity) = t3;
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryAdd(entity) = t1;
-                        container2.TryAdd(entity) = t2;
-                        container3.TryAdd(entity) = t3;
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryAddForAll<T1, T2, T3, T4>(T1 t1, T2 t2, T3 t3, T4 t4) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryAdd(entity) = t1;
-                            container2.TryAdd(entity) = t2;
-                            container3.TryAdd(entity) = t3;
-                            container4.TryAdd(entity) = t4;
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryAdd(entity) = t1;
-                        container2.TryAdd(entity) = t2;
-                        container3.TryAdd(entity) = t3;
-                        container4.TryAdd(entity) = t4;
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryAddForAll<T1, T2, T3, T4, T5>(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-            where T5 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            ref var container5 = ref World<WorldType>.Components<T5>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryAdd(entity) = t1;
-                            container2.TryAdd(entity) = t2;
-                            container3.TryAdd(entity) = t3;
-                            container4.TryAdd(entity) = t4;
-                            container5.TryAdd(entity) = t5;
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryAdd(entity) = t1;
-                        container2.TryAdd(entity) = t2;
-                        container3.TryAdd(entity) = t3;
-                        container4.TryAdd(entity) = t4;
-                        container5.TryAdd(entity) = t5;
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void PutForAll<T1>(T1 t1) 
-            where T1 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Put(entity, t1);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Put(entity, t1);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void PutForAll<T1, T2>(T1 t1, T2 t2) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Put(entity, t1);
-                            container2.Put(entity, t2);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Put(entity, t1);
-                        container2.Put(entity, t2);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void PutForAll<T1, T2, T3>(T1 t1, T2 t2, T3 t3) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Put(entity, t1);
-                            container2.Put(entity, t2);
-                            container3.Put(entity, t3);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Put(entity, t1);
-                        container2.Put(entity, t2);
-                        container3.Put(entity, t3);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void PutForAll<T1, T2, T3, T4>(T1 t1, T2 t2, T3 t3, T4 t4) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Put(entity, t1);
-                            container2.Put(entity, t2);
-                            container3.Put(entity, t3);
-                            container4.Put(entity, t4);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Put(entity, t1);
-                        container2.Put(entity, t2);
-                        container3.Put(entity, t3);
-                        container4.Put(entity, t4);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void PutForAll<T1, T2, T3, T4, T5>(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-            where T5 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            ref var container5 = ref World<WorldType>.Components<T5>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Put(entity, t1);
-                            container2.Put(entity, t2);
-                            container3.Put(entity, t3);
-                            container4.Put(entity, t4);
-                            container5.Put(entity, t5);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Put(entity, t1);
-                        container2.Put(entity, t2);
-                        container3.Put(entity, t3);
-                        container4.Put(entity, t4);
-                        container5.Put(entity, t5);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void DeleteForAll<T1>() 
-            where T1 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Delete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Delete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void DeleteForAll<T1, T2>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Delete(entity);
-                            container2.Delete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Delete(entity);
-                        container2.Delete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void DeleteForAll<T1, T2, T3>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Delete(entity);
-                            container2.Delete(entity);
-                            container3.Delete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Delete(entity);
-                        container2.Delete(entity);
-                        container3.Delete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void DeleteForAll<T1, T2, T3, T4>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Delete(entity);
-                            container2.Delete(entity);
-                            container3.Delete(entity);
-                            container4.Delete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Delete(entity);
-                        container2.Delete(entity);
-                        container3.Delete(entity);
-                        container4.Delete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void DeleteForAll<T1, T2, T3, T4, T5>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-            where T5 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            ref var container5 = ref World<WorldType>.Components<T5>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Delete(entity);
-                            container2.Delete(entity);
-                            container3.Delete(entity);
-                            container4.Delete(entity);
-                            container5.Delete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Delete(entity);
-                        container2.Delete(entity);
-                        container3.Delete(entity);
-                        container4.Delete(entity);
-                        container5.Delete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryDeleteForAll<T1>() 
-            where T1 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryDelete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryDelete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryDeleteForAll<T1, T2>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryDelete(entity);
-                            container2.TryDelete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryDelete(entity);
-                        container2.TryDelete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryDeleteForAll<T1, T2, T3>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryDelete(entity);
-                            container2.TryDelete(entity);
-                            container3.TryDelete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryDelete(entity);
-                        container2.TryDelete(entity);
-                        container3.TryDelete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryDeleteForAll<T1, T2, T3, T4>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryDelete(entity);
-                            container2.TryDelete(entity);
-                            container3.TryDelete(entity);
-                            container4.TryDelete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryDelete(entity);
-                        container2.TryDelete(entity);
-                        container3.TryDelete(entity);
-                        container4.TryDelete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void TryDeleteForAll<T1, T2, T3, T4, T5>() 
-            where T1 : struct, IComponent
-            where T2 : struct, IComponent
-            where T3 : struct, IComponent
-            where T4 : struct, IComponent
-            where T5 : struct, IComponent {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Components<T1>.Value;
-            ref var container2 = ref World<WorldType>.Components<T2>.Value;
-            ref var container3 = ref World<WorldType>.Components<T3>.Value;
-            ref var container4 = ref World<WorldType>.Components<T4>.Value;
-            ref var container5 = ref World<WorldType>.Components<T5>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.TryDelete(entity);
-                            container2.TryDelete(entity);
-                            container3.TryDelete(entity);
-                            container4.TryDelete(entity);
-                            container5.TryDelete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.TryDelete(entity);
-                        container2.TryDelete(entity);
-                        container3.TryDelete(entity);
-                        container4.TryDelete(entity);
-                        container5.TryDelete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        #endregion
-        
-        #region TAGS
-        [MethodImpl(AggressiveInlining)]
-        public void SetTagForAll<T1>() where T1 : struct, ITag {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container = ref World<WorldType>.Tags<T1>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container.Set(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container.Set(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void SetTagForAll<T1, T2>() 
-            where T1 : struct, ITag
-            where T2 : struct, ITag {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Tags<T1>.Value;
-            ref var container2 = ref World<WorldType>.Tags<T2>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Set(entity);
-                            container2.Set(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Set(entity);
-                        container2.Set(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void SetTagForAll<T1, T2, T3>() 
-            where T1 : struct, ITag
-            where T2 : struct, ITag
-            where T3 : struct, ITag {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Tags<T1>.Value;
-            ref var container2 = ref World<WorldType>.Tags<T2>.Value;
-            ref var container3 = ref World<WorldType>.Tags<T3>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Set(entity);
-                            container2.Set(entity);
-                            container3.Set(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Set(entity);
-                        container2.Set(entity);
-                        container3.Set(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void SetTagForAll<T1, T2, T3, T4>() 
-            where T1 : struct, ITag
-            where T2 : struct, ITag
-            where T3 : struct, ITag
-            where T4 : struct, ITag {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Tags<T1>.Value;
-            ref var container2 = ref World<WorldType>.Tags<T2>.Value;
-            ref var container3 = ref World<WorldType>.Tags<T3>.Value;
-            ref var container4 = ref World<WorldType>.Tags<T4>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Set(entity);
-                            container2.Set(entity);
-                            container3.Set(entity);
-                            container4.Set(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Set(entity);
-                        container2.Set(entity);
-                        container3.Set(entity);
-                        container4.Set(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void SetTagForAll<T1, T2, T3, T4, T5>() 
-            where T1 : struct, ITag
-            where T2 : struct, ITag
-            where T3 : struct, ITag
-            where T4 : struct, ITag
-            where T5 : struct, ITag {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Tags<T1>.Value;
-            ref var container2 = ref World<WorldType>.Tags<T2>.Value;
-            ref var container3 = ref World<WorldType>.Tags<T3>.Value;
-            ref var container4 = ref World<WorldType>.Tags<T4>.Value;
-            ref var container5 = ref World<WorldType>.Tags<T5>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Set(entity);
-                            container2.Set(entity);
-                            container3.Set(entity);
-                            container4.Set(entity);
-                            container5.Set(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Set(entity);
-                        container2.Set(entity);
-                        container3.Set(entity);
-                        container4.Set(entity);
-                        container5.Set(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void DeleteTagForAll<T1>() 
-            where T1 : struct, ITag {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Tags<T1>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Delete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Delete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void DeleteTagForAll<T1, T2>() 
-            where T1 : struct, ITag
-            where T2 : struct, ITag {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Tags<T1>.Value;
-            ref var container2 = ref World<WorldType>.Tags<T2>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Delete(entity);
-                            container2.Delete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Delete(entity);
-                        container2.Delete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void DeleteTagForAll<T1, T2, T3>() 
-            where T1 : struct, ITag
-            where T2 : struct, ITag
-            where T3 : struct, ITag {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Tags<T1>.Value;
-            ref var container2 = ref World<WorldType>.Tags<T2>.Value;
-            ref var container3 = ref World<WorldType>.Tags<T3>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Delete(entity);
-                            container2.Delete(entity);
-                            container3.Delete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Delete(entity);
-                        container2.Delete(entity);
-                        container3.Delete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void DeleteTagForAll<T1, T2, T3, T4>() 
-            where T1 : struct, ITag
-            where T2 : struct, ITag
-            where T3 : struct, ITag
-            where T4 : struct, ITag {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Tags<T1>.Value;
-            ref var container2 = ref World<WorldType>.Tags<T2>.Value;
-            ref var container3 = ref World<WorldType>.Tags<T3>.Value;
-            ref var container4 = ref World<WorldType>.Tags<T4>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Delete(entity);
-                            container2.Delete(entity);
-                            container3.Delete(entity);
-                            container4.Delete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Delete(entity);
-                        container2.Delete(entity);
-                        container3.Delete(entity);
-                        container4.Delete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        
-        [MethodImpl(AggressiveInlining)]
-        public void DeleteTagForAll<T1, T2, T3, T4, T5>() 
-            where T1 : struct, ITag
-            where T2 : struct, ITag
-            where T3 : struct, ITag
-            where T4 : struct, ITag
-            where T5 : struct, ITag {
-            #if FFS_ECS_DEBUG
-            AssertIsNotDisposed();
-            #endif
-            DisposePart1();
-            var entity = new World<WorldType>.Entity();
-            ref var eid = ref entity.id;
-            ref var container1 = ref World<WorldType>.Tags<T1>.Value;
-            ref var container2 = ref World<WorldType>.Tags<T2>.Value;
-            ref var container3 = ref World<WorldType>.Tags<T3>.Value;
-            ref var container4 = ref World<WorldType>.Tags<T4>.Value;
-            ref var container5 = ref World<WorldType>.Tags<T5>.Value;
-            while (firstGlobalBlockIdx >= 0) {
-                ref var cache = ref qd.Blocks[firstGlobalBlockIdx];
-                ref var entitiesMask = ref cache.EntitiesMask;
-        
-                if (entitiesMask.CheckBitDensity(out idx, out end)) {
-                    while (idx < end) {
-                        if ((entitiesMask & (1UL << idx++)) > 0) {
-                            eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + idx);
-                            container1.Delete(entity);
-                            container2.Delete(entity);
-                            container3.Delete(entity);
-                            container4.Delete(entity);
-                            container5.Delete(entity);
-                        }
-                    }
-                } else {
-                    while (entitiesMask > 0) {
-                        eid = (uint) ((firstGlobalBlockIdx << Const.BLOCK_IN_CHUNK_SHIFT) + Utils.PopLsb(ref entitiesMask)) + Const.ENTITY_ID_OFFSET;
-                        container1.Delete(entity);
-                        container2.Delete(entity);
-                        container3.Delete(entity);
-                        container4.Delete(entity);
-                        container5.Delete(entity);
-                    }
-                }
-                
-                firstGlobalBlockIdx = cache.NextGlobalBlock;
-            }
-            DisposePart2();
-        }
-        #endregion
     }
 }

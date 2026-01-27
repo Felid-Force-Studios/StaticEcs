@@ -4,160 +4,266 @@ parent: Возможности
 nav_order: 10
 ---
 
-## SystemsType
-Тип-тег-идентификатор систем, служит для изоляции статических данных при создании групп систем в одном процессе
-- Представлен в виде пользовательской структуры без данных с маркер интерфейсом `ISystemsType`
-
-#### Пример:
-```c#
-public struct BaseSystemsType : ISystemsType { }
-public struct FixedSystemsType : ISystemsType { }
-public struct LateSystemsType : ISystemsType { }
-```
-
-___
-
 ## Systems
-Системы, контролирует и менеджируют создание и запуск систем
-- Представлен в виде статического класса `Systems<ISystemsType>`
+Системы управляют логикой мира через определённый жизненный цикл
+- Вложенный класс `World<TWorld>.Systems<SysType>` — каждый тип `ISystemsType` создаёт изолированную группу систем внутри мира
+- Единый интерфейс `ISystem` с четырьмя методами (все опциональны)
+- Системы выполняются в порядке, определённом параметром `order`
+- Нереализованные методы не вызываются и не создают накладных расходов
+- Системы могут быть структурами или классами
 
+___
 
-```c#
-// Системы существуют 3 видов и могут использоваться во всех комбинациях вместе или отдельно
+## ISystemsType
 
-// Система IInitSystem - метод Init() запускается один раз при инициализации MySystems.Initialize()
-// Пример:
-public struct SomeInitSystem : IInitSystem {
-    public void Init() { }
-}
+Маркерный интерфейс для изоляции групп систем. Каждый тип получает собственное статическое хранилище:
 
-// Система IUpdateSystem  - метод Update() запускается каждый раз при вызове MySystems.Update();
-// Пример:
-public struct SomeUpdateSystem : IUpdateSystem {
-    public void Update() { }
-}
+```csharp
+public struct GameSystems : ISystemsType { }
+public struct FixedSystems : ISystemsType { }
+public struct LateSystems : ISystemsType { }
 
-// Система IDestroySystem - метод Destroy() запускается один раз при вызове MySystems.Destroy();
-// Пример:
-public struct SomeDestroySystem : IDestroySystem {
-    public void Destroy() { }
-}
-
- // Комбинированная система
- public struct SomeInitDestroySystem : IInitSystem, IDestroySystem {
-     public void Init() { }
-     public void Destroy() { }
- }
-
- // Комбинированная система
- public struct SomeComboSystem : IInitSystem, IUpdateSystem, IDestroySystem {
-     public void Init() { }
-     public void Update() { }
-     public void Destroy() { }
- }
+// Алиасы для удобного доступа
+public abstract class GameSys : W.Systems<GameSystems> { }
+public abstract class FixedSys : W.Systems<FixedSystems> { }
+public abstract class LateSys : W.Systems<LateSystems> { }
 ```
 
 ___
 
-#### Создание и операции:
-```c#
-// Определяем идентификатор систем
-public struct SystemsType : ISystemsType { }
+## ISystem
 
-// Определяем тип-алиас для удобного доступа к системам
-public abstract class Systems : W.Systems<SystemsType> { }
+Единый интерфейс для всех систем. Реализуйте только нужные методы — остальные не будут вызываться:
 
-// Здесь будет созданны структуры для систем
-Systems.Create();
+```csharp
+public interface ISystem {
+    // Вызывается один раз при Systems.Initialize()
+    void Init() { }
 
-// Добавление системы НЕ реализующей IUpdateSystem, то есть Init и\или Destroy системы
-Systems.AddCallOnce(new SomeInitSystem());
-Systems.AddCallOnce(new SomeDestroySystem>());
-Systems.AddCallOnce(new SomeInitDestroySystem>());
+    // Вызывается каждый кадр при Systems.Update()
+    void Update() { }
 
-// Добавление системы реализующей IUpdateSystem, с наличием любых имплементаций таких как Init или Destroy
-Systems.AddUpdate(new SomeComboSystem());
+    // Вызывается перед каждым Update() — false пропускает обновление
+    bool UpdateIsActive() => true;
 
-// Важно! Системы запускаются в порядке перeданным вторым аргументом (по умолчанию order 0)
-Systems.AddUpdate(new SomeComboSystem(), order: 3);
+    // Вызывается один раз при Systems.Destroy()
+    void Destroy() { }
+}
+```
 
-// это значит что сначала будут запущены все Init системы в том порядке в котором добавлены
-// затем в игровом цикле будут выполняться по порядку все Update системы
-// затем по порядку вызовутся все системы типа Destroy при уничтожении мира
+{: .importantru }
+Не оставляйте пустые реализации методов. Если метод не нужен — не реализуйте его. Нереализованные методы обнаруживаются через рефлексию и не вызываются.
 
-// Важно! Системы могут быть структурами или классами
-// (использование структур может существенно увеличить производительность для небольших систем)
-
-// Есть возможность подключать системы батчами что может существенно увеличить производительность
-// Добавление батча систем, каждая система может реализовывать любые типы систем но обязана иметь реализацию IUpdateSystem
-Systems.AddUpdate(
-    new SomeUpdateSystem1(),
-    new SomeComboSystem1(),
-    new SomeComboSystem2(),
-    new SomeComboSystem3(),
-    new SomeComboSystem4(),
-    new SomeComboSystem5(),
-    new SomeComboSystem()
-);
-
-// Есть возможность добавить условия для систем, для этого требуется реализовать ISystemCondition
-class GamePauseCondition : ISystemCondition {
-    private bool paused;
-    
-    public bool ShouldUpdate() => !paused;
+#### Примеры систем:
+```csharp
+// Система только с Update
+public struct MoveSystem : ISystem {
+    public void Update() {
+        W.Query().For(static (ref Position pos, in Velocity vel) => {
+            pos.Value += vel.Value;
+        });
+    }
 }
 
-// Метод AddConditionalUpdate принимает первым аргументом реализацию ISystemCondition, при обновлении систем они будут запущенны только если ShouldUpdate true
-tSystems.AddConditionalUpdate(new GamePauseCondition(), new SaveLoadSystem());
+// Система с инициализацией и уничтожением
+public struct AudioSystem : ISystem {
+    public void Init() {
+        // загрузить аудио-ресурсы
+    }
 
-// Также для группы систем
-Systems.AddConditionalUpdate(
-    new GamePauseCondition(), 
-    
-    new SomeUpdateSystem1(),
-    new SomeComboSystem1(),
-    new SomeComboSystem2(),
-    new SomeComboSystem3(),
-    new SomeComboSystem4(),
-    new SomeComboSystem5(),
-    new SomeComboSystem()
-);
+    public void Update() {
+        // обработать звуки
+    }
 
-// Здесь будут вызваны все Init системы
-Systems.Initialize();
+    public void Destroy() {
+        // освободить ресурсы
+    }
+}
 
-// Здесь будут вызваны все Update системы
-Systems.Update();
+// Система с условным выполнением
+public struct PausableSystem : ISystem {
+    public void Update() {
+        // игровая логика
+    }
 
-// Здесь будут вызваны все Destroy системы
-Systems.Destroy();
+    public bool UpdateIsActive() {
+        return !W.GetResource<GameState>().IsPaused;
+    }
+}
 ```
 
 ___
 
-#### Системы с условным выполнением:
-```c#
-// Есть возможность добавить условия для систем, для этого требуется реализовать ISystemState
-class GamePauseState : ISystemState {
-    private bool paused;
-    
-    public bool IsActive() => !paused;
+## Жизненный цикл
+
+```
+Create() → Add() → Initialize() → Update() цикл → Destroy()
+```
+
+```csharp
+// 1. Создать группу систем (baseSize — начальная ёмкость массива)
+GameSys.Create(baseSize: 64);
+
+// 2. Зарегистрировать системы (order определяет порядок выполнения)
+GameSys.Add(new InputSystem(), order: -10)
+    .Add(new MoveSystem(), order: 0)
+    .Add(new RenderSystem(), order: 10);
+
+// 3. Инициализировать — сортирует по order, вызывает Init() у всех систем
+GameSys.Initialize();
+
+// 4. Игровой цикл — вызывает Update() каждый кадр
+while (gameIsRunning) {
+    GameSys.Update();
 }
 
-// Метод AddConditionalUpdate принимает первым аргументом реализацию ISystemState
-// при обновлении систем они будут запущенны только если IsActive возвращает true
-tSystems.AddConditionalUpdate(new GamePauseState(), new SomeUpdateSystem());
+// 5. Уничтожить — вызывает Destroy() у всех систем, сбрасывает состояние
+GameSys.Destroy();
+```
 
-// Также для группы систем
-Systems.AddConditionalUpdate(
-    new GamePauseState(), 
-    
-    new SomeUpdateSystem1(),
-    new SomeComboSystem1(),
-    new SomeComboSystem2(),
-    new SomeComboSystem3(),
-    new SomeComboSystem4(),
-    new SomeComboSystem5(),
-    new SomeComboSystem()
-);
+___
+
+## Регистрация
+
+Все системы регистрируются одним методом `Add<T>()`:
+
+```csharp
+// Базовая регистрация (order по умолчанию = 0)
+GameSys.Add(new MoveSystem());
+
+// С указанием порядка (меньше = раньше)
+GameSys.Add(new InputSystem(), order: -10)      // выполняется первой
+    .Add(new PhysicsSystem(), order: 0)          // затем физика
+    .Add(new RenderSystem(), order: 10);         // рендер последним
+
+// Системы с одинаковым order выполняются в порядке регистрации
+GameSys.Add(new SystemA(), order: 0)   // первая среди order=0
+    .Add(new SystemB(), order: 0);     // вторая среди order=0
+```
+
+___
+
+## Условное выполнение
+
+Метод `UpdateIsActive()` позволяет пропускать обновление системы на текущем кадре:
+
+```csharp
+public struct GameplaySystem : ISystem {
+    public void Update() {
+        // логика, выполняемая только когда игра не на паузе
+    }
+
+    public bool UpdateIsActive() {
+        return !W.GetResource<GameState>().IsPaused;
+    }
+}
+
+public struct TutorialSystem : ISystem {
+    public void Update() {
+        // логика обучения
+    }
+
+    public bool UpdateIsActive() {
+        return W.GetResource<PlayerProgress>().IsFirstPlay;
+    }
+}
+```
+
+___
+
+## Несколько групп систем
+
+Разные `ISystemsType` создают независимые группы с собственным жизненным циклом:
+
+```csharp
+public struct GameSystems : ISystemsType { }
+public struct FixedSystems : ISystemsType { }
+public abstract class GameSys : W.Systems<GameSystems> { }
+public abstract class FixedSys : W.Systems<FixedSystems> { }
+
+// Настройка
+GameSys.Create();
+GameSys.Add(new InputSystem())
+    .Add(new RenderSystem());
+GameSys.Initialize();
+
+FixedSys.Create();
+FixedSys.Add(new PhysicsSystem())
+    .Add(new CollisionSystem());
+FixedSys.Initialize();
+
+// Игровой цикл
+while (gameIsRunning) {
+    GameSys.Update();           // каждый кадр
+
+    while (fixedTimeAccumulated) {
+        FixedSys.Update();      // с фиксированным шагом
+    }
+}
+
+GameSys.Destroy();
+FixedSys.Destroy();
+```
+
+___
+
+## Полный пример
+
+```csharp
+// Типы систем
+public struct GameSystems : ISystemsType { }
+
+// Системы
+public struct InputSystem : ISystem {
+    public void Update() {
+        // чтение ввода
+    }
+}
+
+public struct MoveSystem : ISystem {
+    public void Update() {
+        W.Query().For(static (ref Position pos, in Velocity vel) => {
+            pos.Value += vel.Value;
+        });
+    }
+}
+
+public struct DamageSystem : ISystem {
+    private EventReceiver<WT, OnDamage> _receiver;
+
+    public void Init() {
+        _receiver = W.RegisterEventReceiver<OnDamage>();
+    }
+
+    public void Update() {
+        foreach (var e in _receiver) {
+            if (e.Value.Target.TryUnpack<WT>(out var target)) {
+                ref var health = ref target.Ref<Health>();
+                health.Current -= e.Value.Amount;
+            }
+        }
+    }
+
+    public void Destroy() {
+        W.DeleteEventReceiver(ref _receiver);
+    }
+}
+
+// Запуск
+W.Create(WorldConfig.Default());
+// ... регистрация типов ...
+W.Initialize();
+
+GameSys.Create();
+GameSys.Add(new InputSystem(), order: -10)
+    .Add(new MoveSystem(), order: 0)
+    .Add(new DamageSystem(), order: 5);
+GameSys.Initialize();
+
+while (gameIsRunning) {
+    GameSys.Update();
+}
+
+GameSys.Destroy();
+W.Destroy();
 ```

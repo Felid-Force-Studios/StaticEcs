@@ -4,24 +4,38 @@ has_toc: false
 parent: Main page
 ---
 
-![Version](https://img.shields.io/badge/version-1.2.14-blue.svg?style=for-the-badge)
+<p align="center">
+  <img src="../fulllogo.png" alt="Static ECS" width="100%">
+  <br><br>
+  <img src="https://img.shields.io/badge/version-2.0.0-blue?style=for-the-badge" alt="Version">
+  <a href="https://felid-force-studios.github.io/StaticEcs/en/"><img src="https://img.shields.io/badge/Docs-documentation-blueviolet?style=for-the-badge" alt="Documentation"></a>
+  <a href="https://gist.github.com/blackbone/6d254a684cf580441bf58690ad9485c3"><img src="https://img.shields.io/badge/Benchmarks-results-green?style=for-the-badge" alt="Benchmarks"></a>
+  <a href="https://github.com/Felid-Force-Studios/StaticEcs-Unity"><img src="https://img.shields.io/badge/Unity-module-orange?style=for-the-badge&logo=unity" alt="Unity module"></a>
+  <a href="https://github.com/Felid-Force-Studios/StaticEcs-Showcase"><img src="https://img.shields.io/badge/Showcase-examples-yellow?style=for-the-badge" alt="Showcase"></a>
+  <br><br>
+  <a href="https://felid-force-studios.github.io/StaticEcs/en/migrationguide.html"><img src="https://img.shields.io/badge/Migration_guide-2.0.0-red?style=for-the-badge" alt="Migration guide"></a>
+</p>
 
-___
+<p align="center">
+  <a href="https://github.com/Felid-Force-Studios/StaticEcs/blob/master/CHANGELOG_2_0_0_EN.md"><img src="https://img.shields.io/badge/🚀_What's_New_in_2.0.0-Entity_Types_·_Change_Tracking_·_Burst_·_Block_Iteration_·_Batch_Ops-ff6600?style=for-the-badge&labelColor=222222" alt="What's New in 2.0.0"></a>
+</p>
 
-### 🚀 **[Benchmarks](https://gist.github.com/blackbone/6d254a684cf580441bf58690ad9485c3)** 🚀
-### ⚙️ **[Unity module](https://github.com/Felid-Force-Studios/StaticEcs-Unity)** ⚙️
-
-### ❗️ **[Guide for migrating from version 1.0.x to 1.2.x](migrationguide.md)** ❗️
-
-# Static ECS - C# Binary Entity component system framework
-- Lightweight
+# Static ECS - C# Hierarchical Inverted Bitmap ECS framework
 - Performance
+- Lightweight
 - No allocations
-- No Unsafe
+- Low memory footprint
+- No Unsafe in core
 - Based on statics and structures
 - Type-safe
 - Free abstractions
-- Powerful query engine
+- Powerful query engine with parallelism support
+- Batch entity operations
+- Component and tag change tracking
+- Entity grouping by types and clusters
+- Entity relations system
+- World snapshot serialization
+- Event system
 - No boilerplate
 - Compatibility with Unity with support for Il2Cpp and [Burst](https://github.com/Felid-Force-Studios/StaticEcs-Unity?tab=readme-ov-file#templates)
 - Compatibility with other C# engines
@@ -41,15 +55,16 @@ ___
     * [Relations](features/relations.md)
     * [World](features/world.md)
     * [Systems](features/systems.md)
-    * [Context](features/context.md)
+    * [Resources](features/resources.md)
     * [Query](features/query.md)
     * [Events](features/events.md)
-    * [Component configurators](features/configs.md)
+    * [Change Tracking](features/tracking.md)
     * [Serialization](features/serialization.md)
     * [Compiler directives](features/compilerdirectives.md)
 * [Performance](performance.md)
 * [Unity integration](unityintegrations.md)
-* [FAQ](faq.md)
+* [Common Pitfalls](pitfalls.md)
+* [AI Agent Guide](aiagentguide.md)
 * [License](#license)
 
 
@@ -57,35 +72,68 @@ ___
 * [felid.force.studios@gmail.com](mailto:felid.force.studios@gmail.com)
 * [Telegram](https://t.me/felid_force_studios)
 
+# Support the project
+If you like Static ECS and it helps your project, you can support its development:
+
+<a href="https://www.buymeacoffee.com/felid.force.studios" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="60"></a>
+
 # Installation
-The library has a dependency on [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) `1.0.6` for binary serialization, StaticPack must also be installed
+The library has a dependency on [StaticPack](https://github.com/Felid-Force-Studios/StaticPack) `1.1.0` for binary serialization, StaticPack must also be installed
 * ### As source code
   From the release page or as an archive from the branch. In the `master` branch there is a stable tested version
 * ### Installation for Unity
-  - How to git module in Unity PackageManager     
-    `https://github.com/Felid-Force-Studios/StaticEcs.git`  
-    `https://github.com/Felid-Force-Studios/StaticPack.git`
-  - Or adding to the manifest `Packages/manifest.json`  
-    `"com.felid-force-studios.static-ecs": "https://github.com/Felid-Force-Studios/StaticEcs.git"`  
-    `"com.felid-force-studios.static-pack": "https://github.com/Felid-Force-Studios/StaticPack.git"`
+  Via git module in Unity PackageManager:
+  ```
+  https://github.com/Felid-Force-Studios/StaticEcs.git
+  https://github.com/Felid-Force-Studios/StaticPack.git
+  ```
+  Or adding to the manifest `Packages/manifest.json`:
+  ```json
+  "com.felid-force-studios.static-ecs": "https://github.com/Felid-Force-Studios/StaticEcs.git"
+  "com.felid-force-studios.static-pack": "https://github.com/Felid-Force-Studios/StaticPack.git"
+  ```
+* ### NuGet
+  ```
+  dotnet add package FFS.StaticEcs
+  ```
+  For debug build with assertions:
+  ```
+  dotnet add package FFS.StaticEcs.Debug
+  ```
+  Packages: [FFS.StaticEcs](https://www.nuget.org/packages/FFS.StaticEcs/) · [FFS.StaticEcs.Debug](https://www.nuget.org/packages/FFS.StaticEcs.Debug/)
+
+# AI Agent Integration
+If you use AI coding assistants (Claude Code, Cursor, Copilot, etc.) with StaticEcs:
+- **llms.txt**: Point your agent at [`https://felid-force-studios.github.io/StaticEcs/llms.txt`](https://felid-force-studios.github.io/StaticEcs/llms.txt) for a concise AI-readable reference
+- **Full context**: [`https://felid-force-studios.github.io/StaticEcs/llms-full.txt`](https://felid-force-studios.github.io/StaticEcs/llms-full.txt) for comprehensive documentation
+- **Claude Code**: Copy the [consumer CLAUDE.md snippet](aiagentguide.md) into your project's `CLAUDE.md`
+- **Common pitfalls**: See the [pitfalls guide](pitfalls.md)
 
 
 # Concept
-StaticEcs - a new ECS architecture based on an inverted hierarchical bitmap model.
-Unlike traditional ECS frameworks that rely on archetypes or sparse sets, this design introduces an inverted index structure where each component owns an entity bitmap instead of entities storing component masks.
+StaticEcs — a new ECS architecture based on an inverted hierarchical bitmap model.
+Unlike traditional ECS frameworks that rely on archetypes or sparse sets, this design introduces an inverted index structure where each component type owns entity bitmaps instead of entities storing component masks.
 A hierarchical aggregation of these bitmaps provides logarithmic-space indexing of entity blocks, enabling O(1) block filtering and efficient parallel iteration through bitwise operations.
 This approach completely removes archetype migration and sparse-set indirection, offering direct SoA-style memory access across millions of entities with minimal cache misses.
-The model achieves up to 64× fewer memory lookups per block and scales linearly with the number of active component sets, making it ideal for large-scale simulations, reactive AI, and open-world environments.
+The model achieves up to 64× fewer memory lookups per block and scales linearly with the number of active component sets, making it ideal for large-scale simulations, open worlds with streaming, networked games with state synchronization, reactive AI with thousands of agents, and projects with frequent component composition changes (buffs, effects, statuses).
+
+In archetype-based ECS (Unity DOTS, Flecs, Bevy, Arch), every component addition or removal triggers entity migration — copying all data to a new archetype, and the number of component combinations leads to archetype explosion.
+In sparse-set ECS (EnTT, DefaultEcs), component access requires indirect addressing through sparse tables with at least two cache misses per lookup.
+StaticEcs eliminates both problems: each entity occupies a fixed slot in segmented arrays and never moves in memory — Add/Remove is an O(1) bit flip in the presence mask with no data copying. Memory-stable entity addresses enable cheap entity relations through versioned identifiers (EntityGID), including links with streaming where some related entities reside in unloaded zones — ideal for complex simulations in open worlds. The number of component types has no impact on storage structure, since each type owns its own mask independently of the others. Two-dimensional EntityType × Cluster partitioning further ensures cache locality: entities of the same type within a cluster occupy adjacent memory segments, while clusters allow loading and unloading entire spatial zones without touching the rest of the data.
+
+Memory is organized hierarchically: chunks (4,096 entities) → segments (256) → blocks (64). A world query starts by ANDing heuristic masks at the chunk level — a single bitwise operation covers up to 4,096 entities, skipping empty blocks entirely — then refines at the 64-entity block level. Batch operations (BatchAdd, BatchRemove, BatchSet) process up to 64 entities with a single bitwise operation.
 
 
-> - The main idea of this implementation is static, all data about the world and components are in static classes, which makes it possible to avoid expensive virtual calls and have a convenient API
+> - The core idea of this implementation is static: all world and component data resides in static generic classes (`World<TWorld>`), enabling avoidance of costly virtual calls and allocations, with a convenient API and plenty of syntactic sugar. The JIT compiler eliminates dead code for unused component hooks
 > - This framework is focused on maximum ease of use, speed and comfort of code writing without loss of performance
 > - Multi-world creation, strict typing, ~zero-cost abstractions
-> - Serialization system
-> - System of entity relations
-> - Multithreaded processing
-> - Low memory usage
-> - Based on Bitmap architecture, no archetypes, no sparse-sets
+> - Binary serialization system with world, cluster, and per-entity snapshots, schema versioning and compression support
+> - Entity relations system with automatic bidirectional hooks for hierarchies, groups, and links
+> - Reactive change tracking for network synchronization, UI, and triggers
+> - Multi-components — variable-length per-entity data (inventory, buffs) without heap allocations
+> - Multithreaded processing with parallel queries and block-level safety guarantees
+> - Low memory usage, SoA layout (Structure of Arrays) — components of the same type in contiguous arrays
+> - Built on Bitmap architecture, no archetypes, no sparse-sets
 > - The framework was created for the needs of a private project and put out in open-source.
 
 # Quick start
@@ -95,65 +143,71 @@ using FFS.Libraries.StaticEcs;
 // Define the world type
 public struct WT : IWorldType { }
 
+// Define type-alias for convenient access
 public abstract class W : World<WT> { }
 
 // Define the systems type
-public struct SystemsType : ISystemsType { }
+public struct GameSystems : ISystemsType { }
 
-// Define type-alias for easy access to systems
-public abstract class Systems : W.Systems<SystemsType> { }
+// Define type-alias for systems
+public abstract class GameSys : W.Systems<GameSystems> { }
 
 // Define components
 public struct Position : IComponent { public Vector3 Value; }
 public struct Direction : IComponent { public Vector3 Value; }
 public struct Velocity : IComponent { public float Value; }
 
-// Define systems
-public readonly struct VelocitySystem : IUpdateSystem {
+// Define a system
+public struct VelocitySystem : ISystem {
     public void Update() {
-        foreach (var entity in W.Query.Entities<All<Position, Velocity, Direction>>()) {
-            entity.Ref<Position>().Value += entity.Ref<Direction>().Value * entity.Ref<Velocity>().Value;
-        }
-        
-        // Or
-        W.Query.For((ref Position pos, ref Velocity vel, ref Direction dir) => {
+        // Iteration via foreach
+        foreach (var entity in W.Query<All<Position, Velocity, Direction>>().Entities()) {
+            ref var pos = ref entity.Ref<Position>();
+            ref readonly var dir = ref entity.Read<Direction>();
+            ref readonly var vel = ref entity.Read<Velocity>();
             pos.Value += dir.Value * vel.Value;
-        });
+        }
+
+        // Or via delegate (faster, zero-allocation)
+        W.Query().For(
+            static (ref Position pos, in Velocity vel, in Direction dir) => {
+                pos.Value += dir.Value * vel.Value;
+            }
+        );
     }
 }
 
 public class Program {
     public static void Main() {
-        // Creating world data
+        // Create the world
         W.Create(WorldConfig.Default());
-        
-        // Registering components
-        W.RegisterComponentType<Position>();
-        W.RegisterComponentType<Direction>();
-        W.RegisterComponentType<Velocity>();
-        
-        // Initializing the world
+
+        // Auto-register all components, tags, events, etc. from the calling assembly
+        W.Types().RegisterAll();
+
+        // Initialize the world
         W.Initialize();
-        
-        // Creating systems
-        Systems.Create();
-        Systems.AddUpdate(new VelocitySystem());
 
-        // Initializing systems
-        Systems.Initialize();
+        // Create and configure systems
+        GameSys.Create();
+        GameSys.Add(new VelocitySystem(), order: 0);
+        GameSys.Initialize();
 
-        // Creating entity
-        var entity = W.Entity.New(
-            new Velocity { Value = 1f },
+        // Create an entity with components
+        var entity = W.NewEntity<Default>().Set(
             new Position { Value = Vector3.Zero },
-            new Direction { Value = Vector3.UnitX }
+            new Direction { Value = Vector3.UnitX },
+            new Velocity { Value = 1f }
         );
-        
-        // Update all systems - called in every frame
-        Systems.Update();
-        // Destroying systems
-        Systems.Destroy();
-        // Destroying the world and deleting all data
+
+        // Update all systems — called every frame
+        GameSys.Update();
+        // Advance change tracking (changes become visible next frame)
+        W.Tick();
+
+        // Destroy systems
+        GameSys.Destroy();
+        // Destroy the world and clean up all data
         W.Destroy();
     }
 }
