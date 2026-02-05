@@ -7,7 +7,7 @@ ___
 ### 🚀 **[Benchmarks](https://gist.github.com/blackbone/6d254a684cf580441bf58690ad9485c3)** 🚀
 ### ⚙️ **[Unity module](https://github.com/Felid-Force-Studios/StaticEcs-Unity)** ⚙️
 ### 📖️ **[Documentation](https://felid-force-studios.github.io/StaticEcs/en/)** 📖️
-
+### 🗺️ **[Roadmap](#roadmap)** 🗺️
 ___
 
 ### ❗️ **[Guide for migrating from version 1.0.x to 1.2.x](https://felid-force-studios.github.io/StaticEcs/en/migrationguide.html)** ❗️
@@ -157,6 +157,124 @@ public class Program {
     }
 }
 ```
+
+# Roadmap 🗺️
+
+It’s been a while since the last update. About **3 months have passed** since the last static update, and since no major bugs have been reported, it’s time to break something! 😄
+
+This roadmap outlines **planned changes** with some significant and radical improvements.
+
+---
+
+### 1. Bitmask Optimization 🧮
+
+The issue with bitmasks (used to store component bits for each entity, primarily for searching all components/tags during copy and delete operations) will be resolved.
+
+**Expected improvements:**
+
+* Memory usage for bitmasks will be reduced by **256x**.
+* Component add/remove operations will be **15-20% faster**.
+* World serialization will become faster.
+* Snapshots will be lighter and **no longer store this bitmask**.
+
+---
+
+### 2. Removing `Put` Method ❌
+
+* The `Put` method on entities will be removed.
+* Functionality can be replaced with the extension method `TryAdd`.
+
+---
+
+### 3. Renaming Component Check Methods ✨
+
+* `HasAllOf<>` methods will be renamed to `Has<>` to reduce verbosity and improve readability.
+
+---
+
+### 4. `IComponent` Interface Updates 🛠️
+
+Creating an `IComponent` will now **has empty implementation** of the following methods:
+
+```csharp
+OnAdd
+OnDelete
+CopyTo
+Write
+Read
+```
+
+* Overriding is **optional**, methods may be empty.
+* IDEs and snippets will help scaffold these methods.
+* This removes callbacks/delegates, allows inlining, and **speeds up add/remove operations**.
+
+---
+
+### 5. Component Registration Changes 🔄
+
+* Multi and relation component registration methods will be removed.
+* Automated initialization/deletion must now be explicitly implemented in `OnAdd/OnDelete` using extension helpers.
+
+---
+
+### 6. Optional Component/Tag Auto-Registration ⚡
+
+* Full **optional auto-registration** for components and tags will be introduced.
+* Enabled by changes in bitmask storage.
+* Will **not affect entity operation speed**.
+
+---
+
+### 7. Entity Creation Changes 🆕
+
+* `W.Entity.New()` will now **require explicit cluster specification** (previously default cluster `0` was used).
+* A new method will allow creation in the default cluster, but with a **long and ugly name** to discourage casual use. 😅
+
+---
+
+### 8. Component Change Events 📣
+
+* Ability to receive **events** (not delegates) on component changes:
+
+```csharp
+Changed<Position>
+Added<Position>
+Deleted<Position>
+```
+
+* Currently **Work In Progress**.
+
+---
+
+### 9. Iteration Algorithm Improvements ⚡
+
+* Iteration algorithm has been reworked.
+* Performance improvements expected.
+* **Block SIMD `QueryFunction`** support will be added.
+
+---
+
+### 10. API for Unmanaged Components 🔧
+
+* All API for unmanaged components will be available in **Native/Burst**:
+
+    * `Query`
+    * `entity.Add<>(), Ref<>(), Delete<>()`, etc.
+* Components containing reference types **will not have this API**.
+
+---
+
+### Release Date 📅
+
+* Planned for **end of February**.
+* No major updates are planned after this release.
+
+---
+
+### Feedback & Suggestions 💡
+
+If you have **feature requests, suggestions, or feedback**, please open a GitHub issue! Your input is highly appreciated and will help shape this release. 🙂
+
 
 # License
 [MIT license](https://github.com/Felid-Force-Studios/StaticEcs/blob/master/LICENSE.md)
