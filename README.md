@@ -158,7 +158,7 @@ public class Program {
 }
 ```
 
-# Roadmap 🗺️
+# Roadmap
 
 It’s been a while since the last update. About **3 months have passed** since the last static update, and since no major bugs have been reported, it’s time to break something! 😄
 
