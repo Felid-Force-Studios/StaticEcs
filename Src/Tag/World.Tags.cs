@@ -31,6 +31,19 @@ namespace FFS.Libraries.StaticEcs {
 
             ModuleTags.Value.RegisterTagType<T>(guid);
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static List<ITagsWrapper> GetTagsPools() {
+
+            var tagsPools = new List<ITagsWrapper>();
+            var allPools = ModuleTags.Value.GetAllRawsPools();
+            foreach (var pool in allPools)
+            {
+                if (pool is ITagsWrapper tagsPool) 
+                    tagsPools.Add(tagsPool);
+            }
+            return tagsPools;
+        }
 
         [MethodImpl(AggressiveInlining)]
         public static ITagsWrapper GetTagsPool(Type tagType) {

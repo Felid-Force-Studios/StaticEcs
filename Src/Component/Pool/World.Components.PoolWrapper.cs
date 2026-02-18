@@ -20,7 +20,7 @@ namespace FFS.Libraries.StaticEcs {
 
         public Guid Guid();
 
-        internal Type GetElementType();
+        public Type GetElementType();
 
         internal object GetRaw(uint entity);
 

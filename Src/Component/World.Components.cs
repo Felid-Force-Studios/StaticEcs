@@ -59,6 +59,19 @@ namespace FFS.Libraries.StaticEcs {
             config ??= DefaultComponentConfig<T, WorldType>.Default;
             ModuleComponents.Value.RegisterComponentType(config);
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public static List<IComponentsWrapper> GetComponentsPools() {
+
+            var componentPools = new List<IComponentsWrapper>();
+            var allPools = ModuleComponents.Value.GetAllRawsPools();
+            foreach (var pool in allPools)
+            {
+                if (pool is IComponentsWrapper componentsPool) 
+                    componentPools.Add(componentsPool);
+            }
+            return componentPools;
+        }
 
         [MethodImpl(AggressiveInlining)]
         public static IComponentsWrapper GetComponentsPool(Type componentType) {
