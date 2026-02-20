@@ -114,6 +114,7 @@ namespace FFS.Libraries.StaticEcs {
                                         }
                                     }
                                 }
+                                writer.WriteArrayUnmanaged(page.Sources);
                                 count++;
                                 curPageIdx++;
                             }
@@ -158,6 +159,7 @@ namespace FFS.Libraries.StaticEcs {
                                             }
                                         }
                                     }
+                                    reader.ReadArrayUnmanaged(ref page.Sources);
                                 } else {
                                     uint oneSize = default;
                                     if (isUnmanaged) {

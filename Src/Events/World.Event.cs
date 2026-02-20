@@ -36,7 +36,17 @@ namespace FFS.Libraries.StaticEcs {
                     #if FFS_ECS_DEBUG
                     if (_eventIdx < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Event<{typeof(E)}>.Value ] event is deleted");
                     #endif
-                    return ref Events.Pool<E>.Value.Get(_eventIdx);
+                    return ref Events.Pool<E>.Value.GetData(_eventIdx);
+                }
+            }
+            
+            public ref Entity Source {
+                [MethodImpl(AggressiveInlining)]
+                get {
+                    #if FFS_ECS_DEBUG
+                    if (_eventIdx < 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Event<{typeof(E)}>.Value ] event is deleted");
+                    #endif
+                    return ref Events.Pool<E>.Value.GetSource(_eventIdx);
                 }
             }
 

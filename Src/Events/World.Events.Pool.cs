@@ -61,7 +61,7 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     public readonly struct EventPoolWrapper<WorldType, T> : IEventPoolWrapper where T : struct, IEvent where WorldType : struct, IWorldType {
         [MethodImpl(AggressiveInlining)]
-        internal ref T Get(int idx) => ref World<WorldType>.Events.Pool<T>.Value.Get(idx);
+        internal ref T GetData(int idx) => ref World<WorldType>.Events.Pool<T>.Value.GetData(idx);
 
         [MethodImpl(AggressiveInlining)]
         public bool Add(T value) => World<WorldType>.Events.Pool<T>.Value.Add(value);
@@ -76,7 +76,7 @@ namespace FFS.Libraries.StaticEcs {
         Type IEventPoolWrapper.GetEventType() => typeof(T);
 
         [MethodImpl(AggressiveInlining)]
-        IEvent IEventPoolWrapper.GetRaw(int idx) => World<WorldType>.Events.Pool<T>.Value.Get(idx);
+        IEvent IEventPoolWrapper.GetRaw(int idx) => World<WorldType>.Events.Pool<T>.Value.GetData(idx);
 
         [MethodImpl(AggressiveInlining)]
         void IEventPoolWrapper.Destroy() => World<WorldType>.Events.Pool<T>.Value.Destroy();
@@ -85,7 +85,7 @@ namespace FFS.Libraries.StaticEcs {
         public bool AddRaw(IEvent value) => World<WorldType>.Events.Pool<T>.Value.Add((T) value);
 
         [MethodImpl(AggressiveInlining)]
-        void IEventPoolWrapper.PutRaw(int idx, IEvent value) => World<WorldType>.Events.Pool<T>.Value.Get(idx) = (T) value;
+        void IEventPoolWrapper.PutRaw(int idx, IEvent value) => World<WorldType>.Events.Pool<T>.Value.GetData(idx) = (T) value;
 
         [MethodImpl(AggressiveInlining)]
         void IEventPoolWrapper.Clear() => World<WorldType>.Events.Pool<T>.Value.Clear();
@@ -169,6 +169,7 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
                 internal struct Page {
                     internal T[] Data;
+                    internal Entity[] Sources;
                     internal ulong[] Mask;
                     internal ushort[] UnreadReceiversCount;
                     internal ushort Version;
@@ -176,9 +177,11 @@ namespace FFS.Libraries.StaticEcs {
                     [MethodImpl(AggressiveInlining)]
                     public void Free(ref FreePage freePage) {
                         freePage.Data = Data;
+                        freePage.Sources = Sources;
                         freePage.Mask = Mask;
                         freePage.UnreadReceiversCount = UnreadReceiversCount;
                         Data = null;
+                        Sources = null;
                         Mask = null;
                         UnreadReceiversCount = null;
                         Version++;
@@ -187,6 +190,7 @@ namespace FFS.Libraries.StaticEcs {
                     [MethodImpl(AggressiveInlining)]
                     public void FromFree(ref FreePage freePage) {
                         Data = freePage.Data;
+                        Sources = freePage.Sources;
                         Mask = freePage.Mask;
                         UnreadReceiversCount = freePage.UnreadReceiversCount;
                         freePage = default;
@@ -195,6 +199,7 @@ namespace FFS.Libraries.StaticEcs {
                     [MethodImpl(AggressiveInlining)]
                     public void InitNew() {
                         Data = new T[EVENTS_PER_PAGE];
+                        Sources = new Entity[EVENTS_PER_PAGE];
                         Mask = new ulong[MASKS_IN_PAGE];
                         UnreadReceiversCount = new ushort[EVENTS_PER_PAGE];
                     }
@@ -206,6 +211,7 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
                 internal struct FreePage {
                     internal T[] Data;
+                    internal Entity[] Sources;
                     internal ulong[] Mask;
                     internal ushort[] UnreadReceiversCount;
                 }
@@ -298,12 +304,17 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 
                 [MethodImpl(AggressiveInlining)]
-                internal ref T Get(int idx) {
+                internal ref T GetData(int idx) {
                     return ref pages[idx >> EVENT_PAGE_SHIFT].Data[idx & EVENT_PAGE_OFFSET_MASK];
+                }
+                
+                [MethodImpl(AggressiveInlining)]
+                internal ref Entity GetSource(int idx) {
+                    return ref pages[idx >> EVENT_PAGE_SHIFT].Sources[idx & EVENT_PAGE_OFFSET_MASK];
                 }
 
                 [MethodImpl(AggressiveInlining)]
-                internal bool Add(T value = default) {
+                internal bool Add(T value = default, Entity source = default) {
                     #if FFS_ECS_DEBUG
                     if (_blockers > 0) throw new StaticEcsException($"[ World<{typeof(WorldType)}>.Events.Pool<{typeof(T)}>.Add ] event pool cannot be changed, it is in read-only mode");
                     #endif
@@ -324,6 +335,7 @@ namespace FFS.Libraries.StaticEcs {
                         }
 
                         page.Data[inPageIdx] = value;
+                        page.Sources[inPageIdx] = source;
                         page.Mask[maskIdx] |= 1UL << inMaskBit;
                         page.UnreadReceiversCount[inPageIdx] = receiversCount;
                         sequence++;
