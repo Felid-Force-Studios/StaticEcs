@@ -580,6 +580,16 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
+        public readonly Span<T> AsSpan() {
+            return new Span<T>(data.values[blockIdx], dataOffset, count);
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public static implicit operator Span<T>(Multi<T> multi) {
+            return multi.AsSpan();
+        }
+
+        [MethodImpl(AggressiveInlining)]
         ref Multi<T> IRefProvider<Multi<T>, Multi<T>>.RefValue(ref Multi<T> component) => ref component;
 
         public override string ToString() {
