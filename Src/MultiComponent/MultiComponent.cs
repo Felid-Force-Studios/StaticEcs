@@ -263,6 +263,22 @@ namespace FFS.Libraries.StaticEcs {
                 count += (ushort) len;
             }
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public void Add(ReadOnlySpan<T> src) {
+            if (src.Length > 0) {
+                #if FFS_ECS_DEBUG
+                if (data.IsBlocked(ref this)) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] data is blocked by iterator");
+                if (src.Length > short.MaxValue + 1) throw new StaticEcsException($"[ Multi<{typeof(T)}>.Add ] src.Length > 32768");
+                #endif
+                if (count + src.Length > 1 << level) {
+                    data.Resize(ref this, Utils.CalculateSize((uint) (count + src.Length)));
+                }
+
+                src.CopyTo(new Span<T>(data.values[blockIdx], dataOffset + count, src.Length));
+                count += (ushort) src.Length;
+            }
+        }
 
         [MethodImpl(AggressiveInlining)]
         public void Add(ref Multi<T> src) {
