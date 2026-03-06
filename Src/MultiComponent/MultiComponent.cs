@@ -87,6 +87,16 @@ namespace FFS.Libraries.StaticEcs {
         public void CopyTo(T[] dst, int dstIdx, int len) {
             multi.CopyTo(dst, dstIdx, len);
         }
+        
+        [MethodImpl(AggressiveInlining)]
+        public readonly ReadOnlySpan<T> AsReadonlySpan() {
+            return multi.AsSpan();
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        public static implicit operator ReadOnlySpan<T>(ROMulti<T> roMulti) {
+            return roMulti.multi.AsSpan();
+        }
 
         [MethodImpl(AggressiveInlining)]
         ref Multi<T> IRefProvider<ROMulti<T>, Multi<T>>.RefValue(ref ROMulti<T> component) => ref component.multi;
