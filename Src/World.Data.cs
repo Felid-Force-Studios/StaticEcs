@@ -674,12 +674,6 @@ namespace FFS.Libraries.StaticEcs {
                         _selfFreeChunks[_selfFreeChunksCount++] = (uint)i;
                     }
                 }
-
-                RegisterClusterInternal(default);
-
-                #if FFS_ECS_BURST
-                LifecycleHandle.OnActiveClustersChanged();
-                #endif
             }
             #endregion
 
@@ -1229,6 +1223,11 @@ namespace FFS.Libraries.StaticEcs {
             #endregion
 
             #region CREATE ENTITY FUNCTIONS
+            [MethodImpl(NoInlining)]
+            internal void CallOnCreate<TEntityType>(TEntityType entityType, Entity entity) where TEntityType : struct, IEntityType {
+                entityType.OnCreate(entity);
+            }
+            
             [MethodImpl(AggressiveInlining)]
             internal void CreateEntityWithOnCreate(byte entityType, ushort clusterId, out Entity entity) {
                 #if FFS_ECS_DEBUG
@@ -1246,6 +1245,23 @@ namespace FFS.Libraries.StaticEcs {
                 }
             }
             
+            [MethodImpl(AggressiveInlining)]
+            internal void CreateEntity<TEntityType>(TEntityType entityType, ushort clusterId, out Entity entity) where TEntityType : struct, IEntityType {
+                #if FFS_ECS_DEBUG
+                AssertWorldIsInitialized(EntityTypeName);
+                AssertMultiThreadNotActive(EntityTypeName);
+                AssertClusterIsRegistered(EntityTypeName, clusterId);
+                AssertEntityTypeIsRegistered(EntityTypeName, EntityTypeInfo<TEntityType>.Id);
+                #endif
+                var type = EntityTypeInfo<TEntityType>.Id;
+                if (!TryCreateEntity(type, clusterId, out entity)) {
+                    throw new StaticEcsException($"World<{typeof(TWorld)}>, Method: CreateEntity, ran out of space in the attached chunks");
+                }
+                if (EntityTypeInfo<TEntityType>.HasOnCreate) {
+                    CallOnCreate(entityType, entity);
+                }
+            }
+
             [MethodImpl(AggressiveInlining)]
             internal void CreateEntity(byte entityType, ushort clusterId, out Entity entity) {
                 #if FFS_ECS_DEBUG
@@ -1296,6 +1312,19 @@ namespace FFS.Libraries.StaticEcs {
                     #endif
                 }
                 return true;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal bool TryCreateEntity<TEntityType>(TEntityType entityType, ushort clusterId, out Entity entity) where TEntityType : struct, IEntityType {
+                var type = EntityTypeInfo<TEntityType>.Id;
+                if (TryCreateEntity(type, clusterId, out entity)) {
+                    if (EntityTypeInfo<TEntityType>.HasOnCreate) {
+                        CallOnCreate(entityType, entity);
+                    }
+
+                    return true;
+                }
+                return false;
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -1374,6 +1403,23 @@ namespace FFS.Libraries.StaticEcs {
                     throw new StaticEcsException($"World<{typeof(TWorld)}>, Method: CreateEntity, ran out of space in chunk {chunkIdx}");
                 }
             }
+
+            [MethodImpl(AggressiveInlining)]
+            internal void CreateEntity<TEntityType>(TEntityType entityType, uint chunkIdx, out Entity entity) where TEntityType : struct, IEntityType {
+                #if FFS_ECS_DEBUG
+                AssertWorldIsInitialized(EntityTypeName);
+                AssertMultiThreadNotActive(EntityTypeName);
+                AssertChunkIsRegistered(EntityTypeName, chunkIdx);
+                AssertEntityTypeIsRegistered(EntityTypeName, EntityTypeInfo<TEntityType>.Id);
+                #endif
+                var type = EntityTypeInfo<TEntityType>.Id;
+                if (!TryCreateEntity(type, chunkIdx, out entity)) {
+                    throw new StaticEcsException($"World<{typeof(TWorld)}>, Method: CreateEntity, ran out of space in chunk {chunkIdx}");
+                }
+                if (EntityTypeInfo<TEntityType>.HasOnCreate) {
+                    CallOnCreate(entityType, entity);
+                }
+            }
             
             [MethodImpl(AggressiveInlining)]
             internal void CreateEntityWithOnCreate(byte entityType, uint chunkIdx, out Entity entity) {
@@ -1390,6 +1436,19 @@ namespace FFS.Libraries.StaticEcs {
                     var onCreate = EntityTypes[entityType].OnCreateFn;
                     if (onCreate != null) onCreate(entity);
                 }
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal bool TryCreateEntity<TEntityType>(TEntityType entityType, uint chunkIdx, out Entity entity) where TEntityType : struct, IEntityType {
+                var type = EntityTypeInfo<TEntityType>.Id;
+                if (TryCreateEntity(type, chunkIdx, out entity)) {
+                    if (EntityTypeInfo<TEntityType>.HasOnCreate) {
+                        CallOnCreate(entityType, entity);
+                    }
+
+                    return true;
+                }
+                return false;
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -1472,6 +1531,15 @@ namespace FFS.Libraries.StaticEcs {
                 unsafe {
                     var onCreate = EntityTypes[entityType].OnCreateFn;
                     if (onCreate != null) onCreate(entity);
+                }
+            }
+            
+            [MethodImpl(AggressiveInlining)]
+            internal void CreateEntity<TEntityType>(TEntityType entityType, EntityGID gid, out Entity entity) where TEntityType : struct, IEntityType {
+                var type = EntityTypeInfo<TEntityType>.Id;
+                CreateEntity(type, gid, out entity);
+                if (EntityTypeInfo<TEntityType>.HasOnCreate) {
+                    CallOnCreate(entityType, entity);
                 }
             }
 

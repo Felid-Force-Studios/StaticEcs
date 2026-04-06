@@ -78,24 +78,24 @@ public class Startup : MonoBehaviour {
     public SceneData sceneData;
 
     private void Start() {
-        // Создаём мир
+        // Создаём мир и системы
         W.Create(WorldConfig.Default());
+        GameSys.Create();
 
         // Регистрируем все типы и подключаем отладку (Unity модуль)
         W.Types().RegisterAll();
         UnityEventTypes.Register<WT>(); // Регистрирует все события и компоненты Unity
         EcsDebug<WT>.AddWorld<GameSystems>();
 
-        // Инициализируем мир
-        W.Initialize();
-
         // Передаём данные сцены через ресурс
         W.SetResource(sceneData);
 
         // Создаём и настраиваем системы
-        GameSys.Create();
         GameSys.Add(new CreateRandomEntities(), order: -10)
             .Add(new UpdatePositions(), order: 0);
+
+        // Инициализируем мир и системы
+        W.Initialize();
         GameSys.Initialize();
 
         // Подключаем отладку систем

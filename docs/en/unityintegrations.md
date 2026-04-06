@@ -78,24 +78,24 @@ public class Startup : MonoBehaviour {
     public SceneData sceneData;
 
     private void Start() {
-        // Create the world
+        // Create the world and systems
         W.Create(WorldConfig.Default());
+        GameSys.Create();
 
         // Register all types and connect debug (Unity module)
         W.Types().RegisterAll();
         UnityEventTypes.Register<WT>(); // Registers all Unity events and components
         EcsDebug<WT>.AddWorld<GameSystems>();
 
-        // Initialize the world
-        W.Initialize();
-
         // Pass scene data via resource
         W.SetResource(sceneData);
 
-        // Create and configure systems
-        GameSys.Create();
+        // Configure systems
         GameSys.Add(new CreateRandomEntities(), order: -10)
             .Add(new UpdatePositions(), order: 0);
+            
+        // Initialize the world and systems
+        W.Initialize();
         GameSys.Initialize();
 
         // Connect system debugging

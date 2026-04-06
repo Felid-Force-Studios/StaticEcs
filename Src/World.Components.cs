@@ -308,7 +308,6 @@ namespace FFS.Libraries.StaticEcs {
 
             private readonly QueryData[] _queriesToUpdateOnDelete;
             private readonly QueryData[] _queriesToUpdateOnAdd;
-            internal readonly T DefaultValue;
             private byte _queriesToUpdateOnDeleteCount;
             private byte _queriesToUpdateOnAddCount;
 
@@ -327,6 +326,7 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             internal readonly bool TrackAddedOrChanged;
             internal readonly byte DeletedTrackingOffset;
+            internal readonly T DefaultValue;
             internal ulong[][] TrackingMaskSegments;
             internal HeuristicComponentsTracking[] TrackingHeuristicChunks;
             internal HeuristicComponentsTracking[][] TrackingHistoryHeuristic;
@@ -832,7 +832,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 ref var component = ref componentSegment[segmentEntityIdx];
                 if (HasOnAdd) {
-                    component.OnAdd(entity);
+                    CallOnAdd(ref component, entity);
                 }
 
                 return ref component;
@@ -901,7 +901,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 ref var component = ref componentSegment[segmentEntityIdx];
                 if (HasOnAdd) {
-                    component.OnAdd(entity);
+                    CallOnAdd(ref component, entity);
                 }
 
                 return ref component;
@@ -968,7 +968,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
                 else if (HasOnDelete) {
-                    component.OnDelete(entity, HookReason.Default);
+                    CallOnDelete(ref component, entity, HookReason.Default);
                 }
 
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
@@ -980,8 +980,13 @@ namespace FFS.Libraries.StaticEcs {
                 component = value;
 
                 if (withOnAdd && HasOnAdd) {
-                    component.OnAdd(entity);
+                    CallOnAdd(ref component, entity);
                 }
+            }
+            
+            [MethodImpl(NoInlining)]
+            private void CallOnAdd(ref T component, Entity entity) {
+                component.OnAdd(entity);
             }
 
             /// <summary>
@@ -1045,7 +1050,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 if (withOnDelete && HasOnDelete) {
                     var segmentEntityIdx = (byte) (entityId & Const.ENTITIES_IN_SEGMENT_MASK);
-                    ComponentSegments[segmentIdx][segmentEntityIdx].OnDelete(entity, reason);
+                    CallOnDelete(ref ComponentSegments[segmentIdx][segmentEntityIdx], entity, HookReason.Default);
                 }
                 else if (DataLifecycle) {
                     var segmentEntityIdx = (byte) (entityId & Const.ENTITIES_IN_SEGMENT_MASK);
@@ -1062,6 +1067,11 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 return true;
+            }
+            
+            [MethodImpl(NoInlining)]
+            private void CallOnDelete(ref T component, Entity entity, HookReason reason) {
+                component.OnDelete(entity, reason);
             }
 
             /// <summary>

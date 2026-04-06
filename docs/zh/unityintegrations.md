@@ -80,22 +80,19 @@ public class Startup : MonoBehaviour {
     private void Start() {
         // 创建世界
         W.Create(WorldConfig.Default());
+        GameSys.Create();
 
         // 注册所有类型并连接调试（Unity 模块）
         W.Types().RegisterAll();
         UnityEventTypes.Register<WT>(); // 注册所有 Unity 事件和组件
         EcsDebug<WT>.AddWorld<GameSystems>();
 
-        // 初始化世界
-        W.Initialize();
-
         // 通过资源传递场景数据
         W.SetResource(sceneData);
-
-        // 创建和配置系统
-        GameSys.Create();
         GameSys.Add(new CreateRandomEntities(), order: -10)
             .Add(new UpdatePositions(), order: 0);
+            
+        W.Initialize();
         GameSys.Initialize();
 
         // 连接系统调试

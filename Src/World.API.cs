@@ -295,6 +295,7 @@ namespace FFS.Libraries.StaticEcs {
             #endif
             Data.Instance.HardResetInternal();
             Data.Instance.ClearEvents();
+            Data.Instance.RegisterClusterInternal(default);
         }
 
         /// <summary>
@@ -903,11 +904,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static Entity NewEntity<TEntityType>(ushort clusterId = default)
             where TEntityType : struct, IEntityType {
-            Data.Instance.CreateEntity(EntityTypeInfo<TEntityType>.Id, clusterId, out var entity);
-            if (EntityTypeInfo<TEntityType>.HasOnCreate) {
-                var entityType = default(TEntityType);
-                entityType.OnCreate(entity);
-            }
+            Data.Instance.CreateEntity<TEntityType>(default, clusterId, out var entity);
             return entity;
         }
 
@@ -919,10 +916,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static Entity NewEntity<TEntityType>(TEntityType entityType, ushort clusterId = default)
             where TEntityType : struct, IEntityType {
-            Data.Instance.CreateEntity(EntityTypeInfo<TEntityType>.Id, clusterId, out var entity);
-            if (EntityTypeInfo<TEntityType>.HasOnCreate) {
-                entityType.OnCreate(entity);
-            }
+            Data.Instance.CreateEntity(entityType, clusterId, out var entity);
             return entity;
         }
 
@@ -933,11 +927,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static Entity NewEntityInChunk<TEntityType>(uint chunkIdx)
             where TEntityType : struct, IEntityType {
-            Data.Instance.CreateEntity(EntityTypeInfo<TEntityType>.Id, chunkIdx, out var entity);
-            if (EntityTypeInfo<TEntityType>.HasOnCreate) {
-                var entityType = default(TEntityType);
-                entityType.OnCreate(entity);
-            }
+            Data.Instance.CreateEntity<TEntityType>(default, chunkIdx, out var entity);
             return entity;
         }
 
@@ -948,10 +938,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static Entity NewEntityInChunk<TEntityType>(TEntityType entityType, uint chunkIdx)
             where TEntityType : struct, IEntityType {
-            Data.Instance.CreateEntity(EntityTypeInfo<TEntityType>.Id, chunkIdx, out var entity);
-            if (EntityTypeInfo<TEntityType>.HasOnCreate) {
-                entityType.OnCreate(entity);
-            }
+            Data.Instance.CreateEntity(entityType, chunkIdx, out var entity);
             return entity;
         }
 
@@ -963,12 +950,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static bool TryNewEntity<TEntityType>(out Entity entity, ushort clusterId = default)
             where TEntityType : struct, IEntityType {
-            if (!Data.Instance.TryCreateEntity(EntityTypeInfo<TEntityType>.Id, clusterId, out entity)) return false;
-            if (EntityTypeInfo<TEntityType>.HasOnCreate) {
-                var entityType = default(TEntityType);
-                entityType.OnCreate(entity);
-            }
-            return true;
+            return Data.Instance.TryCreateEntity<TEntityType>(default, clusterId, out entity);
         }
 
         /// <summary>
@@ -979,11 +961,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static bool TryNewEntity<TEntityType>(TEntityType entityType, out Entity entity, ushort clusterId = default)
             where TEntityType : struct, IEntityType {
-            if (!Data.Instance.TryCreateEntity(EntityTypeInfo<TEntityType>.Id, clusterId, out entity)) return false;
-            if (EntityTypeInfo<TEntityType>.HasOnCreate) {
-                entityType.OnCreate(entity);
-            }
-            return true;
+            return Data.Instance.TryCreateEntity(entityType, clusterId, out entity);
         }
 
         /// <summary>
@@ -994,12 +972,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static bool TryNewEntityInChunk<TEntityType>(out Entity entity, uint chunkIdx)
             where TEntityType : struct, IEntityType {
-            if (!Data.Instance.TryCreateEntity(EntityTypeInfo<TEntityType>.Id, chunkIdx, out entity)) return false;
-            if (EntityTypeInfo<TEntityType>.HasOnCreate) {
-                var entityType = default(TEntityType);
-                entityType.OnCreate(entity);
-            }
-            return true;
+            return Data.Instance.TryCreateEntity<TEntityType>(default, chunkIdx, out entity);
         }
 
         /// <summary>
@@ -1010,11 +983,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static bool TryNewEntityInChunk<TEntityType>(TEntityType entityType, out Entity entity, uint chunkIdx)
             where TEntityType : struct, IEntityType {
-            if (!Data.Instance.TryCreateEntity(EntityTypeInfo<TEntityType>.Id, chunkIdx, out entity)) return false;
-            if (EntityTypeInfo<TEntityType>.HasOnCreate) {
-                entityType.OnCreate(entity);
-            }
-            return true;
+            return Data.Instance.TryCreateEntity(entityType, chunkIdx, out entity);
         }
 
         /// <summary>
@@ -1033,11 +1002,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static Entity NewEntityByGID<TEntityType>(EntityGID gid)
             where TEntityType : struct, IEntityType {
-            Data.Instance.CreateEntity(EntityTypeInfo<TEntityType>.Id, gid, out var entity);
-            if (EntityTypeInfo<TEntityType>.HasOnCreate) {
-                var entityType = default(TEntityType);
-                entityType.OnCreate(entity);
-            }
+            Data.Instance.CreateEntity<TEntityType>(default, gid, out var entity);
             return entity;
         }
 
@@ -1058,10 +1023,7 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public static Entity NewEntityByGID<TEntityType>(TEntityType entityType, EntityGID gid)
             where TEntityType : struct, IEntityType {
-            Data.Instance.CreateEntity(EntityTypeInfo<TEntityType>.Id, gid, out var entity);
-            if (EntityTypeInfo<TEntityType>.HasOnCreate) {
-                entityType.OnCreate(entity);
-            }
+            Data.Instance.CreateEntity(entityType, gid, out var entity);
             return entity;
         }
 
