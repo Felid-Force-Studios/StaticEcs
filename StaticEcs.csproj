@@ -46,6 +46,10 @@
     <ItemGroup>
         <Content Include="README.md" Pack="true" PackagePath=""/>
         <Content Include="README_RU.md"/>
+        <Content Include="README_ZH.md"/>
+        <Content Include="CHANGELOG_2_0_0.md"/>
+        <Content Include="CHANGELOG_2_0_0_EN.md"/>
+        <Content Include="CHANGELOG_2_0_0_ZH.md"/>
     </ItemGroup>
     <ItemGroup>
         <None Remove="**/*.meta"/>
