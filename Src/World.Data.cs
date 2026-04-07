@@ -72,12 +72,13 @@ namespace FFS.Libraries.StaticEcs {
     internal struct EntitiesSegment {
         internal const ushort InvalidCluster = ushort.MaxValue;
         internal const int Invalid = -1;
+        internal const ushort NoEntityType = ushort.MaxValue;
         
         internal ulong[] Masks;  // 4 ulong active entities + 4 ulong disabled entities + 4 loaded entities
         internal ushort[] Versions;
         internal ushort ClusterId;
+        internal ushort EntityType; // 0-255 types and ushort.MaxValue not reserved
         internal bool SelfOwner;
-        internal byte EntityType;
     }
 
     #if ENABLE_IL2CPP
@@ -429,6 +430,7 @@ namespace FFS.Libraries.StaticEcs {
                     segment.Masks = new ulong[Const.BLOCKS_IN_SEGMENT * 3];
                     segment.ClusterId = EntitiesSegment.InvalidCluster;
                     segment.SelfOwner = IndependentWorld;
+                    segment.EntityType = EntitiesSegment.NoEntityType;
                 }
 
                 _selfFreeChunksCount = 0;
@@ -504,6 +506,7 @@ namespace FFS.Libraries.StaticEcs {
                     segment.Masks = new ulong[Const.BLOCKS_IN_SEGMENT * 3];
                     segment.ClusterId = EntitiesSegment.InvalidCluster;
                     segment.SelfOwner = IndependentWorld;
+                    segment.EntityType = EntitiesSegment.NoEntityType;
                 }
                 
                 if (IndependentWorld) {
@@ -608,7 +611,7 @@ namespace FFS.Libraries.StaticEcs {
                         }
                     }
                     segment.ClusterId = EntitiesSegment.InvalidCluster;
-                    segment.EntityType = 0;
+                    segment.EntityType = EntitiesSegment.NoEntityType;
 
                     if (TrackCreated) {
                         if (TrackingBufferSize > 0) {
@@ -1109,7 +1112,7 @@ namespace FFS.Libraries.StaticEcs {
                 #endif
 
                 var entityId = entity.IdWithOffset - Const.ENTITY_ID_OFFSET;
-                return EntitiesSegments[entityId >> Const.ENTITIES_IN_SEGMENT_SHIFT].EntityType;
+                return (byte)EntitiesSegments[entityId >> Const.ENTITIES_IN_SEGMENT_SHIFT].EntityType;
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -1517,7 +1520,7 @@ namespace FFS.Libraries.StaticEcs {
                     var segmentInChunk = (int)(segmentIdx & Const.SEGMENTS_IN_CHUNK_MASK);
                     var mask = SegmentsMaskCache[segmentInChunk];
                     if ((heuristic.FullBlocks.Value & mask) == mask && cluster.FreeSegmentByType[segment.EntityType] == (int) segmentIdx) {
-                        TryFindNextFreeSegmentForType(ref cluster, segment.EntityType);
+                        TryFindNextFreeSegmentForType(ref cluster, (byte)segment.EntityType);
                     }
                 }
 
@@ -1620,7 +1623,7 @@ namespace FFS.Libraries.StaticEcs {
                     var segmentInChunk = (int)(segmentIdx & Const.SEGMENTS_IN_CHUNK_MASK);
                     var mask = SegmentsMaskCache[segmentInChunk];
                     if ((HeuristicChunks[chunkIdx].FullBlocks.Value & mask) == mask && cluster.FreeSegmentByType[segment.EntityType] == (int) segmentIdx) {
-                        TryFindNextFreeSegmentForType(ref cluster, segment.EntityType);
+                        TryFindNextFreeSegmentForType(ref cluster, (byte)segment.EntityType);
                     }
                 }
 
@@ -1915,7 +1918,7 @@ namespace FFS.Libraries.StaticEcs {
                 var segmentBlockIdx = (byte)((entityId >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCKS_IN_SEGMENT_MASK);
                 var blockEntityInvMask = ~(1UL << (int)(entityId & Const.ENTITIES_IN_BLOCK_MASK));
                 var segmentEntityIdx = (int)(entityId & Const.ENTITIES_IN_SEGMENT_MASK);
-
+                
                 ref var segment = ref EntitiesSegments[segmentIdx];
                 ref var entitiesMask = ref segment.Masks[segmentBlockIdx];
 
@@ -2226,7 +2229,7 @@ namespace FFS.Libraries.StaticEcs {
                     seg.ClusterId = clusterId;
                     seg.SelfOwner = selfOwner;
                     if (clusterId == EntitiesSegment.InvalidCluster) {
-                        seg.EntityType = 0;
+                        seg.EntityType = EntitiesSegment.NoEntityType;
                     }
                 }
                 #if FFS_ECS_BURST
@@ -2684,12 +2687,13 @@ namespace FFS.Libraries.StaticEcs {
                         nonFullBlocks &= ~segmentMask;
 
                         var segIdx = baseSegmentIdx + segmentIdxInChunk;
+                        var type = EntitiesSegments[segIdx].EntityType;
                         if ((heuristic.NotEmptyBlocks.Value & segmentMask) != 0) {
-                            if (EntitiesSegments[segIdx].EntityType == entityType) {
+                            if (type == entityType) {
                                 cluster.FreeSegmentByType[entityType] = (int) segIdx;
                                 return;
                             }
-                        } else if (emptySegment == uint.MaxValue) {
+                        } else if (emptySegment == uint.MaxValue && (type == EntitiesSegment.NoEntityType || type == entityType)) {
                             emptySegment = segIdx;
                         }
                     }
@@ -2925,7 +2929,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 for (var s = 0; s < Const.SEGMENTS_IN_CHUNK; s++) {
-                    writer.WriteByte(EntitiesSegments[baseSegmentIdx + s].EntityType);
+                    writer.WriteUshort(EntitiesSegments[baseSegmentIdx + s].EntityType);
                 }
             }
 
@@ -2958,7 +2962,7 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 for (var s = 0; s < Const.SEGMENTS_IN_CHUNK; s++) {
-                    var et = reader.ReadByte();
+                    var et = reader.ReadUshort();
                     EntitiesSegments[baseSegmentIdx + s].EntityType = et;
                     #if FFS_ECS_BURST
                     LifecycleHandle.OnSegmentEntityTypeChanged((uint)(baseSegmentIdx + s), et);

@@ -24,12 +24,7 @@ namespace FFS.Libraries.StaticEcs {
 
             public void Invoke(Entity entity, ref T0 comp0);
 
-            public void InvokeBlock(Entity entity,
-                                    #if NET6_0_OR_GREATER
-                                    int start, int end, Span<T0> comp0);
-                                    #else
-                                    uint start, uint end, T0[] comp0);
-                                    #endif
+            public void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0);
         }
         
         #if ENABLE_IL2CPP
@@ -47,13 +42,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void InvokeBlock(
-                Entity entity,
-                #if NET6_0_OR_GREATER
-                int start, int end, Span<T0> comp0) {
-                #else
-                uint start, uint end, T0[] comp0) {
-                #endif
+            public void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 ref var entityId = ref entity.IdWithOffset;
                 while (start < end) {
                     #if FFS_ECS_DEBUG
@@ -80,13 +69,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void InvokeBlock(
-                Entity entity,
-                #if NET6_0_OR_GREATER
-                int start, int end, Span<T0> comp0) {
-                #else
-                uint start, uint end, T0[] comp0) {
-                #endif
+            public void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 while (start < end) {
                     #if FFS_ECS_DEBUG
                     Data.Instance.SetCurrentQueryEntity(entity.IdWithOffset++);
@@ -111,13 +94,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void InvokeBlock(
-                Entity entity,
-                #if NET6_0_OR_GREATER
-                int start, int end, Span<T0> comp0) {
-                #else
-                uint start, uint end, T0[] comp0) {
-                #endif
+            public void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 ref var entityId = ref entity.IdWithOffset;
                 while (start < end) {
                     #if FFS_ECS_DEBUG
@@ -145,13 +122,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void InvokeBlock(
-                Entity entity,
-                #if NET6_0_OR_GREATER
-                int start, int end, Span<T0> comp0) {
-                #else
-                uint start, uint end, T0[] comp0) {
-                #endif
+            public void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 ref var entityId = ref entity.IdWithOffset;
                 while (start < end) {
                     #if FFS_ECS_DEBUG
@@ -179,13 +150,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void InvokeBlock(
-                Entity entity,
-                #if NET6_0_OR_GREATER
-                int start, int end, Span<T0> comp0) {
-                #else
-                uint start, uint end, T0[] comp0) {
-                #endif
+            public void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 while (start < end) {
                     #if FFS_ECS_DEBUG
                     Data.Instance.SetCurrentQueryEntity(entity.IdWithOffset++);
@@ -210,12 +175,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public unsafe void InvokeBlock(Entity entity,
-                                           #if NET6_0_OR_GREATER
-                                           int start, int end, Span<T0> comp0) {
-                                           #else
-                                           uint start, uint end, T0[] comp0) {
-                                           #endif
+            public unsafe void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 while (start < end) {
                     #if FFS_ECS_DEBUG
                     Data.Instance.SetCurrentQueryEntity(entity.IdWithOffset++);
@@ -240,13 +200,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public unsafe void InvokeBlock(
-                Entity entity,
-                #if NET6_0_OR_GREATER
-                int start, int end, Span<T0> comp0) {
-                #else
-                uint start, uint end, T0[] comp0) {
-                #endif
+            public unsafe void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 ref var entityId = ref entity.IdWithOffset;
                 while (start < end) {
                     #if FFS_ECS_DEBUG
@@ -276,13 +230,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void InvokeBlock(
-                Entity entity,
-                #if NET6_0_OR_GREATER
-                int start, int end, Span<T0> comp0) {
-                #else
-                uint start, uint end, T0[] comp0) {
-                #endif
+            public void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 ref var entityId = ref entity.IdWithOffset;
                 while (start < end) {
                     #if FFS_ECS_DEBUG
@@ -309,13 +257,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void InvokeBlock(
-                Entity entity,
-                #if NET6_0_OR_GREATER
-                int start, int end, Span<T0> comp0) {
-                #else
-                uint start, uint end, T0[] comp0) {
-                #endif
+            public void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 while (start < end) {
                     #if FFS_ECS_DEBUG
                     Data.Instance.SetCurrentQueryEntity(entity.IdWithOffset++);
@@ -340,13 +282,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void InvokeBlock(
-                Entity entity,
-                #if NET6_0_OR_GREATER
-                int start, int end, Span<T0> comp0) {
-                #else
-                uint start, uint end, T0[] comp0) {
-                #endif
+            public void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 ref var entityId = ref entity.IdWithOffset;
                 while (start < end) {
                     #if FFS_ECS_DEBUG
@@ -374,13 +310,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void InvokeBlock(
-                Entity entity,
-                #if NET6_0_OR_GREATER
-                int start, int end, Span<T0> comp0) {
-                #else
-                uint start, uint end, T0[] comp0) {
-                #endif
+            public void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 ref var entityId = ref entity.IdWithOffset;
                 while (start < end) {
                     #if FFS_ECS_DEBUG
@@ -408,13 +338,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            public void InvokeBlock(
-                Entity entity,
-                #if NET6_0_OR_GREATER
-                int start, int end, Span<T0> comp0) {
-                #else
-                uint start, uint end, T0[] comp0) {
-                #endif
+            public void InvokeBlock(Entity entity, uint start, uint end, T0[] comp0) {
                 while (start < end) {
                     #if FFS_ECS_DEBUG
                     Data.Instance.SetCurrentQueryEntity(entity.IdWithOffset++);
@@ -793,11 +717,7 @@ namespace FFS.Libraries.StaticEcs {
                     where TFunction : struct, IQuery.Write<T0>.Read<T1, T2, T3> {
                     QueryFunctionStructAdapterW1R3<T0, T1, T2, T3, TFunction> adapter;
                     adapter.Function = function;
-                    new WorldQuery<TFilter>(Filter).ForInternal<T0, T1, T2, T3, QueryFunctionStructAdapterW1R3<T0, T1, T2, T3, TFunction>
-                        , ChangedTracker<T0>
-                    >(ref adapter,
-                        new ChangedTracker<T0>(0),
-                        entities, components, queryMode, clusters);
+                    new WorldQuery<TFilter>(Filter).ForInternalTracked<T0, T1, T2, T3, QueryFunctionStructAdapterW1R3<T0, T1, T2, T3, TFunction>, ChangedTracker<T0>>(ref adapter, new ChangedTracker<T0>(0), entities, components, queryMode, clusters);
                 }
 
                 /// <summary>Iterates over matching entities, invoking the struct function for each.</summary>
@@ -810,11 +730,7 @@ namespace FFS.Libraries.StaticEcs {
                     where TFunction : struct, IQuery.Write<T0>.Read<T1, T2, T3> {
                     QueryFunctionStructAdapterW1R3<T0, T1, T2, T3, TFunction> adapter;
                     adapter.Function = function;
-                    new WorldQuery<TFilter>(Filter).ForInternal<T0, T1, T2, T3, QueryFunctionStructAdapterW1R3<T0, T1, T2, T3, TFunction>
-                        , ChangedTracker<T0>
-                    >(ref adapter,
-                        new ChangedTracker<T0>(0),
-                        entities, components, queryMode, clusters);
+                    new WorldQuery<TFilter>(Filter).ForInternalTracked<T0, T1, T2, T3, QueryFunctionStructAdapterW1R3<T0, T1, T2, T3, TFunction>, ChangedTracker<T0>>(ref adapter, new ChangedTracker<T0>(0), entities, components, queryMode, clusters);
                     function = adapter.Function;
                 }
 
@@ -894,11 +810,7 @@ namespace FFS.Libraries.StaticEcs {
                     where TFunction : struct, IQuery.Write<T0>.Read<T1, T2, T3, T4> {
                     QueryFunctionStructAdapterW1R4<T0, T1, T2, T3, T4, TFunction> adapter;
                     adapter.Function = function;
-                    new WorldQuery<TFilter>(Filter).ForInternal<T0, T1, T2, T3, T4, QueryFunctionStructAdapterW1R4<T0, T1, T2, T3, T4, TFunction>
-                        , ChangedTracker<T0>
-                    >(ref adapter,
-                        new ChangedTracker<T0>(0),
-                        entities, components, queryMode, clusters);
+                    new WorldQuery<TFilter>(Filter).ForInternalTracked<T0, T1, T2, T3, T4, QueryFunctionStructAdapterW1R4<T0, T1, T2, T3, T4, TFunction>, ChangedTracker<T0>>(ref adapter, new ChangedTracker<T0>(0), entities, components, queryMode, clusters);
                 }
 
                 /// <summary>Iterates over matching entities, invoking the struct function for each.</summary>
@@ -911,11 +823,7 @@ namespace FFS.Libraries.StaticEcs {
                     where TFunction : struct, IQuery.Write<T0>.Read<T1, T2, T3, T4> {
                     QueryFunctionStructAdapterW1R4<T0, T1, T2, T3, T4, TFunction> adapter;
                     adapter.Function = function;
-                    new WorldQuery<TFilter>(Filter).ForInternal<T0, T1, T2, T3, T4, QueryFunctionStructAdapterW1R4<T0, T1, T2, T3, T4, TFunction>
-                        , ChangedTracker<T0>
-                    >(ref adapter,
-                        new ChangedTracker<T0>(0),
-                        entities, components, queryMode, clusters);
+                    new WorldQuery<TFilter>(Filter).ForInternalTracked<T0, T1, T2, T3, T4, QueryFunctionStructAdapterW1R4<T0, T1, T2, T3, T4, TFunction>, ChangedTracker<T0>>(ref adapter, new ChangedTracker<T0>(0), entities, components, queryMode, clusters);
                     function = adapter.Function;
                 }
 
@@ -996,11 +904,7 @@ namespace FFS.Libraries.StaticEcs {
                     where TFunction : struct, IQuery.Write<T0>.Read<T1, T2, T3, T4, T5> {
                     QueryFunctionStructAdapterW1R5<T0, T1, T2, T3, T4, T5, TFunction> adapter;
                     adapter.Function = function;
-                    new WorldQuery<TFilter>(Filter).ForInternal<T0, T1, T2, T3, T4, T5, QueryFunctionStructAdapterW1R5<T0, T1, T2, T3, T4, T5, TFunction>
-                        , ChangedTracker<T0>
-                    >(ref adapter,
-                        new ChangedTracker<T0>(0),
-                        entities, components, queryMode, clusters);
+                    new WorldQuery<TFilter>(Filter).ForInternalTracked<T0, T1, T2, T3, T4, T5, QueryFunctionStructAdapterW1R5<T0, T1, T2, T3, T4, T5, TFunction>, ChangedTracker<T0>>(ref adapter, new ChangedTracker<T0>(0), entities, components, queryMode, clusters);
                 }
 
                 /// <summary>Iterates over matching entities, invoking the struct function for each.</summary>
@@ -1013,11 +917,7 @@ namespace FFS.Libraries.StaticEcs {
                     where TFunction : struct, IQuery.Write<T0>.Read<T1, T2, T3, T4, T5> {
                     QueryFunctionStructAdapterW1R5<T0, T1, T2, T3, T4, T5, TFunction> adapter;
                     adapter.Function = function;
-                    new WorldQuery<TFilter>(Filter).ForInternal<T0, T1, T2, T3, T4, T5, QueryFunctionStructAdapterW1R5<T0, T1, T2, T3, T4, T5, TFunction>
-                        , ChangedTracker<T0>
-                    >(ref adapter,
-                        new ChangedTracker<T0>(0),
-                        entities, components, queryMode, clusters);
+                    new WorldQuery<TFilter>(Filter).ForInternalTracked<T0, T1, T2, T3, T4, T5, QueryFunctionStructAdapterW1R5<T0, T1, T2, T3, T4, T5, TFunction>, ChangedTracker<T0>>(ref adapter, new ChangedTracker<T0>(0), entities, components, queryMode, clusters);
                     function = adapter.Function;
                 }
 
@@ -1323,9 +1223,7 @@ namespace FFS.Libraries.StaticEcs {
                     where TFunction : struct, IQueryBlock.Write<T0>.Read<T1> {
                     BlockAdapterW1R1<T0, T1, TFunction> adapter;
                     adapter.Function = function;
-                    new WorldQuery<TFilter>(Filter).ForBlockInternalTracked<T0, T1, BlockAdapterW1R1<T0, T1, TFunction>, ChangedTracker<T0>>(ref adapter,
-                        new ChangedTracker<T0>(0),
-                        entities, components, clusters);
+                    new WorldQuery<TFilter>(Filter).ForBlockInternalTracked<T0, T1, BlockAdapterW1R1<T0, T1, TFunction>, ChangedTracker<T0>>(ref adapter, new ChangedTracker<T0>(0), entities, components, clusters);
                 }
 
                 /// <summary>Iterates over matching entities, invoking the struct function for each.</summary>
@@ -1337,9 +1235,7 @@ namespace FFS.Libraries.StaticEcs {
                     where TFunction : struct, IQueryBlock.Write<T0>.Read<T1> {
                     BlockAdapterW1R1<T0, T1, TFunction> adapter;
                     adapter.Function = function;
-                    new WorldQuery<TFilter>(Filter).ForBlockInternalTracked<T0, T1, BlockAdapterW1R1<T0, T1, TFunction>, ChangedTracker<T0>>(ref adapter,
-                        new ChangedTracker<T0>(0),
-                        entities, components, clusters);
+                    new WorldQuery<TFilter>(Filter).ForBlockInternalTracked<T0, T1, BlockAdapterW1R1<T0, T1, TFunction>, ChangedTracker<T0>>(ref adapter, new ChangedTracker<T0>(0), entities, components, clusters);
                     function = adapter.Function;
                 }
 
@@ -1956,7 +1852,6 @@ namespace FFS.Libraries.StaticEcs {
             #endif // !FFS_ECS_DISABLE_CHANGED_TRACKING
 
             #region DELEGATE SEARCH
-            /// <inheritdoc cref="Search{T0}(out Entity, SearchFunctionWithEntity{TWorld,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
             public bool Search<T0>(out Entity entity,
                                    SearchFunctionWithEntity<TWorld, T0> function,
@@ -1965,14 +1860,24 @@ namespace FFS.Libraries.StaticEcs {
                                    QueryMode queryMode = QueryMode.Strict,
                                    ReadOnlySpan<ushort> clusters = default)
                 where T0 : struct, IComponent {
-                ref var world = ref Data.Instance;
-                var strict = queryMode == QueryMode.Strict;
-
+                return queryMode == QueryMode.Strict
+                    ? SearchStrict(out entity, function, entities, components, clusters)
+                    : SearchFlexible(out entity, function, entities, components, clusters);
+            }
+            
+            /// <inheritdoc cref="Search{T0}(out Entity, SearchFunctionWithEntity{TWorld,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
+            [MethodImpl(AggressiveInlining)]
+            internal bool SearchFlexible<T0>(out Entity entity,
+                                             SearchFunctionWithEntity<TWorld, T0> function,
+                                             EntityStatusType entities = EntityStatusType.Enabled,
+                                             ComponentStatus components = ComponentStatus.Enabled,
+                                             ReadOnlySpan<ushort> clusters = default)
+                where T0 : struct, IComponent {
                 var result = false;
                 entity = new Entity();
                 ref var entityId = ref entity.IdWithOffset;
 
-                if (Prepare<T0>(Filter, clusters, entities, components, strict, out var queryData, out var firstGlobalBlockIdx)) {
+                if (PrepareFlexible<T0>(Filter, clusters, entities, components, out var queryData, out var firstGlobalBlockIdx)) {
                     #if FFS_ECS_DEBUG
                     try
                     #endif
@@ -1983,11 +1888,7 @@ namespace FFS.Libraries.StaticEcs {
                         var deBruijn = Utils.DeBruijn;
                         #endif
 
-                        #if NET6_0_OR_GREATER
-                        Span<T0> components0 = default;
-                        #else
                         T0[] components0 = null;
-                        #endif
 
                         var blocks = queryData.Blocks;
                         var segmentIdx = uint.MaxValue;
@@ -1996,11 +1897,7 @@ namespace FFS.Libraries.StaticEcs {
                             var curSegmentIdx = firstGlobalBlockIdx >> Const.BLOCKS_IN_SEGMENT_SHIFT;
                             if (curSegmentIdx != segmentIdx) {
                                 segmentIdx = (uint)curSegmentIdx;
-                                #if NET6_0_OR_GREATER
-                                components0 = new(segments0[segmentIdx]);
-                                #else
                                 components0 = segments0[segmentIdx];
-                                #endif
                             }
 
                             var chunkBlockEntityId = (uint)(firstGlobalBlockIdx << Const.ENTITIES_IN_BLOCK_SHIFT);
@@ -2008,80 +1905,137 @@ namespace FFS.Libraries.StaticEcs {
                             ref var entitiesMaskRef = ref block.EntitiesMask;
                             firstGlobalBlockIdx = block.NextGlobalBlock;
                             var entitiesMask = entitiesMaskRef;
-                            #if NET6_0_OR_GREATER
-                            var componentOffset = (int)(chunkBlockEntityId & Const.ENTITIES_IN_SEGMENT_MASK);
-                            #else
                             var componentOffset = chunkBlockEntityId & Const.ENTITIES_IN_SEGMENT_MASK;
-                            #endif
                             chunkBlockEntityId += Const.ENTITY_ID_OFFSET;
 
-                            if (strict) {
-                                if (entitiesMask == ulong.MaxValue) {
-                                    var componentEnd = componentOffset + Const.U64_BITS;
-                                    entityId = chunkBlockEntityId;
-                                    while (componentOffset < componentEnd) {
-                                        #if FFS_ECS_DEBUG
-                                        world.SetCurrentQueryEntity(entityId);
-                                        #endif
-                                        if (function.Invoke(
-                                                entity,
-                                                in components0[componentOffset]
-                                            )) {
-                                            result = true;
-                                            goto EXIT;
-                                        }
+                            do {
+                                var isolatedBit = entitiesMask & (ulong)-(long)entitiesMask;
+                                #if NET6_0_OR_GREATER
+                                var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(entitiesMask);
+                                #else
+                                var runStart = deBruijn[(uint)((isolatedBit * 0x37E84A99DAE458FUL) >> 58)];
+                                #endif
 
-                                        componentOffset++;
-                                        entityId++;
+                                var componentIdx = runStart + componentOffset;
+                                entityId = chunkBlockEntityId + runStart;
+
+                                do {
+                                    #if FFS_ECS_DEBUG
+                                    Data.Instance.SetCurrentQueryEntity(entityId);
+                                    #endif
+                                    if (function.Invoke(
+                                            entity,
+                                            in components0[componentIdx]
+                                        )) {
+                                        result = true;
+                                        goto EXIT;
                                     }
-                                }
-                                else {
-                                    var runStarts = entitiesMask & ~(entitiesMask << 1);
-                                    var runEnds = entitiesMask & ~(entitiesMask >> 1);
-                                    do {
-                                        #if NET6_0_OR_GREATER
-                                        var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(runStarts);
-                                        var runEnd = (byte)System.Numerics.BitOperations.TrailingZeroCount(runEnds);
-                                        #else
-                                        var runStart = deBruijn[(uint)(((runStarts & (ulong)-(long)runStarts) * 0x37E84A99DAE458FUL) >> 58)];
-                                        var runEnd = deBruijn[(uint)(((runEnds & (ulong)-(long)runEnds) * 0x37E84A99DAE458FUL) >> 58)];
-                                        #endif
-                                        runStarts &= runStarts - 1UL;
-                                        runEnds &= runEnds - 1UL;
-                                        var componentIdx = runStart + componentOffset;
-                                        var componentEnd = runEnd + componentOffset;
-                                        entityId = chunkBlockEntityId + runStart;
-                                        while (componentIdx <= componentEnd) {
-                                            #if FFS_ECS_DEBUG
-                                            world.SetCurrentQueryEntity(entityId);
-                                            #endif
-                                            if (function.Invoke(
-                                                    entity,
-                                                    in components0[componentIdx]
-                                                )) {
-                                                result = true;
-                                                goto EXIT;
-                                            }
 
-                                            componentIdx++;
-                                            entityId++;
-                                        }
-                                    } while (runStarts != 0);
+                                    isolatedBit <<= 1;
+                                    componentIdx++;
+                                    entityId++;
+                                } while ((entitiesMaskRef & isolatedBit) != 0);
+
+                                entitiesMask = entitiesMaskRef & ~(isolatedBit - 1);
+                            } while (entitiesMask != 0);
+                        } while (firstGlobalBlockIdx >= 0);
+
+                        EXIT: ;
+                    }
+
+                    #if FFS_ECS_DEBUG
+                    finally
+                    #endif
+                    {
+                        Data.Instance.PopCurrentQuery(queryData);
+                        DisposeFlexible<T0>(Filter, entities, components, queryData);
+                    }
+                }
+
+                return result;
+            }
+            
+            /// <inheritdoc cref="Search{T0}(out Entity, SearchFunctionWithEntity{TWorld,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
+            [MethodImpl(AggressiveInlining)]
+            internal bool SearchStrict<T0>(out Entity entity,
+                                           SearchFunctionWithEntity<TWorld, T0> function,
+                                           EntityStatusType entities = EntityStatusType.Enabled,
+                                           ComponentStatus components = ComponentStatus.Enabled,
+                                           ReadOnlySpan<ushort> clusters = default)
+                where T0 : struct, IComponent {
+                ref var world = ref Data.Instance;
+
+                var result = false;
+                entity = new Entity();
+                ref var entityId = ref entity.IdWithOffset;
+
+                if (PrepareStrict<T0>(Filter, clusters, entities, components, out var queryData, out var firstGlobalBlockIdx)) {
+                    #if FFS_ECS_DEBUG
+                    try
+                    #endif
+                    {
+                        var segments0 = Components<T0>.Instance.ComponentSegments;
+
+                        #if !NET6_0_OR_GREATER
+                        var deBruijn = Utils.DeBruijn;
+                        #endif
+
+                        T0[] components0 = null;
+
+                        var blocks = queryData.Blocks;
+                        var segmentIdx = uint.MaxValue;
+
+                        do {
+                            var curSegmentIdx = firstGlobalBlockIdx >> Const.BLOCKS_IN_SEGMENT_SHIFT;
+                            if (curSegmentIdx != segmentIdx) {
+                                segmentIdx = (uint)curSegmentIdx;
+                                components0 = segments0[segmentIdx];
+                            }
+
+                            var chunkBlockEntityId = (uint)(firstGlobalBlockIdx << Const.ENTITIES_IN_BLOCK_SHIFT);
+                            ref var block = ref blocks[firstGlobalBlockIdx];
+                            ref var entitiesMaskRef = ref block.EntitiesMask;
+                            firstGlobalBlockIdx = block.NextGlobalBlock;
+                            var entitiesMask = entitiesMaskRef;
+                            var componentOffset = chunkBlockEntityId & Const.ENTITIES_IN_SEGMENT_MASK;
+                            chunkBlockEntityId += Const.ENTITY_ID_OFFSET;
+
+                            if (entitiesMask == ulong.MaxValue) {
+                                var componentEnd = componentOffset + Const.U64_BITS;
+                                entityId = chunkBlockEntityId;
+                                while (componentOffset < componentEnd) {
+                                    #if FFS_ECS_DEBUG
+                                    world.SetCurrentQueryEntity(entityId);
+                                    #endif
+                                    if (function.Invoke(
+                                            entity,
+                                            in components0[componentOffset]
+                                        )) {
+                                        result = true;
+                                        goto EXIT;
+                                    }
+
+                                    componentOffset++;
+                                    entityId++;
                                 }
                             }
                             else {
+                                var runStarts = entitiesMask & ~(entitiesMask << 1);
+                                var runEnds = entitiesMask & ~(entitiesMask >> 1);
                                 do {
-                                    var isolatedBit = entitiesMask & (ulong)-(long)entitiesMask;
                                     #if NET6_0_OR_GREATER
-                                    var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(entitiesMask);
+                                    var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(runStarts);
+                                    var runEnd = (byte)System.Numerics.BitOperations.TrailingZeroCount(runEnds);
                                     #else
-                                    var runStart = deBruijn[(uint)((isolatedBit * 0x37E84A99DAE458FUL) >> 58)];
+                                    var runStart = deBruijn[(uint)(((runStarts & (ulong)-(long)runStarts) * 0x37E84A99DAE458FUL) >> 58)];
+                                    var runEnd = deBruijn[(uint)(((runEnds & (ulong)-(long)runEnds) * 0x37E84A99DAE458FUL) >> 58)];
                                     #endif
-
+                                    runStarts &= runStarts - 1UL;
+                                    runEnds &= runEnds - 1UL;
                                     var componentIdx = runStart + componentOffset;
+                                    var componentEnd = runEnd + componentOffset;
                                     entityId = chunkBlockEntityId + runStart;
-
-                                    do {
+                                    while (componentIdx <= componentEnd) {
                                         #if FFS_ECS_DEBUG
                                         world.SetCurrentQueryEntity(entityId);
                                         #endif
@@ -2093,13 +2047,10 @@ namespace FFS.Libraries.StaticEcs {
                                             goto EXIT;
                                         }
 
-                                        isolatedBit <<= 1;
                                         componentIdx++;
                                         entityId++;
-                                    } while ((entitiesMaskRef & isolatedBit) != 0);
-
-                                    entitiesMask = entitiesMaskRef & ~(isolatedBit - 1);
-                                } while (entitiesMask != 0);
+                                    }
+                                } while (runStarts != 0);
                             }
                         } while (firstGlobalBlockIdx >= 0);
 
@@ -2110,7 +2061,10 @@ namespace FFS.Libraries.StaticEcs {
                     finally
                     #endif
                     {
-                        Dispose<T0>(Filter, entities, components, strict, queryData);
+                        Data.Instance.PopCurrentQuery(queryData);
+                        #if FFS_ECS_DEBUG
+                        DisposeStrict<T0>(Filter, entities, components, queryData);
+                        #endif
                     }
                 }
 
@@ -2854,7 +2808,7 @@ namespace FFS.Libraries.StaticEcs {
                 where T0 : unmanaged, IComponent
                 where TAdapter : struct, IBlockQueryAdapter<T0>
                 {
-                if (Prepare<T0>(Filter, clusters, entities, components, true, out var queryData, out var firstGlobalBlockIdx)) {
+                if (PrepareStrict<T0>(Filter, clusters, entities, components, out var queryData, out var firstGlobalBlockIdx)) {
                     ref var world = ref Data.Instance;
                     #if FFS_ECS_DEBUG
                     try
@@ -2933,7 +2887,10 @@ namespace FFS.Libraries.StaticEcs {
                     finally
                     #endif
                     {
-                        Dispose<T0>(Filter, entities, components, true, queryData);
+                        Data.Instance.PopCurrentQuery(queryData);
+                        #if FFS_ECS_DEBUG
+                        DisposeStrict<T0>(Filter, entities, components, queryData);
+                        #endif
                     }
                 }
             }
@@ -2949,7 +2906,7 @@ namespace FFS.Libraries.StaticEcs {
                 where TAdapter : struct, IBlockQueryAdapter<T0>
                 where TTracker : struct, IChangedTracker
                 {
-                if (Prepare<T0>(Filter, clusters, entities, components, true, out var queryData, out var firstGlobalBlockIdx)) {
+                if (PrepareStrict<T0>(Filter, clusters, entities, components, out var queryData, out var firstGlobalBlockIdx)) {
                     ref var world = ref Data.Instance;
                     #if FFS_ECS_DEBUG
                     try
@@ -3032,7 +2989,10 @@ namespace FFS.Libraries.StaticEcs {
                     finally
                     #endif
                     {
-                        Dispose<T0>(Filter, entities, components, true, queryData);
+                        Data.Instance.PopCurrentQuery(queryData);
+                        #if FFS_ECS_DEBUG
+                        DisposeStrict<T0>(Filter, entities, components, queryData);
+                        #endif
                     }
                 }
             }
@@ -3146,18 +3106,14 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal void ForInternal<T0, TFunction>(ref TFunction function,
-                EntityStatusType entities = EntityStatusType.Enabled,
-                ComponentStatus components = ComponentStatus.Enabled,
-                QueryMode queryMode = QueryMode.Strict,
-                ReadOnlySpan<ushort> clusters = default)
+            internal void ForInternalFlexible<T0, TFunction>(ref TFunction function,
+                                                             EntityStatusType entities = EntityStatusType.Enabled,
+                                                             ComponentStatus components = ComponentStatus.Enabled,
+                                                             ReadOnlySpan<ushort> clusters = default)
                 where T0 : struct, IComponent
                 where TFunction : struct, IQueryFunctionAdapter<T0>
             {
-                ref var world = ref Data.Instance;
-                var strict = queryMode == QueryMode.Strict;
-
-                if (Prepare<T0>(Filter, clusters, entities, components, strict, out var queryData, out var firstGlobalBlockIdx)) {
+                if (PrepareFlexible<T0>(Filter, clusters, entities, components, out var queryData, out var firstGlobalBlockIdx)) {
                     #if FFS_ECS_DEBUG
                     try
                     #endif
@@ -3168,11 +3124,7 @@ namespace FFS.Libraries.StaticEcs {
                         var deBruijn = Utils.DeBruijn;
                         #endif
 
-                        #if NET6_0_OR_GREATER
-                        Span<T0> comp0 = default;
-                        #else
                         T0[] comp0 = null;
-                        #endif
 
                         var blocks = queryData.Blocks;
                         var segmentIdx = uint.MaxValue;
@@ -3183,11 +3135,7 @@ namespace FFS.Libraries.StaticEcs {
                             var curSegmentIdx = firstGlobalBlockIdx >> Const.BLOCKS_IN_SEGMENT_SHIFT;
                             if (curSegmentIdx != segmentIdx) {
                                 segmentIdx = (uint)curSegmentIdx;
-                                #if NET6_0_OR_GREATER
-                                comp0 = new(segments0[segmentIdx]);
-                                #else
                                 comp0 = segments0[segmentIdx];
-                                #endif
                             }
 
                             var chunkBlockEntityId = (uint)(firstGlobalBlockIdx << Const.ENTITIES_IN_BLOCK_SHIFT);
@@ -3195,63 +3143,131 @@ namespace FFS.Libraries.StaticEcs {
                             ref var entitiesMaskRef = ref block.EntitiesMask;
                             firstGlobalBlockIdx = block.NextGlobalBlock;
                             var entitiesMask = entitiesMaskRef;
-                            #if NET6_0_OR_GREATER
-                            var componentOffset = (int)(chunkBlockEntityId & Const.ENTITIES_IN_SEGMENT_MASK);
-                            #else
                             var componentOffset = chunkBlockEntityId & Const.ENTITIES_IN_SEGMENT_MASK;
-                            #endif
                             chunkBlockEntityId += Const.ENTITY_ID_OFFSET;
 
-                            if (strict) {
-                                if (entitiesMask == ulong.MaxValue) {
-                                    var componentEnd = componentOffset + Const.U64_BITS;
-                                    entityId = chunkBlockEntityId;
-                                    function.InvokeBlock(entity, componentOffset, componentEnd, comp0);
+                            do {
+                                var isolatedBit = entitiesMask & (ulong)-(long)entitiesMask;
+                                #if NET6_0_OR_GREATER
+                                var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(entitiesMask);
+                                #else
+                                var runStart = deBruijn[(uint)((isolatedBit * 0x37E84A99DAE458FUL) >> 58)];
+                                #endif
+
+                                var idx = runStart + componentOffset;
+                                entityId = chunkBlockEntityId + runStart;
+
+                                do {
+                                    #if FFS_ECS_DEBUG
+                                    Data.Instance.SetCurrentQueryEntity(entityId);
+                                    #endif
+                                    function.Invoke(entity, ref comp0[idx]);
+                                    isolatedBit <<= 1;
+                                    idx++;
+                                    entityId++;
+                                } while ((entitiesMaskRef & isolatedBit) != 0);
+
+                                entitiesMask = entitiesMaskRef & ~(isolatedBit - 1);
+                            } while (entitiesMask != 0);
+                        } while (firstGlobalBlockIdx >= 0);
+                    }
+
+                    #if FFS_ECS_DEBUG
+                    finally
+                    #endif
+                    {
+                        Data.Instance.PopCurrentQuery(queryData);
+                        DisposeFlexible<T0>(Filter, entities, components, queryData);
+                    }
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal void ForInternalStrict<T0, TFunction>(ref TFunction function,
+                                                           EntityStatusType entities = EntityStatusType.Enabled,
+                                                           ComponentStatus components = ComponentStatus.Enabled,
+                                                           ReadOnlySpan<ushort> clusters = default)
+                where T0 : struct, IComponent
+                where TFunction : struct, IQueryFunctionAdapter<T0>
+            {
+                if (PrepareStrict<T0>(Filter, clusters, entities, components, out var queryData, out var firstGlobalBlockIdx)) {
+                    #if FFS_ECS_DEBUG
+                    try
+                    #endif
+                    {
+                        var segments0 = Components<T0>.Instance.ComponentSegments;
+
+                        #if !NET6_0_OR_GREATER
+                        var deBruijn = Utils.DeBruijn;
+                        #endif
+
+                        T0[] comp0 = null;
+
+                        var blocks = queryData.Blocks;
+                        var segmentIdx = uint.MaxValue;
+                        var entity = new Entity();
+                        ref var entityId = ref entity.IdWithOffset;
+
+                        do {
+                            var curSegmentIdx = firstGlobalBlockIdx >> Const.BLOCKS_IN_SEGMENT_SHIFT;
+                            if (curSegmentIdx != segmentIdx) {
+                                segmentIdx = (uint)curSegmentIdx;
+                                comp0 = segments0[segmentIdx];
+                            }
+
+                            var chunkBlockEntityId = (uint)(firstGlobalBlockIdx << Const.ENTITIES_IN_BLOCK_SHIFT);
+                            ref var block = ref blocks[firstGlobalBlockIdx];
+                            ref var entitiesMaskRef = ref block.EntitiesMask;
+                            firstGlobalBlockIdx = block.NextGlobalBlock;
+                            var entitiesMask = entitiesMaskRef;
+                            var componentOffset = chunkBlockEntityId & Const.ENTITIES_IN_SEGMENT_MASK;
+                            chunkBlockEntityId += Const.ENTITY_ID_OFFSET;
+
+                            if (entitiesMask == ulong.MaxValue) {
+                                var componentEnd = componentOffset + Const.U64_BITS;
+                                entityId = chunkBlockEntityId;
+                                #if NET6_0_OR_GREATER && !ENABLE_IL2CPP
+                                while (componentOffset < componentEnd) {
+                                    #if FFS_ECS_DEBUG
+                                    Data.Instance.SetCurrentQueryEntity(entityId);
+                                    #endif
+                                    function.Invoke(entity, ref comp0[componentOffset]);
+                                    componentOffset++;
+                                    entityId++;
                                 }
-                                else {
-                                    var runStarts = entitiesMask & ~(entitiesMask << 1);
-                                    var runEnds = entitiesMask & ~(entitiesMask >> 1);
-                                    do {
-                                        #if NET6_0_OR_GREATER
-                                        var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(runStarts);
-                                        var runEnd = (byte)System.Numerics.BitOperations.TrailingZeroCount(runEnds);
-                                        #else
-                                        var runStart = deBruijn[(uint)(((runStarts & (ulong)-(long)runStarts) * 0x37E84A99DAE458FUL) >> 58)];
-                                        var runEnd = deBruijn[(uint)(((runEnds & (ulong)-(long)runEnds) * 0x37E84A99DAE458FUL) >> 58)];
-                                        #endif
-                                        runStarts &= runStarts - 1UL;
-                                        runEnds &= runEnds - 1UL;
-                                        var componentIdx = runStart + componentOffset;
-                                        var componentEnd = runEnd + componentOffset;
-                                        entityId = chunkBlockEntityId + runStart;
-                                        function.InvokeBlock(entity, componentIdx, componentEnd + 1, comp0);
-                                    } while (runStarts != 0);
-                                }
+                                #else
+                                function.InvokeBlock(entity, componentOffset, componentEnd, comp0);
+                                #endif
                             }
                             else {
+                                var runStarts = entitiesMask & ~(entitiesMask << 1);
+                                var runEnds = entitiesMask & ~(entitiesMask >> 1);
                                 do {
-                                    var isolatedBit = entitiesMask & (ulong)-(long)entitiesMask;
                                     #if NET6_0_OR_GREATER
-                                    var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(entitiesMask);
+                                    var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(runStarts);
+                                    var runEnd = (byte)System.Numerics.BitOperations.TrailingZeroCount(runEnds);
                                     #else
-                                    var runStart = deBruijn[(uint)((isolatedBit * 0x37E84A99DAE458FUL) >> 58)];
+                                    var runStart = deBruijn[(uint)(((runStarts & (ulong)-(long)runStarts) * 0x37E84A99DAE458FUL) >> 58)];
+                                    var runEnd = deBruijn[(uint)(((runEnds & (ulong)-(long)runEnds) * 0x37E84A99DAE458FUL) >> 58)];
                                     #endif
-
-                                    var idx = runStart + componentOffset;
+                                    runStarts &= runStarts - 1UL;
+                                    runEnds &= runEnds - 1UL;
+                                    var componentIdx = runStart + componentOffset;
+                                    var componentEnd = runEnd + componentOffset;
                                     entityId = chunkBlockEntityId + runStart;
-
-                                    do {
+                                    #if NET6_0_OR_GREATER && !ENABLE_IL2CPP
+                                    while (componentIdx <= componentEnd) {
                                         #if FFS_ECS_DEBUG
-                                        world.SetCurrentQueryEntity(entityId);
+                                        Data.Instance.SetCurrentQueryEntity(entityId);
                                         #endif
-                                        function.Invoke(entity, ref comp0[idx]);
-                                        isolatedBit <<= 1;
-                                        idx++;
+                                        function.Invoke(entity, ref comp0[componentIdx]);
+                                        componentIdx++;
                                         entityId++;
-                                    } while ((entitiesMaskRef & isolatedBit) != 0);
-
-                                    entitiesMask = entitiesMaskRef & ~(isolatedBit - 1);
-                                } while (entitiesMask != 0);
+                                    }
+                                    #else
+                                    function.InvokeBlock(entity, componentIdx, componentEnd + 1, comp0);
+                                    #endif
+                                } while (runStarts != 0);
                             }
                         } while (firstGlobalBlockIdx >= 0);
                     }
@@ -3260,27 +3276,26 @@ namespace FFS.Libraries.StaticEcs {
                     finally
                     #endif
                     {
-                        Dispose<T0>(Filter, entities, components, strict, queryData);
+                        Data.Instance.PopCurrentQuery(queryData);
+                        #if FFS_ECS_DEBUG
+                        DisposeStrict<T0>(Filter, entities, components, queryData);
+                        #endif
                     }
                 }
             }
 
             #if !FFS_ECS_DISABLE_CHANGED_TRACKING
             [MethodImpl(AggressiveInlining)]
-            internal void ForInternal<T0, TFunction, TTracker>(ref TFunction function,
-                TTracker tracker,
-                EntityStatusType entities = EntityStatusType.Enabled,
-                ComponentStatus components = ComponentStatus.Enabled,
-                QueryMode queryMode = QueryMode.Strict,
-                ReadOnlySpan<ushort> clusters = default)
+            internal void ForInternalFlexible<T0, TFunction, TTracker>(ref TFunction function,
+                                                                       TTracker tracker,
+                                                                       EntityStatusType entities = EntityStatusType.Enabled,
+                                                                       ComponentStatus components = ComponentStatus.Enabled,
+                                                                       ReadOnlySpan<ushort> clusters = default)
                 where T0 : struct, IComponent
                 where TFunction : struct, IQueryFunctionAdapter<T0>
                 where TTracker : struct, IChangedTracker
             {
-                ref var world = ref Data.Instance;
-                var strict = queryMode == QueryMode.Strict;
-
-                if (Prepare<T0>(Filter, clusters, entities, components, strict, out var queryData, out var firstGlobalBlockIdx)) {
+                if (PrepareFlexible<T0>(Filter, clusters, entities, components, out var queryData, out var firstGlobalBlockIdx)) {
                     #if FFS_ECS_DEBUG
                     try
                     #endif
@@ -3291,11 +3306,7 @@ namespace FFS.Libraries.StaticEcs {
                         var deBruijn = Utils.DeBruijn;
                         #endif
 
-                        #if NET6_0_OR_GREATER
-                        Span<T0> comp0 = default;
-                        #else
                         T0[] comp0 = null;
-                        #endif
 
                         var blocks = queryData.Blocks;
                         var segmentIdx = uint.MaxValue;
@@ -3306,11 +3317,7 @@ namespace FFS.Libraries.StaticEcs {
                             var curSegmentIdx = firstGlobalBlockIdx >> Const.BLOCKS_IN_SEGMENT_SHIFT;
                             if (curSegmentIdx != segmentIdx) {
                                 segmentIdx = (uint)curSegmentIdx;
-                                #if NET6_0_OR_GREATER
-                                comp0 = new(segments0[segmentIdx]);
-                                #else
                                 comp0 = segments0[segmentIdx];
-                                #endif
                             }
 
                             var chunkBlockEntityId = (uint)(firstGlobalBlockIdx << Const.ENTITIES_IN_BLOCK_SHIFT);
@@ -3318,71 +3325,38 @@ namespace FFS.Libraries.StaticEcs {
                             ref var entitiesMaskRef = ref block.EntitiesMask;
                             firstGlobalBlockIdx = block.NextGlobalBlock;
                             var entitiesMask = entitiesMaskRef;
-                            #if NET6_0_OR_GREATER
-                            var componentOffset = (int)(chunkBlockEntityId & Const.ENTITIES_IN_SEGMENT_MASK);
-                            #else
                             var componentOffset = chunkBlockEntityId & Const.ENTITIES_IN_SEGMENT_MASK;
-                            #endif
                             var trackSegmentBlockIdx = (byte)((chunkBlockEntityId >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCKS_IN_SEGMENT_MASK);
                             var trackChunkBlockIdx = (byte)((chunkBlockEntityId >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCKS_IN_CHUNK_MASK);
                             var trackChunkIdx = chunkBlockEntityId >> Const.ENTITIES_IN_CHUNK_SHIFT;
                             chunkBlockEntityId += Const.ENTITY_ID_OFFSET;
 
-                            if (strict) {
-                                if (entitiesMask == ulong.MaxValue) {
-                                    var componentEnd = componentOffset + Const.U64_BITS;
-                                    entityId = chunkBlockEntityId;
-                                    function.InvokeBlock(entity, componentOffset, componentEnd, comp0);
-                                }
-                                else {
-                                    var runStarts = entitiesMask & ~(entitiesMask << 1);
-                                    var runEnds = entitiesMask & ~(entitiesMask >> 1);
-                                    do {
-                                        #if NET6_0_OR_GREATER
-                                        var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(runStarts);
-                                        var runEnd = (byte)System.Numerics.BitOperations.TrailingZeroCount(runEnds);
-                                        #else
-                                        var runStart = deBruijn[(uint)(((runStarts & (ulong)-(long)runStarts) * 0x37E84A99DAE458FUL) >> 58)];
-                                        var runEnd = deBruijn[(uint)(((runEnds & (ulong)-(long)runEnds) * 0x37E84A99DAE458FUL) >> 58)];
-                                        #endif
-                                        runStarts &= runStarts - 1UL;
-                                        runEnds &= runEnds - 1UL;
-                                        var componentIdx = runStart + componentOffset;
-                                        var componentEnd = runEnd + componentOffset;
-                                        entityId = chunkBlockEntityId + runStart;
-                                        function.InvokeBlock(entity, componentIdx, componentEnd + 1, comp0);
-                                    } while (runStarts != 0);
-                                }
-                                tracker.ApplyBlock(segmentIdx, trackSegmentBlockIdx, entitiesMask, trackChunkBlockIdx, trackChunkIdx);
-                            }
-                            else {
-                                ulong trackedEntities = 0;
+                            ulong trackedEntities = 0;
+                            do {
+                                var isolatedBit = entitiesMask & (ulong)-(long)entitiesMask;
+                                #if NET6_0_OR_GREATER
+                                var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(entitiesMask);
+                                #else
+                                var runStart = deBruijn[(uint)((isolatedBit * 0x37E84A99DAE458FUL) >> 58)];
+                                #endif
+
+                                var idx = runStart + componentOffset;
+                                entityId = chunkBlockEntityId + runStart;
+
                                 do {
-                                    var isolatedBit = entitiesMask & (ulong)-(long)entitiesMask;
-                                    #if NET6_0_OR_GREATER
-                                    var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(entitiesMask);
-                                    #else
-                                    var runStart = deBruijn[(uint)((isolatedBit * 0x37E84A99DAE458FUL) >> 58)];
+                                    #if FFS_ECS_DEBUG
+                                    Data.Instance.SetCurrentQueryEntity(entityId);
                                     #endif
+                                    trackedEntities |= isolatedBit;
+                                    function.Invoke(entity, ref comp0[idx]);
+                                    isolatedBit <<= 1;
+                                    idx++;
+                                    entityId++;
+                                } while ((entitiesMaskRef & isolatedBit) != 0);
 
-                                    var idx = runStart + componentOffset;
-                                    entityId = chunkBlockEntityId + runStart;
-
-                                    do {
-                                        #if FFS_ECS_DEBUG
-                                        world.SetCurrentQueryEntity(entityId);
-                                        #endif
-                                        trackedEntities |= isolatedBit;
-                                        function.Invoke(entity, ref comp0[idx]);
-                                        isolatedBit <<= 1;
-                                        idx++;
-                                        entityId++;
-                                    } while ((entitiesMaskRef & isolatedBit) != 0);
-
-                                    entitiesMask = entitiesMaskRef & ~(isolatedBit - 1);
-                                } while (entitiesMask != 0);
-                                tracker.ApplyBlock(segmentIdx, trackSegmentBlockIdx, trackedEntities, trackChunkBlockIdx, trackChunkIdx);
-                            }
+                                entitiesMask = entitiesMaskRef & ~(isolatedBit - 1);
+                            } while (entitiesMask != 0);
+                            tracker.ApplyBlock(segmentIdx, trackSegmentBlockIdx, trackedEntities, trackChunkBlockIdx, trackChunkIdx);
                         } while (firstGlobalBlockIdx >= 0);
                     }
 
@@ -3390,7 +3364,116 @@ namespace FFS.Libraries.StaticEcs {
                     finally
                     #endif
                     {
-                        Dispose<T0>(Filter, entities, components, strict, queryData);
+                        Data.Instance.PopCurrentQuery(queryData);
+                        DisposeFlexible<T0>(Filter, entities, components, queryData);
+                    }
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal void ForInternalStrict<T0, TFunction, TTracker>(ref TFunction function,
+                                                                     TTracker tracker,
+                                                                     EntityStatusType entities = EntityStatusType.Enabled,
+                                                                     ComponentStatus components = ComponentStatus.Enabled,
+                                                                     ReadOnlySpan<ushort> clusters = default)
+                where T0 : struct, IComponent
+                where TFunction : struct, IQueryFunctionAdapter<T0>
+                where TTracker : struct, IChangedTracker
+            {
+                if (PrepareStrict<T0>(Filter, clusters, entities, components, out var queryData, out var firstGlobalBlockIdx)) {
+                    #if FFS_ECS_DEBUG
+                    try
+                    #endif
+                    {
+                        var segments0 = Components<T0>.Instance.ComponentSegments;
+
+                        #if !NET6_0_OR_GREATER
+                        var deBruijn = Utils.DeBruijn;
+                        #endif
+
+                        T0[] comp0 = null;
+
+                        var blocks = queryData.Blocks;
+                        var segmentIdx = uint.MaxValue;
+                        var entity = new Entity();
+                        ref var entityId = ref entity.IdWithOffset;
+
+                        do {
+                            var curSegmentIdx = firstGlobalBlockIdx >> Const.BLOCKS_IN_SEGMENT_SHIFT;
+                            if (curSegmentIdx != segmentIdx) {
+                                segmentIdx = (uint)curSegmentIdx;
+                                comp0 = segments0[segmentIdx];
+                            }
+
+                            var chunkBlockEntityId = (uint)(firstGlobalBlockIdx << Const.ENTITIES_IN_BLOCK_SHIFT);
+                            ref var block = ref blocks[firstGlobalBlockIdx];
+                            ref var entitiesMaskRef = ref block.EntitiesMask;
+                            firstGlobalBlockIdx = block.NextGlobalBlock;
+                            var entitiesMask = entitiesMaskRef;
+                            var componentOffset = chunkBlockEntityId & Const.ENTITIES_IN_SEGMENT_MASK;
+                            var trackSegmentBlockIdx = (byte)((chunkBlockEntityId >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCKS_IN_SEGMENT_MASK);
+                            var trackChunkBlockIdx = (byte)((chunkBlockEntityId >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCKS_IN_CHUNK_MASK);
+                            var trackChunkIdx = chunkBlockEntityId >> Const.ENTITIES_IN_CHUNK_SHIFT;
+                            chunkBlockEntityId += Const.ENTITY_ID_OFFSET;
+
+                            if (entitiesMask == ulong.MaxValue) {
+                                var componentEnd = componentOffset + Const.U64_BITS;
+                                entityId = chunkBlockEntityId;
+                                #if NET6_0_OR_GREATER && !ENABLE_IL2CPP
+                                while (componentOffset < componentEnd) {
+                                    #if FFS_ECS_DEBUG
+                                    Data.Instance.SetCurrentQueryEntity(entityId);
+                                    #endif
+                                    function.Invoke(entity, ref comp0[componentOffset]);
+                                    componentOffset++;
+                                    entityId++;
+                                }
+                                #else
+                                function.InvokeBlock(entity, componentOffset, componentEnd, comp0);
+                                #endif
+                            }
+                            else {
+                                var runStarts = entitiesMask & ~(entitiesMask << 1);
+                                var runEnds = entitiesMask & ~(entitiesMask >> 1);
+                                do {
+                                    #if NET6_0_OR_GREATER
+                                    var runStart = (byte)System.Numerics.BitOperations.TrailingZeroCount(runStarts);
+                                    var runEnd = (byte)System.Numerics.BitOperations.TrailingZeroCount(runEnds);
+                                    #else
+                                    var runStart = deBruijn[(uint)(((runStarts & (ulong)-(long)runStarts) * 0x37E84A99DAE458FUL) >> 58)];
+                                    var runEnd = deBruijn[(uint)(((runEnds & (ulong)-(long)runEnds) * 0x37E84A99DAE458FUL) >> 58)];
+                                    #endif
+                                    runStarts &= runStarts - 1UL;
+                                    runEnds &= runEnds - 1UL;
+                                    var componentIdx = runStart + componentOffset;
+                                    var componentEnd = runEnd + componentOffset;
+                                    entityId = chunkBlockEntityId + runStart;
+                                    #if NET6_0_OR_GREATER && !ENABLE_IL2CPP
+                                    while (componentIdx <= componentEnd) {
+                                        #if FFS_ECS_DEBUG
+                                        Data.Instance.SetCurrentQueryEntity(entityId);
+                                        #endif
+                                        function.Invoke(entity, ref comp0[componentIdx]);
+                                        componentIdx++;
+                                        entityId++;
+                                    }
+                                    #else
+                                    function.InvokeBlock(entity, componentIdx, componentEnd + 1, comp0);
+                                    #endif
+                                } while (runStarts != 0);
+                            }
+                            tracker.ApplyBlock(segmentIdx, trackSegmentBlockIdx, entitiesMask, trackChunkBlockIdx, trackChunkIdx);
+                        } while (firstGlobalBlockIdx >= 0);
+                    }
+
+                    #if FFS_ECS_DEBUG
+                    finally
+                    #endif
+                    {
+                        Data.Instance.PopCurrentQuery(queryData);
+                        #if FFS_ECS_DEBUG
+                        DisposeStrict<T0>(Filter, entities, components, queryData);
+                        #endif
                     }
                 }
             }
@@ -3407,13 +3490,40 @@ namespace FFS.Libraries.StaticEcs {
                 where TTracker : struct, IChangedTracker
             {
                 if (tracker.IsActive) {
-                    ForInternal<T0, TFunction, TTracker>(ref function, tracker, entities, components, queryMode, clusters);
+                    if (queryMode == QueryMode.Strict) {
+                        ForInternalStrict<T0, TFunction, TTracker>(ref function, tracker, entities, components, clusters);
+                    }
+                    else {
+                        ForInternalFlexible<T0, TFunction, TTracker>(ref function, tracker, entities, components, clusters);
+                    }
                 } else {
-                    ForInternal<T0, TFunction>(ref function, entities, components, queryMode, clusters);
+                    if (queryMode == QueryMode.Strict) {
+                        ForInternalStrict<T0, TFunction>(ref function, entities, components, clusters);
+                    }
+                    else {
+                        ForInternalFlexible<T0, TFunction>(ref function, entities, components, clusters);
+                    }
                 }
             }
             #endif
             
+            [MethodImpl(AggressiveInlining)]
+            internal void ForInternal<T0, TFunction>(ref TFunction function,
+                                                     EntityStatusType entities = EntityStatusType.Enabled,
+                                                     ComponentStatus components = ComponentStatus.Enabled,
+                                                     QueryMode queryMode = QueryMode.Strict,
+                                                     ReadOnlySpan<ushort> clusters = default)
+                where T0 : struct, IComponent
+                where TFunction : struct, IQueryFunctionAdapter<T0>
+            {
+                if (queryMode == QueryMode.Strict) {
+                    ForInternalStrict<T0, TFunction>(ref function, entities, components, clusters);
+                }
+                else {
+                    ForInternalFlexible<T0, TFunction>(ref function, entities, components, clusters);
+                }
+            }
+
 
             internal static unsafe void ForParallelInternal<T0, TFunction>(Job[] jobs, uint[] jobIndexes, uint from, uint to, int worker)
                 where T0 : struct, IComponent
@@ -3424,11 +3534,7 @@ namespace FFS.Libraries.StaticEcs {
                 var deBruijn = Utils.DeBruijn;
                 #endif
 
-                #if NET6_0_OR_GREATER
-                Span<T0> comp0;
-                #else
                 T0[] comp0;
-                #endif
 
                 ref var function = ref Resources<ParallelData<TFunction>>.Value.Value;
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
@@ -3444,26 +3550,29 @@ namespace FFS.Libraries.StaticEcs {
                     job.Count = 0;
 
                     var segmentIdx = job.GlobalBlockIdx[0] >> Const.BLOCKS_IN_SEGMENT_SHIFT;
-                    #if NET6_0_OR_GREATER
-                    comp0 = new(segments0[segmentIdx]);
-                    #else
                     comp0 = segments0[segmentIdx];
-                    #endif
 
                     for (uint i = 0; i < count; i++) {
                         var chunkBlockEntityId = job.GlobalBlockIdx[i] << Const.ENTITIES_IN_BLOCK_SHIFT;
                         var entitiesMask = job.Masks[i];
-                        #if NET6_0_OR_GREATER
-                        var componentOffset = (int)(chunkBlockEntityId & Const.ENTITIES_IN_SEGMENT_MASK);
-                        #else
                         var componentOffset = chunkBlockEntityId & Const.ENTITIES_IN_SEGMENT_MASK;
-                        #endif
                         chunkBlockEntityId += Const.ENTITY_ID_OFFSET;
 
                         if (entitiesMask == ulong.MaxValue) {
                             var componentEnd = componentOffset + Const.U64_BITS;
                             entityId = chunkBlockEntityId;
+                            #if NET6_0_OR_GREATER && !ENABLE_IL2CPP
+                            while (componentOffset < componentEnd) {
+                                #if FFS_ECS_DEBUG
+                                Data.Instance.SetCurrentQueryEntity(entityId);
+                                #endif
+                                function.Invoke(entity, ref comp0[componentOffset]);
+                                componentOffset++;
+                                entityId++;
+                            }
+                            #else
                             function.InvokeBlock(entity, componentOffset, componentEnd, comp0);
+                            #endif
                         }
                         else {
                             var runStarts = entitiesMask & ~(entitiesMask << 1);
@@ -3481,7 +3590,18 @@ namespace FFS.Libraries.StaticEcs {
                                 var componentIdx = runStart + componentOffset;
                                 var componentEnd = runEnd + componentOffset;
                                 entityId = chunkBlockEntityId + runStart;
+                                #if NET6_0_OR_GREATER && !ENABLE_IL2CPP
+                                while (componentIdx <= componentEnd) {
+                                    #if FFS_ECS_DEBUG
+                                    Data.Instance.SetCurrentQueryEntity(entityId);
+                                    #endif
+                                    function.Invoke(entity, ref comp0[componentIdx]);
+                                    componentIdx++;
+                                    entityId++;
+                                }
+                                #else
                                 function.InvokeBlock(entity, componentIdx, componentEnd + 1, comp0);
+                                #endif
                             } while (runStarts != 0);
                         }
                         #if !FFS_ECS_DISABLE_CHANGED_TRACKING
@@ -3490,7 +3610,7 @@ namespace FFS.Libraries.StaticEcs {
                             var trackSegmentBlockIdx = (byte)((origChunkBlockEntityId >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCKS_IN_SEGMENT_MASK);
                             var trackChunkBlockIdx = (byte)((origChunkBlockEntityId >> Const.ENTITIES_IN_BLOCK_SHIFT) & Const.BLOCKS_IN_CHUNK_MASK);
                             var trackChunkIdx = origChunkBlockEntityId >> Const.ENTITIES_IN_CHUNK_SHIFT;
-                            tracker.ApplyBlock(segmentIdx, trackSegmentBlockIdx, entitiesMask, trackChunkBlockIdx, trackChunkIdx);
+                            tracker.ApplyBlock(segmentIdx >> Const.BLOCKS_IN_SEGMENT_SHIFT, trackSegmentBlockIdx, entitiesMask, trackChunkBlockIdx, trackChunkIdx);
                         }
                         #endif
                     }
@@ -3500,8 +3620,7 @@ namespace FFS.Libraries.StaticEcs {
             #region PREPARE AND DISPOSE
             [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
             [MethodImpl(AggressiveInlining)]
-            internal bool Prepare<T0>(TFilter filter, ReadOnlySpan<ushort> clusters, EntityStatusType entities, ComponentStatus components,
-                                      bool strict, out QueryData queryData, out int firstGlobalBlockIdx)
+            internal bool PrepareFlexible<T0>(TFilter filter, ReadOnlySpan<ushort> clusters, EntityStatusType entities, ComponentStatus components, out QueryData queryData, out int firstGlobalBlockIdx)
                 where T0 : struct, IComponent {
                 #if FFS_ECS_DEBUG
                 AssertNotNestedParallelQuery(WorldTypeName);
@@ -3581,61 +3700,159 @@ namespace FFS.Libraries.StaticEcs {
                                     }
                                     else {
                                         #if FFS_ECS_DEBUG
-                                        var queryMode = strict ? (byte)1 : (byte)2;
+                                        const int queryMode = 0; // flexible
                                         AssertSameQueryMode(WorldTypeName, queryMode);
                                         world.QueryMode = queryMode;
                                         #endif
 
                                         queryData = world.PushCurrentQuery();
 
-                                        if (!strict) {
-                                            filter.PushQueryData<TWorld>(queryData);
-                                            world.PushQueryDataForDestroy(queryData);
+                                        filter.PushQueryData<TWorld>(queryData);
+                                        world.PushQueryDataForDestroy(queryData);
 
-                                            switch (entities) {
-                                                case EntityStatusType.Enabled: world.PushQueryDataForDisable(queryData); break;
-                                                case EntityStatusType.Disabled: world.PushQueryDataForEnable(queryData); break;
-                                            }
-
-                                            switch (components) {
-                                                case ComponentStatus.Enabled:
-                                                    pool0.PushQueryDataForDeleteDisable(queryData);
-                                                    break;
-                                                case ComponentStatus.Disabled:
-                                                    pool0.PushQueryDataForDeleteEnable(queryData);
-                                                    break;
-                                                default:
-                                                    pool0.PushQueryDataForDelete(queryData);
-                                                    break;
-                                            }
+                                        switch (entities) {
+                                            case EntityStatusType.Enabled: world.PushQueryDataForDisable(queryData); break;
+                                            case EntityStatusType.Disabled: world.PushQueryDataForEnable(queryData); break;
                                         }
-                                        #if FFS_ECS_DEBUG
-                                        else {
-                                            const int block = 1;
-                                            filter.Block<TWorld>(block);
-                                            world.BlockDestroy(block);
 
-                                            switch (entities) {
-                                                case EntityStatusType.Enabled: world.BlockDisable(block); break;
-                                                case EntityStatusType.Disabled: world.BlockEnable(block); break;
-                                            }
-
-                                            switch (components) {
-                                                case ComponentStatus.Enabled:
-                                                    pool0.BlockDeleteDisable(block);
-                                                    break;
-                                                case ComponentStatus.Disabled:
-                                                    pool0.BlockDeleteEnable(block);
-                                                    break;
-                                                default:
-                                                    pool0.BlockDelete(block);
-                                                    break;
-                                            }
+                                        switch (components) {
+                                            case ComponentStatus.Enabled:
+                                                pool0.PushQueryDataForDeleteDisable(queryData);
+                                                break;
+                                            case ComponentStatus.Disabled:
+                                                pool0.PushQueryDataForDeleteEnable(queryData);
+                                                break;
+                                            default:
+                                                pool0.PushQueryDataForDelete(queryData);
+                                                break;
                                         }
-                                        #endif
 
                                         filteredBlocks = queryData.Blocks;
                                         firstGlobalBlockIdx = (int)globalBlockIdx;
+                                    }
+
+                                    filteredBlocks[globalBlockIdx].EntitiesMask = entitiesMask;
+                                    filteredBlocks[globalBlockIdx].NextGlobalBlock = -1;
+                                    previousGlobalBlockIdx = (int)globalBlockIdx;
+                                }
+                            } while (chunkMask != 0);
+                        }
+                    }
+                }
+
+                return filteredBlocks != null;
+            }
+
+            [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+            [MethodImpl(AggressiveInlining)]
+            internal bool PrepareStrict<T0>(TFilter filter, ReadOnlySpan<ushort> clusters, EntityStatusType entities, ComponentStatus components, out QueryData queryData, out int firstGlobalBlockIdx)
+                where T0 : struct, IComponent {
+                #if FFS_ECS_DEBUG
+                AssertNotNestedParallelQuery(WorldTypeName);
+                AssertRegisteredComponent<T0>(Components<T0>.ComponentsTypeName);
+                filter.Assert<TWorld>();
+                #endif
+
+                ref var world = ref Data.Instance;
+                ref var pool0 = ref Components<T0>.Instance;
+
+                clusters = world.GetActiveClustersIfEmpty(clusters);
+                queryData = default;
+                BlockMaskCache[] filteredBlocks = null;
+
+                #if !NET6_0_OR_GREATER
+                var deBruijn = Utils.DeBruijn;
+                #endif
+
+                var previousGlobalBlockIdx = -1;
+                firstGlobalBlockIdx = -1;
+
+                for (var i = 0; i < clusters.Length; i++) {
+                    var clusterIdx = clusters[i];
+                    ref var cluster = ref world.Clusters[clusterIdx];
+                    if (cluster.Disabled) {
+                        continue;
+                    }
+
+                    for (uint chunkMapIdx = 0; chunkMapIdx < cluster.LoadedChunksCount; chunkMapIdx++) {
+                        var chunkIdx = cluster.LoadedChunks[chunkMapIdx];
+                        var chunkMask = world.HeuristicChunks[chunkIdx].NotEmptyBlocks.Value
+                                        & pool0.HeuristicChunks[chunkIdx].NotEmptyBlocks.Value;
+                        chunkMask &= filter.FilterChunk<TWorld>(chunkIdx);
+
+                        if (chunkMask != 0) {
+                            var segmentIdx = uint.MaxValue;
+
+                            ulong[] worldMasks = null;
+                            ulong[] pool0Masks = null;
+
+                            do {
+                                #if NET6_0_OR_GREATER
+                                var chunkBlockIdx = (uint)System.Numerics.BitOperations.TrailingZeroCount(chunkMask);
+                                #else
+                                var chunkBlockIdx = (uint)deBruijn[(uint)(((chunkMask & (ulong)-(long)chunkMask) * 0x37E84A99DAE458FUL) >> 58)];
+                                #endif
+                                chunkMask &= chunkMask - 1;
+                                var globalBlockIdx = chunkBlockIdx + (chunkIdx << Const.BLOCKS_IN_CHUNK_SHIFT);
+
+                                var curSegmentIdx = (chunkIdx << Const.SEGMENTS_IN_CHUNK_SHIFT) + (chunkBlockIdx >> Const.BLOCKS_IN_SEGMENT_SHIFT);
+                                if (curSegmentIdx != segmentIdx) {
+                                    segmentIdx = curSegmentIdx;
+                                    worldMasks = world.EntitiesSegments[segmentIdx].Masks;
+                                    pool0Masks = pool0.EntitiesMaskSegments[segmentIdx];
+                                }
+
+                                var blockIdx = (byte)(chunkBlockIdx & Const.BLOCKS_IN_SEGMENT_MASK);
+                                var disabledBlockIdx = blockIdx + Const.BLOCKS_IN_SEGMENT;
+                                var loadedBlockIdx = disabledBlockIdx + Const.BLOCKS_IN_SEGMENT;
+
+                                var entitiesMask = entities switch {
+                                    EntityStatusType.Enabled => worldMasks[loadedBlockIdx] & worldMasks[blockIdx] & ~worldMasks[disabledBlockIdx],
+                                    EntityStatusType.Disabled => worldMasks[loadedBlockIdx] & worldMasks[disabledBlockIdx],
+                                    _ => worldMasks[loadedBlockIdx] & worldMasks[blockIdx]
+                                };
+                                entitiesMask &= components switch {
+                                    ComponentStatus.Enabled => pool0Masks[blockIdx] & ~pool0Masks[disabledBlockIdx],
+                                    ComponentStatus.Disabled => pool0Masks[disabledBlockIdx],
+                                    _ => pool0Masks[blockIdx]
+                                };
+                                entitiesMask &= filter.FilterEntities<TWorld>(segmentIdx, blockIdx);
+
+                                if (entitiesMask != 0) {
+                                    if (previousGlobalBlockIdx >= 0) {
+                                        filteredBlocks[previousGlobalBlockIdx].NextGlobalBlock = (int)globalBlockIdx;
+                                    }
+                                    else {
+                                        queryData = world.PushCurrentQuery();
+                                        filteredBlocks = queryData.Blocks;
+                                        firstGlobalBlockIdx = (int)globalBlockIdx;
+                                        
+                                        #if FFS_ECS_DEBUG
+                                        const int queryMode = 1; // strict
+                                        AssertSameQueryMode(WorldTypeName, queryMode);
+                                        world.QueryMode = queryMode; 
+                                        
+                                        const int block = 1;
+                                        filter.Block<TWorld>(block);
+                                        world.BlockDestroy(block);
+
+                                        switch (entities) {
+                                            case EntityStatusType.Enabled: world.BlockDisable(block); break;
+                                            case EntityStatusType.Disabled: world.BlockEnable(block); break;
+                                        }
+
+                                        switch (components) {
+                                            case ComponentStatus.Enabled:
+                                                pool0.BlockDeleteDisable(block);
+                                                break;
+                                            case ComponentStatus.Disabled:
+                                                pool0.BlockDeleteEnable(block);
+                                                break;
+                                            default:
+                                                pool0.BlockDelete(block);
+                                                break;
+                                        }
+                                        #endif
                                     }
 
                                     filteredBlocks[globalBlockIdx].EntitiesMask = entitiesMask;
@@ -3758,63 +3975,71 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal void Dispose<T0>(TFilter filter, EntityStatusType entities, ComponentStatus components, bool strict, QueryData queryData)
+            internal void DisposeFlexible<T0>(TFilter filter, EntityStatusType entities, ComponentStatus components, QueryData queryData)
                 where T0 : struct, IComponent {
                 ref var world = ref Data.Instance;
                 ref var pool0 = ref Components<T0>.Instance;
 
-                world.PopCurrentQuery(queryData);
+                filter.PopQueryData<TWorld>();
+                world.PopQueryDataForDestroy();
 
-                if (!strict) {
-                    filter.PopQueryData<TWorld>();
-                    world.PopQueryDataForDestroy();
+                switch (entities) {
+                    case EntityStatusType.Enabled: world.PopQueryDataForDisable(); break;
+                    case EntityStatusType.Disabled: world.PopQueryDataForEnable(); break;
+                }
 
-                    switch (entities) {
-                        case EntityStatusType.Enabled: world.PopQueryDataForDisable(); break;
-                        case EntityStatusType.Disabled: world.PopQueryDataForEnable(); break;
-                    }
-
-                    switch (components) {
-                        case ComponentStatus.Enabled:
-                            pool0.PopQueryDataForDeleteDisable();
-                            break;
-                        case ComponentStatus.Disabled:
-                            pool0.PopQueryDataForDeleteEnable();
-                            break;
-                        default:
-                            pool0.PopQueryDataForDelete();
-                            break;
-                    }
+                switch (components) {
+                    case ComponentStatus.Enabled:
+                        pool0.PopQueryDataForDeleteDisable();
+                        break;
+                    case ComponentStatus.Disabled:
+                        pool0.PopQueryDataForDeleteEnable();
+                        break;
+                    default:
+                        pool0.PopQueryDataForDelete();
+                        break;
                 }
                 #if FFS_ECS_DEBUG
-                else {
-                    const int unblock = -1;
-                    filter.Block<TWorld>(unblock);
-                    world.BlockDestroy(unblock);
-
-                    switch (entities) {
-                        case EntityStatusType.Enabled: world.BlockDisable(unblock); break;
-                        case EntityStatusType.Disabled: world.BlockEnable(unblock); break;
-                    }
-
-                    switch (components) {
-                        case ComponentStatus.Enabled:
-                            pool0.BlockDeleteDisable(unblock);
-                            break;
-                        case ComponentStatus.Disabled:
-                            pool0.BlockDeleteEnable(unblock);
-                            break;
-                        default:
-                            pool0.BlockDelete(unblock);
-                            break;
-                    }
-                }
-
                 if (world.QueryDataCount == 0) {
                     world.QueryMode = 0;
                 }
                 #endif
             }
+
+            #if FFS_ECS_DEBUG
+            [MethodImpl(AggressiveInlining)]
+            internal void DisposeStrict<T0>(TFilter filter, EntityStatusType entities, ComponentStatus components, QueryData queryData)
+                where T0 : struct, IComponent {
+                
+                ref var world = ref Data.Instance;
+                ref var pool0 = ref Components<T0>.Instance;
+                
+                const int unblock = -1;
+                filter.Block<TWorld>(unblock);
+                world.BlockDestroy(unblock);
+
+                switch (entities) {
+                    case EntityStatusType.Enabled: world.BlockDisable(unblock); break;
+                    case EntityStatusType.Disabled: world.BlockEnable(unblock); break;
+                }
+
+                switch (components) {
+                    case ComponentStatus.Enabled:
+                        pool0.BlockDeleteDisable(unblock);
+                        break;
+                    case ComponentStatus.Disabled:
+                        pool0.BlockDeleteEnable(unblock);
+                        break;
+                    default:
+                        pool0.BlockDelete(unblock);
+                        break;
+                }
+
+                if (world.QueryDataCount == 0) {
+                    world.QueryMode = 0;
+                }
+            }
+            #endif
             #endregion
 
         }
