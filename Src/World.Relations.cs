@@ -8,6 +8,9 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
+#if NET5_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
@@ -1579,7 +1582,11 @@ namespace FFS.Libraries.StaticEcs {
         #endif
     }
 
-    internal static class LinkType<T> where T : unmanaged, ILinkType {
+    internal static class LinkType<
+        #if NET5_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        #endif
+        T> where T : unmanaged, ILinkType {
         private static readonly Type[] OnAddParams = {
             typeof(World<>.Entity),
             typeof(EntityGID)
@@ -1607,7 +1614,11 @@ namespace FFS.Libraries.StaticEcs {
             return HasMethod(typeof(T), nameof(ILinkType.CopyTo), CopyToParams);
         }
         
-        private static bool HasMethod(Type structType, string methodName, Type[] parameterTypes) {
+        private static bool HasMethod(
+            #if NET5_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+            #endif
+            Type structType, string methodName, Type[] parameterTypes) {
             var methods = structType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             foreach (var methodInfo in methods) {
                 if (methodInfo.Name == methodName && methodInfo.IsGenericMethodDefinition) {

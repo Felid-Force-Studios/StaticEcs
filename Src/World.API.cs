@@ -7,6 +7,9 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
+#if NET5_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
@@ -1507,7 +1510,11 @@ namespace FFS.Libraries.StaticEcs {
             /// <param name="id">Stable byte identifier (0–255). Must be unique within this world. Id 0 is reserved for <see cref="Default"/>.</param>
             /// <returns>This registrar for chaining.</returns>
             [MethodImpl(AggressiveInlining)]
-            public TypeRegistrar EntityType<T>(byte id) where T : struct, IEntityType {
+            public TypeRegistrar EntityType<
+                #if NET5_0_OR_GREATER
+                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+                #endif
+                T>(byte id) where T : struct, IEntityType {
                 RegisterEntityType<T>(id);
                 return this;
             }

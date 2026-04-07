@@ -24,26 +24,32 @@ namespace FFS.Libraries.StaticEcs {
             public void Invoke(Entity entity);
 
             /// <summary>Query callback with 1 writable component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapter{T0, TFunction}"/>
             public interface Write<T0> where T0 : struct, IComponent {
                 public void Invoke(Entity entity, ref T0 comp0);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
                 /// <summary>Query callback with 1 writable and 1 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW1R1{T0, T1, TFunction}"/>
                 public interface Read<T1> where T1 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, in T1 comp1);
                 }
                 /// <summary>Query callback with 1 writable and 2 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW1R2{T0, T1, T2, TFunction}"/>
                 public interface Read<T1, T2> where T1 : struct, IComponent where T2 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2);
                 }
                 /// <summary>Query callback with 1 writable and 3 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW1R3{T0, T1, T2, T3, TFunction}"/>
                 public interface Read<T1, T2, T3> where T1 : struct, IComponent where T2 : struct, IComponent where T3 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3);
                 }
                 /// <summary>Query callback with 1 writable and 4 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW1R4{T0, T1, T2, T3, T4, TFunction}"/>
                 public interface Read<T1, T2, T3, T4> where T1 : struct, IComponent where T2 : struct, IComponent where T3 : struct, IComponent where T4 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4);
                 }
                 /// <summary>Query callback with 1 writable and 5 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW1R5{T0, T1, T2, T3, T4, T5, TFunction}"/>
                 public interface Read<T1, T2, T3, T4, T5> where T1 : struct, IComponent where T2 : struct, IComponent where T3 : struct, IComponent where T4 : struct, IComponent where T5 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5);
                 }
@@ -51,22 +57,27 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <summary>Query callback with 2 writable component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapter{T0, T1, TFunction}"/>
             public interface Write<T0, T1> where T0 : struct, IComponent where T1 : struct, IComponent {
                 public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
                 /// <summary>Query callback with 2 writable and 1 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW2R1{T0, T1, T2, TFunction}"/>
                 public interface Read<T2> where T2 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2);
                 }
                 /// <summary>Query callback with 2 writable and 2 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW2R2{T0, T1, T2, T3, TFunction}"/>
                 public interface Read<T2, T3> where T2 : struct, IComponent where T3 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3);
                 }
                 /// <summary>Query callback with 2 writable and 3 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW2R3{T0, T1, T2, T3, T4, TFunction}"/>
                 public interface Read<T2, T3, T4> where T2 : struct, IComponent where T3 : struct, IComponent where T4 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4);
                 }
                 /// <summary>Query callback with 2 writable and 4 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW2R4{T0, T1, T2, T3, T4, T5, TFunction}"/>
                 public interface Read<T2, T3, T4, T5> where T2 : struct, IComponent where T3 : struct, IComponent where T4 : struct, IComponent where T5 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5);
                 }
@@ -74,18 +85,22 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <summary>Query callback with 3 writable component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapter{T0, T1, T2, TFunction}"/>
             public interface Write<T0, T1, T2> where T0 : struct, IComponent where T1 : struct, IComponent where T2 : struct, IComponent {
                 public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
                 /// <summary>Query callback with 3 writable and 1 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW3R1{T0, T1, T2, T3, TFunction}"/>
                 public interface Read<T3> where T3 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3);
                 }
                 /// <summary>Query callback with 3 writable and 2 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW3R2{T0, T1, T2, T3, T4, TFunction}"/>
                 public interface Read<T3, T4> where T3 : struct, IComponent where T4 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3, in T4 comp4);
                 }
                 /// <summary>Query callback with 3 writable and 3 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW3R3{T0, T1, T2, T3, T4, T5, TFunction}"/>
                 public interface Read<T3, T4, T5> where T3 : struct, IComponent where T4 : struct, IComponent where T5 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5);
                 }
@@ -93,14 +108,17 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <summary>Query callback with 4 writable component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapter{T0, T1, T2, T3, TFunction}"/>
             public interface Write<T0, T1, T2, T3> where T0 : struct, IComponent where T1 : struct, IComponent where T2 : struct, IComponent where T3 : struct, IComponent {
                 public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
                 /// <summary>Query callback with 4 writable and 1 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW4R1{T0, T1, T2, T3, T4, TFunction}"/>
                 public interface Read<T4> where T4 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, in T4 comp4);
                 }
                 /// <summary>Query callback with 4 writable and 2 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW4R2{T0, T1, T2, T3, T4, T5, TFunction}"/>
                 public interface Read<T4, T5> where T4 : struct, IComponent where T5 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, in T4 comp4, in T5 comp5);
                 }
@@ -108,10 +126,12 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <summary>Query callback with 5 writable component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapter{T0, T1, T2, T3, T4, TFunction}"/>
             public interface Write<T0, T1, T2, T3, T4> where T0 : struct, IComponent where T1 : struct, IComponent where T2 : struct, IComponent where T3 : struct, IComponent where T4 : struct, IComponent {
                 public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
                 /// <summary>Query callback with 5 writable and 1 readonly component(s).</summary>
+                /// <seealso cref="QueryFunctionStructAdapterW5R1{T0, T1, T2, T3, T4, T5, TFunction}"/>
                 public interface Read<T5> where T5 : struct, IComponent {
                     public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4, in T5 comp5);
                 }
@@ -119,6 +139,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <summary>Query callback with 6 writable component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapter{T0, T1, T2, T3, T4, T5, TFunction}"/>
             public interface Write<T0, T1, T2, T3, T4, T5> where T0 : struct, IComponent where T1 : struct, IComponent where T2 : struct, IComponent where T3 : struct, IComponent where T4 : struct, IComponent where T5 : struct, IComponent {
                 public void Invoke(Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4, ref T5 comp5);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
@@ -127,31 +148,37 @@ namespace FFS.Libraries.StaticEcs {
 
             #if !FFS_ECS_DISABLE_CHANGED_TRACKING
             /// <summary>Query callback with 1 readonly component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapterRead{T0, TFunction}"/>
             public interface Read<T0> where T0 : struct, IComponent {
                 public void Invoke(Entity entity, in T0 comp0);
             }
 
             /// <summary>Query callback with 2 readonly component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapterRead{T0, T1, TFunction}"/>
             public interface Read<T0, T1> where T0 : struct, IComponent where T1 : struct, IComponent {
                 public void Invoke(Entity entity, in T0 comp0, in T1 comp1);
             }
 
             /// <summary>Query callback with 3 readonly component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapterRead{T0, T1, T2, TFunction}"/>
             public interface Read<T0, T1, T2> where T0 : struct, IComponent where T1 : struct, IComponent where T2 : struct, IComponent {
                 public void Invoke(Entity entity, in T0 comp0, in T1 comp1, in T2 comp2);
             }
 
             /// <summary>Query callback with 4 readonly component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapterRead{T0, T1, T2, T3, TFunction}"/>
             public interface Read<T0, T1, T2, T3> where T0 : struct, IComponent where T1 : struct, IComponent where T2 : struct, IComponent where T3 : struct, IComponent {
                 public void Invoke(Entity entity, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3);
             }
 
             /// <summary>Query callback with 5 readonly component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapterRead{T0, T1, T2, T3, T4, TFunction}"/>
             public interface Read<T0, T1, T2, T3, T4> where T0 : struct, IComponent where T1 : struct, IComponent where T2 : struct, IComponent where T3 : struct, IComponent where T4 : struct, IComponent {
                 public void Invoke(Entity entity, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4);
             }
 
             /// <summary>Query callback with 6 readonly component(s).</summary>
+            /// <seealso cref="QueryFunctionStructAdapterRead{T0, T1, T2, T3, T4, T5, TFunction}"/>
             public interface Read<T0, T1, T2, T3, T4, T5> where T0 : struct, IComponent where T1 : struct, IComponent where T2 : struct, IComponent where T3 : struct, IComponent where T4 : struct, IComponent where T5 : struct, IComponent {
                 public void Invoke(Entity entity, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5);
             }
@@ -166,26 +193,32 @@ namespace FFS.Libraries.StaticEcs {
             public void Invoke(uint count, EntityBlock entitiesBlock);
 
             /// <summary>Query callback with 1 writable component(s).</summary>
+            /// <seealso cref="BlockAdapterWrite{T0, TFunction}"/>
             public interface Write<T0> where T0 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
                 /// <summary>Query callback with 1 writable and 1 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW1R1{T0, T1, TFunction}"/>
                 public interface Read<T1> where T1 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, BlockR<T1> block1);
                 }
                 /// <summary>Query callback with 1 writable and 2 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW1R2{T0, T1, T2, TFunction}"/>
                 public interface Read<T1, T2> where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, BlockR<T1> block1, BlockR<T2> block2);
                 }
                 /// <summary>Query callback with 1 writable and 3 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW1R3{T0, T1, T2, T3, TFunction}"/>
                 public interface Read<T1, T2, T3> where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, BlockR<T1> block1, BlockR<T2> block2, BlockR<T3> block3);
                 }
                 /// <summary>Query callback with 1 writable and 4 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW1R4{T0, T1, T2, T3, T4, TFunction}"/>
                 public interface Read<T1, T2, T3, T4> where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, BlockR<T1> block1, BlockR<T2> block2, BlockR<T3> block3, BlockR<T4> block4);
                 }
                 /// <summary>Query callback with 1 writable and 5 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW1R5{T0, T1, T2, T3, T4, T5, TFunction}"/>
                 public interface Read<T1, T2, T3, T4, T5> where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent where T5 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, BlockR<T1> block1, BlockR<T2> block2, BlockR<T3> block3, BlockR<T4> block4, BlockR<T5> block5);
                 }
@@ -193,22 +226,27 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <summary>Query callback with 2 writable component(s).</summary>
+            /// <seealso cref="BlockAdapterWrite{T0, T1, TFunction}"/>
             public interface Write<T0, T1> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
                 /// <summary>Query callback with 2 writable and 1 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW2R1{T0, T1, T2, TFunction}"/>
                 public interface Read<T2> where T2 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, BlockR<T2> block2);
                 }
                 /// <summary>Query callback with 2 writable and 2 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW2R2{T0, T1, T2, T3, TFunction}"/>
                 public interface Read<T2, T3> where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, BlockR<T2> block2, BlockR<T3> block3);
                 }
                 /// <summary>Query callback with 2 writable and 3 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW2R3{T0, T1, T2, T3, T4, TFunction}"/>
                 public interface Read<T2, T3, T4> where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, BlockR<T2> block2, BlockR<T3> block3, BlockR<T4> block4);
                 }
                 /// <summary>Query callback with 2 writable and 4 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW2R4{T0, T1, T2, T3, T4, T5, TFunction}"/>
                 public interface Read<T2, T3, T4, T5> where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent where T5 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, BlockR<T2> block2, BlockR<T3> block3, BlockR<T4> block4, BlockR<T5> block5);
                 }
@@ -216,18 +254,22 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <summary>Query callback with 3 writable component(s).</summary>
+            /// <seealso cref="BlockAdapterWrite{T0, T1, T2, TFunction}"/>
             public interface Write<T0, T1, T2> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, Block<T2> block2);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
                 /// <summary>Query callback with 3 writable and 1 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW3R1{T0, T1, T2, T3, TFunction}"/>
                 public interface Read<T3> where T3 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, Block<T2> block2, BlockR<T3> block3);
                 }
                 /// <summary>Query callback with 3 writable and 2 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW3R2{T0, T1, T2, T3, T4, TFunction}"/>
                 public interface Read<T3, T4> where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, Block<T2> block2, BlockR<T3> block3, BlockR<T4> block4);
                 }
                 /// <summary>Query callback with 3 writable and 3 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW3R3{T0, T1, T2, T3, T4, T5, TFunction}"/>
                 public interface Read<T3, T4, T5> where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent where T5 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, Block<T2> block2, BlockR<T3> block3, BlockR<T4> block4, BlockR<T5> block5);
                 }
@@ -235,14 +277,17 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <summary>Query callback with 4 writable component(s).</summary>
+            /// <seealso cref="BlockAdapterWrite{T0, T1, T2, T3, TFunction}"/>
             public interface Write<T0, T1, T2, T3> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, Block<T2> block2, Block<T3> block3);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
                 /// <summary>Query callback with 4 writable and 1 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW4R1{T0, T1, T2, T3, T4, TFunction}"/>
                 public interface Read<T4> where T4 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, Block<T2> block2, Block<T3> block3, BlockR<T4> block4);
                 }
                 /// <summary>Query callback with 4 writable and 2 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW4R2{T0, T1, T2, T3, T4, T5, TFunction}"/>
                 public interface Read<T4, T5> where T4 : unmanaged, IComponent where T5 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, Block<T2> block2, Block<T3> block3, BlockR<T4> block4, BlockR<T5> block5);
                 }
@@ -250,10 +295,12 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <summary>Query callback with 5 writable component(s).</summary>
+            /// <seealso cref="BlockAdapterWrite{T0, T1, T2, T3, T4, TFunction}"/>
             public interface Write<T0, T1, T2, T3, T4> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, Block<T2> block2, Block<T3> block3, Block<T4> block4);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
                 /// <summary>Query callback with 5 writable and 1 readonly component(s).</summary>
+                /// <seealso cref="BlockAdapterW5R1{T0, T1, T2, T3, T4, T5, TFunction}"/>
                 public interface Read<T5> where T5 : unmanaged, IComponent {
                     public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, Block<T2> block2, Block<T3> block3, Block<T4> block4, BlockR<T5> block5);
                 }
@@ -261,6 +308,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <summary>Query callback with 6 writable component(s).</summary>
+            /// <seealso cref="BlockAdapterWrite{T0, T1, T2, T3, T4, T5, TFunction}"/>
             public interface Write<T0, T1, T2, T3, T4, T5> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent where T5 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, Block<T0> block0, Block<T1> block1, Block<T2> block2, Block<T3> block3, Block<T4> block4, Block<T5> block5);
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
@@ -269,31 +317,37 @@ namespace FFS.Libraries.StaticEcs {
 
             #if !FFS_ECS_DISABLE_CHANGED_TRACKING
             /// <summary>Query callback with 1 readonly component(s).</summary>
+            /// <seealso cref="BlockAdapterRead{T0, TFunction}"/>
             public interface Read<T0> where T0 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, BlockR<T0> block0);
             }
 
             /// <summary>Query callback with 2 readonly component(s).</summary>
+            /// <seealso cref="BlockAdapterRead{T0, T1, TFunction}"/>
             public interface Read<T0, T1> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, BlockR<T0> block0, BlockR<T1> block1);
             }
 
             /// <summary>Query callback with 3 readonly component(s).</summary>
+            /// <seealso cref="BlockAdapterRead{T0, T1, T2, TFunction}"/>
             public interface Read<T0, T1, T2> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, BlockR<T0> block0, BlockR<T1> block1, BlockR<T2> block2);
             }
 
             /// <summary>Query callback with 4 readonly component(s).</summary>
+            /// <seealso cref="BlockAdapterRead{T0, T1, T2, T3, TFunction}"/>
             public interface Read<T0, T1, T2, T3> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, BlockR<T0> block0, BlockR<T1> block1, BlockR<T2> block2, BlockR<T3> block3);
             }
 
             /// <summary>Query callback with 5 readonly component(s).</summary>
+            /// <seealso cref="BlockAdapterRead{T0, T1, T2, T3, T4, TFunction}"/>
             public interface Read<T0, T1, T2, T3, T4> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, BlockR<T0> block0, BlockR<T1> block1, BlockR<T2> block2, BlockR<T3> block3, BlockR<T4> block4);
             }
 
             /// <summary>Query callback with 6 readonly component(s).</summary>
+            /// <seealso cref="BlockAdapterRead{T0, T1, T2, T3, T4, T5, TFunction}"/>
             public interface Read<T0, T1, T2, T3, T4, T5> where T0 : unmanaged, IComponent where T1 : unmanaged, IComponent where T2 : unmanaged, IComponent where T3 : unmanaged, IComponent where T4 : unmanaged, IComponent where T5 : unmanaged, IComponent {
                 public void Invoke(uint count, EntityBlock entitiesBlock, BlockR<T0> block0, BlockR<T1> block1, BlockR<T2> block2, BlockR<T3> block3, BlockR<T4> block4, BlockR<T5> block5);
             }
@@ -315,21 +369,25 @@ namespace FFS.Libraries.StaticEcs {
     /// </para>
     /// </summary>
     /// <typeparam name="T0">Component type passed by reference.</typeparam>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapter{T0}"/>
     public delegate void QueryFunction<T0>(ref T0 comp0)
         where T0 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapter{T0, T1}"/>
     public delegate void QueryFunction<T0, T1>(ref T0 comp0, ref T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapter{T0, T1, T2}"/>
     public delegate void QueryFunction<T0, T1, T2>(ref T0 comp0, ref T1 comp1, ref T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where T2 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapter{T0, T1, T2, T3}"/>
     public delegate void QueryFunction<T0, T1, T2, T3>(ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -337,6 +395,7 @@ namespace FFS.Libraries.StaticEcs {
         where T3 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapter{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunction<T0, T1, T2, T3, T4>(ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -345,6 +404,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapter{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunction<T0, T1, T2, T3, T4, T5>(ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4, ref T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -355,38 +415,45 @@ namespace FFS.Libraries.StaticEcs {
 
     #if !FFS_ECS_DISABLE_CHANGED_TRACKING
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterRead{T0}"/>
     public delegate void QueryFunctionR1<T0>(in T0 comp0)
         where T0 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite1Read1{T0, T1}"/>
     public delegate void QueryFunctionR1<T0, T1>(ref T0 comp0, in T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterRead{T0, T1}"/>
     public delegate void QueryFunctionR2<T0, T1>(in T0 comp0, in T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite2Read1{T0, T1, T2}"/>
     public delegate void QueryFunctionR1<T0, T1, T2>(ref T0 comp0, ref T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where T2 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite1Read2{T0, T1, T2}"/>
     public delegate void QueryFunctionR2<T0, T1, T2>(ref T0 comp0, in T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where T2 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterRead{T0, T1, T2}"/>
     public delegate void QueryFunctionR3<T0, T1, T2>(in T0 comp0, in T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where T2 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite3Read1{T0, T1, T2, T3}"/>
     public delegate void QueryFunctionR1<T0, T1, T2, T3>(ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -394,6 +461,7 @@ namespace FFS.Libraries.StaticEcs {
         where T3 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite2Read2{T0, T1, T2, T3}"/>
     public delegate void QueryFunctionR2<T0, T1, T2, T3>(ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -401,6 +469,7 @@ namespace FFS.Libraries.StaticEcs {
         where T3 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite1Read3{T0, T1, T2, T3}"/>
     public delegate void QueryFunctionR3<T0, T1, T2, T3>(ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -408,6 +477,7 @@ namespace FFS.Libraries.StaticEcs {
         where T3 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterRead{T0, T1, T2, T3}"/>
     public delegate void QueryFunctionR4<T0, T1, T2, T3>(in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -415,6 +485,7 @@ namespace FFS.Libraries.StaticEcs {
         where T3 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite4Read1{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionR1<T0, T1, T2, T3, T4>(ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -423,6 +494,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite3Read2{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionR2<T0, T1, T2, T3, T4>(ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -431,6 +503,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite2Read3{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionR3<T0, T1, T2, T3, T4>(ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -439,6 +512,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite1Read4{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionR4<T0, T1, T2, T3, T4>(ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -447,6 +521,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterRead{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionR5<T0, T1, T2, T3, T4>(in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -455,6 +530,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite5Read1{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionR1<T0, T1, T2, T3, T4, T5>(ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -464,6 +540,7 @@ namespace FFS.Libraries.StaticEcs {
         where T5 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite4Read2{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionR2<T0, T1, T2, T3, T4, T5>(ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -473,6 +550,7 @@ namespace FFS.Libraries.StaticEcs {
         where T5 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite3Read3{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionR3<T0, T1, T2, T3, T4, T5>(ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -482,6 +560,7 @@ namespace FFS.Libraries.StaticEcs {
         where T5 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite2Read4{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionR4<T0, T1, T2, T3, T4, T5>(ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -491,6 +570,7 @@ namespace FFS.Libraries.StaticEcs {
         where T5 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterWrite1Read5{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionR5<T0, T1, T2, T3, T4, T5>(ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -500,6 +580,7 @@ namespace FFS.Libraries.StaticEcs {
         where T5 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunction{T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionAdapterRead{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionR6<T0, T1, T2, T3, T4, T5>(in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -525,21 +606,25 @@ namespace FFS.Libraries.StaticEcs {
     /// </summary>
     /// <typeparam name="TData">Arbitrary user data type passed by reference. Can be any type (struct, class, array).</typeparam>
     /// <typeparam name="T0">Component type passed by reference.</typeparam>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapter{TData, T0}"/>
     public delegate void QueryFunctionWithRefData<TData, T0>(ref TData data, ref T0 comp0)
         where T0 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapter{TData, T0, T1}"/>
     public delegate void QueryFunctionWithRefData<TData, T0, T1>(ref TData data, ref T0 comp0, ref T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapter{TData, T0, T1, T2}"/>
     public delegate void QueryFunctionWithRefData<TData, T0, T1, T2>(ref TData data, ref T0 comp0, ref T1 comp1, ref T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where T2 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapter{TData, T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithRefData<TData, T0, T1, T2, T3>(ref TData data, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -547,6 +632,7 @@ namespace FFS.Libraries.StaticEcs {
         where T3 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapter{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefData<TData, T0, T1, T2, T3, T4>(ref TData data, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -555,6 +641,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapter{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefData<TData, T0, T1, T2, T3, T4, T5>(ref TData data, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4, ref T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -565,38 +652,45 @@ namespace FFS.Libraries.StaticEcs {
 
     #if !FFS_ECS_DISABLE_CHANGED_TRACKING
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterRead{TData, T0}"/>
     public delegate void QueryFunctionWithRefDataR1<TData, T0>(ref TData data, in T0 comp0)
         where T0 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite1Read1{TData, T0, T1}"/>
     public delegate void QueryFunctionWithRefDataR1<TData, T0, T1>(ref TData data, ref T0 comp0, in T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterRead{TData, T0, T1}"/>
     public delegate void QueryFunctionWithRefDataR2<TData, T0, T1>(ref TData data, in T0 comp0, in T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite2Read1{TData, T0, T1, T2}"/>
     public delegate void QueryFunctionWithRefDataR1<TData, T0, T1, T2>(ref TData data, ref T0 comp0, ref T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where T2 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite1Read2{TData, T0, T1, T2}"/>
     public delegate void QueryFunctionWithRefDataR2<TData, T0, T1, T2>(ref TData data, ref T0 comp0, in T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where T2 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterRead{TData, T0, T1, T2}"/>
     public delegate void QueryFunctionWithRefDataR3<TData, T0, T1, T2>(ref TData data, in T0 comp0, in T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where T2 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite3Read1{TData, T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithRefDataR1<TData, T0, T1, T2, T3>(ref TData data, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -604,6 +698,7 @@ namespace FFS.Libraries.StaticEcs {
         where T3 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite2Read2{TData, T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithRefDataR2<TData, T0, T1, T2, T3>(ref TData data, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -611,6 +706,7 @@ namespace FFS.Libraries.StaticEcs {
         where T3 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite1Read3{TData, T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithRefDataR3<TData, T0, T1, T2, T3>(ref TData data, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -618,6 +714,7 @@ namespace FFS.Libraries.StaticEcs {
         where T3 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterRead{TData, T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithRefDataR4<TData, T0, T1, T2, T3>(ref TData data, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -625,6 +722,7 @@ namespace FFS.Libraries.StaticEcs {
         where T3 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite4Read1{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefDataR1<TData, T0, T1, T2, T3, T4>(ref TData data, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -633,6 +731,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite3Read2{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefDataR2<TData, T0, T1, T2, T3, T4>(ref TData data, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -641,6 +740,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite2Read3{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefDataR3<TData, T0, T1, T2, T3, T4>(ref TData data, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -649,6 +749,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite1Read4{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefDataR4<TData, T0, T1, T2, T3, T4>(ref TData data, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -657,6 +758,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterRead{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefDataR5<TData, T0, T1, T2, T3, T4>(ref TData data, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -665,6 +767,7 @@ namespace FFS.Libraries.StaticEcs {
         where T4 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite5Read1{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataR1<TData, T0, T1, T2, T3, T4, T5>(ref TData data, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -674,6 +777,7 @@ namespace FFS.Libraries.StaticEcs {
         where T5 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite4Read2{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataR2<TData, T0, T1, T2, T3, T4, T5>(ref TData data, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -683,6 +787,7 @@ namespace FFS.Libraries.StaticEcs {
         where T5 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite3Read3{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataR3<TData, T0, T1, T2, T3, T4, T5>(ref TData data, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -692,6 +797,7 @@ namespace FFS.Libraries.StaticEcs {
         where T5 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite2Read4{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataR4<TData, T0, T1, T2, T3, T4, T5>(ref TData data, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -701,6 +807,7 @@ namespace FFS.Libraries.StaticEcs {
         where T5 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterWrite1Read5{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataR5<TData, T0, T1, T2, T3, T4, T5>(ref TData data, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -710,6 +817,7 @@ namespace FFS.Libraries.StaticEcs {
         where T5 : struct, IComponent;
 
     /// <inheritdoc cref="QueryFunctionWithRefData{TData, T0}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataAdapterRead{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataR6<TData, T0, T1, T2, T3, T4, T5>(ref TData data, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -738,17 +846,20 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapter{T0}"/>
     public delegate void QueryFunctionWithEntity<TWorld, T0>(World<TWorld>.Entity entity, ref T0 comp0)
         where T0 : struct, IComponent
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapter{T0, T1}"/>
     public delegate void QueryFunctionWithEntity<TWorld, T0, T1>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapter{T0, T1, T2}"/>
     public delegate void QueryFunctionWithEntity<TWorld, T0, T1, T2>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -756,6 +867,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapter{T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithEntity<TWorld, T0, T1, T2, T3>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -764,6 +876,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapter{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithEntity<TWorld, T0, T1, T2, T3, T4>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -773,6 +886,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapter{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithEntity<TWorld, T0, T1, T2, T3, T4, T5>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4, ref T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -784,23 +898,27 @@ namespace FFS.Libraries.StaticEcs {
 
     #if !FFS_ECS_DISABLE_CHANGED_TRACKING
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterRead{T0}"/>
     public delegate void QueryFunctionWithEntityR1<TWorld, T0>(World<TWorld>.Entity entity, in T0 comp0)
         where T0 : struct, IComponent
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite1Read1{T0, T1}"/>
     public delegate void QueryFunctionWithEntityR1<TWorld, T0, T1>(World<TWorld>.Entity entity, ref T0 comp0, in T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterRead{T0, T1}"/>
     public delegate void QueryFunctionWithEntityR2<TWorld, T0, T1>(World<TWorld>.Entity entity, in T0 comp0, in T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite2Read1{T0, T1, T2}"/>
     public delegate void QueryFunctionWithEntityR1<TWorld, T0, T1, T2>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -808,6 +926,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite1Read2{T0, T1, T2}"/>
     public delegate void QueryFunctionWithEntityR2<TWorld, T0, T1, T2>(World<TWorld>.Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -815,6 +934,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterRead{T0, T1, T2}"/>
     public delegate void QueryFunctionWithEntityR3<TWorld, T0, T1, T2>(World<TWorld>.Entity entity, in T0 comp0, in T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -822,6 +942,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite3Read1{T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithEntityR1<TWorld, T0, T1, T2, T3>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -830,6 +951,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite2Read2{T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithEntityR2<TWorld, T0, T1, T2, T3>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -838,6 +960,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite1Read3{T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithEntityR3<TWorld, T0, T1, T2, T3>(World<TWorld>.Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -846,6 +969,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterRead{T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithEntityR4<TWorld, T0, T1, T2, T3>(World<TWorld>.Entity entity, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -854,6 +978,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite4Read1{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithEntityR1<TWorld, T0, T1, T2, T3, T4>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -863,6 +988,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite3Read2{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithEntityR2<TWorld, T0, T1, T2, T3, T4>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -872,6 +998,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite2Read3{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithEntityR3<TWorld, T0, T1, T2, T3, T4>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -881,6 +1008,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite1Read4{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithEntityR4<TWorld, T0, T1, T2, T3, T4>(World<TWorld>.Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -890,6 +1018,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterRead{T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithEntityR5<TWorld, T0, T1, T2, T3, T4>(World<TWorld>.Entity entity, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -899,6 +1028,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite5Read1{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithEntityR1<TWorld, T0, T1, T2, T3, T4, T5>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -909,6 +1039,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite4Read2{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithEntityR2<TWorld, T0, T1, T2, T3, T4, T5>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -919,6 +1050,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite3Read3{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithEntityR3<TWorld, T0, T1, T2, T3, T4, T5>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -929,6 +1061,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite2Read4{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithEntityR4<TWorld, T0, T1, T2, T3, T4, T5>(World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -939,6 +1072,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterWrite1Read5{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithEntityR5<TWorld, T0, T1, T2, T3, T4, T5>(World<TWorld>.Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -949,6 +1083,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithEntity{TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithEntityAdapterRead{T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithEntityR6<TWorld, T0, T1, T2, T3, T4, T5>(World<TWorld>.Entity entity, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -979,17 +1114,20 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapter{TData, T0}"/>
     public delegate void QueryFunctionWithRefDataEntity<TData, TWorld, T0>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0)
         where T0 : struct, IComponent
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapter{TData, T0, T1}"/>
     public delegate void QueryFunctionWithRefDataEntity<TData, TWorld, T0, T1>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapter{TData, T0, T1, T2}"/>
     public delegate void QueryFunctionWithRefDataEntity<TData, TWorld, T0, T1, T2>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -997,6 +1135,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapter{TData, T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithRefDataEntity<TData, TWorld, T0, T1, T2, T3>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1005,6 +1144,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapter{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefDataEntity<TData, TWorld, T0, T1, T2, T3, T4>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1014,6 +1154,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapter{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataEntity<TData, TWorld, T0, T1, T2, T3, T4, T5>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4, ref T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1025,23 +1166,27 @@ namespace FFS.Libraries.StaticEcs {
 
     #if !FFS_ECS_DISABLE_CHANGED_TRACKING
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterRead{TData, T0}"/>
     public delegate void QueryFunctionWithRefDataEntityR1<TData, TWorld, T0>(ref TData data, World<TWorld>.Entity entity, in T0 comp0)
         where T0 : struct, IComponent
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite1Read1{TData, T0, T1}"/>
     public delegate void QueryFunctionWithRefDataEntityR1<TData, TWorld, T0, T1>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, in T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterRead{TData, T0, T1}"/>
     public delegate void QueryFunctionWithRefDataEntityR2<TData, TWorld, T0, T1>(ref TData data, World<TWorld>.Entity entity, in T0 comp0, in T1 comp1)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite2Read1{TData, T0, T1, T2}"/>
     public delegate void QueryFunctionWithRefDataEntityR1<TData, TWorld, T0, T1, T2>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1049,6 +1194,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite1Read2{TData, T0, T1, T2}"/>
     public delegate void QueryFunctionWithRefDataEntityR2<TData, TWorld, T0, T1, T2>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1056,6 +1202,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterRead{TData, T0, T1, T2}"/>
     public delegate void QueryFunctionWithRefDataEntityR3<TData, TWorld, T0, T1, T2>(ref TData data, World<TWorld>.Entity entity, in T0 comp0, in T1 comp1, in T2 comp2)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1063,6 +1210,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite3Read1{TData, T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithRefDataEntityR1<TData, TWorld, T0, T1, T2, T3>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1071,6 +1219,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite2Read2{TData, T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithRefDataEntityR2<TData, TWorld, T0, T1, T2, T3>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1079,6 +1228,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite1Read3{TData, T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithRefDataEntityR3<TData, TWorld, T0, T1, T2, T3>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1087,6 +1237,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterRead{TData, T0, T1, T2, T3}"/>
     public delegate void QueryFunctionWithRefDataEntityR4<TData, TWorld, T0, T1, T2, T3>(ref TData data, World<TWorld>.Entity entity, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1095,6 +1246,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite4Read1{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefDataEntityR1<TData, TWorld, T0, T1, T2, T3, T4>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1104,6 +1256,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite3Read2{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefDataEntityR2<TData, TWorld, T0, T1, T2, T3, T4>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1113,6 +1266,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite2Read3{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefDataEntityR3<TData, TWorld, T0, T1, T2, T3, T4>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1122,6 +1276,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite1Read4{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefDataEntityR4<TData, TWorld, T0, T1, T2, T3, T4>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1131,6 +1286,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterRead{TData, T0, T1, T2, T3, T4}"/>
     public delegate void QueryFunctionWithRefDataEntityR5<TData, TWorld, T0, T1, T2, T3, T4>(ref TData data, World<TWorld>.Entity entity, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1140,6 +1296,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite5Read1{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataEntityR1<TData, TWorld, T0, T1, T2, T3, T4, T5>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, ref T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1150,6 +1307,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite4Read2{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataEntityR2<TData, TWorld, T0, T1, T2, T3, T4, T5>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, ref T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1160,6 +1318,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite3Read3{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataEntityR3<TData, TWorld, T0, T1, T2, T3, T4, T5>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, ref T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1170,6 +1329,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite2Read4{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataEntityR4<TData, TWorld, T0, T1, T2, T3, T4, T5>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, ref T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1180,6 +1340,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterWrite1Read5{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataEntityR5<TData, TWorld, T0, T1, T2, T3, T4, T5>(ref TData data, World<TWorld>.Entity entity, ref T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent
@@ -1190,6 +1351,7 @@ namespace FFS.Libraries.StaticEcs {
         where TWorld : struct, IWorldType;
 
     /// <inheritdoc cref="QueryFunctionWithRefDataEntity{TData, TWorld}"/>
+    /// <seealso cref="World{TWorld}.QueryFunctionWithDataEntityAdapterRead{TData, T0, T1, T2, T3, T4, T5}"/>
     public delegate void QueryFunctionWithRefDataEntityR6<TData, TWorld, T0, T1, T2, T3, T4, T5>(ref TData data, World<TWorld>.Entity entity, in T0 comp0, in T1 comp1, in T2 comp2, in T3 comp3, in T4 comp4, in T5 comp5)
         where T0 : struct, IComponent
         where T1 : struct, IComponent

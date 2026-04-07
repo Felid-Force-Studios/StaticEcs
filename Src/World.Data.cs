@@ -11,6 +11,9 @@ using System.Text;
 using System.Threading;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
+#if NET5_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
@@ -172,7 +175,11 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         [MethodImpl(AggressiveInlining)]
-        internal static void RegisterEntityType<T>(byte id) where T : struct, IEntityType {
+        internal static void RegisterEntityType<
+            #if NET5_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+            #endif
+            T>(byte id) where T : struct, IEntityType {
             #if FFS_ECS_DEBUG
             AssertWorldIsCreated(WorldTypeName);
             Assert(WorldTypeName, !IsEntityTypeRegistered(id), $"EntityType with id {id} already registered");
@@ -3222,7 +3229,11 @@ namespace FFS.Libraries.StaticEcs {
 
             #region ENTITY TYPES
             [MethodImpl(AggressiveInlining)]
-            internal void RegisterEntityTypeInternal<T>(byte id) where T : struct, IEntityType {
+            internal void RegisterEntityTypeInternal<
+                #if NET5_0_OR_GREATER
+                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+                #endif
+                T>(byte id) where T : struct, IEntityType {
                 EntityTypeInfo<T>.Id = id;
                 EntityTypeInfo<T>.HasOnCreate = EntityTypeType<T>.HasOnCreate();
                 EntityTypeInfo<T>.Registered = true;
@@ -3770,7 +3781,11 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     #endif
-    internal static class EntityTypeType<T> where T : struct, IEntityType {
+    internal static class EntityTypeType<
+        #if NET5_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        #endif
+        T> where T : struct, IEntityType {
         internal static bool HasOnCreate() {
             return HasMethod(typeof(T), nameof(IEntityType.OnCreate));
         }
@@ -3779,7 +3794,11 @@ namespace FFS.Libraries.StaticEcs {
             return HasMethod(typeof(T), nameof(IEntityType.OnDestroy));
         }
 
-        private static bool HasMethod(Type structType, string methodName) {
+        private static bool HasMethod(
+            #if NET5_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+            #endif
+            Type structType, string methodName) {
             var methods = structType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             foreach (var methodInfo in methods) {
                 if (methodInfo.Name == methodName && methodInfo.IsGenericMethodDefinition) {

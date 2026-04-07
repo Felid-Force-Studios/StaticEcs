@@ -8,6 +8,9 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
+#if NET5_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
@@ -287,7 +290,11 @@ namespace FFS.Libraries.StaticEcs {
             /// <param name="system">The system instance to register.</param>
             /// <param name="order">Execution priority. Lower values execute first. Default is 0.</param>
             [MethodImpl(AggressiveInlining)]
-            public static SystemsRegistrar<TSystemsType> Add<TSystem>(TSystem system, short order = 0) where TSystem : ISystem {
+            public static SystemsRegistrar<TSystemsType> Add<
+                #if NET5_0_OR_GREATER
+                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+                #endif
+                TSystem>(TSystem system, short order = 0) where TSystem : ISystem {
                 #if FFS_ECS_DEBUG
                 if (Status != SystemsStatus.Created) {
                     throw new StaticEcsException($"Systems<{typeof(TSystemsType)}>, Method: Add, systems pipeline must be in Created state (current: {Status}).");
@@ -322,7 +329,11 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="Systems{TSystemsType}.Add{TSystem}"/>
             [MethodImpl(AggressiveInlining)]
-            public SystemsRegistrar<TSystemsType> Add<TSystem>(TSystem system, short order = 0) where TSystem : ISystem {
+            public SystemsRegistrar<TSystemsType> Add<
+                #if NET5_0_OR_GREATER
+                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+                #endif
+                TSystem>(TSystem system, short order = 0) where TSystem : ISystem {
                 Systems<TSystemsType>.Add(system, order);
                 return this;
             }
@@ -334,7 +345,11 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     [Il2CppEagerStaticClassConstruction]
     #endif
-    internal static class SystemType<T> where T : ISystem {
+    internal static class SystemType<
+        #if NET5_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        #endif
+        T> where T : ISystem {
         internal static bool HasUpdate() {
             return HasMethod(typeof(T), nameof(ISystem.Update), Array.Empty<Type>());
         }
@@ -351,7 +366,11 @@ namespace FFS.Libraries.StaticEcs {
             return HasMethod(typeof(T), nameof(ISystem.UpdateIsActive), Array.Empty<Type>());
         }
 
-        private static bool HasMethod(Type structType, string methodName, Type[] parameterTypes) {
+        private static bool HasMethod(
+            #if NET5_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+            #endif
+            Type structType, string methodName, Type[] parameterTypes) {
             return structType.GetMethod(
                 methodName,
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly,
