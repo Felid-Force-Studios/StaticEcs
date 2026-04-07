@@ -124,14 +124,13 @@ ___
 
 ## Parallel execution
 
-To enable multithreaded queries, specify the mode in world configuration:
+To enable multithreaded queries, specify the thread count in world configuration:
 
 ```csharp
 W.Create(new WorldConfig {
-    ParallelQueryType = ParallelQueryType.MaxThreadsCount,
+    ThreadCount = WorldConfig.MaxThreadCount, // all available CPU threads
     // or
-    // ParallelQueryType = ParallelQueryType.CustomThreadsCount,
-    // CustomThreadCount = 8,
+    // ThreadCount = 8, // specific number of threads
 });
 ```
 

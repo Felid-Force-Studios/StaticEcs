@@ -286,7 +286,7 @@ namespace FFS.Libraries.StaticEcs {
 
             // CONFIG
             internal readonly bool IndependentWorld;
-            internal readonly ParallelQueryType ParallelQueryType;
+            internal readonly bool ZeroThreadCount;
             internal readonly bool TrackCreated;
             internal readonly byte TrackingBufferSize;
 
@@ -307,11 +307,11 @@ namespace FFS.Libraries.StaticEcs {
 
             #region BASE
             public Data(WorldConfig worldConfig) {
-                worldConfig = worldConfig.Normalize();
-                IndependentWorld = worldConfig.Independent;
-                ParallelQueryType = worldConfig.ParallelQueryType;
-                TrackCreated = worldConfig.TrackCreated;
-                TrackingBufferSize = worldConfig.TrackingBufferSize;
+                worldConfig = worldConfig.MergeWith(WorldConfig.Default());
+                IndependentWorld = worldConfig.Independent.Value;
+                ZeroThreadCount = worldConfig.ThreadCount.Value == 0;
+                TrackCreated = worldConfig.TrackCreated.Value;
+                TrackingBufferSize = worldConfig.TrackingBufferSize.Value;
                 CurrentTick = 1;
                 CurrentLastTick = 0;
                 CreatedTrackingChunks = null;
@@ -331,8 +331,8 @@ namespace FFS.Libraries.StaticEcs {
                 EntityTypes = new EntityTypeData[256];
                 
                 // CLUSTERS
-                Clusters = new EntitiesCluster[worldConfig.BaseClustersCapacity];
-                ActiveClusters = new ushort[worldConfig.BaseClustersCapacity];
+                Clusters = new EntitiesCluster[worldConfig.BaseClustersCapacity.Value];
+                ActiveClusters = new ushort[worldConfig.BaseClustersCapacity.Value];
                 ActiveClustersCount = 0;
                 for (ushort i = 0; i < worldConfig.BaseClustersCapacity; i++) {
                     ref var cluster = ref Clusters[i];
@@ -370,17 +370,17 @@ namespace FFS.Libraries.StaticEcs {
                 }
                 
                 // COMPONENTS
-                _poolsComponents = new ComponentsHandle[worldConfig.BaseComponentTypesCount];
-                _guidsComponents = new Guid[worldConfig.BaseComponentTypesCount];
-                _trackingComponentIndices = new ushort[worldConfig.BaseComponentTypesCount];
+                _poolsComponents = new ComponentsHandle[worldConfig.BaseComponentTypesCount.Value];
+                _guidsComponents = new Guid[worldConfig.BaseComponentTypesCount.Value];
+                _trackingComponentIndices = new ushort[worldConfig.BaseComponentTypesCount.Value];
                 _trackingComponentIndicesCount = default;
                 _componentPoolByGuid = new Dictionary<Guid, ComponentsHandle>();
                 _migratorByGuid = new Dictionary<Guid, EcsComponentDeleteMigrationReader<TWorld>>();
                 BitMaskComponents = null;
                 _poolsCountComponents = default;
                 BitMaskComponentsLen = default;
-                
-                ParallelRunner<TWorld>.Create(worldConfig.ParallelQueryType, worldConfig.CustomThreadCount, worldConfig.WorkerSpinCount);
+
+                ParallelRunner<TWorld>.Create(worldConfig.ThreadCount.Value, worldConfig.WorkerSpinCount.Value);
                 
                 QueryDataCount = 0;
                 #if FFS_ECS_DEBUG
@@ -2746,7 +2746,8 @@ namespace FFS.Libraries.StaticEcs {
 
                         var segIdx = baseSegmentIdx + segmentIdxInChunk;
                         var segType = EntitiesSegments[segIdx].EntityType;
-                        if (cluster.FreeSegmentByType[segType] == EntitiesSegment.Invalid) {
+                        if (segType != EntitiesSegment.NoEntityType &&
+                            cluster.FreeSegmentByType[segType] == EntitiesSegment.Invalid) {
                             cluster.FreeSegmentByType[segType] = (int) segIdx;
                         }
                     }
@@ -3000,12 +3001,6 @@ namespace FFS.Libraries.StaticEcs {
                    var pool = _poolsComponents[j];
                    var guid = pool.Guid;
 
-                   #if FFS_ECS_DEBUG
-                   if (guid == default) {
-                       throw new StaticEcsException($"Serializer for component type {pool.ComponentType} not registered");
-                   }
-                   #endif
-
                    writer.WriteGuid(guid);
                    writer.WriteUshort(pool.DynamicId);
 
@@ -3073,14 +3068,13 @@ namespace FFS.Libraries.StaticEcs {
                     while (mask > 0) {
                         var id = Utils.PopLsb(ref mask) + offset;
                         var pool = _poolsComponents[id];
-                        if (!pool.Guid.Equals(Guid.Empty)) {
-                            var pos = writer.Position;
-                            writer.WriteUshort((ushort) id);
-                            if (pool.WriteEntity(ref writer, entity.ID, false)) {
-                                len++;
-                            } else {
-                                writer.Position = pos;
-                            }
+                        var pos = writer.Position;
+                        writer.WriteUshort((ushort)id);
+                        if (pool.WriteEntity(ref writer, entity.ID, false)) {
+                            len++;
+                        }
+                        else {
+                            writer.Position = pos;
                         }
                     }
                 }
@@ -3283,6 +3277,13 @@ namespace FFS.Libraries.StaticEcs {
                 AssertNotRegisteredComponent<TComponent>(WorldTypeName);
                 #endif
 
+                typeConfig = typeConfig.MergeWith(AutoRegistration.FindComponentConfig<TComponent>())
+                                       .MergeWith(ComponentTypeConfig<TComponent>.DefaultComponent);
+
+                #if FFS_ECS_DEBUG
+                AssertGuidNotEmpty<TComponent>(WorldTypeName, typeConfig.Guid.Value);
+                #endif
+
                 if (_poolsCountComponents == _poolsComponents.Length) {
                     Array.Resize(ref _poolsComponents, _poolsCountComponents << 1);
                     Array.Resize(ref _guidsComponents, _poolsCountComponents << 1);
@@ -3291,11 +3292,11 @@ namespace FFS.Libraries.StaticEcs {
                 Components<TComponent>.Instance = new Components<TComponent>(_poolsCountComponents, typeConfig, false);
                 Components<TComponent>.Handle = ComponentsHandle.Create<TWorld, TComponent>();
                 _poolsComponents[_poolsCountComponents] = Components<TComponent>.Handle;
-                _guidsComponents[_poolsCountComponents++] = typeConfig.Guid;
+                _guidsComponents[_poolsCountComponents++] = typeConfig.Guid.Value;
 
-                if (typeConfig.TrackAdded || typeConfig.TrackDeleted
+                if (typeConfig.TrackAdded.Value || typeConfig.TrackDeleted.Value
                     #if !FFS_ECS_DISABLE_CHANGED_TRACKING
-                    || typeConfig.TrackChanged
+                    || typeConfig.TrackChanged.Value
                     #endif
                     ) {
                     if (_trackingComponentIndicesCount == _trackingComponentIndices.Length) {
@@ -3304,11 +3305,12 @@ namespace FFS.Libraries.StaticEcs {
                     _trackingComponentIndices[_trackingComponentIndicesCount++] = (ushort)(_poolsCountComponents - 1);
                 }
 
-                var guid = typeConfig.Guid;
-                if (guid != Guid.Empty) {
-                    if (_componentPoolByGuid.ContainsKey(guid)) throw new StaticEcsException($"Component type {typeof(TComponent)} with guid {guid} already registered");
-                    _componentPoolByGuid[guid] = Components<TComponent>.Handle;
+                var guid = typeConfig.Guid.Value;
+                if (_componentPoolByGuid.ContainsKey(guid)) {
+                    throw new StaticEcsException($"Component type {typeof(TComponent)} with guid {guid} already registered");
                 }
+
+                _componentPoolByGuid[guid] = Components<TComponent>.Handle;
             }
             
             [MethodImpl(AggressiveInlining)]
@@ -3399,28 +3401,37 @@ namespace FFS.Libraries.StaticEcs {
                 AssertNotRegisteredComponent<TTag>(WorldTypeName);
                 #endif
 
+                var typeConfig = config.AsComponentConfig
+                                       .MergeWith(AutoRegistration.FindTagConfig<TTag>().AsComponentConfig)
+                                       .MergeWith(ComponentTypeConfig<TTag>.DefaultTag);
+
+                #if FFS_ECS_DEBUG
+                AssertGuidNotEmpty<TTag>(WorldTypeName, typeConfig.Guid.Value);
+                #endif
+
                 if (_poolsCountComponents == _poolsComponents.Length) {
                     Array.Resize(ref _poolsComponents, _poolsCountComponents << 1);
                     Array.Resize(ref _guidsComponents, _poolsCountComponents << 1);
                 }
 
-                Components<TTag>.Instance = new Components<TTag>(_poolsCountComponents, new ComponentTypeConfig<TTag>(guid: config.Guid, trackAdded: config.TrackAdded, trackDeleted: config.TrackDeleted), isTag: true);
+                Components<TTag>.Instance = new Components<TTag>(_poolsCountComponents, typeConfig, isTag: true);
                 Components<TTag>.Handle = ComponentsHandle.Create<TWorld, TTag>();
                 _poolsComponents[_poolsCountComponents] = Components<TTag>.Handle;
-                _guidsComponents[_poolsCountComponents++] = config.Guid;
+                _guidsComponents[_poolsCountComponents++] = typeConfig.Guid.Value;
 
-                if (config.TrackAdded || config.TrackDeleted) {
+                if (typeConfig.TrackAdded.Value || typeConfig.TrackDeleted.Value) {
                     if (_trackingComponentIndicesCount == _trackingComponentIndices.Length) {
                         Array.Resize(ref _trackingComponentIndices, _trackingComponentIndicesCount << 1);
                     }
                     _trackingComponentIndices[_trackingComponentIndicesCount++] = (ushort)(_poolsCountComponents - 1);
                 }
 
-                var guid = config.Guid;
-                if (guid != Guid.Empty) {
-                    if (_componentPoolByGuid.ContainsKey(guid)) throw new StaticEcsException($"Tag type {typeof(TTag)} with guid {guid} already registered");
-                    _componentPoolByGuid[guid] = Components<TTag>.Handle;
+                var guid = typeConfig.Guid.Value;
+                if (_componentPoolByGuid.ContainsKey(guid)) {
+                    throw new StaticEcsException($"Tag type {typeof(TTag)} with guid {guid} already registered");
                 }
+
+                _componentPoolByGuid[guid] = Components<TTag>.Handle;
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -3481,6 +3492,13 @@ namespace FFS.Libraries.StaticEcs {
             internal void RegisterEventTypeInternal<T>(EventTypeConfig<T> config) where T : struct, IEvent {
                 if (Events<T>.Instance.Initialized) throw new StaticEcsException($"Event {typeof(T)} already registered");
 
+                var typeConfig = config.MergeWith(AutoRegistration.FindEventConfig<T>())
+                                       .MergeWith(EventTypeConfig<T>.Default);
+
+                #if FFS_ECS_DEBUG
+                AssertGuidNotEmpty<T>(WorldTypeName, typeConfig.Guid.Value);
+                #endif
+
                 Events<T>.Instance = new Events<T>(_poolsCountEvents, config);
 
                 if (_poolsCountEvents == _poolsEvents.Length) {
@@ -3489,12 +3507,13 @@ namespace FFS.Libraries.StaticEcs {
 
                 _poolsEvents[_poolsCountEvents] = EventsHandle.Create<TWorld, T>();
 
-                var guid = config.Guid;
-                if (guid != Guid.Empty) {
-                    if (_poolEventsByGuid.ContainsKey(guid)) throw new StaticEcsException($"Event type {typeof(T)} with guid {guid} already registered");
-                    _poolEventsByGuid[guid] = _poolsEvents[_poolsCountEvents];
+                var guid = config.Guid.Value;
+                if (_poolEventsByGuid.ContainsKey(guid)) {
+                    throw new StaticEcsException($"Event type {typeof(T)} with guid {guid} already registered");
                 }
-                
+
+                _poolEventsByGuid[guid] = _poolsEvents[_poolsCountEvents];
+
                 _poolsCountEvents++;
             }
             

@@ -91,16 +91,29 @@ var entity = W.NewEntity<Default>();  // Default entity type, clusterId=0
 
 #### WorldConfig:
 ```csharp
-// New fields:
-WorkerSpinCount       // spin-wait iterations before blocking (default 256)
-BaseClustersCapacity  // initial cluster capacity (default 16)
+// All fields are now nullable — unset values fall back to WorldConfig.Default()
+// ParallelQueryType enum removed → use ThreadCount (uint?)
+//   0 = single-threaded (default)
+//   WorldConfig.MaxThreadCount = all available CPU threads
+//   N = specific number of threads
+// CustomThreadCount removed → use ThreadCount directly
 
 // Factory methods:
 WorldConfig.Default()      // standard settings
 WorldConfig.MaxThreads()   // all available threads
 ```
 
+#### Config types (ComponentTypeConfig, TagTypeConfig, EventTypeConfig):
+```csharp
+// All config fields are now nullable — unset values fall back to defaults
+// Guid is auto-computed from type name (no need to specify manually)
+// ReadWriteStrategy is auto-detected (UnmanagedPackArrayStrategy for unmanaged types)
+// 3-level merge: user config → static Config field → built-in defaults
+```
+
 #### Removed:
+- `ParallelQueryType` enum → `WorldConfig.ThreadCount`
+- `WorldConfig.CustomThreadCount` → `WorldConfig.ThreadCount`
 - `IWorld` interface → `WorldHandle`
 - `WorldWrapper<W>` → `WorldHandle`
 - `Worlds` static class

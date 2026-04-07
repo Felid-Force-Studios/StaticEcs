@@ -132,9 +132,9 @@ ___
 ### 缺少序列化设置
 序列化需要：
 1. FFS.StaticPack 依赖
-2. 所有可序列化类型需要 Guid 注册：`W.Types().Component<T>(new ComponentTypeConfig<T> { Guid = ... })`
+2. 所有类型自动获得 GUID。通过 `new ComponentTypeConfig<T>(guid: ...)` 覆盖以确保重命名类型时的稳定性
 3. 非 unmanaged 组件需要 `Write`/`Read` 钩子实现
-4. Unmanaged 组件可以使用 `UnmanagedPackArrayStrategy<T>`
+4. 序列化策略自动检测（unmanaged 类型使用 `UnmanagedPackArrayStrategy<T>`，其他使用 `StructPackArrayStrategy<T>`）
 
 ___
 

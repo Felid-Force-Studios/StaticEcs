@@ -38,9 +38,9 @@ W.Types()
 
 // Регистрация с конфигурацией
 W.Types().Event<WeatherChanged>(new EventTypeConfig<WeatherChanged>(
-    guid: new Guid("..."),      // стабильный идентификатор для сериализации
+    guid: new Guid("..."),      // стабильный идентификатор для сериализации (по умолчанию — автоматически из имени типа)
     version: 1,                  // версия схемы данных для миграции (по умолчанию — 0)
-    readWriteStrategy: null      // стратегия бинарной сериализации (по умолчанию — StructPackArrayStrategy<T>)
+    readWriteStrategy: null      // стратегия бинарной сериализации (по умолчанию — авто-определение)
 ));
 //...
 W.Initialize();

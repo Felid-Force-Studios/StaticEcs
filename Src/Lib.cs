@@ -5,9 +5,11 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
@@ -485,8 +487,8 @@ namespace FFS.Libraries.StaticEcs {
         }
         
         internal static void AssertParallelAvailable(string type, [CallerMemberName] string method = "") {
-            if (Data.Instance.ParallelQueryType == ParallelQueryType.Disabled) {
-                throw new StaticEcsException(type, method, "ParallelQueryType = Disabled, change World config");
+            if (Data.Instance.ZeroThreadCount) {
+                throw new StaticEcsException(type, method, "ThreadCount = 0, change World config");
             }
         }
         
@@ -560,6 +562,12 @@ namespace FFS.Libraries.StaticEcs {
         internal static void AssertChunkIsNotRegistered(string type, uint chunkIdx, [CallerMemberName] string method = "") {
             if (Data.Instance.ChunkIsRegisteredInternal(chunkIdx)) {
                 throw new StaticEcsException(type, method, $"Chunk {chunkIdx} already registered.");
+            }
+        }
+
+        internal static void AssertGuidNotEmpty<T>(string type, Guid guid, [CallerMemberName] string method = "") {
+            if (guid.Equals(Guid.Empty)) {
+                throw new StaticEcsException(type, method, $"`{typeof(T).GenericName()}` GUID can't be empty. Set valid value or leave it uninitialized.");
             }
         }
     }
@@ -758,6 +766,14 @@ namespace FFS.Libraries.StaticEcs {
 
             return $"{typeName}<{genericArgs}>".Replace("+", ".");
         }
+
+        internal static Guid GuidFromAQN(this Type type) {
+            var simplifiedAQN = $"{type.FullName}, {type.Assembly.GetName().Name}".ToLowerInvariant();
+
+            using var md5 = MD5.Create();
+            var hashBytes = md5.ComputeHash(Encoding.UTF8.GetBytes(simplifiedAQN));
+            return new Guid(hashBytes);
+        }
     }
 
     /// <summary>
@@ -907,6 +923,33 @@ namespace FFS.Libraries.StaticEcs {
             }
         }
 
+        internal static ComponentTypeConfig<T> FindComponentConfig<T>() where T : struct, IComponentOrTag {
+            return (ComponentTypeConfig<T>)FindComponentConfig(typeof(T));
+        }
+
+        internal static EventTypeConfig<T> FindEventConfig<T>() where T : struct, IEvent {
+            return (EventTypeConfig<T>)FindEventConfig(typeof(T));
+        }
+
+        internal static TagTypeConfig<T> FindTagConfig<T>() where T : struct, ITag {
+            return (TagTypeConfig<T>)FindTagConfig(typeof(T));
+        }
+
+        #if NET5_0_OR_GREATER
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(UnmanagedPackArrayStrategy<>))]
+        #endif
+        internal static IPackArrayStrategy<T> TryCreateUnmanagedPackArrayStrategy<T>() where T : struct {
+            try {
+                var unmanagedPackStrategyType = typeof(UnmanagedPackArrayStrategy<>).MakeGenericType(typeof(T));
+                return (IPackArrayStrategy<T>)Activator.CreateInstance(unmanagedPackStrategyType);
+            }
+            catch (ArgumentException argumentException) {
+                return null;
+            }
+
+            return null;
+        }
+
         #if NET5_0_OR_GREATER
         [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
         [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency on RegisterAll.")]
@@ -914,9 +957,7 @@ namespace FFS.Libraries.StaticEcs {
         [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
         #endif
         private static void InvokeRegisterComponent(MethodInfo openMethod, Type componentType) {
-            var configType = typeof(ComponentTypeConfig<>).MakeGenericType(componentType);
-            var config = FindStaticConfig(componentType, configType, "Config")
-                         ?? Activator.CreateInstance(configType);
+            var config = FindComponentConfig(componentType);
             openMethod.MakeGenericMethod(componentType).Invoke(null, new[] { config });
         }
 
@@ -942,9 +983,7 @@ namespace FFS.Libraries.StaticEcs {
         [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
         #endif
         private static void InvokeRegisterEvent(MethodInfo openMethod, Type eventType) {
-            var configType = typeof(EventTypeConfig<>).MakeGenericType(eventType);
-            var config = FindStaticConfig(eventType, configType, "Config")
-                         ?? Activator.CreateInstance(configType);
+            var config = FindEventConfig(eventType);
             openMethod.MakeGenericMethod(eventType).Invoke(null, new[] { config });
         }
 
@@ -955,10 +994,41 @@ namespace FFS.Libraries.StaticEcs {
         [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
         #endif
         private static void InvokeRegisterTag(MethodInfo openMethod, Type tagType) {
-            var configType = typeof(TagTypeConfig<>).MakeGenericType(tagType);
-            var config = FindStaticConfig(tagType, configType, "Config")
-                         ?? Activator.CreateInstance(configType);
+            var config = FindTagConfig(tagType);
             openMethod.MakeGenericMethod(tagType).Invoke(null, new[] { config });
+        }
+
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency on RegisterAll.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "Config types have public parameterless constructors preserved by DynamicDependency on RegisterAll.")]
+        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
+        #endif
+        private static object FindComponentConfig(Type componentType) {
+            var configType = typeof(ComponentTypeConfig<>).MakeGenericType(componentType);
+            return FindStaticConfig(componentType, configType, "Config") ?? Activator.CreateInstance(configType);
+        }
+
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency on RegisterAll.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "Config types have public parameterless constructors preserved by DynamicDependency on RegisterAll.")]
+        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
+        #endif
+        private static object FindEventConfig(Type eventType) {
+            var configType = typeof(EventTypeConfig<>).MakeGenericType(eventType);
+            return FindStaticConfig(eventType, configType, "Config") ?? Activator.CreateInstance(configType);
+        }
+
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency on RegisterAll.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "Config types have public parameterless constructors preserved by DynamicDependency on RegisterAll.")]
+        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
+        #endif
+        private static object FindTagConfig(Type tagType) {
+            var configType = typeof(TagTypeConfig<>).MakeGenericType(tagType);
+            return FindStaticConfig(tagType, configType, "Config") ?? Activator.CreateInstance(configType);
         }
 
         #if NET5_0_OR_GREATER

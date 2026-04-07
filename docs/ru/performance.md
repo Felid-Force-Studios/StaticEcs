@@ -124,14 +124,13 @@ ___
 
 ## Параллельное выполнение
 
-Для активации многопоточных запросов, укажите режим в конфигурации мира:
+Для активации многопоточных запросов укажите количество потоков в конфигурации мира:
 
 ```csharp
 W.Create(new WorldConfig {
-    ParallelQueryType = ParallelQueryType.MaxThreadsCount,
+    ThreadCount = WorldConfig.MaxThreadCount, // все доступные потоки CPU
     // или
-    // ParallelQueryType = ParallelQueryType.CustomThreadsCount,
-    // CustomThreadCount = 8,
+    // ThreadCount = 8, // конкретное количество потоков
 });
 ```
 

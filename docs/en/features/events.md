@@ -38,9 +38,9 @@ W.Types()
 
 // Registration with configuration
 W.Types().Event<WeatherChanged>(new EventTypeConfig<WeatherChanged>(
-    guid: new Guid("..."),      // stable identifier for serialization
+    guid: new Guid("..."),      // stable identifier for serialization (default — auto-computed from type name)
     version: 1,                  // data schema version for migration (default — 0)
-    readWriteStrategy: null      // binary serialization strategy (default — StructPackArrayStrategy<T>)
+    readWriteStrategy: null      // binary serialization strategy (default — auto-detected)
 ));
 //...
 W.Initialize();

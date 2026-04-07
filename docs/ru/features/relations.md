@@ -191,8 +191,8 @@ var child1 = W.NewEntity<Default>();
 var child2 = W.NewEntity<Default>();
 
 // Добавить одиночную связь
-child1.Add(new W.Link<Parent>(parent));
-child2.Add(new W.Link<Parent>(parent));
+child1.Set(new W.Link<Parent>(parent));
+child2.Set(new W.Link<Parent>(parent));
 
 // Получить ссылку
 ref var parentLink = ref child1.Ref<W.Link<Parent>>();
@@ -288,7 +288,7 @@ var unit = W.NewEntity<Default>();
 var target = W.NewEntity<Default>();
 
 // Установить цель для преследования
-unit.Add(new W.Link<FollowTarget>(target));
+unit.Set(new W.Link<FollowTarget>(target));
 
 // В системе движения
 W.Query().For(static (W.Entity entity, ref W.Link<FollowTarget> follow) => {
@@ -330,7 +330,7 @@ var alice = W.NewEntity<Default>();
 var bob = W.NewEntity<Default>();
 
 // Достаточно установить с одной стороны — обратная создастся автоматически
-alice.Add(new W.Link<MarriedTo>(bob));
+alice.Set(new W.Link<MarriedTo>(bob));
 // Теперь: alice имеет Link<MarriedTo> → bob
 //         bob имеет Link<MarriedTo> → alice
 
@@ -377,7 +377,7 @@ W.Types()
 var player = W.NewEntity<Default>();
 var horse = W.NewEntity<Default>();
 
-player.Add(new W.Link<Mount>(horse));
+player.Set(new W.Link<Mount>(horse));
 // player имеет Link<Mount> → horse
 // horse имеет Link<Rider> → player
 ```
@@ -426,8 +426,8 @@ var son = W.NewEntity<Default>();
 var daughter = W.NewEntity<Default>();
 
 // Установить связь с любой стороны
-son.Add(new W.Link<Parent>(father));
-daughter.Add(new W.Link<Parent>(father));
+son.Set(new W.Link<Parent>(father));
+daughter.Set(new W.Link<Parent>(father));
 // father автоматически получит Links<Children> → [son, daughter]
 
 // Или добавить со стороны родителя

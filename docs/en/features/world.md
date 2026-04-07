@@ -86,7 +86,7 @@ public abstract class W : World<WT> { }
 // Create with default configuration
 W.Create(WorldConfig.Default());
 
-// Or with custom configuration
+// Or with custom configuration (all parameters are optional — unset values fall back to defaults)
 W.Create(new WorldConfig {
     // Independent world (manages chunks automatically) or dependent (requires manual chunk management)
     Independent = true,
@@ -94,13 +94,11 @@ W.Create(new WorldConfig {
     BaseComponentTypesCount = 64,
     // Initial capacity for clusters (minimum 16, default — 16)
     BaseClustersCapacity = 16,
-    // Multithreading mode
-    // Disabled — no threads created
-    // MaxThreadsCount — maximum available threads
-    // CustomThreadsCount — specified number of threads
-    ParallelQueryType = ParallelQueryType.Disabled,
-    // Thread count when using CustomThreadsCount
-    CustomThreadCount = 4,
+    // Number of threads for parallel queries (default — 0, single-threaded)
+    // 0 — no threads created
+    // WorldConfig.MaxThreadCount — all available CPU threads
+    // N — specified number of threads
+    ThreadCount = 4,
     // Worker spin iterations before blocking (default — 256)
     WorkerSpinCount = 256,
     // Enable entity creation tracking for the Created query filter (default — false)
@@ -112,7 +110,7 @@ W.Create(new WorldConfig {
 `WorldConfig` provides factory methods:
 - `WorldConfig.Default()` — standard settings (single-threaded, independent)
 - `WorldConfig.MaxThreads()` — all available CPU threads
-Both accept `bool independent = true`.
+All parameters are optional — any unset value falls back to `WorldConfig.Default()`.
 
 ___
 
@@ -153,7 +151,7 @@ W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
 // Can be combined with manual registration (e.g. to set serialization GUID)
 W.Types()
     .RegisterAll()
-    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent> { Guid = myGuid });
+    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent>(guid: myGuid));
 
 W.Initialize();
 ```

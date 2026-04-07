@@ -191,8 +191,8 @@ var child1 = W.NewEntity<Default>();
 var child2 = W.NewEntity<Default>();
 
 // Add a single link
-child1.Add(new W.Link<Parent>(parent));
-child2.Add(new W.Link<Parent>(parent));
+child1.Set(new W.Link<Parent>(parent));
+child2.Set(new W.Link<Parent>(parent));
 
 // Get reference
 ref var parentLink = ref child1.Ref<W.Link<Parent>>();
@@ -288,7 +288,7 @@ var unit = W.NewEntity<Default>();
 var target = W.NewEntity<Default>();
 
 // Set pursuit target
-unit.Add(new W.Link<FollowTarget>(target));
+unit.Set(new W.Link<FollowTarget>(target));
 
 // In movement system
 W.Query().For(static (W.Entity entity, ref W.Link<FollowTarget> follow) => {
@@ -330,7 +330,7 @@ var alice = W.NewEntity<Default>();
 var bob = W.NewEntity<Default>();
 
 // Set from one side — the back-reference is created automatically
-alice.Add(new W.Link<MarriedTo>(bob));
+alice.Set(new W.Link<MarriedTo>(bob));
 // Now: alice has Link<MarriedTo> → bob
 //      bob has Link<MarriedTo> → alice
 
@@ -377,7 +377,7 @@ W.Types()
 var player = W.NewEntity<Default>();
 var horse = W.NewEntity<Default>();
 
-player.Add(new W.Link<Mount>(horse));
+player.Set(new W.Link<Mount>(horse));
 // player has Link<Mount> → horse
 // horse has Link<Rider> → player
 ```
@@ -426,8 +426,8 @@ var son = W.NewEntity<Default>();
 var daughter = W.NewEntity<Default>();
 
 // Set from child side
-son.Add(new W.Link<Parent>(father));
-daughter.Add(new W.Link<Parent>(father));
+son.Set(new W.Link<Parent>(father));
+daughter.Set(new W.Link<Parent>(father));
 // father automatically gets Links<Children> → [son, daughter]
 
 // Or add from parent side

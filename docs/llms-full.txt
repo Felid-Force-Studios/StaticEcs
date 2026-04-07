@@ -234,13 +234,11 @@ W.Create(new WorldConfig {
     BaseComponentTypesCount = 64,
     // Initial capacity for clusters (minimum 16, default — 16)
     BaseClustersCapacity = 16,
-    // Multithreading mode
-    // Disabled — no threads created
-    // MaxThreadsCount — maximum available threads
-    // CustomThreadsCount — specified number of threads
-    ParallelQueryType = ParallelQueryType.Disabled,
-    // Thread count when using CustomThreadsCount
-    CustomThreadCount = 4,
+    // Number of threads for parallel queries (default — 0, single-threaded)
+    // 0 — no threads created
+    // WorldConfig.MaxThreadCount — all available CPU threads
+    // N — specified number of threads
+    ThreadCount = 4,
     // Worker spin iterations before blocking (default — 256)
     WorkerSpinCount = 256,
     // Enable entity creation tracking (for Created query filter)
@@ -253,7 +251,7 @@ W.Create(new WorldConfig {
 `WorldConfig` provides factory methods:
 - `WorldConfig.Default()` — standard settings (single-threaded, independent)
 - `WorldConfig.MaxThreads()` — all available CPU threads
-Both accept `bool independent = true`.
+All parameters are optional — any unset value falls back to `WorldConfig.Default()`.
 
 ___
 
@@ -294,7 +292,7 @@ W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
 // Can be combined with manual registration (e.g. to set serialization GUID)
 W.Types()
     .RegisterAll()
-    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent> { Guid = myGuid });
+    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent>(guid: myGuid));
 
 W.Initialize();
 ```
@@ -314,7 +312,7 @@ Detected interfaces:
 {: .note }
 - If no assemblies are specified, only the calling assembly is scanned (not all loaded assemblies)
 - The StaticEcs framework assembly itself is always excluded from scanning
-- All types are registered with default configuration (no GUID, no custom serialization)
+- All types are registered with default configuration (GUID auto-computed from type name, serialization strategy auto-detected)
 - A struct implementing multiple interfaces (e.g. both `IComponent` and `IMultiComponent`) will be registered for each one
 
 ___
@@ -1165,10 +1163,10 @@ W.Types()
 
 // Registration with configuration
 W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("..."),      // stable identifier for serialization
+    guid: new Guid("..."),      // stable identifier for serialization (default — auto-computed from type name)
     version: 1,                  // data schema version for migration (default — 0)
-    notClearable: true,          // skip zeroing data on deletion (default — false)
-    readWriteStrategy: null      // binary serialization strategy (default — StructPackArrayStrategy<T>)
+    noDataLifecycle: true,       // skip zeroing data on deletion (default — false)
+    readWriteStrategy: null      // binary serialization strategy (default — auto-detected)
 ));
 //...
 W.Initialize();
@@ -3118,7 +3116,7 @@ ___
 ## Parallel processing
 
 {: .warning }
-Parallel processing requires enabling at world creation: `ParallelQueryType.MaxThreadsCount` or `ParallelQueryType.CustomThreadsCount` with `CustomThreadCount` in `WorldConfig`.
+Parallel processing requires enabling at world creation: set `ThreadCount > 0` in `WorldConfig` (or use `WorldConfig.MaxThreads()`).
 Inside parallel iteration, only the **current** iterated entity may be modified or destroyed. Forbidden: creating entities, modifying other entities, reading events. Sending events (`SendEvent`) is thread-safe (when there is no concurrent reading of the same type). Always uses `QueryMode.Strict`.
 
 ```csharp
@@ -3347,9 +3345,9 @@ W.Types()
 
 // Registration with configuration
 W.Types().Event<WeatherChanged>(new EventTypeConfig<WeatherChanged>(
-    guid: new Guid("..."),      // stable identifier for serialization
+    guid: new Guid("..."),      // stable identifier for serialization (default — auto-computed from type name)
     version: 1,                  // data schema version for migration (default — 0)
-    readWriteStrategy: null      // binary serialization strategy (default — StructPackArrayStrategy<T>)
+    readWriteStrategy: null      // binary serialization strategy (default — auto-detected)
 ));
 //...
 W.Initialize();
@@ -3542,7 +3540,7 @@ W.Types().Component<Position>(new ComponentTypeConfig<Position>(
 ```
 
 {: .note }
-`UnmanagedPackArrayStrategy<T>` performs direct memory copying — significantly faster than per-component serialization. Works only for unmanaged types. On version mismatch (data migration), the system automatically falls back to `Read` hooks. The default strategy is `StructPackArrayStrategy<T>`.
+`UnmanagedPackArrayStrategy<T>` performs direct memory copying — significantly faster than per-component serialization. Works only for unmanaged types. On version mismatch (data migration), the system automatically falls back to `Read` hooks. The default strategy is auto-detected: `UnmanagedPackArrayStrategy<T>` for unmanaged types, `StructPackArrayStrategy<T>` otherwise.
 
 #### Full configuration:
 ```csharp
@@ -3569,7 +3567,7 @@ W.Types()
 #### Full configuration:
 ```csharp
 W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."), // stable identifier for serialization (default — default)
+    guid: new Guid("A1B2C3D4-..."), // stable identifier for serialization (default — auto-computed from type name)
     trackAdded: true,                // enable addition tracking (default — false)
     trackDeleted: true               // enable deletion tracking (default — false)
 ));
@@ -3660,7 +3658,7 @@ W.Serializer.LoadWorldSnapshot(compressed, gzip: true);
 ```
 
 {: .important }
-All components and tags in the world snapshot **must** have a registered `Guid`. In DEBUG mode, an error will occur when attempting serialization without a `Guid`.
+All components and tags are automatically assigned a stable `Guid` computed from the type name. You can override the `Guid` via config to ensure stability across type renames.
 
 ___
 
@@ -4068,17 +4066,12 @@ When using `CreateWorldSnapshot`, events are saved automatically (unless `writeE
 
 ___
 
-## Excluding from serialization
+## Custom GUID for stability
+
+All types automatically get a stable `Guid` computed from the type name (`assembly-qualified name`). If you rename or move a type, the auto-generated GUID changes — breaking compatibility with existing snapshots. To prevent this, specify a fixed GUID:
 
 ```csharp
-// Components, tags, and events without Guid are skipped during EntitiesSnapshot serialization
-W.Types().Component<DebugInfo>();     // no guid — not serialized
-W.Types().Tag<EditorOnly>();          // no guid — not serialized
-
-// For world snapshots (CreateWorldSnapshot) all Guids are required — error in DEBUG otherwise
-// For entity snapshots (EntitiesSnapshot) types without Guid are simply skipped
-
-// Example: save all entities while skipping debug data
+// Example: save all entities
 using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
 writer.WriteAllEntities();
 byte[] snapshot = writer.CreateSnapshot();
@@ -4981,10 +4974,9 @@ To enable multithreaded queries, specify the mode in world configuration:
 
 ```csharp
 W.Create(new WorldConfig {
-    ParallelQueryType = ParallelQueryType.MaxThreadsCount,
+    ThreadCount = WorldConfig.MaxThreadCount, // all available CPU threads
     // or
-    // ParallelQueryType = ParallelQueryType.CustomThreadsCount,
-    // CustomThreadCount = 8,
+    // ThreadCount = 8, // specific number of threads
 });
 ```
 
@@ -5368,9 +5360,9 @@ ___
 ### Missing serialization setup
 Serialization requires:
 1. FFS.StaticPack dependency
-2. Guid registration for all serializable types: `W.Types().Component<T>(new ComponentTypeConfig<T> { Guid = ... })`
+2. All types get auto-computed GUIDs. Override via `new ComponentTypeConfig<T>(guid: ...)` for stability across type renames
 3. Non-unmanaged components need `Write`/`Read` hook implementations
-4. Unmanaged components can use `UnmanagedPackArrayStrategy<T>` for efficient bulk copy
+4. Serialization strategy is auto-detected (`UnmanagedPackArrayStrategy<T>` for unmanaged types, `StructPackArrayStrategy<T>` otherwise)
 
 ___
 

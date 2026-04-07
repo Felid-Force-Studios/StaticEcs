@@ -488,7 +488,7 @@ ___
 ## Parallel processing
 
 {: .warning }
-Parallel processing requires enabling at world creation: `ParallelQueryType.MaxThreadsCount` or `ParallelQueryType.CustomThreadsCount` with `CustomThreadCount` in `WorldConfig`.
+Parallel processing requires enabling at world creation: set `ThreadCount > 0` in `WorldConfig` (or use `WorldConfig.MaxThreads()`).
 Inside parallel iteration, only the **current** iterated entity may be modified or destroyed. Forbidden: creating entities, modifying other entities, reading events. Sending events (`SendEvent`) is thread-safe (when there is no concurrent reading of the same type, see [Events](events#multithreading) for details). Always uses `QueryMode.Strict`.
 
 ```csharp

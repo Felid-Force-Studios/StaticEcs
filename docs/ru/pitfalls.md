@@ -132,9 +132,9 @@ ___
 ### Отсутствие настройки сериализации
 Сериализация требует:
 1. Зависимость FFS.StaticPack
-2. Регистрация Guid для всех сериализуемых типов: `W.Types().Component<T>(new ComponentTypeConfig<T> { Guid = ... })`
+2. Все типы автоматически получают GUID. Переопределите через `new ComponentTypeConfig<T>(guid: ...)` для стабильности при переименовании типов
 3. Для не-unmanaged компонентов нужны реализации хуков `Write`/`Read`
-4. Для unmanaged компонентов можно использовать `UnmanagedPackArrayStrategy<T>`
+4. Стратегия сериализации определяется автоматически (`UnmanagedPackArrayStrategy<T>` для unmanaged типов, `StructPackArrayStrategy<T>` в остальных случаях)
 
 ___
 

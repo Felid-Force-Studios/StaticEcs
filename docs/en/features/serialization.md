@@ -78,7 +78,7 @@ W.Types().Component<Position>(new ComponentTypeConfig<Position>(
 ```
 
 {: .note }
-`UnmanagedPackArrayStrategy<T>` performs direct memory copying — significantly faster than per-component serialization. Works only for unmanaged types. On version mismatch (data migration), the system automatically falls back to `Read` hooks. The default strategy is `StructPackArrayStrategy<T>`.
+`UnmanagedPackArrayStrategy<T>` performs direct memory copying — significantly faster than per-component serialization. Works only for unmanaged types. On version mismatch (data migration), the system automatically falls back to `Read` hooks. The default strategy is auto-detected: `UnmanagedPackArrayStrategy<T>` for unmanaged types, `StructPackArrayStrategy<T>` otherwise.
 
 #### Bulk segment serialization for Multi and Links:
 
@@ -123,14 +123,14 @@ W.Types()
 #### Full configuration:
 ```csharp
 W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."), // stable identifier for serialization (default — default)
+    guid: new Guid("A1B2C3D4-..."), // stable identifier for serialization (default — auto-computed from type name)
     trackAdded: true,                // enable addition tracking (default — false)
     trackDeleted: true               // enable deletion tracking (default — false)
 ));
 ```
 
 {: .note }
-For automatic registration, `RegisterAll()` picks up a static `Guid` field inside the tag struct. The `trackAdded` / `trackDeleted` parameters are not set during automatic registration — use manual registration with `TagTypeConfig<T>` for tracking.
+All types automatically get a stable GUID computed from the type name. To override, declare a static `Guid` field inside the tag struct or pass `TagTypeConfig<T>` with a custom guid. `RegisterAll()` also picks up a static `TagTypeConfig<T>` field (preferring the name `Config`) for `trackAdded` / `trackDeleted` parameters.
 
 ___
 
@@ -217,7 +217,7 @@ W.Serializer.LoadWorldSnapshot(compressed, gzip: true);
 ```
 
 {: .important }
-All components and tags in the world snapshot **must** have a registered `Guid`. In DEBUG mode, an error will occur when attempting serialization without a `Guid`.
+All components and tags are automatically assigned a stable `Guid` computed from the type name. You can override the `Guid` via config to ensure stability across type renames.
 
 ___
 
@@ -627,17 +627,12 @@ When using `CreateWorldSnapshot`, events are saved automatically (unless `writeE
 
 ___
 
-## Excluding from serialization
+## Custom GUID for stability
+
+All types automatically get a stable `Guid` computed from the type name (`assembly-qualified name`). If you rename or move a type, the auto-generated GUID changes — breaking compatibility with existing snapshots. To prevent this, specify a fixed GUID:
 
 ```csharp
-// Components, tags, and events without Guid are skipped during EntitiesSnapshot serialization
-W.Types().Component<DebugInfo>();     // no guid — not serialized
-W.Types().Tag<EditorOnly>();          // no guid — not serialized
-
-// For world snapshots (CreateWorldSnapshot) all Guids are required — error in DEBUG otherwise
-// For entity snapshots (EntitiesSnapshot) types without Guid are simply skipped
-
-// Example: save all entities while skipping debug data
+// Example: save all entities
 using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
 writer.WriteAllEntities();
 byte[] snapshot = writer.CreateSnapshot();

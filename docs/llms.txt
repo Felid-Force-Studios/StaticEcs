@@ -63,7 +63,7 @@
 - **Strict mode violations**: In default Strict query mode, modifying filtered component/tag types on OTHER entities during iteration is forbidden. Use Flexible mode if needed, or restructure the code.
 - **Storing Entity across frames**: Entity handles have no generation counter. A stored Entity may silently alias a different entity after the original is destroyed. Always use EntityGID for cross-frame references.
 - **Parallel iteration constraints**: During `ForParallel`, only modify the CURRENT entity. Do not create/destroy entities or modify other entities.
-- **Forgetting StaticPack for serialization**: Serialization requires FFS.StaticPack. All serializable types need Guid registration. Non-unmanaged components need Write/Read hook implementations.
+- **Forgetting StaticPack for serialization**: Serialization requires FFS.StaticPack. All types get auto-computed GUIDs (override via config for stability across type renames). Non-unmanaged components need Write/Read hook implementations.
 - **Entity operations before Initialize**: NewEntity, queries, and other entity operations only work after `W.Initialize()` is called.
 - **NamedResource caching**: `NamedResource<T>` caches its box reference on first access. Do not store it as `readonly` or pass by value after first use — this breaks the cache.
 

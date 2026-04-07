@@ -488,7 +488,7 @@ ___
 ## 并行处理
 
 {: .warningzh }
-并行处理需要在创建世界时启用：在 `WorldConfig` 中设置 `ParallelQueryType.MaxThreadsCount` 或 `ParallelQueryType.CustomThreadsCount` 并指定 `CustomThreadCount`。
+并行处理需要在创建世界时启用：在 `WorldConfig` 中设置 `ThreadCount > 0`（或使用 `WorldConfig.MaxThreads()`）。
 在并行迭代中只允许修改和销毁**当前**迭代的实体。禁止：创建实体、修改其他实体、读取事件。发送事件（`SendEvent`）是线程安全的（在没有同时读取同一类型时，详见[事件](events#多线程)）。始终使用 `QueryMode.Strict`。
 
 ```csharp
