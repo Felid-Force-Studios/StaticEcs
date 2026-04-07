@@ -10,6 +10,9 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
+#if NET5_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
@@ -1564,7 +1567,11 @@ namespace FFS.Libraries.StaticEcs {
         #endif
     }
 
-    internal static class MultiComponentType<T> where T : struct, IMultiComponent {
+    internal static class MultiComponentType<
+        #if NET5_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        #endif
+        T> where T : struct, IMultiComponent {
         private static readonly Type[] WriteParams = { typeof(BinaryPackWriter).MakeByRefType() };
         private static readonly Type[] ReadParams = { typeof(BinaryPackReader).MakeByRefType() };
 
@@ -1576,7 +1583,11 @@ namespace FFS.Libraries.StaticEcs {
             return HasMethod(typeof(T), nameof(IMultiComponent.Read), ReadParams);
         }
 
-        private static bool HasMethod(Type structType, string methodName, Type[] parameterTypes) {
+        private static bool HasMethod(
+            #if NET5_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+            #endif
+            Type structType, string methodName, Type[] parameterTypes) {
             var methods = structType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             foreach (var methodInfo in methods) {
                 if (methodInfo.Name == methodName && !methodInfo.IsGenericMethodDefinition) {

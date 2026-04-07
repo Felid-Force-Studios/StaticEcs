@@ -11,6 +11,9 @@ using System.Text;
 using System.Threading;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
+#if NET5_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
@@ -3845,7 +3848,11 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     [Il2CppEagerStaticClassConstruction]
     #endif
-    internal static class ComponentType<T> where T : struct, IComponentOrTag {
+    internal static class ComponentType<
+        #if NET5_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        #endif
+        T> where T : struct, IComponentOrTag {
         private static readonly Type[] OnAddParams = {
             typeof(World<>.Entity)
         };
@@ -3889,7 +3896,11 @@ namespace FFS.Libraries.StaticEcs {
             return HasMethod(typeof(T), nameof(IComponentOrTag.Read), ReadParams);
         }
         
-        private static bool HasMethod(Type structType, string methodName, Type[] parameterTypes) {
+        private static bool HasMethod(
+            #if NET5_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+            #endif
+            Type structType, string methodName, Type[] parameterTypes) {
             var methods = structType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             foreach (var methodInfo in methods) {
                 if (methodInfo.Name == methodName && methodInfo.IsGenericMethodDefinition) {
