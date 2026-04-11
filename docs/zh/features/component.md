@@ -43,11 +43,11 @@ W.Types()
 // 带配置的注册
 W.Types()
     .Component<Scale>(new ComponentTypeConfig<Scale>(
-        guid: new Guid("..."),                           // 序列化的稳定标识符
+        guid: new Guid("..."),                           // 序列化的稳定标识符（默认 — 从类型名称自动计算）
         version: 1,                                      // 数据模式版本，用于迁移（默认 — 0）
         noDataLifecycle: false,                          // 禁用框架数据管理（默认 — false）
-        readWriteStrategy: null,                         // 二进制序列化策略（默认 — StructPackArrayStrategy<T>）
-        defaultValue: new Scale { Value = Vector3.One }, // 初始化和删除时的默认值（默认 — default(T)）
+        readWriteStrategy: null,                         // 二进制序列化策略（默认 — 自动检测）
+        defaultValue: new Scale { Value = Vector3.One }, // 初始化和删除时的默认值（默认 — 无）
         trackAdded: true,                                // 启用添加追踪（默认 — false），参见变更追踪
         trackDeleted: true                               // 启用删除追踪（默认 — false），参见变更追踪
     ));

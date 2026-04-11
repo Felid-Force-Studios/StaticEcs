@@ -35,22 +35,18 @@ namespace FFS.Libraries.StaticEcs {
         internal static uint[] CachedJobIndexes;
         internal static int CachedSize;
 
-        internal static void Create(ParallelQueryType parallelQueryType, uint customThreadCount, uint workerSpinCount) {
+        internal static void Create(uint threadCount, uint workerSpinCount) {
             #if FFS_ECS_DEBUG
             _exceptions = new();
             #endif
-            if (parallelQueryType == ParallelQueryType.Disabled) {
+            if (threadCount == 0) {
                 _threadsCount = -1;
                 return;
             }
             #if UNITY_WEBGL
             _threadsCount = 1;
             #else
-            if (parallelQueryType == ParallelQueryType.MaxThreadsCount) {
-                _threadsCount = Environment.ProcessorCount;
-            } else {
-                _threadsCount = (int) Math.Min(Environment.ProcessorCount, customThreadCount);
-            }
+            _threadsCount = (int) Math.Min(Environment.ProcessorCount, threadCount);
             #endif
             _workerSpinCount = (int) workerSpinCount;
             _disposing = false;

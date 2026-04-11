@@ -76,17 +76,16 @@ namespace FFS.Libraries.StaticEcs {
     public readonly struct EventTypeConfig<T> where T : struct, IEvent {
         /// <summary>
         /// Stable GUID used to identify this event type during serialization and deserialization.
-        /// When set to <see cref="Guid.Empty"/> (default), the event type is excluded from serialization.
-        /// Assign a non-empty GUID to enable persistent save/load of in-flight events.
+        /// Default is computed via <see cref="Utils.GuidFromAQN"/>.
         /// </summary>
-        public readonly Guid Guid;
+        public readonly Guid? Guid;
 
         /// <summary>
         /// Schema version number for data migration.
         /// When loading serialized data whose stored version differs from this value,
         /// <see cref="IEvent.Read"/> receives the old version so the event can migrate its fields.
         /// </summary>
-        public readonly byte Version;
+        public readonly byte? Version;
 
         /// <summary>
         /// Strategy for binary array serialization of event pages.
@@ -100,20 +99,34 @@ namespace FFS.Libraries.StaticEcs {
         /// Creates a new event type configuration.
         /// </summary>
         /// <param name="guid">
-        /// Stable serialization identifier. Set to a non-empty GUID to enable serialization of in-flight events.
-        /// Default is <see cref="Guid.Empty"/> (serialization disabled).
+        /// Stable serialization identifier.
+        /// Default is computed via <see cref="Utils.GuidFromAQN"/>.
         /// </param>
         /// <param name="version">Schema version for data migration. Default is 0.</param>
         /// <param name="readWriteStrategy">
         /// Custom binary serialization strategy. Default is <see cref="StructPackArrayStrategy{T}"/>.
         /// </param>
-        public EventTypeConfig(Guid guid = default,
-                               byte version = 0,
+        public EventTypeConfig(Guid? guid = null,
+                               byte? version = null,
                                IPackArrayStrategy<T> readWriteStrategy = null) {
             Guid = guid;
             Version = version;
-            ReadWriteStrategy = readWriteStrategy ?? new StructPackArrayStrategy<T>();
+            ReadWriteStrategy = readWriteStrategy;
         }
+
+        internal EventTypeConfig<T> MergeWith(EventTypeConfig<T> other) {
+            return new EventTypeConfig<T>(
+                guid: Guid ?? other.Guid,
+                version: Version ?? other.Version,
+                readWriteStrategy: ReadWriteStrategy ?? other.ReadWriteStrategy
+            );
+        }
+
+        internal static readonly EventTypeConfig<T> Default = new(
+            guid: typeof(T).GuidFromAQN(),
+            version: 0,
+            readWriteStrategy: AutoRegistration.TryCreateUnmanagedPackArrayStrategy<T>() ?? new StructPackArrayStrategy<T>()
+        );
     }
     
     #if ENABLE_IL2CPP
@@ -334,12 +347,9 @@ namespace FFS.Libraries.StaticEcs {
                     );
                 }
 
-                Guid = config.Guid;
-                Version = config.Version;
-                if (Guid != Guid.Empty) {
-                    _readWriteArrayStrategy = config.ReadWriteStrategy;
-                    _readWriteArrayStrategy ??= new StructPackArrayStrategy<T>();
-                }
+                Guid = config.Guid.Value;
+                Version = config.Version.Value;
+                _readWriteArrayStrategy = config.ReadWriteStrategy;
                 _pagePoolLock = new SpinLock(false);
                 Initialized = true;
             }

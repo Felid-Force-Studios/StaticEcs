@@ -91,16 +91,29 @@ var entity = W.NewEntity<Default>();  // Default 实体类型, clusterId=0
 
 #### WorldConfig：
 ```csharp
-// 新字段：
-WorkerSpinCount       // 阻塞前的自旋等待次数（默认 256）
-BaseClustersCapacity  // 初始集群容量（默认 16）
+// 所有字段现在为 nullable — 未设置的值使用 WorldConfig.Default() 的默认值
+// ParallelQueryType 枚举已移除 → 使用 ThreadCount (uint?)
+//   0 = 单线程（默认）
+//   WorldConfig.MaxThreadCount = 所有可用 CPU 线程
+//   N = 指定线程数
+// CustomThreadCount 已移除 → 直接使用 ThreadCount
 
 // 工厂方法：
 WorldConfig.Default()      // 标准设置
 WorldConfig.MaxThreads()   // 所有可用线程
 ```
 
+#### 配置类型（ComponentTypeConfig、TagTypeConfig、EventTypeConfig）：
+```csharp
+// 所有配置字段现在为 nullable — 未设置的值使用默认值
+// Guid 从类型名称自动计算（无需手动指定）
+// ReadWriteStrategy 自动检测（unmanaged 类型使用 UnmanagedPackArrayStrategy）
+// 3 级合并：用户配置 → 静态 Config 字段 → 内置默认值
+```
+
 #### 已删除：
+- `ParallelQueryType` 枚举 → `WorldConfig.ThreadCount`
+- `WorldConfig.CustomThreadCount` → `WorldConfig.ThreadCount`
 - `IWorld` 接口 → `WorldHandle`
 - `WorldWrapper<W>` → `WorldHandle`
 - `Worlds` 静态类

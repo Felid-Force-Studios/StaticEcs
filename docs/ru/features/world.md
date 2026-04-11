@@ -86,7 +86,7 @@ public abstract class W : World<WT> { }
 // Создание мира с конфигурацией по умолчанию
 W.Create(WorldConfig.Default());
 
-// Или с пользовательской конфигурацией
+// Или с пользовательской конфигурацией (все параметры опциональны — незаданные значения берутся из умолчаний)
 W.Create(new WorldConfig {
     // Независимый мир (управляет чанками самостоятельно) или зависимый (требует ручного управления чанками)
     Independent = true,
@@ -94,13 +94,11 @@ W.Create(new WorldConfig {
     BaseComponentTypesCount = 64,
     // Начальная ёмкость для кластеров (минимум 16, по умолчанию — 16)
     BaseClustersCapacity = 16,
-    // Режим многопоточности
-    // Disabled — потоки не создаются
-    // MaxThreadsCount — максимально доступное количество потоков
-    // CustomThreadsCount — указанное количество потоков
-    ParallelQueryType = ParallelQueryType.Disabled,
-    // Количество потоков при CustomThreadsCount
-    CustomThreadCount = 4,
+    // Количество потоков для параллельных запросов (по умолчанию — 0, однопоточный)
+    // 0 — потоки не создаются
+    // WorldConfig.MaxThreadCount — все доступные потоки CPU
+    // N — указанное количество потоков
+    ThreadCount = 4,
     // Количество итераций ожидания потока перед блокировкой (по умолчанию — 256)
     WorkerSpinCount = 256,
     // Включить отслеживание создания сущностей для фильтра Created (по умолчанию — false)
@@ -112,7 +110,7 @@ W.Create(new WorldConfig {
 `WorldConfig` предоставляет фабричные методы:
 - `WorldConfig.Default()` — стандартные настройки (однопоточный, независимый)
 - `WorldConfig.MaxThreads()` — все доступные потоки CPU
-Оба принимают `bool independent = true`.
+Все параметры опциональны — незаданные значения берутся из `WorldConfig.Default()`.
 
 ___
 
@@ -153,7 +151,7 @@ W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
 // Можно комбинировать с ручной регистрацией (например, для задания GUID сериализации)
 W.Types()
     .RegisterAll()
-    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent> { Guid = myGuid });
+    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent>(guid: myGuid));
 
 W.Initialize();
 ```

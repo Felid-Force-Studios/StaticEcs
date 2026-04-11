@@ -39,9 +39,9 @@ W.Types()
 // 带配置的注册
 W.Types()
     .Event<WeatherChanged>(new EventTypeConfig<WeatherChanged>(
-        guid: new Guid("..."),      // 序列化的稳定标识符
+        guid: new Guid("..."),      // 序列化的稳定标识符（默认 — 从类型名称自动计算）
         version: 1,                  // 数据模式版本，用于迁移（默认 — 0）
-        readWriteStrategy: null      // 二进制序列化策略（默认 — StructPackArrayStrategy<T>）
+        readWriteStrategy: null      // 二进制序列化策略（默认 — 自动检测）
     ));
 //...
 W.Initialize();

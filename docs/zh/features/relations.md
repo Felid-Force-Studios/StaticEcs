@@ -289,7 +289,7 @@ var unit = W.NewEntity<Default>();
 var target = W.NewEntity<Default>();
 
 // 设置追踪目标
-unit.Add(new W.Link<FollowTarget>(target));
+unit.Set(new W.Link<FollowTarget>(target));
 
 // 在移动系统中
 W.Query().For(static (W.Entity entity, ref W.Link<FollowTarget> follow) => {
@@ -332,7 +332,7 @@ var alice = W.NewEntity<Default>();
 var bob = W.NewEntity<Default>();
 
 // 从一侧设置 — 反向引用自动创建
-alice.Add(new W.Link<MarriedTo>(bob));
+alice.Set(new W.Link<MarriedTo>(bob));
 // 现在：alice 有 Link<MarriedTo> → bob
 //       bob 有 Link<MarriedTo> → alice
 
@@ -379,7 +379,7 @@ W.Types()
 var player = W.NewEntity<Default>();
 var horse = W.NewEntity<Default>();
 
-player.Add(new W.Link<Mount>(horse));
+player.Set(new W.Link<Mount>(horse));
 // player 有 Link<Mount> → horse
 // horse 有 Link<Rider> → player
 ```
@@ -428,8 +428,8 @@ var son = W.NewEntity<Default>();
 var daughter = W.NewEntity<Default>();
 
 // 从子实体侧设置
-son.Add(new W.Link<Parent>(father));
-daughter.Add(new W.Link<Parent>(father));
+son.Set(new W.Link<Parent>(father));
+daughter.Set(new W.Link<Parent>(father));
 // father 自动获得 Links<Children> → [son, daughter]
 
 // 或从父实体侧添加

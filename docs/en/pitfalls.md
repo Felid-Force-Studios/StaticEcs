@@ -132,9 +132,9 @@ ___
 ### Missing serialization setup
 Serialization requires:
 1. FFS.StaticPack dependency
-2. Guid registration for all serializable types: `W.Types().Component<T>(new ComponentTypeConfig<T> { Guid = ... })`
+2. All types get auto-computed GUIDs. Override via `new ComponentTypeConfig<T>(guid: ...)` for stability across type renames
 3. Non-unmanaged components need `Write`/`Read` hook implementations
-4. Unmanaged components can use `UnmanagedPackArrayStrategy<T>` for efficient bulk copy
+4. Serialization strategy is auto-detected (`UnmanagedPackArrayStrategy<T>` for unmanaged types, `StructPackArrayStrategy<T>` otherwise)
 
 ___
 

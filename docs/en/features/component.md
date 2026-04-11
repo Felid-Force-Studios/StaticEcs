@@ -42,11 +42,11 @@ W.Types()
 
 // Registration with configuration
 W.Types().Component<Scale>(new ComponentTypeConfig<Scale>(
-    guid: new Guid("..."),                           // stable identifier for serialization
+    guid: new Guid("..."),                           // stable identifier for serialization (default — auto-computed from type name)
     version: 1,                                      // data schema version for migration (default — 0)
     noDataLifecycle: false,                          // disable framework data management (default — false)
-    readWriteStrategy: null,                         // binary serialization strategy (default — StructPackArrayStrategy<T>)
-    defaultValue: new Scale { Value = Vector3.One }, // default value for init and deletion (default — default(T))
+    readWriteStrategy: null,                         // binary serialization strategy (default — auto-detected)
+    defaultValue: new Scale { Value = Vector3.One }, // default value for init and deletion (default — none)
     trackAdded: true,                                // enable addition tracking (default — false), see Change Tracking
     trackDeleted: true                               // enable deletion tracking (default — false), see Change Tracking
 ));

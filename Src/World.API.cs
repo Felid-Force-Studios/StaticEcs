@@ -103,11 +103,11 @@ namespace FFS.Libraries.StaticEcs {
         /// </para>
         /// </summary>
         /// <param name="worldConfig">
-        /// Configuration controlling initial capacities, parallel query threading model,
-        /// cluster count, query strictness, and independence mode.
-        /// Use <see cref="WorldConfig.Default"/> for sensible defaults.
+        /// Configuration controlling initial capacities, parallel query threading,
+        /// cluster count, and independence mode.
+        /// All parameters are optional - any unset value falls back to <see cref="WorldConfig.Default"/>.
         /// </param>
-        public static void Create(WorldConfig worldConfig) {
+        public static void Create(WorldConfig worldConfig = default) {
             #if FFS_ECS_DEBUG
             AssertWorldIsNotCreated(WorldTypeName);
             #endif
@@ -1535,7 +1535,7 @@ namespace FFS.Libraries.StaticEcs {
             /// Registers a tag type for use in this world. Tags are zero-size marker components.
             /// </summary>
             /// <typeparam name="T">Tag type — must be a struct implementing <see cref="ITag"/>.</typeparam>
-            /// <param name="config">Configuration for this tag type.</param>
+            /// <param name="config">Optional configuration for this tag type.</param>
             /// <returns>This registrar for chaining.</returns>
             [MethodImpl(AggressiveInlining)]
             public TypeRegistrar Tag<T>(TagTypeConfig<T> config = default) where T : struct, ITag {
@@ -1631,6 +1631,7 @@ namespace FFS.Libraries.StaticEcs {
     /// Configuration for creating a <see cref="World{TWorld}"/>.
     /// Controls initial capacities, threading model, and behavioral settings.
     /// Pass to <see cref="World{TWorld}.Create"/>.
+    /// All parameters are optional - any unset value falls back to <see cref="WorldConfig.Default"/>.
     /// </summary>
     public struct WorldConfig {
         /// <summary>
@@ -1638,21 +1639,14 @@ namespace FFS.Libraries.StaticEcs {
         /// component types — the registry grows automatically. Setting this to a reasonable estimate
         /// avoids early reallocations. Default: 64.
         /// </summary>
-        public uint BaseComponentTypesCount;
+        public uint? BaseComponentTypesCount;
 
         /// <summary>
-        /// Threading model for parallel query execution.
-        /// <see cref="StaticEcs.ParallelQueryType.Disabled"/> = single-threaded only.
-        /// <see cref="StaticEcs.ParallelQueryType.MaxThreadsCount"/> = use all available CPU threads.
-        /// <see cref="StaticEcs.ParallelQueryType.CustomThreadsCount"/> = use <see cref="CustomThreadCount"/> threads.
+        /// Number of threads to use for parallel query execution.
+        /// 0 = single-threaded only (default).
+        /// <see cref="MaxThreadCount"/> = use all available CPU threads (<see cref="MaxThreads"/> configuration).
         /// </summary>
-        public ParallelQueryType ParallelQueryType;
-
-        /// <summary>
-        /// Number of threads to use when <see cref="ParallelQueryType"/> is
-        /// <see cref="StaticEcs.ParallelQueryType.CustomThreadsCount"/>. Ignored otherwise.
-        /// </summary>
-        public uint CustomThreadCount;
+        public uint? ThreadCount;
 
         /// <summary>
         /// Number of spin-wait iterations worker threads perform before blocking on a kernel event.
@@ -1663,13 +1657,13 @@ namespace FFS.Libraries.StaticEcs {
         /// Default 256 (4096 in <see cref="MaxThreads"/> configuration).
         /// </para>
         /// </summary>
-        public uint WorkerSpinCount;
+        public uint? WorkerSpinCount;
 
         /// <summary>
         /// Initial capacity for the cluster registry. Minimum 16. Grows automatically if more
         /// clusters are registered.
         /// </summary>
-        public ushort BaseClustersCapacity;
+        public ushort? BaseClustersCapacity;
 
         /// <summary>
         /// If <c>true</c> (default), this world independently manages its own chunk allocation.
@@ -1677,7 +1671,7 @@ namespace FFS.Libraries.StaticEcs {
         /// enabling advanced multi-world streaming where the same entity slots are visible
         /// from multiple worlds. Most applications should use <c>true</c>.
         /// </summary>
-        public bool Independent;
+        public bool? Independent;
 
         /// <summary>
         /// If <c>true</c>, the world tracks entity creation events in per-block bitmasks.
@@ -1685,7 +1679,7 @@ namespace FFS.Libraries.StaticEcs {
         /// since the last <see cref="World{TWorld}.ClearCreatedTracking"/> call.
         /// Default: <c>false</c> (opt-in).
         /// </summary>
-        public bool TrackCreated;
+        public bool? TrackCreated;
 
         /// <summary>
         /// Size of the tracking ring buffer (number of ticks of history to retain).
@@ -1695,7 +1689,7 @@ namespace FFS.Libraries.StaticEcs {
         /// Systems automatically see changes since their last execution via per-system tick tracking.
         /// <para>Default: 8. Minimum: 2.</para>
         /// </summary>
-        public byte TrackingBufferSize;
+        public byte? TrackingBufferSize;
 
         /// <summary>
         /// Returns a default configuration suitable for most applications:
@@ -1703,16 +1697,15 @@ namespace FFS.Libraries.StaticEcs {
         /// </summary>
         /// <param name="independent">Whether the world should be independent (default: true).</param>
         /// <returns>A <see cref="WorldConfig"/> with sensible defaults.</returns>
-        public static WorldConfig Default(bool independent = true) =>
-            new() {
-                BaseComponentTypesCount = 64,
-                ParallelQueryType = ParallelQueryType.Disabled,
-                CustomThreadCount = 1,
-                BaseClustersCapacity = 16,
-                WorkerSpinCount = 256,
-                Independent = independent,
-                TrackingBufferSize = 8
-            };
+        public static WorldConfig Default(bool independent = true) => new() {
+            BaseComponentTypesCount = 64,
+            ThreadCount = 0,
+            WorkerSpinCount = 256,
+            BaseClustersCapacity = 16,
+            Independent = independent,
+            TrackCreated = false,
+            TrackingBufferSize = 8,
+        };
 
         /// <summary>
         /// Returns a configuration that uses all available CPU threads for parallel queries.
@@ -1720,46 +1713,33 @@ namespace FFS.Libraries.StaticEcs {
         /// </summary>
         /// <param name="independent">Whether the world should be independent (default: true).</param>
         /// <returns>A <see cref="WorldConfig"/> with max-threads parallelism enabled.</returns>
-        public static WorldConfig MaxThreads(bool independent = true) =>
-            new() {
-                BaseComponentTypesCount = 64,
-                BaseClustersCapacity = 16,
-                ParallelQueryType = ParallelQueryType.MaxThreadsCount,
-                WorkerSpinCount = 4096,
-                Independent = independent,
-                TrackingBufferSize = 8
-            };
+        public static WorldConfig MaxThreads(bool? independent = null) => new() {
+            ThreadCount = MaxThreadCount,
+            WorkerSpinCount = 4096,
+            Independent = independent,
+        };
 
-        internal WorldConfig Normalize() {
-            BaseClustersCapacity = (ushort) Math.Max((uint) 16, BaseClustersCapacity);
-            if (WorkerSpinCount == 0) WorkerSpinCount = 256;
-            if (TrackingBufferSize < 1) TrackingBufferSize = 1;
-            return this;
+        /// <summary>
+        /// All available CPU threads (typically <c>Environment.ProcessorCount</c>).
+        /// </summary>
+        public static uint MaxThreadCount {
+            get {
+                #if UNITY_WEBGL
+                return 1;
+                #else
+                return (uint)Environment.ProcessorCount;
+                #endif
+            }
         }
-    }
 
-    /// <summary>
-    /// Threading model for parallel query execution in a <see cref="World{TWorld}"/>.
-    /// Set via <see cref="WorldConfig.ParallelQueryType"/>.
-    /// </summary>
-    public enum ParallelQueryType {
-        /// <summary>
-        /// Parallel queries are disabled. All queries run on the calling thread.
-        /// Safest option — no synchronization concerns.
-        /// </summary>
-        Disabled,
-
-        /// <summary>
-        /// Parallel queries use all available CPU threads (typically <c>Environment.ProcessorCount</c>).
-        /// Best throughput for CPU-bound workloads on dedicated hardware.
-        /// </summary>
-        MaxThreadsCount,
-
-        /// <summary>
-        /// Parallel queries use a custom number of threads specified by
-        /// <see cref="WorldConfig.CustomThreadCount"/>. Useful for controlling CPU usage
-        /// on shared servers or for profiling with controlled parallelism.
-        /// </summary>
-        CustomThreadsCount
+        internal WorldConfig MergeWith(WorldConfig other) => new() {
+            BaseComponentTypesCount = BaseComponentTypesCount ?? other.BaseComponentTypesCount,
+            ThreadCount = ThreadCount ?? other.ThreadCount,
+            WorkerSpinCount = WorkerSpinCount ?? other.WorkerSpinCount,
+            BaseClustersCapacity = BaseClustersCapacity ?? other.BaseClustersCapacity,
+            Independent = Independent ?? other.Independent,
+            TrackCreated = TrackCreated ?? other.TrackCreated,
+            TrackingBufferSize = TrackingBufferSize ?? other.TrackingBufferSize
+        };
     }
 }

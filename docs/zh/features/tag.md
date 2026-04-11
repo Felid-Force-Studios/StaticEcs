@@ -38,10 +38,10 @@ W.Initialize();
 ```
 
 {: .notezh }
-为了序列化，标签可以有一个稳定的 GUID。您可以手动传递，也可以在标签结构体内声明一个静态 `Guid` 字段/属性 — `RegisterAll()` 会按类型自动发现它（优先选择名为 `Guid` 的成员）：
+标签自动获得由类型名称计算的稳定 GUID。要覆盖（例如，为了在重命名类型时保持稳定），可以手动传递，也可以在标签结构体内声明一个静态 `Guid` 字段/属性 — `RegisterAll()` 会自动发现它（优先选择名为 `Guid` 的成员）：
 
 ```csharp
-// 手动注册并设置 GUID
+// 手动注册并覆盖 GUID
 W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(guid: new Guid("A1B2C3D4-...")));
 
 // 或声明静态字段 — RegisterAll() 会自动获取

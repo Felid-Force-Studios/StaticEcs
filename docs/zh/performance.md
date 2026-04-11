@@ -124,14 +124,13 @@ ___
 
 ## 并行执行
 
-要启用多线程查询，在世界配置中指定模式：
+要启用多线程查询，在世界配置中指定线程数：
 
 ```csharp
 W.Create(new WorldConfig {
-    ParallelQueryType = ParallelQueryType.MaxThreadsCount,
+    ThreadCount = WorldConfig.MaxThreadCount, // 所有可用 CPU 线程
     // 或
-    // ParallelQueryType = ParallelQueryType.CustomThreadsCount,
-    // CustomThreadCount = 8,
+    // ThreadCount = 8, // 指定线程数
 });
 ```
 

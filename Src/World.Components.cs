@@ -3,7 +3,6 @@
 #endif
 
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -152,10 +151,11 @@ namespace FFS.Libraries.StaticEcs {
     public readonly struct ComponentTypeConfig<T> where T : struct, IComponentOrTag {
         /// <summary>
         /// Stable identifier for this component type used during serialization.
-        /// When set, the serializer uses this Guid to match saved data to the correct component type
+        /// Serializer uses this Guid to match saved data to the correct component type
         /// even if the type is renamed or moved.
+        /// Default is computed via <see cref="Utils.GuidFromAQN"/>.
         /// </summary>
-        public readonly Guid Guid;
+        public readonly Guid? Guid;
 
         /// <summary>
         /// Schema version byte written alongside serialized component data.
@@ -164,7 +164,7 @@ namespace FFS.Libraries.StaticEcs {
         /// the default binary deserialization strategy.
         /// Increment this when changing the component's data layout to enable backward-compatible loading.
         /// </summary>
-        public readonly byte Version;
+        public readonly byte? Version;
 
         /// <summary>
         /// When <c>false</c> (default), the framework manages component data lifecycle:
@@ -175,7 +175,7 @@ namespace FFS.Libraries.StaticEcs {
         /// When <see cref="IComponent.OnDelete{TWorld}"/> is defined, the hook handles cleanup
         /// regardless of this flag.
         /// </summary>
-        public readonly bool NoDataLifecycle;
+        public readonly bool? NoDataLifecycle;
 
         /// <summary>
         /// Strategy for binary serialization of component arrays. Defaults to <see cref="StructPackArrayStrategy{T}"/>
@@ -190,19 +190,19 @@ namespace FFS.Libraries.StaticEcs {
         /// (2) On deletion, data is reset to this value (if no <see cref="IComponent.OnDelete{TWorld}"/> hook).
         /// Only effective when <see cref="NoDataLifecycle"/> is <c>false</c> (default).
         /// </summary>
-        public readonly T DefaultValue;
+        public readonly T? DefaultValue;
 
         /// <summary>
         /// When <c>true</c>, tracks component additions — enables use of <c>Added&lt;T&gt;</c> query filter.
         /// Requires calling <see cref="World{TWorld}.ClearTracking"/> to reset tracking state.
         /// </summary>
-        public readonly bool TrackAdded;
+        public readonly bool? TrackAdded;
 
         /// <summary>
         /// When <c>true</c>, tracks component deletions — enables use of <c>Deleted&lt;T&gt;</c> query filter.
         /// Requires calling <see cref="World{TWorld}.ClearTracking"/> to reset tracking state.
         /// </summary>
-        public readonly bool TrackDeleted;
+        public readonly bool? TrackDeleted;
 
         #if !FFS_ECS_DISABLE_CHANGED_TRACKING
         /// <summary>
@@ -211,13 +211,13 @@ namespace FFS.Libraries.StaticEcs {
         /// <c>Mut&lt;T&gt;()</c>, <c>Add&lt;T&gt;()</c>, or query iteration with writable semantics.
         /// Requires calling <see cref="World{TWorld}.ClearTracking"/> to reset tracking state.
         /// </summary>
-        public readonly bool TrackChanged;
+        public readonly bool? TrackChanged;
         #endif
 
         /// <summary>
         /// Creates a configuration for component type registration.
         /// </summary>
-        /// <param name="guid">Stable serialization identifier. Default uses type name as key.</param>
+        /// <param name="guid">Stable serialization identifier. Default is computed via <see cref="Utils.GuidFromAQN"/>.</param>
         /// <param name="version">Schema version for data migration. Default is 0.</param>
         /// <param name="noDataLifecycle">When <c>true</c>, disables framework data lifecycle (no init, no clear). Default is <c>false</c>.</param>
         /// <param name="readWriteStrategy">Custom binary serialization strategy. Default is <see cref="StructPackArrayStrategy{T}"/>.</param>
@@ -225,18 +225,18 @@ namespace FFS.Libraries.StaticEcs {
         /// <param name="trackAdded">When <c>true</c>, enables tracking of component additions for <c>Added&lt;T&gt;</c> query filter.</param>
         /// <param name="trackDeleted">When <c>true</c>, enables tracking of component deletions for <c>Deleted&lt;T&gt;</c> query filter.</param>
         /// <param name="trackChanged">When <c>true</c>, enables tracking of component changes for <c>Changed&lt;T&gt;</c> query filter.</param>
-        public ComponentTypeConfig(Guid guid = default,
-                                   byte version = 0,
-                                   bool noDataLifecycle = false,
+        public ComponentTypeConfig(Guid? guid = null,
+                                   byte? version = null,
+                                   bool? noDataLifecycle = null,
                                    IPackArrayStrategy<T> readWriteStrategy = null,
-                                   T defaultValue = default,
-                                   bool trackAdded = false,
-                                   bool trackDeleted = false,
-                                   bool trackChanged = false) {
+                                   T? defaultValue = null,
+                                   bool? trackAdded = null,
+                                   bool? trackDeleted = null,
+                                   bool? trackChanged = null) {
             Guid = guid;
             Version = version;
             NoDataLifecycle = noDataLifecycle;
-            ReadWriteStrategy = readWriteStrategy ?? new StructPackArrayStrategy<T>();
+            ReadWriteStrategy = readWriteStrategy;
             DefaultValue = defaultValue;
             TrackAdded = trackAdded;
             TrackDeleted = trackDeleted;
@@ -244,6 +244,44 @@ namespace FFS.Libraries.StaticEcs {
             TrackChanged = trackChanged;
             #endif
         }
+
+        internal ComponentTypeConfig<T> MergeWith(ComponentTypeConfig<T> other) {
+            bool? trackChanged = null;
+            bool? otherTrackChanged = null;
+            #if !FFS_ECS_DISABLE_CHANGED_TRACKING
+            trackChanged = TrackChanged;
+            otherTrackChanged = other.TrackChanged;
+            #endif
+
+            return new ComponentTypeConfig<T>(
+                guid: Guid ?? other.Guid,
+                version: Version ?? other.Version,
+                noDataLifecycle: NoDataLifecycle ?? other.NoDataLifecycle,
+                readWriteStrategy: ReadWriteStrategy ?? other.ReadWriteStrategy,
+                defaultValue: DefaultValue ?? other.DefaultValue,
+                trackAdded: TrackAdded ?? other.TrackAdded,
+                trackDeleted: TrackDeleted ?? other.TrackDeleted,
+                trackChanged: trackChanged ?? otherTrackChanged
+            );
+        }
+
+        internal static readonly ComponentTypeConfig<T> DefaultComponent = new(
+            guid: typeof(T).GuidFromAQN(),
+            version: 0,
+            noDataLifecycle: false,
+            readWriteStrategy: AutoRegistration.TryCreateUnmanagedPackArrayStrategy<T>() ?? new StructPackArrayStrategy<T>(),
+            defaultValue: null,
+            trackAdded: false,
+            trackDeleted: false,
+            trackChanged: false
+        );
+
+        internal static readonly ComponentTypeConfig<T> DefaultTag = new(
+            guid: typeof(T).GuidFromAQN(),
+            version: 0,
+            trackAdded: false,
+            trackDeleted: false
+        );
     }
 
     /// <summary>
@@ -251,15 +289,22 @@ namespace FFS.Libraries.StaticEcs {
     /// </summary>
     // ReSharper disable once UnusedTypeParameter
     public readonly struct TagTypeConfig<T> where T : struct, ITag {
-        public readonly Guid Guid;
-        public readonly bool TrackAdded;
-        public readonly bool TrackDeleted;
+        /// <inheritdoc cref="ComponentTypeConfig{T}.Guid"/>>
+        public readonly Guid? Guid;
 
-        public TagTypeConfig(Guid guid = default, bool trackAdded = false, bool trackDeleted = false) {
+        /// <inheritdoc cref="ComponentTypeConfig{T}.TrackAdded"/>>
+        public readonly bool? TrackAdded;
+
+        /// <inheritdoc cref="ComponentTypeConfig{T}.TrackChanged"/>>
+        public readonly bool? TrackDeleted;
+
+        public TagTypeConfig(Guid? guid = null, bool? trackAdded = null, bool? trackDeleted = null) {
             Guid = guid;
             TrackAdded = trackAdded;
             TrackDeleted = trackDeleted;
         }
+
+        public ComponentTypeConfig<T> AsComponentConfig => new(guid: Guid, trackAdded: TrackAdded, trackDeleted: TrackDeleted);
     }
 
     #if ENABLE_IL2CPP
@@ -2196,8 +2241,8 @@ namespace FFS.Libraries.StaticEcs {
                 _idMask = 1UL << (DynamicId & Const.U64_MASK);
                 _idMaskInv = ~_idMask;
 
-                Guid = config.Guid;
-                Version = config.Version;
+                Guid = config.Guid.Value;
+                Version = config.Version.Value;
                 _readWriteArrayStrategy = config.ReadWriteStrategy;
                 _resettableStrategy = config.ReadWriteStrategy as IPackArrayStrategyResettable;
 
@@ -2231,31 +2276,18 @@ namespace FFS.Libraries.StaticEcs {
                     HasRead = ComponentType<T>.HasRead();
                 }
                 Unmanaged = isTag || !RuntimeHelpers.IsReferenceOrContainsReferences<T>();
-                DataLifecycle = !isTag && !config.NoDataLifecycle;
-                DefaultValue = config.DefaultValue;
+                DataLifecycle = !isTag && !config.NoDataLifecycle.Value;
+                DefaultValue = config.DefaultValue ?? default;
+                HasDefaultValue = config.DefaultValue.HasValue;
 
-                bool hasDefaultValue;
-                if (isTag) {
-                    hasDefaultValue = false;
-                } else {
-                    try {
-                        hasDefaultValue = !EqualityComparer<T>.Default.Equals(config.DefaultValue, default);
-                    } catch {
-                        hasDefaultValue = true;
-                        #pragma warning disable ERP022
-                    }
-                    #pragma warning restore ERP022
-                }
-                HasDefaultValue = hasDefaultValue;
-
-                TrackAdded = config.TrackAdded;
-                TrackDeleted = config.TrackDeleted;
+                TrackAdded = config.TrackAdded.Value;
+                TrackDeleted = config.TrackDeleted.Value;
                 #if !FFS_ECS_DISABLE_CHANGED_TRACKING
-                TrackChanged = !isTag && config.TrackChanged;
+                TrackChanged = !isTag && config.TrackChanged.Value;
                 #endif
-                TrackAddedOrChanged = config.TrackAdded
+                TrackAddedOrChanged = config.TrackAdded.Value
                     #if !FFS_ECS_DISABLE_CHANGED_TRACKING
-                    || (!isTag && config.TrackChanged)
+                    || (!isTag && config.TrackChanged.Value)
                     #endif
                 ;
                 DeletedTrackingOffset = (byte)(isTag ? Const.BLOCKS_IN_SEGMENT : Const.BLOCKS_IN_SEGMENT * 2);
@@ -3245,7 +3277,6 @@ namespace FFS.Libraries.StaticEcs {
                     #if !NET6_0_OR_GREATER
                     var deBruijn = Utils.DeBruijn;
                     #endif
-                    var unmanagedStrategy = _readWriteArrayStrategy.IsUnmanaged();
 
                     writer.WriteUlong(heuristic.FullBlocks.Value);
                     if (IsTag) {
@@ -3261,6 +3292,8 @@ namespace FFS.Libraries.StaticEcs {
                         }
                     }
                     else {
+                        var unmanagedStrategy = _readWriteArrayStrategy.IsUnmanaged();
+
                         writer.WriteByte(Version);
                         writer.WriteBool(unmanagedStrategy);
 

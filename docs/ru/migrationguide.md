@@ -91,16 +91,29 @@ var entity = W.NewEntity<Default>();  // тип сущности Default, cluste
 
 #### WorldConfig:
 ```csharp
-// Новые поля:
-WorkerSpinCount       // spin-wait итераций перед блокировкой (по умолчанию 256)
-BaseClustersCapacity  // начальная ёмкость кластеров (по умолчанию 16)
+// Все поля теперь nullable — незаданные значения берутся из WorldConfig.Default()
+// ParallelQueryType enum удалён → используйте ThreadCount (uint?)
+//   0 = однопоточный (по умолчанию)
+//   WorldConfig.MaxThreadCount = все доступные потоки CPU
+//   N = конкретное количество потоков
+// CustomThreadCount удалён → используйте ThreadCount напрямую
 
 // Фабричные методы:
 WorldConfig.Default()      // стандартные настройки
 WorldConfig.MaxThreads()   // все доступные потоки
 ```
 
+#### Типы конфигурации (ComponentTypeConfig, TagTypeConfig, EventTypeConfig):
+```csharp
+// Все поля конфигурации теперь nullable — незаданные значения берутся из умолчаний
+// Guid вычисляется автоматически из имени типа (не нужно задавать вручную)
+// ReadWriteStrategy определяется автоматически (UnmanagedPackArrayStrategy для unmanaged типов)
+// 3-уровневое слияние: пользовательский конфиг → статическое поле Config → встроенные умолчания
+```
+
 #### Удалено:
+- `ParallelQueryType` enum → `WorldConfig.ThreadCount`
+- `WorldConfig.CustomThreadCount` → `WorldConfig.ThreadCount`
 - `IWorld` интерфейс → `WorldHandle`
 - `WorldWrapper<W>` → `WorldHandle`
 - `Worlds` статический класс

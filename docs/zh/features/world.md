@@ -86,7 +86,7 @@ public abstract class W : World<WT> { }
 // 使用默认配置创建
 W.Create(WorldConfig.Default());
 
-// 或使用自定义配置
+// 或使用自定义配置（所有参数均为可选 — 未设置的值使用默认值）
 W.Create(new WorldConfig {
     // 独立世界（自动管理块）或依赖世界（需要手动管理块）
     Independent = true,
@@ -94,13 +94,11 @@ W.Create(new WorldConfig {
     BaseComponentTypesCount = 64,
     // 集群的初始容量（最小 16，默认 — 16）
     BaseClustersCapacity = 16,
-    // 多线程模式
-    // Disabled — 不创建线程
-    // MaxThreadsCount — 使用最大可用线程数
-    // CustomThreadsCount — 使用指定数量的线程
-    ParallelQueryType = ParallelQueryType.Disabled,
-    // 使用 CustomThreadsCount 时的线程数
-    CustomThreadCount = 4,
+    // 并行查询的线程数（默认 — 0，单线程）
+    // 0 — 不创建线程
+    // WorldConfig.MaxThreadCount — 使用所有可用 CPU 线程
+    // N — 使用指定数量的线程
+    ThreadCount = 4,
     // 工作线程阻塞前的自旋次数（默认 — 256）
     WorkerSpinCount = 256,
     // 启用实体创建追踪，用于 Created 查询过滤器（默认 — false）
@@ -112,7 +110,7 @@ W.Create(new WorldConfig {
 `WorldConfig` 提供工厂方法：
 - `WorldConfig.Default()` — 标准设置（单线程，独立）
 - `WorldConfig.MaxThreads()` — 使用所有可用 CPU 线程
-两者都接受 `bool independent = true` 参数。
+所有参数均为可选 — 未设置的值使用 `WorldConfig.Default()` 的默认值。
 
 ___
 
@@ -153,7 +151,7 @@ W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
 // 可以与手动注册结合使用（例如设置序列化 GUID）
 W.Types()
     .RegisterAll()
-    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent> { Guid = myGuid });
+    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent>(guid: myGuid));
 
 W.Initialize();
 ```

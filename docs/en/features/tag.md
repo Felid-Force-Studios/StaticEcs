@@ -38,10 +38,10 @@ W.Initialize();
 ```
 
 {: .note }
-For serialization, tags can have a stable GUID. You can pass it manually or declare a static `Guid` field/property inside the tag struct — `RegisterAll()` will discover it automatically (preferring the name `Guid`):
+Tags automatically get a stable GUID computed from the type name. To override (e.g. for stability across renames), pass it manually or declare a static `Guid` field/property inside the tag struct — `RegisterAll()` will discover it automatically (preferring the name `Guid`):
 
 ```csharp
-// Manual registration with GUID
+// Manual registration with GUID override
 W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(guid: new Guid("A1B2C3D4-...")));
 
 // Or declare a static field — RegisterAll() will pick it up

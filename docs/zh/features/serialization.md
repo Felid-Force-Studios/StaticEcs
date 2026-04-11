@@ -81,7 +81,7 @@ W.Types()
 ```
 
 {: .notezh }
-`UnmanagedPackArrayStrategy<T>` 执行直接内存复制 — 比逐个组件序列化快得多。仅适用于 unmanaged 类型。版本不匹配时（数据迁移），系统自动回退到 `Read` 钩子。默认策略为 `StructPackArrayStrategy<T>`。
+`UnmanagedPackArrayStrategy<T>` 执行直接内存复制 — 比逐个组件序列化快得多。仅适用于 unmanaged 类型。版本不匹配时（数据迁移），系统自动回退到 `Read` 钩子。默认策略自动检测：unmanaged 类型使用 `UnmanagedPackArrayStrategy<T>`，其他类型使用 `StructPackArrayStrategy<T>`。
 
 #### Multi 和 Links 的批量段序列化：
 
@@ -127,14 +127,14 @@ W.Types()
 #### 完整配置:
 ```csharp
 W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."), // 序列化的稳定标识符（默认 — default）
+    guid: new Guid("A1B2C3D4-..."), // 序列化的稳定标识符（默认 — 从类型名称自动计算）
     trackAdded: true,                // 启用添加追踪（默认 — false）
     trackDeleted: true               // 启用删除追踪（默认 — false）
 ));
 ```
 
 {: .notezh }
-自动注册时，`RegisterAll()` 会获取标签结构体内的静态 `Guid` 字段。自动注册不会设置 `trackAdded` / `trackDeleted` 参数 — 要启用追踪请使用 `TagTypeConfig<T>` 手动注册。
+所有类型自动获得由类型名称计算的稳定 GUID。要覆盖，请在标签结构体内声明静态 `Guid` 字段或传递带自定义 guid 的 `TagTypeConfig<T>`。`RegisterAll()` 也会获取静态 `TagTypeConfig<T>` 字段（优先选择名为 `Config` 的成员）用于 `trackAdded` / `trackDeleted` 参数。
 
 ___
 
@@ -222,7 +222,7 @@ W.Serializer.LoadWorldSnapshot(compressed, gzip: true);
 ```
 
 {: .importantzh }
-世界快照中的所有组件和标签**必须**注册 `Guid`。在 DEBUG 模式下，尝试序列化未注册 `Guid` 的类型将报错。
+所有组件和标签自动获得由类型名称计算的稳定 `Guid`。您可以通过配置覆盖 `Guid`，以确保在重命名类型时保持稳定。
 
 ___
 
@@ -633,18 +633,12 @@ W.Serializer.LoadEventsSnapshot("path/to/events.bin");
 
 ___
 
-## 排除序列化
+## 自定义 GUID 以确保稳定性
+
+所有类型自动获得由类型名称（`assembly-qualified name`）计算的稳定 `Guid`。如果重命名或移动类型，自动生成的 GUID 会改变 — 这将破坏与现有快照的兼容性。为防止此问题，请指定固定的 GUID：
 
 ```csharp
-// 没有 Guid 的组件、标签和事件在 EntitiesSnapshot 序列化时会被跳过
-W.Types()
-    .Component<DebugInfo>()     // 无 guid — 不会被序列化
-    .Tag<EditorOnly>();         // 无 guid — 不会被序列化
-
-// 世界快照（CreateWorldSnapshot）要求所有类型都有 Guid — 否则 DEBUG 模式下报错
-// 实体快照（EntitiesSnapshot）会简单跳过没有 Guid 的类型
-
-// 示例：保存所有实体，跳过调试数据
+// 示例：保存所有实体
 using var writer = W.Serializer.CreateEntitiesSnapshotWriter();
 writer.WriteAllEntities();
 byte[] snapshot = writer.CreateSnapshot();
