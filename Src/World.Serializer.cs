@@ -660,15 +660,20 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="CreateWorldSnapshot(bool, bool, ChunkWritingStrategy, ReadOnlySpan{ushort}, bool)"/>
             /// <param name="result">Reference to the destination byte array. Resized if necessary.</param>
+            /// <returns>Length of writen bytes.</returns>
             [MethodImpl(AggressiveInlining)]
-            public static void CreateWorldSnapshot(ref byte[] result, bool withCustomSnapshotData = true, bool gzip = false, ChunkWritingStrategy strategy = ChunkWritingStrategy.All, ReadOnlySpan<ushort> clusters = default, bool writeEvents = true) {
+            public static int CreateWorldSnapshot(ref byte[] result, bool withCustomSnapshotData = true, bool gzip = false, ChunkWritingStrategy strategy = ChunkWritingStrategy.All, ReadOnlySpan<ushort> clusters = default, bool writeEvents = true) {
                 #if FFS_ECS_DEBUG
                 AssertWorldIsInitialized(WorldTypeName);
                 #endif
-                var writer = BinaryPackWriter.CreateFromPool(CalculateByteSizeHint());
+                var writer = BinaryPackWriter.Create(result);
                 WriteWorld(ref writer, withCustomSnapshotData, strategy, clusters, writeEvents);
-                writer.CopyToBytes(ref result, gzip);
-                writer.Dispose();
+                if (gzip) {
+                    return writer.Gzip(ref result, 0, writer.Position);
+                }
+
+                result = writer.Buffer;
+                return (int) writer.Position;
             }
 
             /// <summary>
@@ -752,17 +757,27 @@ namespace FFS.Libraries.StaticEcs {
             /// <param name="gzip">When <c>true</c>, the input is decompressed from gzip before reading.</param>
             [MethodImpl(AggressiveInlining)]
             public static void LoadWorldSnapshot(byte[] snapshot, bool gzip = false, bool hardReset = false) {
+                LoadWorldSnapshot(snapshot, 0, snapshot.Length, gzip, hardReset);
+            }
+
+            /// <inheritdoc cref="LoadWorldSnapshot(BinaryPackReader, bool)" />
+            /// <param name="snapshot">Byte array containing the serialized world snapshot.</param>
+            /// <param name="index">The starting offset within <paramref name="snapshot" /> to begin reading from.</param>
+            /// <param name="count">The number of bytes to read from <paramref name="snapshot" />.</param>
+            /// <param name="gzip">When <c>true</c>, the input is decompressed from gzip before reading.</param>
+            [MethodImpl(AggressiveInlining)]
+            public static void LoadWorldSnapshot(byte[] snapshot, int index, int count, bool gzip = false, bool hardReset = false) {
                 #if FFS_ECS_DEBUG
                 AssertWorldIsCreatedOrInitialized(WorldTypeName);
                 #endif
                 if (gzip) {
-                    var writer = BinaryPackWriter.CreateFromPool((uint) (snapshot.Length * 2));
-                    writer.WriteGzipData(snapshot);
+                    var writer = BinaryPackWriter.CreateFromPool((uint) (count * 2));
+                    writer.WriteGzipData(snapshot, index, count);
                     var reader = writer.AsReader();
                     ReadWorld(ref reader, hardReset);
                     writer.Dispose();
                 } else {
-                    var reader = new BinaryPackReader(snapshot, (uint) snapshot.Length, 0);
+                    var reader = new BinaryPackReader(snapshot, (uint) count, (uint) index);
                     ReadWorld(ref reader, hardReset);
                 }
             }

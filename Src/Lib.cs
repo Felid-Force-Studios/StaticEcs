@@ -943,11 +943,9 @@ namespace FFS.Libraries.StaticEcs {
                 var unmanagedPackStrategyType = typeof(UnmanagedPackArrayStrategy<>).MakeGenericType(typeof(T));
                 return (IPackArrayStrategy<T>)Activator.CreateInstance(unmanagedPackStrategyType);
             }
-            catch (ArgumentException argumentException) {
+            catch (Exception) {
                 return null;
             }
-
-                return null;
         }
 
         #if NET5_0_OR_GREATER
