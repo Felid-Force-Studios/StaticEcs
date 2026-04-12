@@ -3602,6 +3602,9 @@ namespace FFS.Libraries.StaticEcs {
             internal static Array _ComponentsSegments() => Instance.ComponentSegments;
 
             [MethodImpl(AggressiveInlining)]
+            internal static bool _IsSegmentAllocated(uint segmentIdx) => segmentIdx < Instance.EntitiesMaskSegments.Length && Instance.EntitiesMaskSegments[segmentIdx] != null;
+
+            [MethodImpl(AggressiveInlining)]
             internal static ulong _EnabledMask(uint segmentIdx, int blockIdx) => Instance.EnabledMask(segmentIdx, blockIdx);
 
             [MethodImpl(AggressiveInlining)]
@@ -3661,6 +3664,15 @@ namespace FFS.Libraries.StaticEcs {
                     Instance.Set(new Entity(eid));
                 } else {
                     Instance.Set(new Entity(eid), (T)value);
+                }
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal static void _SetRawDirect(uint eid, IComponentOrTag value) {
+                if (!Instance.IsTag) {
+                    var entityId = eid;
+                    Instance.ComponentSegments[entityId >> Const.ENTITIES_IN_SEGMENT_SHIFT]
+                        [entityId & Const.ENTITIES_IN_SEGMENT_MASK] = (T) value;
                 }
             }
 
