@@ -3499,7 +3499,7 @@ namespace FFS.Libraries.StaticEcs {
                 AssertGuidNotEmpty<T>(WorldTypeName, typeConfig.Guid.Value);
                 #endif
 
-                Events<T>.Instance = new Events<T>(_poolsCountEvents, config);
+                Events<T>.Instance = new Events<T>(_poolsCountEvents, typeConfig);
 
                 if (_poolsCountEvents == _poolsEvents.Length) {
                     Array.Resize(ref _poolsEvents, _poolsCountEvents << 1);
@@ -3507,7 +3507,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 _poolsEvents[_poolsCountEvents] = EventsHandle.Create<TWorld, T>();
 
-                var guid = config.Guid.Value;
+                var guid = typeConfig.Guid.Value;
                 if (_poolEventsByGuid.ContainsKey(guid)) {
                     throw new StaticEcsException($"Event type {typeof(T)} with guid {guid} already registered");
                 }
