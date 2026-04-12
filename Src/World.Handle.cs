@@ -512,6 +512,7 @@ namespace FFS.Libraries.StaticEcs {
         // chunks & segments
         private readonly unsafe delegate*<HeuristicChunk[]> _heuristicChunks;
         private readonly unsafe delegate*<Array> _componentsSegments;
+        private readonly unsafe delegate*<uint, bool> _isSegmentAllocated;
         private readonly unsafe delegate*<uint, int, ulong> _enabledMask;
         private readonly unsafe delegate*<uint, int, ulong> _disabledMask;
         private readonly unsafe delegate*<uint, int, ulong> _anyMask;
@@ -521,6 +522,7 @@ namespace FFS.Libraries.StaticEcs {
         // entity
         private readonly unsafe delegate*<uint, out IComponentOrTag, bool> _tryGetRaw;
         private readonly unsafe delegate*<uint, IComponentOrTag, void> _setRaw;
+        private readonly unsafe delegate*<uint, IComponentOrTag, void> _setRawDirect;
         private readonly unsafe delegate*<uint, bool> _add;
         private readonly unsafe delegate*<uint, bool> _has;
         private readonly unsafe delegate*<uint, bool> _hasEnabled;
@@ -587,6 +589,7 @@ namespace FFS.Libraries.StaticEcs {
                 &World<TWorld>.Components<TComponent>._ReadEntity,
                 &World<TWorld>.Components<TComponent>._HeuristicChunks,
                 &World<TWorld>.Components<TComponent>._ComponentsSegments,
+                &World<TWorld>.Components<TComponent>._IsSegmentAllocated,
                 &World<TWorld>.Components<TComponent>._EnabledMask,
                 &World<TWorld>.Components<TComponent>._DisabledMask,
                 &World<TWorld>.Components<TComponent>._AnyMask,
@@ -595,6 +598,7 @@ namespace FFS.Libraries.StaticEcs {
                 &World<TWorld>.Components<TComponent>._CalculateCount,
                 &World<TWorld>.Components<TComponent>._TryGetRaw,
                 &World<TWorld>.Components<TComponent>._SetRaw,
+                &World<TWorld>.Components<TComponent>._SetRawDirect,
                 &World<TWorld>.Components<TComponent>._Add,
                 &World<TWorld>.Components<TComponent>._Has,
                 &World<TWorld>.Components<TComponent>._HasEnabled,
@@ -633,6 +637,7 @@ namespace FFS.Libraries.StaticEcs {
             delegate*<ref BinaryPackReader, uint, void> readEntity,
             delegate*<HeuristicChunk[]> heuristicChunks,
             delegate*<Array> componentsSegments,
+            delegate*<uint, bool> isSegmentAllocated,
             delegate*<uint, int, ulong> enabledMask,
             delegate*<uint, int, ulong> disabledMask,
             delegate*<uint, int, ulong> anyMask,
@@ -641,6 +646,7 @@ namespace FFS.Libraries.StaticEcs {
             delegate*<uint> calculateCount,
             delegate*<uint, out IComponentOrTag, bool> tryGetRaw,
             delegate*<uint, IComponentOrTag, void> setRaw,
+            delegate*<uint, IComponentOrTag, void> setRawDirect,
             delegate*<uint, bool> add,
             delegate*<uint, bool> has,
             delegate*<uint, bool> hasEnabled,
@@ -676,6 +682,7 @@ namespace FFS.Libraries.StaticEcs {
             _readEntity = readEntity;
             _heuristicChunks = heuristicChunks;
             _componentsSegments = componentsSegments;
+            _isSegmentAllocated = isSegmentAllocated;
             _enabledMask = enabledMask;
             _disabledMask = disabledMask;
             _anyMask = anyMask;
@@ -684,6 +691,7 @@ namespace FFS.Libraries.StaticEcs {
             _calculateCount = calculateCount;
             _tryGetRaw = tryGetRaw;
             _setRaw = setRaw;
+            _setRawDirect = setRawDirect;
             _add = add;
             _has = has;
             _hasEnabled = hasEnabled;
@@ -841,6 +849,18 @@ namespace FFS.Libraries.StaticEcs {
         }
 
         /// <summary>
+        /// Checks whether the specified segment has been allocated for this component type.
+        /// A segment is allocated when at least one entity in its range has (or had) this component.
+        /// Unallocated segments have no memory footprint for this component.
+        /// </summary>
+        /// <param name="segmentIdx">Segment index.</param>
+        /// <returns><c>true</c> if the segment is allocated; <c>false</c> if null (no memory).</returns>
+        [MethodImpl(AggressiveInlining)]
+        public bool IsSegmentAllocated(uint segmentIdx) {
+            unsafe { return _isSegmentAllocated(segmentIdx); }
+        }
+
+        /// <summary>
         /// Calculates the current storage capacity (number of allocated component slots)
         /// for this component type. Grows automatically as chunks are registered.
         /// </summary>
@@ -900,6 +920,11 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public void SetRaw(uint entityId, IComponentOrTag value) {
             unsafe { _setRaw(entityId, value); }
+        }
+
+        [MethodImpl(AggressiveInlining)]
+        internal void SetRawDirect(uint entityId, IComponentOrTag value) {
+            unsafe { _setRawDirect(entityId, value); }
         }
 
         [MethodImpl(AggressiveInlining)]

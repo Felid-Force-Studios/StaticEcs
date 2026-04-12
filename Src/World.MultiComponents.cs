@@ -73,6 +73,7 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
         #endif
+        [Serializable]
         public struct Multi<TValue> : IComponent, IComponentInternal, IEquatable<Multi<TValue>> where TValue : struct, IMultiComponent {
             internal static IPackArrayStrategy<TValue> ElementStrategy;
 

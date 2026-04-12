@@ -54,6 +54,15 @@ namespace FFS.Libraries.StaticEcs {
     /// </summary>
     public interface ILinksType : ILinkType {}
 
+    internal interface ILinkComponent : IComponent {
+        internal EntityGID Value { get; }
+        internal void SetValue(EntityGID gid);
+    }
+
+    internal interface ILinksComponent : IComponent {
+        internal void AddLink(EntityGID gid);
+    }
+
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
@@ -72,7 +81,8 @@ namespace FFS.Libraries.StaticEcs {
         /// and <see cref="Entity"/>, as well as implicit conversion back to <see cref="EntityGID"/>.</para>
         /// </summary>
         /// <typeparam name="TLinkType">The link type defining relationship semantics and hooks. Must implement <see cref="ILinkType"/>.</typeparam>
-        public struct Link<TLinkType> : IComponent, IMultiComponent, IComponentHookOverride, IEquatable<Link<TLinkType>>
+        [Serializable]
+        public struct Link<TLinkType> : ILinkComponent, IMultiComponent, IComponentHookOverride, IEquatable<Link<TLinkType>>
             where TLinkType : unmanaged, ILinkType {
 
             private EntityGID _value;
@@ -135,6 +145,9 @@ namespace FFS.Libraries.StaticEcs {
             bool IComponentHookOverride.HasOnDelete() => LinkType<TLinkType>.HasOnDelete();
             bool IComponentHookOverride.HasCopyTo() => LinkType<TLinkType>.HasCopyTo();
 
+            EntityGID ILinkComponent.Value => _value;
+            void ILinkComponent.SetValue(EntityGID gid) => _value = gid;
+
             /// <summary>
             /// Converts a <see cref="Link{TLinkType}"/> to its underlying <see cref="EntityGID"/>.
             /// </summary>
@@ -194,7 +207,8 @@ namespace FFS.Libraries.StaticEcs {
         /// Duplicate links are prevented by <see cref="TryAdd(Link{TLinkType}, bool)"/> or asserted in debug builds by <see cref="Add(Link{TLinkType})"/>.</para>
         /// </summary>
         /// <typeparam name="TLinkType">The link type defining relationship semantics and hooks. Must implement <see cref="ILinksType"/>.</typeparam>
-        public struct Links<TLinkType> : IComponent, IComponentInternal, IEquatable<Links<TLinkType>> where TLinkType : unmanaged, ILinksType {
+        [Serializable]
+        public struct Links<TLinkType> : ILinksComponent, IComponentInternal, IEquatable<Links<TLinkType>> where TLinkType : unmanaged, ILinksType {
             internal uint Offset;
             internal uint SegmentIdx;
             internal ushort Count;
@@ -601,6 +615,8 @@ namespace FFS.Libraries.StaticEcs {
                 }
             }
             #endregion
+
+            void ILinksComponent.AddLink(EntityGID gid) => TryAdd(new Link<TLinkType>(gid));
 
             #region REMOVE
             /// <summary>
