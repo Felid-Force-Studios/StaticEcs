@@ -261,7 +261,7 @@ namespace FFS.Libraries.StaticEcs {
         #endif
         internal struct Events<T> where T : struct, IEvent {
             internal static Events<T> Instance;
-            
+
             #if ENABLE_IL2CPP
             [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
             [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]

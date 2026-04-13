@@ -2491,6 +2491,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void For<TData, T0, T1, T2>(TData userData,
                                                QueryFunctionWithRefDataEntityR1<TData, TWorld, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -2511,6 +2514,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="For{TData,T0}(TData, QueryFunctionWithRefDataEntity{TData,TWorld,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void For<TData, T0, T1, T2>(ref TData userData,
                                                QueryFunctionWithRefDataEntityR1<TData, TWorld, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -2534,6 +2540,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(TData userData,
                                                        QueryFunctionWithRefDataEntityR1<TData, TWorld, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -2550,6 +2559,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="ForParallel{TData,T0, T1, T2}(ref TData, QueryFunctionWithRefDataEntityR1{TData,TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(ref TData userData,
                                                        QueryFunctionWithRefDataEntityR1<TData, TWorld, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -2598,6 +2610,9 @@ namespace FFS.Libraries.StaticEcs {
             #region DELEGATE WITH ENTITY
             /// <inheritdoc cref="Search{T0, T1, T2}(out Entity, SearchFunctionWithEntity{TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void For<T0, T1, T2>(QueryFunctionWithEntityR1<TWorld, T0, T1, T2> function,
                                         EntityStatusType entities = EntityStatusType.Enabled,
                                         ComponentStatus components = ComponentStatus.Enabled,
@@ -2615,6 +2630,9 @@ namespace FFS.Libraries.StaticEcs {
             
             /// <inheritdoc cref="ForParallel{T0, T1, T2}(QueryFunctionWithEntityR1{TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void ForParallel<T0, T1, T2>(QueryFunctionWithEntityR1<TWorld, T0, T1, T2> function,
                                                 EntityStatusType entities = EntityStatusType.Enabled,
                                                 ComponentStatus components = ComponentStatus.Enabled,
@@ -2663,6 +2681,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void For<TData, T0, T1, T2>(TData userData,
                                                QueryFunctionWithRefDataR1<TData, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -2683,6 +2704,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="For{TData,T0}(TData, QueryFunctionWithRefData{TData,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void For<TData, T0, T1, T2>(ref TData userData,
                                                QueryFunctionWithRefDataR1<TData, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -2706,6 +2730,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(TData userData,
                                                        QueryFunctionWithRefDataR1<TData, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -2722,6 +2749,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="ForParallel{TData,T0, T1, T2}(ref TData, QueryFunctionWithRefDataR1{TData,TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(ref TData userData,
                                                        QueryFunctionWithRefDataR1<TData, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -2770,6 +2800,9 @@ namespace FFS.Libraries.StaticEcs {
             #region DELEGATE
             /// <inheritdoc cref="For{T0}(QueryFunctionWithEntity{TWorld,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void For<T0, T1, T2>(QueryFunctionR1<T0, T1, T2> function,
                                         EntityStatusType entities = EntityStatusType.Enabled,
                                         ComponentStatus components = ComponentStatus.Enabled,
@@ -2787,6 +2820,9 @@ namespace FFS.Libraries.StaticEcs {
             
             /// <inheritdoc cref="ForParallel{T0, T1, T2}(QueryFunctionR1{T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(1)]
+            #endif
             public void ForParallel<T0, T1, T2>(QueryFunctionR1<T0, T1, T2> function,
                                                 EntityStatusType entities = EntityStatusType.Enabled,
                                                 ComponentStatus components = ComponentStatus.Enabled,
@@ -2835,6 +2871,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void For<TData, T0, T1, T2>(TData userData,
                                                QueryFunctionWithRefDataEntityR2<TData, TWorld, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -2855,6 +2894,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="For{TData,T0}(TData, QueryFunctionWithRefDataEntity{TData,TWorld,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void For<TData, T0, T1, T2>(ref TData userData,
                                                QueryFunctionWithRefDataEntityR2<TData, TWorld, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -2878,6 +2920,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(TData userData,
                                                        QueryFunctionWithRefDataEntityR2<TData, TWorld, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -2894,6 +2939,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="ForParallel{TData,T0, T1, T2}(ref TData, QueryFunctionWithRefDataEntityR2{TData,TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(ref TData userData,
                                                        QueryFunctionWithRefDataEntityR2<TData, TWorld, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -2942,6 +2990,9 @@ namespace FFS.Libraries.StaticEcs {
             #region DELEGATE WITH ENTITY
             /// <inheritdoc cref="Search{T0, T1, T2}(out Entity, SearchFunctionWithEntity{TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void For<T0, T1, T2>(QueryFunctionWithEntityR2<TWorld, T0, T1, T2> function,
                                         EntityStatusType entities = EntityStatusType.Enabled,
                                         ComponentStatus components = ComponentStatus.Enabled,
@@ -2959,6 +3010,9 @@ namespace FFS.Libraries.StaticEcs {
             
             /// <inheritdoc cref="ForParallel{T0, T1, T2}(QueryFunctionWithEntityR2{TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void ForParallel<T0, T1, T2>(QueryFunctionWithEntityR2<TWorld, T0, T1, T2> function,
                                                 EntityStatusType entities = EntityStatusType.Enabled,
                                                 ComponentStatus components = ComponentStatus.Enabled,
@@ -3007,6 +3061,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void For<TData, T0, T1, T2>(TData userData,
                                                QueryFunctionWithRefDataR2<TData, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -3027,6 +3084,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="For{TData,T0}(TData, QueryFunctionWithRefData{TData,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void For<TData, T0, T1, T2>(ref TData userData,
                                                QueryFunctionWithRefDataR2<TData, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -3050,6 +3110,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(TData userData,
                                                        QueryFunctionWithRefDataR2<TData, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -3066,6 +3129,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="ForParallel{TData,T0, T1, T2}(ref TData, QueryFunctionWithRefDataR2{TData,TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(ref TData userData,
                                                        QueryFunctionWithRefDataR2<TData, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -3114,6 +3180,9 @@ namespace FFS.Libraries.StaticEcs {
             #region DELEGATE
             /// <inheritdoc cref="For{T0}(QueryFunctionWithEntity{TWorld,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void For<T0, T1, T2>(QueryFunctionR2<T0, T1, T2> function,
                                         EntityStatusType entities = EntityStatusType.Enabled,
                                         ComponentStatus components = ComponentStatus.Enabled,
@@ -3131,6 +3200,9 @@ namespace FFS.Libraries.StaticEcs {
             
             /// <inheritdoc cref="ForParallel{T0, T1, T2}(QueryFunctionR2{T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(2)]
+            #endif
             public void ForParallel<T0, T1, T2>(QueryFunctionR2<T0, T1, T2> function,
                                                 EntityStatusType entities = EntityStatusType.Enabled,
                                                 ComponentStatus components = ComponentStatus.Enabled,
@@ -3179,6 +3251,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void For<TData, T0, T1, T2>(TData userData,
                                                QueryFunctionWithRefDataEntityR3<TData, TWorld, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -3198,6 +3273,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="For{TData,T0}(TData, QueryFunctionWithRefDataEntity{TData,TWorld,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void For<TData, T0, T1, T2>(ref TData userData,
                                                QueryFunctionWithRefDataEntityR3<TData, TWorld, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -3220,6 +3298,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(TData userData,
                                                        QueryFunctionWithRefDataEntityR3<TData, TWorld, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -3236,6 +3317,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="ForParallel{TData,T0, T1, T2}(ref TData, QueryFunctionWithRefDataEntityR3{TData,TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(ref TData userData,
                                                        QueryFunctionWithRefDataEntityR3<TData, TWorld, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -3284,6 +3368,9 @@ namespace FFS.Libraries.StaticEcs {
             #region DELEGATE WITH ENTITY
             /// <inheritdoc cref="Search{T0, T1, T2}(out Entity, SearchFunctionWithEntity{TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void For<T0, T1, T2>(QueryFunctionWithEntityR3<TWorld, T0, T1, T2> function,
                                         EntityStatusType entities = EntityStatusType.Enabled,
                                         ComponentStatus components = ComponentStatus.Enabled,
@@ -3300,6 +3387,9 @@ namespace FFS.Libraries.StaticEcs {
             
             /// <inheritdoc cref="ForParallel{T0, T1, T2}(QueryFunctionWithEntityR3{TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void ForParallel<T0, T1, T2>(QueryFunctionWithEntityR3<TWorld, T0, T1, T2> function,
                                                 EntityStatusType entities = EntityStatusType.Enabled,
                                                 ComponentStatus components = ComponentStatus.Enabled,
@@ -3348,6 +3438,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void For<TData, T0, T1, T2>(TData userData,
                                                QueryFunctionWithRefDataR3<TData, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -3367,6 +3460,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="For{TData,T0}(TData, QueryFunctionWithRefData{TData,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void For<TData, T0, T1, T2>(ref TData userData,
                                                QueryFunctionWithRefDataR3<TData, T0, T1, T2> function,
                                                EntityStatusType entities = EntityStatusType.Enabled,
@@ -3389,6 +3485,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <para>See the <c>ref TData</c> overload for full documentation.</para>
             /// </summary>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(TData userData,
                                                        QueryFunctionWithRefDataR3<TData, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -3405,6 +3504,9 @@ namespace FFS.Libraries.StaticEcs {
 
             /// <inheritdoc cref="ForParallel{TData,T0, T1, T2}(ref TData, QueryFunctionWithRefDataR3{TData,TWorld,T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void ForParallel<TData, T0, T1, T2>(ref TData userData,
                                                        QueryFunctionWithRefDataR3<TData, T0, T1, T2> function,
                                                        EntityStatusType entities = EntityStatusType.Enabled,
@@ -3453,6 +3555,9 @@ namespace FFS.Libraries.StaticEcs {
             #region DELEGATE
             /// <inheritdoc cref="For{T0}(QueryFunctionWithEntity{TWorld,T0}, EntityStatusType, ComponentStatus, QueryMode, ReadOnlySpan{ushort})"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void For<T0, T1, T2>(QueryFunctionR3<T0, T1, T2> function,
                                         EntityStatusType entities = EntityStatusType.Enabled,
                                         ComponentStatus components = ComponentStatus.Enabled,
@@ -3469,6 +3574,9 @@ namespace FFS.Libraries.StaticEcs {
             
             /// <inheritdoc cref="ForParallel{T0, T1, T2}(QueryFunctionR3{T0, T1, T2}, EntityStatusType, ComponentStatus, ReadOnlySpan{ushort}, uint, uint)"/>
             [MethodImpl(AggressiveInlining)]
+            #if NET8_0_OR_GREATER
+            [OverloadResolutionPriority(3)]
+            #endif
             public void ForParallel<T0, T1, T2>(QueryFunctionR3<T0, T1, T2> function,
                                                 EntityStatusType entities = EntityStatusType.Enabled,
                                                 ComponentStatus components = ComponentStatus.Enabled,
