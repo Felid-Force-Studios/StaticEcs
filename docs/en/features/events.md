@@ -36,28 +36,23 @@ W.Types()
     .Event<WeatherChanged>()
     .Event<OnDamage>();
 
-// Registration with configuration
-W.Types().Event<WeatherChanged>(new EventTypeConfig<WeatherChanged>(
-    guid: new Guid("..."),      // stable identifier for serialization (default — auto-computed from type name)
-    version: 1,                  // data schema version for migration (default — 0)
-    readWriteStrategy: null      // binary serialization strategy (default — auto-detected)
-));
+// Configuration is provided by implementing IEventConfig<T> on the event struct
+// (see example below)
 //...
 W.Initialize();
 ```
 
 {: .note }
-Instead of passing configuration manually, you can declare a static field or property of type `EventTypeConfig<T>` inside the event struct. `RegisterAll()` will discover it automatically (preferring the name `Config`):
+To provide configuration, implement the `IEventConfig<T>` interface on the event struct. Both manual registration and `RegisterAll()` will use it automatically:
 
 ```csharp
-public struct WeatherChanged : IEvent {
+public struct WeatherChanged : IEvent, IEventConfig<WeatherChanged> {
     public WeatherType WeatherType;
-    public static readonly EventTypeConfig<WeatherChanged> Config = new(
-        guid: new Guid("..."),
-        version: 1
+    public EventTypeConfig<WeatherChanged> Config() => new(
+        guid: new Guid("..."),   // stable identifier for serialization (default — auto-computed from type name)
+        version: 1               // data schema version for migration (default — 0)
     );
 }
-// RegisterAll() will use WeatherChanged.Config automatically
 ```
 
 ___

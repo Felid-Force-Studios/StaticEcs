@@ -31,28 +31,42 @@ All tracking is disabled by default and must be explicitly enabled at registrati
 `ComponentTypeConfig<T>` supports three tracking flags: `trackAdded`, `trackDeleted`, `trackChanged`:
 
 ```csharp
-W.Create(WorldConfig.Default());
-//...
-// Enable all three tracking types
-W.Types().Component<Health>(new ComponentTypeConfig<Health>(
-    trackAdded: true,
-    trackDeleted: true,
-    trackChanged: true
-));
+// Tracking is configured by implementing IComponentConfig<T> on the component type:
+public struct Health : IComponent, IComponentConfig<Health> {
+    public float Value;
+    public ComponentTypeConfig<Health> Config() => new(
+        trackAdded: true,
+        trackDeleted: true,
+        trackChanged: true
+    );
+}
 
 // Enable only one direction
-W.Types().Component<Velocity>(new ComponentTypeConfig<Velocity>(
-    trackAdded: true  // track additions only
-));
+public struct Velocity : IComponent, IComponentConfig<Velocity> {
+    public float X, Y;
+    public ComponentTypeConfig<Velocity> Config() => new(
+        trackAdded: true  // track additions only
+    );
+}
 
 // Full configuration with tracking
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("..."),
-    defaultValue: default,
-    trackAdded: true,
-    trackDeleted: true,
-    trackChanged: true
-));
+public struct Position : IComponent, IComponentConfig<Position> {
+    public float X, Y;
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("..."),
+        defaultValue: default,
+        trackAdded: true,
+        trackDeleted: true,
+        trackChanged: true
+    );
+}
+
+W.Create(WorldConfig.Default());
+//...
+// Registration is parameterless — config is read from the interface
+W.Types().Component<Health>()
+         .Component<Velocity>()
+         .Component<Position>();
 //...
 W.Initialize();
 ```
@@ -62,17 +76,26 @@ W.Initialize();
 `TagTypeConfig<T>` supports `trackAdded` and `trackDeleted`. Tags do **not** support Changed tracking.
 
 ```csharp
-W.Types().Tag<Unit>(new TagTypeConfig<Unit>(
-    trackAdded: true,
-    trackDeleted: true
-));
+// Tracking is configured by implementing ITagConfig<T> on the tag type:
+public struct Unit : ITag, ITagConfig<Unit> {
+    public TagTypeConfig<Unit> Config() => new(
+        trackAdded: true,
+        trackDeleted: true
+    );
+}
 
 // With GUID for serialization
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."),
-    trackAdded: true,
-    trackDeleted: true
-));
+public struct Poisoned : ITag, ITagConfig<Poisoned> {
+    public TagTypeConfig<Poisoned> Config() => new(
+        guid: new Guid("A1B2C3D4-..."),
+        trackAdded: true,
+        trackDeleted: true
+    );
+}
+
+// Registration is parameterless
+W.Types().Tag<Unit>()
+         .Tag<Poisoned>();
 ```
 
 ### Entity Creation
@@ -93,7 +116,7 @@ W.Initialize();
 
 ### Auto-Registration
 
-`trackAdded`, `trackDeleted`, and `trackChanged` can be declared in a static `Config` field inside the struct — `RegisterAll()` will pick them up automatically.
+`trackAdded`, `trackDeleted`, and `trackChanged` declared via `IComponentConfig<T>` / `ITagConfig<T>` are automatically picked up by `RegisterAll()` — no additional configuration needed.
 
 ### Compile-Time Disable
 

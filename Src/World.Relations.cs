@@ -54,6 +54,14 @@ namespace FFS.Libraries.StaticEcs {
     /// </summary>
     public interface ILinksType : ILinkType {}
 
+    public interface ILinkConfig<T> where T : unmanaged, ILinkType {
+        ComponentTypeConfig<World<TWorld>.Link<T>> Config<TWorld>() where TWorld : struct, IWorldType;
+    }
+
+    public interface ILinksConfig<T> where T : unmanaged, ILinksType {
+        ComponentTypeConfig<World<TWorld>.Links<T>> Config<TWorld>() where TWorld : struct, IWorldType;
+    }
+
     internal interface ILinkComponent : IComponent {
         internal EntityGID Value { get; }
         internal void SetValue(EntityGID gid);
@@ -82,8 +90,24 @@ namespace FFS.Libraries.StaticEcs {
         /// </summary>
         /// <typeparam name="TLinkType">The link type defining relationship semantics and hooks. Must implement <see cref="ILinkType"/>.</typeparam>
         [Serializable]
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Link type metadata is preserved by the registration path.")]
+        #endif
         public struct Link<TLinkType> : ILinkComponent, IMultiComponent, IComponentHookOverride, IEquatable<Link<TLinkType>>
             where TLinkType : unmanaged, ILinkType {
+
+            #if UNITY_2022_1_OR_NEWER
+            [UnityEngine.Scripting.Preserve]
+            #endif
+            [MethodImpl(NoInlining)]
+            internal static void AutoRegister() {
+                if (Components<Link<TLinkType>>.Instance.IsRegistered) return;
+                ComponentTypeConfig<Link<TLinkType>> config = default;
+                if (default(TLinkType) is ILinkConfig<TLinkType> cfg) {
+                    config = cfg.Config<TWorld>();
+                }
+                RegisterComponentType(config, $"Link<{typeof(TLinkType).Name}>");
+            }
 
             private EntityGID _value;
 
@@ -176,7 +200,7 @@ namespace FFS.Libraries.StaticEcs {
             /// Returns a string representation including the link type and the linked <see cref="EntityGID"/>.
             /// </summary>
             [MethodImpl(AggressiveInlining)]
-            public override string ToString() => $"Link<{typeof(TLinkType)}> : {_value}";
+            public override string ToString() => $"{typeof(TLinkType)}: {_value}";
 
             /// <summary>
             /// Compares two links for equality by their underlying <see cref="EntityGID"/> values.
@@ -208,7 +232,24 @@ namespace FFS.Libraries.StaticEcs {
         /// </summary>
         /// <typeparam name="TLinkType">The link type defining relationship semantics and hooks. Must implement <see cref="ILinksType"/>.</typeparam>
         [Serializable]
-        public struct Links<TLinkType> : ILinksComponent, IComponentInternal, IEquatable<Links<TLinkType>> where TLinkType : unmanaged, ILinksType {
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Link type metadata is preserved by the registration path.")]
+        #endif
+        public struct Links<TLinkType> : ILinksComponent, IComponentInternal, IComponentStrategyOverride, IEquatable<Links<TLinkType>> where TLinkType : unmanaged, ILinksType {
+
+            #if UNITY_2022_1_OR_NEWER
+            [UnityEngine.Scripting.Preserve]
+            #endif
+            [MethodImpl(NoInlining)]
+            internal static void AutoRegister() {
+                if (Components<Links<TLinkType>>.Instance.IsRegistered) return;
+                ComponentTypeConfig<Links<TLinkType>> config = default;
+                if (default(TLinkType) is ILinksConfig<TLinkType> cfg) {
+                    config = cfg.Config<TWorld>();
+                }
+                RegisterComponentType(config, $"Links<{typeof(TLinkType).Name}>");
+            }
+
             internal uint Offset;
             internal uint SegmentIdx;
             internal ushort Count;
@@ -1088,6 +1129,10 @@ namespace FFS.Libraries.StaticEcs {
                     World<TW>.Data.Instance.RegisterMultiStorageResizer(_ResizeStorage);
                 }
             }
+            
+            IPackArrayStrategy<T> IComponentStrategyOverride.ArrayPackStrategy<T>() {
+                return new LinksUnmanagedPackArrayStrategy<TWorld, TLinkType>() as IPackArrayStrategy<T>;
+            }
             #endregion
 
             #region INTERNAL
@@ -1473,8 +1518,7 @@ namespace FFS.Libraries.StaticEcs {
     /// ));
     /// </code>
     /// </example>
-    public sealed class LinksUnmanagedPackArrayStrategy<TWorld, TLinkType>
-        : IPackArrayStrategy<World<TWorld>.Links<TLinkType>>, IPackArrayStrategyResettable
+    public sealed class LinksUnmanagedPackArrayStrategy<TWorld, TLinkType> : IPackArrayStrategy<World<TWorld>.Links<TLinkType>>, IPackArrayStrategyResettable
         where TWorld : struct, IWorldType
         where TLinkType : unmanaged, ILinksType {
 
@@ -1600,7 +1644,7 @@ namespace FFS.Libraries.StaticEcs {
 
     internal static class LinkType<
         #if NET5_0_OR_GREATER
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
         #endif
         T> where T : unmanaged, ILinkType {
         private static readonly Type[] OnAddParams = {

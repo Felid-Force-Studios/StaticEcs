@@ -128,7 +128,11 @@ namespace FFS.Libraries.StaticEcs {
             readWriteStrategy: AutoRegistration.TryCreateUnmanagedPackArrayStrategy<T>() ?? new StructPackArrayStrategy<T>()
         );
     }
-    
+
+    public interface IEventConfig<T> where T : struct, IEvent {
+        EventTypeConfig<T> Config();
+    }
+
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
@@ -158,6 +162,9 @@ namespace FFS.Libraries.StaticEcs {
         /// </para>
         /// </summary>
         /// <typeparam name="TEvent">The event struct type.</typeparam>
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Event metadata is preserved by the registration path.")]
+        #endif
         public ref struct Event<TEvent> where TEvent : struct, IEvent {
             internal int EventIdx;
 
@@ -259,8 +266,28 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
         [Il2CppEagerStaticClassConstruction]
         #endif
-        internal struct Events<T> where T : struct, IEvent {
+        internal struct Events<
+            #if NET5_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields | DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+            #endif
+            T> where T : struct, IEvent {
             internal static Events<T> Instance;
+            
+            #if UNITY_2022_1_OR_NEWER
+            [UnityEngine.Scripting.Preserve]
+            #endif
+            [MethodImpl(NoInlining)]
+            internal static void AutoRegister() {
+                if (Instance.Initialized) {
+                    return;
+                }
+                EventTypeConfig<T> config = default;
+                if (default(T) is IEventConfig<T> cfg) {
+                    config = cfg.Config();
+                }
+                
+                Data.Instance.RegisterEventTypeInternal(config);
+            }
 
             #if ENABLE_IL2CPP
             [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
@@ -352,6 +379,17 @@ namespace FFS.Libraries.StaticEcs {
                 _readWriteArrayStrategy = config.ReadWriteStrategy;
                 _pagePoolLock = new SpinLock(false);
                 Initialized = true;
+                
+                #if FFS_ECS_TRACE
+                Utils.Trace($"Registered {typeof(T).Name}:\n"
+                            + $"DynamicId {Id}\n"
+                            + $"Guid {Guid}\n"
+                            + $"Version {Version}\n"
+                            + $"clearDataOnRead {_clearDataOnRead}\n"
+                            + $"ReadWriteStrategyType {_readWriteArrayStrategy?.GetType().ToString() ?? "null"}\n"
+                            + "\n"
+                );
+                #endif
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -984,6 +1022,9 @@ namespace FFS.Libraries.StaticEcs {
         /// </para>
         /// </summary>
         /// <typeparam name="TEvent">The event struct type.</typeparam>
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Event metadata is preserved by the registration path.")]
+        #endif
         public ref struct EventIterator<TEvent> where TEvent : struct, IEvent {
             private Event<TEvent> _current;
             private readonly int _id;

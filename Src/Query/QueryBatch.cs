@@ -6,6 +6,9 @@ using System;
 using System.Runtime.CompilerServices;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
+#if NET5_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
@@ -176,6 +179,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <param name="mode">Query mode: Strict (default) blocks hooks from modifying filtered types on non-current entities; Flexible allows free modification.</param>
             /// <param name="clusters">Optional cluster filter.</param>
             /// <returns>This query instance for chaining.</returns>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchAdd<T1>(EntityStatusType entities = EntityStatusType.Enabled,
                                                     QueryMode mode = QueryMode.Strict,
@@ -190,6 +196,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchAdd{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchAdd<T1>(ReadOnlySpan<uint> chunks,
                                                     EntityStatusType entities = EntityStatusType.Enabled,
@@ -204,6 +213,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchAdd{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchAdd<T1, T2>(EntityStatusType entities = EntityStatusType.Enabled,
                                                         QueryMode mode = QueryMode.Strict,
@@ -221,6 +233,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchAdd{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchAdd<T1, T2, T3>(EntityStatusType entities = EntityStatusType.Enabled,
                                                             QueryMode mode = QueryMode.Strict,
@@ -240,6 +255,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchAdd{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchAdd<T1, T2, T3, T4>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                 QueryMode mode = QueryMode.Strict,
@@ -261,6 +279,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchAdd{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchAdd<T1, T2, T3, T4, T5>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                     QueryMode mode = QueryMode.Strict,
@@ -294,6 +315,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <param name="mode">Query mode: Strict (default) blocks hooks from modifying filtered types on non-current entities; Flexible allows free modification.</param>
             /// <param name="clusters">Optional cluster filter.</param>
             /// <returns>This query instance for chaining.</returns>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchSet<T1>(T1 value1 = default,
                                                     EntityStatusType entities = EntityStatusType.Enabled,
@@ -310,6 +334,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchSet{T1}(T1, EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchSet<T1, T2>(T1 value1 = default, T2 value2 = default,
                                                         EntityStatusType entities = EntityStatusType.Enabled,
@@ -328,6 +355,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchSet{T1}(T1, EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchSet<T1, T2, T3>(T1 value1 = default, T2 value2 = default, T3 value3 = default,
                                                             EntityStatusType entities = EntityStatusType.Enabled,
@@ -348,6 +378,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchSet{T1}(T1, EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchSet<T1, T2, T3, T4>(T1 value1 = default, T2 value2 = default, T3 value3 = default, T4 value4 = default,
                                                                 EntityStatusType entities = EntityStatusType.Enabled,
@@ -370,6 +403,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchSet{T1}(T1, EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchSet<T1, T2, T3, T4, T5>(T1 value1 = default, T2 value2 = default, T3 value3 = default, T4 value4 = default, T5 value5 = default,
                                                                     EntityStatusType entities = EntityStatusType.Enabled,
@@ -403,6 +439,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <param name="mode">Query mode: Strict (default) blocks hooks from modifying filtered types on non-current entities; Flexible allows free modification.</param>
             /// <param name="clusters">Optional cluster filter.</param>
             /// <returns>This query instance for chaining.</returns>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDelete<T1>(EntityStatusType entities = EntityStatusType.Enabled,
                                                        QueryMode mode = QueryMode.Strict,
@@ -419,6 +458,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchDelete{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDelete<T1>(EntityStatusType entities, ReadOnlySpan<uint> chunks,
                                                        QueryMode mode = QueryMode.Strict)
@@ -433,6 +475,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchDelete{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDelete<T1, T2>(EntityStatusType entities = EntityStatusType.Enabled,
                                                            QueryMode mode = QueryMode.Strict,
@@ -450,6 +495,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchDelete{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDelete<T1, T2, T3>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                QueryMode mode = QueryMode.Strict,
@@ -469,6 +517,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchDelete{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDelete<T1, T2, T3, T4>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                    QueryMode mode = QueryMode.Strict,
@@ -491,6 +542,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchDelete{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDelete<T1, T2, T3, T4, T5>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                        QueryMode mode = QueryMode.Strict,
@@ -523,6 +577,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <param name="mode">Query mode: Strict (default) blocks hooks from modifying filtered types on non-current entities; Flexible allows free modification.</param>
             /// <param name="clusters">Optional cluster filter.</param>
             /// <returns>This query instance for chaining.</returns>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDisable<T1>(EntityStatusType entities = EntityStatusType.Enabled,
                                                         QueryMode mode = QueryMode.Strict,
@@ -538,6 +595,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchDisable{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDisable<T1>(EntityStatusType entities, ReadOnlySpan<uint> chunks,
                                                         QueryMode mode = QueryMode.Strict)
@@ -552,6 +612,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchDisable{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDisable<T1, T2>(EntityStatusType entities = EntityStatusType.Enabled,
                                                             QueryMode mode = QueryMode.Strict,
@@ -569,6 +632,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchDisable{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDisable<T1, T2, T3>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                 QueryMode mode = QueryMode.Strict,
@@ -588,6 +654,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchDisable{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDisable<T1, T2, T3, T4>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                     QueryMode mode = QueryMode.Strict,
@@ -609,6 +678,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchDisable{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchDisable<T1, T2, T3, T4, T5>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                         QueryMode mode = QueryMode.Strict,
@@ -642,6 +714,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <param name="mode">Query mode: Strict (default) blocks hooks from modifying filtered types on non-current entities; Flexible allows free modification.</param>
             /// <param name="clusters">Optional cluster filter.</param>
             /// <returns>This query instance for chaining.</returns>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchEnable<T1>(EntityStatusType entities = EntityStatusType.Enabled,
                                                        QueryMode mode = QueryMode.Strict,
@@ -658,6 +733,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchEnable{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchEnable<T1>(EntityStatusType entities, ReadOnlySpan<uint> chunks,
                                                        QueryMode mode = QueryMode.Strict)
@@ -672,6 +750,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchEnable{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchEnable<T1, T2>(EntityStatusType entities = EntityStatusType.Enabled,
                                                            QueryMode mode = QueryMode.Strict,
@@ -689,6 +770,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchEnable{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchEnable<T1, T2, T3>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                QueryMode mode = QueryMode.Strict,
@@ -708,6 +792,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchEnable{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchEnable<T1, T2, T3, T4>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                    QueryMode mode = QueryMode.Strict,
@@ -730,6 +817,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchEnable{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchEnable<T1, T2, T3, T4, T5>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                        QueryMode mode = QueryMode.Strict,
@@ -764,6 +854,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <param name="mode">Query mode: Strict (default) blocks hooks from modifying filtered types on non-current entities; Flexible allows free modification.</param>
             /// <param name="clusters">Optional cluster filter.</param>
             /// <returns>This query instance for chaining.</returns>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchToggle<T1>(EntityStatusType entities = EntityStatusType.Enabled,
                                                        QueryMode mode = QueryMode.Strict,
@@ -778,6 +871,9 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             /// <inheritdoc cref="BatchToggle{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchToggle<T1>(EntityStatusType entities, ReadOnlySpan<uint> chunks,
                                                        QueryMode mode = QueryMode.Strict)
@@ -791,6 +887,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchToggle{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchToggle<T1, T2>(EntityStatusType entities = EntityStatusType.Enabled,
                                                            QueryMode mode = QueryMode.Strict,
@@ -807,6 +906,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchToggle{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchToggle<T1, T2, T3>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                QueryMode mode = QueryMode.Strict,
@@ -825,6 +927,9 @@ namespace FFS.Libraries.StaticEcs {
             }
             
             /// <inheritdoc cref="BatchToggle{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchToggle<T1, T2, T3, T4>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                    QueryMode mode = QueryMode.Strict,
@@ -845,6 +950,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchToggle{T1}(EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchToggle<T1, T2, T3, T4, T5>(EntityStatusType entities = EntityStatusType.Enabled,
                                                                        QueryMode mode = QueryMode.Strict,
@@ -876,6 +984,9 @@ namespace FFS.Libraries.StaticEcs {
             /// <param name="mode">Query mode: Strict (default) blocks hooks from modifying filtered types on non-current entities; Flexible allows free modification.</param>
             /// <param name="clusters">Optional cluster filter.</param>
             /// <returns>This query instance for chaining.</returns>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchApply<T1>(bool state1,
                                                       EntityStatusType entities = EntityStatusType.Enabled,
@@ -890,6 +1001,9 @@ namespace FFS.Libraries.StaticEcs {
                 return this;
             }
             
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchApply<T1>(bool state1,
                                                       EntityStatusType entities, ReadOnlySpan<uint> chunks,
@@ -904,6 +1018,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchApply{T1}(bool, EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchApply<T1, T2>(bool state1, bool state2,
                                                           EntityStatusType entities = EntityStatusType.Enabled,
@@ -921,6 +1038,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchApply{T1}(bool, EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchApply<T1, T2, T3>(bool state1, bool state2, bool state3,
                                                               EntityStatusType entities = EntityStatusType.Enabled,
@@ -940,6 +1060,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchApply{T1}(bool, EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchApply<T1, T2, T3, T4>(bool state1, bool state2, bool state3, bool state4,
                                                                   EntityStatusType entities = EntityStatusType.Enabled,
@@ -961,6 +1084,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             /// <inheritdoc cref="BatchApply{T1}(bool, EntityStatusType, QueryMode, ReadOnlySpan{ushort})"/>
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             public WorldQuery<TFilter> BatchApply<T1, T2, T3, T4, T5>(bool state1, bool state2, bool state3, bool state4, bool state5,
                                                                       EntityStatusType entities = EntityStatusType.Enabled,

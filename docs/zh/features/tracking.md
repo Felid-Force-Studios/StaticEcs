@@ -31,28 +31,42 @@ ___
 `ComponentTypeConfig<T>` 支持三个追踪标志：`trackAdded`、`trackDeleted`、`trackChanged`：
 
 ```csharp
-W.Create(WorldConfig.Default());
-//...
-// 启用全部三种追踪
-W.Types().Component<Health>(new ComponentTypeConfig<Health>(
-    trackAdded: true,
-    trackDeleted: true,
-    trackChanged: true
-));
+// 通过在组件类型上实现 IComponentConfig<T> 来配置追踪：
+public struct Health : IComponent, IComponentConfig<Health> {
+    public float Value;
+    public ComponentTypeConfig<Health> Config() => new(
+        trackAdded: true,
+        trackDeleted: true,
+        trackChanged: true
+    );
+}
 
 // 仅启用一个方向
-W.Types().Component<Velocity>(new ComponentTypeConfig<Velocity>(
-    trackAdded: true  // 仅追踪添加
-));
+public struct Velocity : IComponent, IComponentConfig<Velocity> {
+    public float X, Y;
+    public ComponentTypeConfig<Velocity> Config() => new(
+        trackAdded: true  // 仅追踪添加
+    );
+}
 
 // 带追踪的完整配置
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("..."),
-    defaultValue: default,
-    trackAdded: true,
-    trackDeleted: true,
-    trackChanged: true
-));
+public struct Position : IComponent, IComponentConfig<Position> {
+    public float X, Y;
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("..."),
+        defaultValue: default,
+        trackAdded: true,
+        trackDeleted: true,
+        trackChanged: true
+    );
+}
+
+W.Create(WorldConfig.Default());
+//...
+// 注册无需参数 — 配置从接口读取
+W.Types().Component<Health>()
+         .Component<Velocity>()
+         .Component<Position>();
 //...
 W.Initialize();
 ```
@@ -62,17 +76,26 @@ W.Initialize();
 `TagTypeConfig<T>` 支持 `trackAdded` 和 `trackDeleted`。标签**不**支持 Changed 追踪。
 
 ```csharp
-W.Types().Tag<Unit>(new TagTypeConfig<Unit>(
-    trackAdded: true,
-    trackDeleted: true
-));
+// 通过在标签类型上实现 ITagConfig<T> 来配置追踪：
+public struct Unit : ITag, ITagConfig<Unit> {
+    public TagTypeConfig<Unit> Config() => new(
+        trackAdded: true,
+        trackDeleted: true
+    );
+}
 
 // 带序列化 GUID
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."),
-    trackAdded: true,
-    trackDeleted: true
-));
+public struct Poisoned : ITag, ITagConfig<Poisoned> {
+    public TagTypeConfig<Poisoned> Config() => new(
+        guid: new Guid("A1B2C3D4-..."),
+        trackAdded: true,
+        trackDeleted: true
+    );
+}
+
+// 注册无需参数
+W.Types().Tag<Unit>()
+         .Tag<Poisoned>();
 ```
 
 ### 实体创建
@@ -93,7 +116,7 @@ W.Initialize();
 
 ### 自动注册
 
-`trackAdded`、`trackDeleted` 和 `trackChanged` 可以在结构体内的静态 `Config` 字段中声明 — `RegisterAll()` 会自动获取。
+通过 `IComponentConfig<T>` / `ITagConfig<T>` 声明的 `trackAdded`、`trackDeleted` 和 `trackChanged` 会被 `RegisterAll()` 自动获取 — 无需额外配置。
 
 ### 编译时禁用
 

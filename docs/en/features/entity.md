@@ -18,19 +18,19 @@ Entity type is a logical category assigned at creation. It determines the entity
 
 ### Defining entity types
 
-Entity types are defined as structs implementing `IEntityType` with a stable `byte Id`:
+Entity types are defined as structs implementing `IEntityType` with a stable `byte Id()` method:
 
 ```csharp
 public struct Bullet : IEntityType {
-    public static readonly byte Id = 1;
+    public byte Id() => 1;
 }
 
 public struct Enemy : IEntityType {
-    public static readonly byte Id = 2;
+    public byte Id() => 2;
 }
 
 public struct Effect : IEntityType {
-    public static readonly byte Id = 3;
+    public byte Id() => 3;
 }
 ```
 
@@ -43,9 +43,9 @@ Entity types are registered during the `Created` phase.
 **Manual registration:**
 ```csharp
 W.Types()
-    .EntityType<Bullet>(Bullet.Id)
-    .EntityType<Enemy>(Enemy.Id)
-    .EntityType<Effect>(Effect.Id);
+    .EntityType<Bullet>()
+    .EntityType<Enemy>()
+    .EntityType<Effect>();
 ```
 
 **Auto-registration:**
@@ -53,7 +53,7 @@ W.Types()
 W.Types().RegisterAll();
 ```
 
-`RegisterAll()` discovers all types implementing `IEntityType` in the specified assemblies (defaults to the calling assembly) and registers them automatically. For this to work, the entity type must declare a `public static readonly byte Id` field — it is used as the identifier during auto-registration.
+`RegisterAll()` discovers all types implementing `IEntityType` in the specified assemblies (defaults to the calling assembly) and registers them automatically. The identifier is obtained from the `Id()` method.
 
 ### Lifecycle hooks (OnCreate / OnDestroy)
 
@@ -61,7 +61,7 @@ Entity types can define `OnCreate` and `OnDestroy` hooks. If a method is not def
 
 ```csharp
 public struct Bullet : IEntityType {
-    public static readonly byte Id = 1;
+    public byte Id() => 1;
 
     public void OnCreate<TWorld>(World<TWorld>.Entity entity) where TWorld : struct, IWorldType {
         entity.Set(new Velocity { Speed = 100 });
@@ -81,7 +81,7 @@ Since `IEntityType` is a struct, it can carry fields. `OnCreate` is an instance 
 
 ```csharp
 public struct Flora : IEntityType {
-    public static readonly byte Id = 4;
+    public byte Id() => 4;
 
     public enum Kind : byte { Grass, Bush, Tree }
     public Kind FloraKind;

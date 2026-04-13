@@ -117,17 +117,45 @@ namespace FFS.Libraries.StaticEcs {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+        [Il2CppEagerStaticClassConstruction]
         #endif
         // ReSharper disable once UnusedTypeParameter
-        internal static class EntityTypeInfo<T> where T : struct, IEntityType {
-            internal static byte Id;
-            internal static bool HasOnCreate;
-            internal static bool Registered;
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Entity type metadata is preserved by the registration path.")]
+        #endif
+        internal struct EntityTypeInfo<T> where T : struct, IEntityType {
+            public static EntityTypeInfo<T> Instance;
+
+            internal readonly byte _id;
+            internal readonly bool HasOnCreate;
+            internal readonly bool Registered;
+
+            public EntityTypeInfo(byte id, bool hasOnCreate) {
+                _id = id;
+                HasOnCreate = hasOnCreate;
+                Registered = true;
+            }
+            
+            public byte Id {
+                [MethodImpl(AggressiveInlining)]
+                get => _id;
+            }
+
+            #if UNITY_2022_1_OR_NEWER
+            [UnityEngine.Scripting.Preserve]
+            #endif
+            [MethodImpl(NoInlining)]
+            internal static void AutoRegister() {
+                if (Instance.Registered) {
+                    return;
+                }
+                Data.Instance.RegisterEntityTypeInternal<T>();
+            }
         }
         
         #region TYPE REGISTRATION
         [MethodImpl(AggressiveInlining)]
-        internal static void RegisterComponentType<T>(ComponentTypeConfig<T> config = default)
+        internal static void RegisterComponentType<T>(ComponentTypeConfig<T> config, string typeName)
             where T : struct, IComponent {
             #if FFS_ECS_DEBUG
             AssertWorldIsCreated(WorldTypeName);
@@ -135,7 +163,7 @@ namespace FFS.Libraries.StaticEcs {
             #else
             if (IsComponentTypeRegistered<T>()) return;
             #endif
-            Data.Instance.RegisterComponentTypeInternal(config);
+            Data.Instance.RegisterComponentOrTagTypeInternal(config, false, typeName);
         }
 
         /// <summary>
@@ -146,10 +174,10 @@ namespace FFS.Libraries.StaticEcs {
         /// <param name="config">Component configuration for <see cref="Multi{T}"/>.</param>
         /// <param name="elementStrategy">Serialization strategy for elements. Null uses default <c>StructPackArrayStrategy</c>.</param>
         [MethodImpl(AggressiveInlining)]
-        internal static void RegisterMultiComponentType<T>(ComponentTypeConfig<Multi<T>> config, IPackArrayStrategy<T> elementStrategy)
+        internal static void RegisterMultiComponentType<T>(ComponentTypeConfig<Multi<T>> config, IPackArrayStrategy<T> elementStrategy, string typeName)
             where T : struct, IMultiComponent {
-            Multi<T>.ElementStrategy = elementStrategy;
-            RegisterComponentType(config);
+            Multi<T>.ElementStrategy = elementStrategy ?? AutoRegistration.TryCreateUnmanagedPackArrayStrategy<T>() ?? new StructPackArrayStrategy<T>();
+            RegisterComponentType(config, typeName);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -160,11 +188,11 @@ namespace FFS.Libraries.StaticEcs {
             #else
             if (IsTagTypeRegistered<T>()) return;
             #endif
-            Data.Instance.RegisterTagTypeInternal(config);
+            Data.Instance.RegisterComponentOrTagTypeInternal(config.AsComponentConfig, true, typeof(T).Name);
         }
 
         [MethodImpl(AggressiveInlining)]
-        internal static void RegisterEventType<T>(EventTypeConfig<T> config = default) where T : struct, IEvent {
+        internal static void RegisterEventType<T>(EventTypeConfig<T> config) where T : struct, IEvent {
             #if FFS_ECS_DEBUG
             AssertWorldIsCreatedOrInitialized(WorldTypeName);
             AssertNotRegisteredEvent<T>(WorldTypeName);
@@ -177,16 +205,16 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         internal static void RegisterEntityType<
             #if NET5_0_OR_GREATER
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
             #endif
-            T>(byte id) where T : struct, IEntityType {
+            T>() where T : struct, IEntityType {
             #if FFS_ECS_DEBUG
             AssertWorldIsCreated(WorldTypeName);
-            Assert(WorldTypeName, !IsEntityTypeRegistered(id), $"EntityType with id {id} already registered");
+            Assert(WorldTypeName, !IsEntityTypeRegistered(default(T).Id()), $"EntityType with id {default(T).Id()} already registered");
             #else
-            if (IsEntityTypeRegistered(id)) return;
+            if (IsEntityTypeRegistered(default(T).Id())) return;
             #endif
-            Data.Instance.RegisterEntityTypeInternal<T>(id);
+            Data.Instance.RegisterEntityTypeInternal<T>();
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -202,7 +230,7 @@ namespace FFS.Libraries.StaticEcs {
         internal static bool IsEntityTypeRegistered(byte id) => Data.Instance.EntityTypes[id].Registered;
 
         [MethodImpl(AggressiveInlining)]
-        internal static bool IsEntityTypeRegistered<T>() where T : struct, IEntityType => EntityTypeInfo<T>.Registered;
+        internal static bool IsEntityTypeRegistered<T>() where T : struct, IEntityType => EntityTypeInfo<T>.Instance.Registered;
         #endregion
 
         #if ENABLE_IL2CPP
@@ -420,7 +448,7 @@ namespace FFS.Libraries.StaticEcs {
                 LifecycleHandle = default;
                 #endif
                 
-                RegisterEntityTypeInternal<Default>(0);
+                RegisterEntityTypeInternal<Default>();
             }
 
             [MethodImpl(NoInlining)]
@@ -1261,13 +1289,13 @@ namespace FFS.Libraries.StaticEcs {
                 AssertWorldIsInitialized(EntityTypeName);
                 AssertMultiThreadNotActive(EntityTypeName);
                 AssertClusterIsRegistered(EntityTypeName, clusterId);
-                AssertEntityTypeIsRegistered(EntityTypeName, EntityTypeInfo<TEntityType>.Id);
+                AssertEntityTypeIsRegistered(EntityTypeName, EntityTypeInfo<TEntityType>.Instance.Id);
                 #endif
-                var type = EntityTypeInfo<TEntityType>.Id;
-                if (!TryCreateEntity(type, clusterId, out entity)) {
+                var type = EntityTypeInfo<TEntityType>.Instance;
+                if (!TryCreateEntity(type.Id, clusterId, out entity)) {
                     throw new StaticEcsException($"World<{typeof(TWorld)}>, Method: CreateEntity, ran out of space in the attached chunks");
                 }
-                if (EntityTypeInfo<TEntityType>.HasOnCreate) {
+                if (type.HasOnCreate) {
                     CallOnCreate(entityType, entity);
                 }
             }
@@ -1326,9 +1354,9 @@ namespace FFS.Libraries.StaticEcs {
 
             [MethodImpl(AggressiveInlining)]
             internal bool TryCreateEntity<TEntityType>(TEntityType entityType, ushort clusterId, out Entity entity) where TEntityType : struct, IEntityType {
-                var type = EntityTypeInfo<TEntityType>.Id;
-                if (TryCreateEntity(type, clusterId, out entity)) {
-                    if (EntityTypeInfo<TEntityType>.HasOnCreate) {
+                var type = EntityTypeInfo<TEntityType>.Instance;
+                if (TryCreateEntity(type.Id, clusterId, out entity)) {
+                    if (type.HasOnCreate) {
                         CallOnCreate(entityType, entity);
                     }
 
@@ -1420,13 +1448,13 @@ namespace FFS.Libraries.StaticEcs {
                 AssertWorldIsInitialized(EntityTypeName);
                 AssertMultiThreadNotActive(EntityTypeName);
                 AssertChunkIsRegistered(EntityTypeName, chunkIdx);
-                AssertEntityTypeIsRegistered(EntityTypeName, EntityTypeInfo<TEntityType>.Id);
+                AssertEntityTypeIsRegistered(EntityTypeName, EntityTypeInfo<TEntityType>.Instance.Id);
                 #endif
-                var type = EntityTypeInfo<TEntityType>.Id;
-                if (!TryCreateEntity(type, chunkIdx, out entity)) {
+                var type = EntityTypeInfo<TEntityType>.Instance;
+                if (!TryCreateEntity(type.Id, chunkIdx, out entity)) {
                     throw new StaticEcsException($"World<{typeof(TWorld)}>, Method: CreateEntity, ran out of space in chunk {chunkIdx}");
                 }
-                if (EntityTypeInfo<TEntityType>.HasOnCreate) {
+                if (type.HasOnCreate) {
                     CallOnCreate(entityType, entity);
                 }
             }
@@ -1450,9 +1478,9 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             internal bool TryCreateEntity<TEntityType>(TEntityType entityType, uint chunkIdx, out Entity entity) where TEntityType : struct, IEntityType {
-                var type = EntityTypeInfo<TEntityType>.Id;
-                if (TryCreateEntity(type, chunkIdx, out entity)) {
-                    if (EntityTypeInfo<TEntityType>.HasOnCreate) {
+                var type = EntityTypeInfo<TEntityType>.Instance;
+                if (TryCreateEntity(type.Id, chunkIdx, out entity)) {
+                    if (type.HasOnCreate) {
                         CallOnCreate(entityType, entity);
                     }
 
@@ -1546,9 +1574,9 @@ namespace FFS.Libraries.StaticEcs {
             
             [MethodImpl(AggressiveInlining)]
             internal void CreateEntity<TEntityType>(TEntityType entityType, EntityGID gid, out Entity entity) where TEntityType : struct, IEntityType {
-                var type = EntityTypeInfo<TEntityType>.Id;
-                CreateEntity(type, gid, out entity);
-                if (EntityTypeInfo<TEntityType>.HasOnCreate) {
+                var type = EntityTypeInfo<TEntityType>.Instance;
+                CreateEntity(type.Id, gid, out entity);
+                if (type.HasOnCreate) {
                     CallOnCreate(entityType, entity);
                 }
             }
@@ -1713,7 +1741,7 @@ namespace FFS.Libraries.StaticEcs {
             internal static void InvokeOnCreateBatch<TEntityType>(TEntityType entityType, QueryFunctionWithEntity<TWorld> onCreate, ulong mask, uint segmentIdx, byte segmentBlockIdx)
                 where TEntityType : struct, IEntityType {
 
-                var hasOnCreate = EntityTypeInfo<TEntityType>.HasOnCreate;
+                var hasOnCreate = EntityTypeInfo<TEntityType>.Instance.HasOnCreate;
                 
                 if (!hasOnCreate && onCreate == null) return;
 
@@ -3225,12 +3253,11 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             internal void RegisterEntityTypeInternal<
                 #if NET5_0_OR_GREATER
-                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
                 #endif
-                T>(byte id) where T : struct, IEntityType {
-                EntityTypeInfo<T>.Id = id;
-                EntityTypeInfo<T>.HasOnCreate = EntityTypeType<T>.HasOnCreate();
-                EntityTypeInfo<T>.Registered = true;
+                T>() where T : struct, IEntityType {
+                var id = default(T).Id();
+                EntityTypeInfo<T>.Instance = new EntityTypeInfo<T>(id, EntityTypeType<T>.HasOnCreate());
 
                 ref var data = ref EntityTypes[id];
                 data.Registered = true;
@@ -3252,9 +3279,7 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             private static void ResetEntityTypeInfo<T>() where T : struct, IEntityType {
-                EntityTypeInfo<T>.Id = default;
-                EntityTypeInfo<T>.HasOnCreate = default;
-                EntityTypeInfo<T>.Registered = default;
+                EntityTypeInfo<T>.Instance = default;
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -3271,17 +3296,18 @@ namespace FFS.Libraries.StaticEcs {
             #endregion
 
             #region COMPONENTS
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Component/tag metadata is preserved by the registration path and DynamicDependency on RegisterAll.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
-            internal void RegisterComponentTypeInternal<TComponent>(ComponentTypeConfig<TComponent> typeConfig) where TComponent : struct, IComponent {
+            internal void RegisterComponentOrTagTypeInternal<T>(ComponentTypeConfig<T> typeConfig, bool isTag, string typeName) where T : struct, IComponentOrTag {
+                typeConfig = isTag
+                    ? typeConfig.MergeWith(ComponentTypeConfig<T>.DefaultTag)
+                    : typeConfig.MergeWith(ComponentTypeConfig<T>.DefaultComponent);
+                
                 #if FFS_ECS_DEBUG
-                AssertNotRegisteredComponent<TComponent>(WorldTypeName);
-                #endif
-
-                typeConfig = typeConfig.MergeWith(AutoRegistration.FindComponentConfig<TComponent>())
-                                       .MergeWith(ComponentTypeConfig<TComponent>.DefaultComponent);
-
-                #if FFS_ECS_DEBUG
-                AssertGuidNotEmpty<TComponent>(WorldTypeName, typeConfig.Guid.Value);
+                AssertNotRegisteredComponent<T>(WorldTypeName);
+                AssertGuidNotEmpty<T>(WorldTypeName, typeConfig.Guid.Value);
                 #endif
 
                 if (_poolsCountComponents == _poolsComponents.Length) {
@@ -3289,14 +3315,14 @@ namespace FFS.Libraries.StaticEcs {
                     Array.Resize(ref _guidsComponents, _poolsCountComponents << 1);
                 }
 
-                Components<TComponent>.Instance = new Components<TComponent>(_poolsCountComponents, typeConfig, false);
-                Components<TComponent>.Handle = ComponentsHandle.Create<TWorld, TComponent>();
-                _poolsComponents[_poolsCountComponents] = Components<TComponent>.Handle;
-                _guidsComponents[_poolsCountComponents++] = typeConfig.Guid.Value;
+                Components<T>.Instance = new Components<T>(_poolsCountComponents, typeConfig, isTag, typeName);
+                Components<T>.Handle = ComponentsHandle.Create<TWorld, T>();
+                _poolsComponents[_poolsCountComponents] = Components<T>.Handle;
+                _guidsComponents[_poolsCountComponents++] = typeConfig.Guid!.Value;
 
-                if (typeConfig.TrackAdded.Value || typeConfig.TrackDeleted.Value
+                if (typeConfig.TrackAdded!.Value || typeConfig.TrackDeleted!.Value
                     #if !FFS_ECS_DISABLE_CHANGED_TRACKING
-                    || typeConfig.TrackChanged.Value
+                    || (!isTag && typeConfig.TrackChanged!.Value)
                     #endif
                     ) {
                     if (_trackingComponentIndicesCount == _trackingComponentIndices.Length) {
@@ -3307,10 +3333,10 @@ namespace FFS.Libraries.StaticEcs {
 
                 var guid = typeConfig.Guid.Value;
                 if (_componentPoolByGuid.ContainsKey(guid)) {
-                    throw new StaticEcsException($"Component type {typeof(TComponent)} with guid {guid} already registered");
+                    throw new StaticEcsException($"Type {typeof(T)} with guid {guid} already registered");
                 }
 
-                _componentPoolByGuid[guid] = Components<TComponent>.Handle;
+                _componentPoolByGuid[guid] = Components<T>.Handle;
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -3396,45 +3422,6 @@ namespace FFS.Libraries.StaticEcs {
 
             #region TAGS
             [MethodImpl(AggressiveInlining)]
-            internal void RegisterTagTypeInternal<TTag>(TagTypeConfig<TTag> config) where TTag : struct, ITag {
-                #if FFS_ECS_DEBUG
-                AssertNotRegisteredComponent<TTag>(WorldTypeName);
-                #endif
-
-                var typeConfig = config.AsComponentConfig
-                                       .MergeWith(AutoRegistration.FindTagConfig<TTag>().AsComponentConfig)
-                                       .MergeWith(ComponentTypeConfig<TTag>.DefaultTag);
-
-                #if FFS_ECS_DEBUG
-                AssertGuidNotEmpty<TTag>(WorldTypeName, typeConfig.Guid.Value);
-                #endif
-
-                if (_poolsCountComponents == _poolsComponents.Length) {
-                    Array.Resize(ref _poolsComponents, _poolsCountComponents << 1);
-                    Array.Resize(ref _guidsComponents, _poolsCountComponents << 1);
-                }
-
-                Components<TTag>.Instance = new Components<TTag>(_poolsCountComponents, typeConfig, isTag: true);
-                Components<TTag>.Handle = ComponentsHandle.Create<TWorld, TTag>();
-                _poolsComponents[_poolsCountComponents] = Components<TTag>.Handle;
-                _guidsComponents[_poolsCountComponents++] = typeConfig.Guid.Value;
-
-                if (typeConfig.TrackAdded.Value || typeConfig.TrackDeleted.Value) {
-                    if (_trackingComponentIndicesCount == _trackingComponentIndices.Length) {
-                        Array.Resize(ref _trackingComponentIndices, _trackingComponentIndicesCount << 1);
-                    }
-                    _trackingComponentIndices[_trackingComponentIndicesCount++] = (ushort)(_poolsCountComponents - 1);
-                }
-
-                var guid = typeConfig.Guid.Value;
-                if (_componentPoolByGuid.ContainsKey(guid)) {
-                    throw new StaticEcsException($"Tag type {typeof(TTag)} with guid {guid} already registered");
-                }
-
-                _componentPoolByGuid[guid] = Components<TTag>.Handle;
-            }
-
-            [MethodImpl(AggressiveInlining)]
             internal ushort TagsCount(Entity entity) {
                 #if FFS_ECS_DEBUG
                 AssertWorldIsInitialized(WorldTypeName);
@@ -3488,12 +3475,14 @@ namespace FFS.Libraries.StaticEcs {
             #endregion
 
             #region EVENTS
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Event metadata is preserved by the registration path and DynamicDependency on RegisterAll.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             internal void RegisterEventTypeInternal<T>(EventTypeConfig<T> config) where T : struct, IEvent {
                 if (Events<T>.Instance.Initialized) throw new StaticEcsException($"Event {typeof(T)} already registered");
 
-                var typeConfig = config.MergeWith(AutoRegistration.FindEventConfig<T>())
-                                       .MergeWith(EventTypeConfig<T>.Default);
+                var typeConfig = config.MergeWith(EventTypeConfig<T>.Default);
 
                 #if FFS_ECS_DEBUG
                 AssertGuidNotEmpty<T>(WorldTypeName, typeConfig.Guid.Value);
@@ -3802,7 +3791,7 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     internal static class EntityTypeType<
         #if NET5_0_OR_GREATER
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
         #endif
         T> where T : struct, IEntityType {
         internal static bool HasOnCreate() {
@@ -3815,7 +3804,7 @@ namespace FFS.Libraries.StaticEcs {
 
         private static bool HasMethod(
             #if NET5_0_OR_GREATER
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
             #endif
             Type structType, string methodName) {
             var methods = structType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);

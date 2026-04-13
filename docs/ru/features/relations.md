@@ -528,14 +528,16 @@ ___
 
 ## Блочная сериализация сегментов для Links
 
-Для снимков чанков/мира/кластеров с unmanaged типами связей используйте `LinksUnmanagedPackArrayStrategy<TWorld, TLinkType>` для блочной сериализации сегментов хранилища связей:
+Для снимков чанков/мира/кластеров с unmanaged типами связей `LinksUnmanagedPackArrayStrategy` применяется автоматически — ручная настройка не требуется.
+
+Для предоставления пользовательской конфигурации при регистрации связей реализуйте `ILinksConfig<T>` на типе связи:
 
 ```csharp
-W.Types()
-    .Links<MyLinkType>(new ComponentTypeConfig<W.Links<MyLinkType>>(
-        guid: new Guid("..."),
-        readWriteStrategy: new LinksUnmanagedPackArrayStrategy<MyWorld, MyLinkType>()
-    ));
+public struct MyLinkType : ILinksType, ILinksConfig<MyLinkType> {
+    public ComponentTypeConfig<W.Links<MyLinkType>> Config<TWorld>() where TWorld : struct, IWorldType => new(
+        guid: new Guid("...")
+    );
+}
 ```
 
 Работает идентично `MultiUnmanagedPackArrayStrategy` — подробности см. в [блочная сериализация мульти-компонентов](multicomponent.md#блочная-сериализация-сегментов).

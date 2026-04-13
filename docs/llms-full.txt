@@ -7,7 +7,7 @@
 - **Static generics**: `World<TWorld>` where `TWorld : struct, IWorldType` is the central type. Each unique TWorld gets isolated static storage. Typical pattern: `public struct WT : IWorldType {} public abstract class W : World<WT> {}`
 - **World lifecycle**: `W.Create(WorldConfig.Default())` → `W.Types().RegisterAll()` (or manual `.Component<T>().Tag<T>().Event<T>()`) → `W.Initialize()` → work → `W.Destroy()`. Type registration is ONLY allowed between Create and Initialize.
 - **Entity** (`W.Entity`): 4-byte uint handle. NOT a persistent reference — valid only while entity is alive. No generation counter embedded. Use `EntityGID` for persistent references.
-- **Entity types** (`IEntityType`): Logical entity grouping for cache locality. `Default` is the built-in type. Create: `W.NewEntity<Default>()`. Register custom types: `W.Types().EntityType<Bullet>(Bullet.Id)`. Entities of the same type are stored together in memory segments. Non-generic overloads accept `byte entityType` for runtime-known types: `W.NewEntity(entityTypeId)`, `W.NewEntityInChunk(entityTypeId, chunkIdx)`, `W.NewEntityByGID(entityTypeId, gid)`.
+- **Entity types** (`IEntityType`): Logical entity grouping for cache locality. `Default` is the built-in type (Id = 0). Create: `W.NewEntity<Default>()`. Define: `public struct Bullet : IEntityType { public byte Id() => 1; }`. Register: `W.Types().EntityType<Bullet>()`. Entities of the same type are stored together in memory segments. Non-generic overloads accept `byte entityType` for runtime-known types: `W.NewEntity(entityTypeId)`, `W.NewEntityInChunk(entityTypeId, chunkIdx)`, `W.NewEntityByGID(entityTypeId, gid)`.
 - **EntityGID** (8 bytes): Persistent entity reference with version-based staleness detection. Fields: Id (uint) + ClusterId (ushort) + Version (ushort). Check status: `gid.Status<WT>()` → `GIDStatus.Active/NotActual/NotLoaded`. Resolve: `gid.TryUnpack<WT>(out entity)`.
 - **Components** (`IComponent`): Data structs. Register: `W.Types().Component<T>()`. Add: `entity.Add<T>()`. Set with value: `entity.Set(new T{...})`. Access: `ref var c = ref entity.Ref<T>()`. Check: `entity.Has<T>()`. Remove: `entity.Delete<T>()`.
 - **Data access**: `Ref<T>()` — fast mutable ref, does NOT mark Changed. `Mut<T>()` — mutable ref, marks component as Changed (for tracking). `Read<T>()` — readonly ref, does NOT mark Changed.
@@ -15,7 +15,7 @@
 - **Component hooks**: `OnAdd<TW>(entity)`, `OnDelete<TW>(entity, reason)`, `CopyTo<TW>(self, other, disabled)`, `Write<TW>(ref writer, entity)`, `Read<TW>(ref reader, entity, version, disabled)`. All have default empty implementations. `HookReason` enum (`Default`, `UnloadEntity`, `WorldDestroy`) indicates why deletion occurs. `IEntityType.OnDestroy` also receives `HookReason reason`.
 - **Tags** (`ITag`): Zero-size markers (bitmap only, no data storage). `entity.Set<T>()`, `entity.Has<T>()`, `entity.Delete<T>()`. Tags use the same API and query filters as components.
 - **Enable/Disable**: Both entities and individual components can be enabled/disabled. Disabled items are excluded from default queries but data is preserved.
-- **MultiComponent** (`IMultiComponent`): Variable-length per-entity data (struct, not just unmanaged). Stored as `Multi<TValue>` component. Register: `W.Types().Multi<Item>(elementStrategy: new UnmanagedPackArrayStrategy<Item>())`. Non-unmanaged types require `Write`/`Read` hooks. Default strategy: `StructPackArrayStrategy<T>`. Static `PackStrategy` field for auto-registration. Operations: Add, RemoveAt, IndexOf, Contains, foreach by reference, Span access.
+- **MultiComponent** (`IMultiComponent`): Variable-length per-entity data (struct, not just unmanaged). Stored as `Multi<TValue>` component. Register: `W.Types().Multi<Item>()`. Serialization strategy auto-detected: `UnmanagedPackArrayStrategy<T>` for unmanaged, `StructPackArrayStrategy<T>` for managed. Custom config via `IMultiComponentConfig<T>`. Operations: Add, RemoveAt, IndexOf, Contains, foreach by reference, Span access.
 - **Relations**: `ILinkType` for single entity reference (`Link<T>`), `ILinksType` for multiple (`Links<T>`). Both support OnAdd/OnDelete/CopyTo hooks. Register: `W.Types().Link<T>()` / `W.Types().Links<T>()`.
 - **Systems**: `ISystem` with `Init()`, `Update()`, `UpdateIsActive() → bool`, `Destroy()`. Group via `ISystemsType`. Nested in `World<TWorld>`. `W.Systems<TSys>.Create()` → `Add(system, order)` → `Initialize()` → `Update()` per frame → `Destroy()`.
 - **Resources**: `W.SetResource<T>(value)` / `ref var r = ref W.GetResource<T>()` for singletons. `NamedResource<T>(key)` for keyed resources.
@@ -43,8 +43,8 @@
 
 - **Opt-in, bitmap-based, zero-allocation, tick-versioned**. Disabled by default. Enable per-type at registration.
 - **Tick-based ring buffer**: `WorldConfig.TrackingBufferSize` (default 8). `W.Tick()` advances world tick — call once per frame after `W.Systems.Update()`. Each system automatically sees changes since its last execution via per-system `LastTick`.
-- **Component tracking**: `ComponentTypeConfig<T>(trackAdded: true, trackDeleted: true, trackChanged: true)`.
-- **Tag tracking**: `TagTypeConfig<T>(trackAdded: true, trackDeleted: true)`.
+- **Component tracking**: Enable via `IComponentConfig<T>` returning `ComponentTypeConfig<T>(trackAdded: true, trackDeleted: true, trackChanged: true)`.
+- **Tag tracking**: Enable via `ITagConfig<T>` returning `TagTypeConfig<T>(trackAdded: true, trackDeleted: true)`.
 - **Entity creation tracking**: `WorldConfig { TrackCreated = true }`.
 - **Tracking filters** (1–5 type params): `AllAdded<>`, `NoneAdded<>`, `AnyAdded<>`, `AllDeleted<>`, `NoneDeleted<>`, `AnyDeleted<>`, `AllChanged<>`, `NoneChanged<>`, `AnyChanged<>`. All accept optional `fromTick` constructor parameter. Added/Deleted filters work with both components and tags.
 - **Entity creation filter**: `Created` (requires `WorldConfig.TrackCreated = true`). Accepts optional `fromTick`.
@@ -261,7 +261,7 @@ W.Create(WorldConfig.Default());
 
 // Register components, tags, and events — only between Create() and Initialize()
 W.Types()
-    .EntityType<Bullet>(Bullet.Id)
+    .EntityType<Bullet>()
     .Component<Position>()
     .Component<Velocity>()
     .Tag<IsPlayer>()
@@ -272,7 +272,7 @@ W.Initialize();
 ```
 
 {: .important }
-Type registration (`Types().Component<T>()`, `Types().Tag<T>()`, `Types().EntityType<T>(id)`) is only available in the `Created` state — after `Create()` and before `Initialize()`. Event registration (`Types().Event<T>()`) is also available after initialization.
+Type registration (`Types().Component<T>()`, `Types().Tag<T>()`, `Types().EntityType<T>()`) is only available in the `Created` state — after `Create()` and before `Initialize()`. Event registration (`Types().Event<T>()`) is also available after initialization.
 
 ___
 
@@ -289,10 +289,11 @@ W.Types().RegisterAll();
 // Or specify particular assemblies
 W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
 
-// Can be combined with manual registration (e.g. to set serialization GUID)
+// Can be combined with manual registration
+// Configuration is provided by implementing IComponentConfig<T> on the struct itself
 W.Types()
     .RegisterAll()
-    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent>(guid: myGuid));
+    .Component<SpecialComponent>();
 
 W.Initialize();
 ```
@@ -307,7 +308,7 @@ Detected interfaces:
 | `ILinkType` | Wrapped in `Link<T>` and registered as a component |
 | `ILinksType` | Wrapped in `Links<T>` and registered as a component |
 | `IMultiComponent` | Wrapped in `Multi<T>` and registered as a component |
-| `IEntityType` | `Types().EntityType<T>(T.Id)` |
+| `IEntityType` | `Types().EntityType<T>()` |
 
 {: .note }
 - If no assemblies are specified, only the calling assembly is scanned (not all loaded assemblies)
@@ -1161,19 +1162,26 @@ W.Types()
     .Component<Velocity>()
     .Component<Name>();
 
-// Registration with configuration
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("..."),      // stable identifier for serialization (default — auto-computed from type name)
-    version: 1,                  // data schema version for migration (default — 0)
-    noDataLifecycle: true,       // skip zeroing data on deletion (default — false)
-    readWriteStrategy: null      // binary serialization strategy (default — auto-detected)
-));
+// Registration with configuration via IComponentConfig<T>
+// Configuration is provided by implementing the interface on the struct itself:
+//
+// public struct Position : IComponent, IComponentConfig<Position> {
+//     public float X, Y, Z;
+//     public ComponentTypeConfig<Position> Config() => new(
+//         guid: new Guid("..."),      // stable identifier for serialization (default — auto-computed from type name)
+//         version: 1,                  // data schema version for migration (default — 0)
+//         noDataLifecycle: true,       // skip zeroing data on deletion (default — false)
+//         readWriteStrategy: null      // binary serialization strategy (default — auto-detected)
+//     );
+// }
+
+W.Types().Component<Position>();  // config is read from IComponentConfig<Position> automatically
 //...
 W.Initialize();
 ```
 
 {: .note }
-The `notClearable` parameter only takes effect when the component has **no** `OnDelete` hook. By default (`notClearable: false`), component data is zeroed (`= default`) on deletion. With `notClearable: true`, zeroing is skipped — useful for unmanaged types where it's unnecessary overhead. If `OnDelete` is defined, it handles cleanup, and the flag has no effect.
+The `noDataLifecycle` parameter only takes effect when the component has **no** `OnDelete` hook. By default (`noDataLifecycle: false`), component data is zeroed (`= default`) on deletion. With `noDataLifecycle: true`, zeroing is skipped — useful for unmanaged types where it's unnecessary overhead. If `OnDelete` is defined, it handles cleanup, and the flag has no effect.
 
 ___
 
@@ -1605,8 +1613,8 @@ By default, `StructPackArrayStrategy<T>` is used for element serialization (per-
 For unmanaged types, you can use `UnmanagedPackArrayStrategy<T>` for bulk memory copy (faster).
 
 The strategy can be specified:
-1. **Explicit parameter:** `.Multi<Item>(elementStrategy: new UnmanagedPackArrayStrategy<Item>())`
-2. **Static field/property on the type** (for `RegisterAll`): `static readonly IPackArrayStrategy<Item> PackStrategy = new UnmanagedPackArrayStrategy<Item>();`
+1. **Via `IMultiComponentConfig<T>` interface** on the struct: implement `ElementPackStrategy()` to return a custom strategy
+2. **Auto-detected:** `UnmanagedPackArrayStrategy<T>` for unmanaged types, `StructPackArrayStrategy<T>` otherwise
 3. **Default:** `StructPackArrayStrategy<T>` (uses `Write`/`Read` hooks per element)
 
 ___
@@ -1617,9 +1625,9 @@ ___
 W.Create(WorldConfig.Default());
 
 W.Types()
-    .Multi<Item>()                                                         // default strategy
-    .Multi<Item>(elementStrategy: new UnmanagedPackArrayStrategy<Item>())   // explicit unmanaged strategy
-    .Multi<NamedItem>();                                                    // managed type with hooks
+    .Multi<Item>()           // strategy auto-detected (unmanaged → UnmanagedPackArrayStrategy)
+    .Multi<NamedItem>();     // managed type — uses StructPackArrayStrategy with Write/Read hooks
+// Custom config via IMultiComponentConfig<T> on the struct itself
 
 W.Initialize();
 ```
@@ -3343,12 +3351,16 @@ W.Types()
     .Event<WeatherChanged>()
     .Event<OnDamage>();
 
-// Registration with configuration
-W.Types().Event<WeatherChanged>(new EventTypeConfig<WeatherChanged>(
-    guid: new Guid("..."),      // stable identifier for serialization (default — auto-computed from type name)
-    version: 1,                  // data schema version for migration (default — 0)
-    readWriteStrategy: null      // binary serialization strategy (default — auto-detected)
-));
+// Registration with configuration via IEventConfig<T> on the struct:
+//
+// public struct WeatherChanged : IEvent, IEventConfig<WeatherChanged> {
+//     public EventTypeConfig<WeatherChanged> Config() => new(
+//         guid: new Guid("..."),      // stable identifier for serialization (default — auto-computed from type name)
+//         version: 1,                  // data schema version for migration (default — 0)
+//         readWriteStrategy: null      // binary serialization strategy (default — auto-detected)
+//     );
+// }
+W.Types().Event<WeatherChanged>();  // config is read from IEventConfig<WeatherChanged> automatically
 //...
 W.Initialize();
 ```
@@ -3483,8 +3495,13 @@ To support component serialization:
 
 #### Unmanaged component:
 ```csharp
-public struct Position : IComponent {
+public struct Position : IComponent, IComponentConfig<Position> {
     public float X, Y, Z;
+
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+        readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -3501,16 +3518,17 @@ public struct Position : IComponent {
     }
 }
 
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
-));
+W.Types().Component<Position>();  // config is read from IComponentConfig<Position> automatically
 ```
 
 #### Non-unmanaged component (contains reference fields):
 ```csharp
-public struct Name : IComponent {
+public struct Name : IComponent, IComponentConfig<Name> {
     public string Value;
+
+    public ComponentTypeConfig<Name> Config() => new(
+        guid: new Guid("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3")
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -3523,20 +3541,22 @@ public struct Name : IComponent {
     }
 }
 
-W.Types().Component<Name>(new ComponentTypeConfig<Name>(
-    guid: new Guid("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3")
-));
+W.Types().Component<Name>();  // config is read from IComponentConfig<Name> automatically
 ```
 
 #### Bulk memory copying for unmanaged types:
 
-For world/cluster/chunk snapshots, unmanaged components can be serialized as a memory block instead of per-component `Write`/`Read` calls. To enable this, **explicitly specify** `UnmanagedPackArrayStrategy<T>`:
+For world/cluster/chunk snapshots, unmanaged components can be serialized as a memory block instead of per-component `Write`/`Read` calls. The default strategy is auto-detected: `UnmanagedPackArrayStrategy<T>` for unmanaged types, `StructPackArrayStrategy<T>` otherwise. To override, implement `IComponentConfig<T>`:
 
 ```csharp
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()  // bulk memory copy
-));
+public struct Position : IComponent, IComponentConfig<Position> {
+    public float X, Y, Z;
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+        readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()  // bulk memory copy
+    );
+}
+W.Types().Component<Position>();
 ```
 
 {: .note }
@@ -3544,44 +3564,68 @@ W.Types().Component<Position>(new ComponentTypeConfig<Position>(
 
 #### Full configuration:
 ```csharp
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    version: 1,                  // data schema version for migration (default — 0)
-    notClearable: true,          // skip zeroing data on deletion (default — false)
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>() // serialization strategy (default — StructPackArrayStrategy<T>)
-));
+// All configuration is provided via IComponentConfig<T> on the struct:
+public struct Position : IComponent, IComponentConfig<Position> {
+    public float X, Y, Z;
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+        version: 1,                  // data schema version for migration (default — 0)
+        noDataLifecycle: true,       // skip zeroing data on deletion (default — false)
+        readWriteStrategy: new UnmanagedPackArrayStrategy<Position>() // serialization strategy (default — auto-detected)
+    );
+}
+W.Types().Component<Position>();
 ```
 
 ___
 
 ## Configuring tags
 
-Tags are configured via `TagTypeConfig<T>`:
+Tags are configured via `ITagConfig<T>` on the struct itself:
 
 ```csharp
+public struct IsPlayer : ITag, ITagConfig<IsPlayer> {
+    public TagTypeConfig<IsPlayer> Config() => new(
+        guid: new Guid("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90")
+    );
+}
+
+public struct IsDead : ITag, ITagConfig<IsDead> {
+    public TagTypeConfig<IsDead> Config() => new(
+        guid: new Guid("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30")
+    );
+}
+
 W.Types()
-    .Tag<IsPlayer>(new TagTypeConfig<IsPlayer>(guid: new Guid("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90")))
-    .Tag<IsDead>(new TagTypeConfig<IsDead>(guid: new Guid("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30")));
+    .Tag<IsPlayer>()   // config is read from ITagConfig<IsPlayer> automatically
+    .Tag<IsDead>();     // config is read from ITagConfig<IsDead> automatically
 ```
 
 #### Full configuration:
 ```csharp
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."), // stable identifier for serialization (default — auto-computed from type name)
-    trackAdded: true,                // enable addition tracking (default — false)
-    trackDeleted: true               // enable deletion tracking (default — false)
-));
+public struct Poisoned : ITag, ITagConfig<Poisoned> {
+    public TagTypeConfig<Poisoned> Config() => new(
+        guid: new Guid("A1B2C3D4-..."), // stable identifier for serialization (default — auto-computed from type name)
+        trackAdded: true,                // enable addition tracking (default — false)
+        trackDeleted: true               // enable deletion tracking (default — false)
+    );
+}
+W.Types().Tag<Poisoned>();
 ```
 
 ___
 
 ## Configuring events
 
-Events use `EventTypeConfig<T>` — similar to components:
+Events are configured via `IEventConfig<T>` on the struct itself — similar to components:
 
 ```csharp
-public struct OnDamage : IEvent {
+public struct OnDamage : IEvent, IEventConfig<OnDamage> {
     public float Amount;
+
+    public EventTypeConfig<OnDamage> Config() => new(
+        guid: new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+    );
 
     public void Write(ref BinaryPackWriter writer) {
         writer.WriteFloat(Amount);
@@ -3592,9 +3636,7 @@ public struct OnDamage : IEvent {
     }
 }
 
-W.Types().Event<OnDamage>(new EventTypeConfig<OnDamage>(
-    guid: new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-));
+W.Types().Event<OnDamage>();  // config is read from IEventConfig<OnDamage> automatically
 ```
 
 ___
@@ -3893,8 +3935,14 @@ ___
 The `version` parameter in the `Read` hook enables data migration between schema versions:
 
 ```csharp
-public struct Position : IComponent {
+public struct Position : IComponent, IComponentConfig<Position> {
     public float X, Y, Z;
+
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+        version: 1,  // was version 0, now 1
+        readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -3912,12 +3960,7 @@ public struct Position : IComponent {
     }
 }
 
-// Registration with the new version
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    version: 1,  // was version 0, now 1
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
-));
+W.Types().Component<Position>();  // config is read from IComponentConfig<Position> automatically
 ```
 
 ___
@@ -4204,9 +4247,9 @@ StaticEcs provides four types of change tracking, all zero-allocation and opt-in
 
 | Type | What it tracks | Applies to | Config location |
 |------|---------------|------------|-----------------|
-| **Added** | Component/tag was added | Components, tags | `ComponentTypeConfig` / `TagTypeConfig` |
-| **Deleted** | Component/tag was removed | Components, tags | `ComponentTypeConfig` / `TagTypeConfig` |
-| **Changed** | Component data accessed via `ref` | Components only | `ComponentTypeConfig` |
+| **Added** | Component/tag was added | Components, tags | `IComponentConfig<T>` / `ITagConfig<T>` |
+| **Deleted** | Component/tag was removed | Components, tags | `IComponentConfig<T>` / `ITagConfig<T>` |
+| **Changed** | Component data accessed via `ref` | Components only | `IComponentConfig<T>` |
 | **Created** | New entity was created | Entities (global) | `WorldConfig.TrackCreated` |
 
 - Bitmap-based: one `ulong` per 64 entities per tracked type
@@ -4222,51 +4265,72 @@ All tracking is disabled by default and must be explicitly enabled at registrati
 
 ### Components
 
-`ComponentTypeConfig<T>` supports three tracking flags: `trackAdded`, `trackDeleted`, `trackChanged`:
+Tracking is enabled via `IComponentConfig<T>` on the struct itself. `ComponentTypeConfig<T>` supports three tracking flags: `trackAdded`, `trackDeleted`, `trackChanged`:
 
 ```csharp
-W.Create(WorldConfig.Default());
-//...
 // Enable all three tracking types
-W.Types().Component<Health>(new ComponentTypeConfig<Health>(
-    trackAdded: true,
-    trackDeleted: true,
-    trackChanged: true
-));
+public struct Health : IComponent, IComponentConfig<Health> {
+    public float Value;
+    public ComponentTypeConfig<Health> Config() => new(
+        trackAdded: true,
+        trackDeleted: true,
+        trackChanged: true
+    );
+}
 
 // Enable only one direction
-W.Types().Component<Velocity>(new ComponentTypeConfig<Velocity>(
-    trackAdded: true  // track additions only
-));
+public struct Velocity : IComponent, IComponentConfig<Velocity> {
+    public float X, Y, Z;
+    public ComponentTypeConfig<Velocity> Config() => new(
+        trackAdded: true  // track additions only
+    );
+}
 
 // Full configuration with tracking
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("..."),
-    defaultValue: default,
-    trackAdded: true,
-    trackDeleted: true,
-    trackChanged: true
-));
+public struct Position : IComponent, IComponentConfig<Position> {
+    public float X, Y, Z;
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("..."),
+        trackAdded: true,
+        trackDeleted: true,
+        trackChanged: true
+    );
+}
+
+W.Create(WorldConfig.Default());
+//...
+W.Types()
+    .Component<Health>()
+    .Component<Velocity>()
+    .Component<Position>();
 //...
 W.Initialize();
 ```
 
 ### Tags
 
-`TagTypeConfig<T>` supports `trackAdded` and `trackDeleted`. Tags do **not** support Changed tracking.
+Tracking is enabled via `ITagConfig<T>` on the struct itself. `TagTypeConfig<T>` supports `trackAdded` and `trackDeleted`. Tags do **not** support Changed tracking.
 
 ```csharp
-W.Types().Tag<Unit>(new TagTypeConfig<Unit>(
-    trackAdded: true,
-    trackDeleted: true
-));
+public struct Unit : ITag, ITagConfig<Unit> {
+    public TagTypeConfig<Unit> Config() => new(
+        trackAdded: true,
+        trackDeleted: true
+    );
+}
 
 // With GUID for serialization
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."),
-    trackAdded: true,
-    trackDeleted: true
-));
+public struct Poisoned : ITag, ITagConfig<Poisoned> {
+    public TagTypeConfig<Poisoned> Config() => new(
+        guid: new Guid("A1B2C3D4-..."),
+        trackAdded: true,
+        trackDeleted: true
+    );
+}
+
+W.Types()
+    .Tag<Unit>()
+    .Tag<Poisoned>();
 ```
 
 ### Entity Creation
@@ -5360,7 +5424,7 @@ ___
 ### Missing serialization setup
 Serialization requires:
 1. FFS.StaticPack dependency
-2. All types get auto-computed GUIDs. Override via `new ComponentTypeConfig<T>(guid: ...)` for stability across type renames
+2. All types get auto-computed GUIDs. Override via `IComponentConfig<T>` / `ITagConfig<T>` / `IEventConfig<T>` returning a config with `guid:` for stability across type renames
 3. Non-unmanaged components need `Write`/`Read` hook implementations
 4. Serialization strategy is auto-detected (`UnmanagedPackArrayStrategy<T>` for unmanaged types, `StructPackArrayStrategy<T>` otherwise)
 

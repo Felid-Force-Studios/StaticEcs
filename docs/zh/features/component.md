@@ -40,17 +40,8 @@ W.Types()
     .Component<Velocity>()
     .Component<Name>();
 
-// 带配置的注册
-W.Types()
-    .Component<Scale>(new ComponentTypeConfig<Scale>(
-        guid: new Guid("..."),                           // 序列化的稳定标识符（默认 — 从类型名称自动计算）
-        version: 1,                                      // 数据模式版本，用于迁移（默认 — 0）
-        noDataLifecycle: false,                          // 禁用框架数据管理（默认 — false）
-        readWriteStrategy: null,                         // 二进制序列化策略（默认 — 自动检测）
-        defaultValue: new Scale { Value = Vector3.One }, // 初始化和删除时的默认值（默认 — 无）
-        trackAdded: true,                                // 启用添加追踪（默认 — false），参见变更追踪
-        trackDeleted: true                               // 启用删除追踪（默认 — false），参见变更追踪
-    ));
+// 配置通过在组件结构体上实现 IComponentConfig<T> 提供
+// （参见下方示例）
 //...
 W.Initialize();
 ```
@@ -59,17 +50,26 @@ W.Initialize();
 `noDataLifecycle` 参数控制框架是否管理组件数据生命周期。默认情况下（`noDataLifecycle: false`），框架会用 `defaultValue` 预初始化新存储，并在删除时将数据重置为 `defaultValue` — 因此 `entity.Add<T>()` 返回配置的默认值。设置 `noDataLifecycle: true` 时不执行初始化或清理 — 对于高频 unmanaged 类型很有用。如果定义了 `OnDelete`，无论此标志如何，钩子都负责清理。
 
 {: .notezh }
-无需手动传递配置，您可以直接在组件结构体内声明一个 `ComponentTypeConfig<T>` 类型的静态字段或属性。`RegisterAll()` 会按类型自动发现它（优先选择名为 `Config` 的成员）：
+要提供配置，请在组件结构体上实现 `IComponentConfig<T>` 接口。手动注册和 `RegisterAll()` 都会自动使用它：
 
 ```csharp
-public struct Health : IComponent {
+public struct Health : IComponent, IComponentConfig<Health> {
     public float Value;
-    public static readonly ComponentTypeConfig<Health> Config = new(
+    public ComponentTypeConfig<Health> Config() => new(
         defaultValue: new Health { Value = 100f }
     );
 }
-// RegisterAll() 会自动使用 Health.Config
-```
+1```
+
+`ComponentTypeConfig<T>` 参数：
+- `guid` — 序列化的稳定标识符（默认 — 从类型名称自动计算）
+- `version` — 数据模式版本，用于迁移（默认 — 0）
+- `noDataLifecycle` — 禁用框架数据管理（默认 — false）。当 `false` 时，框架会用 `defaultValue` 预初始化新存储，并在删除时将数据重置为 `defaultValue`。当 `true` 时不执行初始化或清理 — 对于高频 unmanaged 类型很有用。如果定义了 `OnDelete`，无论此标志如何，钩子都负责清理
+- `readWriteStrategy` — 二进制序列化策略（默认 — 自动检测）
+- `defaultValue` — 初始化和删除时的默认值（默认 — 无）
+- `trackAdded` — 启用添加追踪（默认 — false），参见[变更追踪](tracking)
+- `trackDeleted` — 启用删除追踪（默认 — false），参见[变更追踪](tracking)
+- `trackChanged` — 启用通过 `Mut<T>()` / `ref` 访问的变更追踪（默认 — false），参见[变更追踪](tracking)
 
 ___
 

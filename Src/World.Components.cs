@@ -126,6 +126,10 @@ namespace FFS.Libraries.StaticEcs {
         internal bool HasOnDelete();
         internal bool HasCopyTo();
     }
+
+    internal interface IComponentStrategyOverride {
+        internal IPackArrayStrategy<T> ArrayPackStrategy<T>() where T : struct;
+    }
     
     /// <summary>
     /// Result of a <see cref="World{TWorld}.Components{T}.Disable"/> or <see cref="World{TWorld}.Components{T}.Enable"/> operation.
@@ -288,7 +292,7 @@ namespace FFS.Libraries.StaticEcs {
     /// Configuration for tag type registration, specifying serialization and tracking options.
     /// </summary>
     // ReSharper disable once UnusedTypeParameter
-    public readonly struct TagTypeConfig<T> where T : struct, ITag {
+    public readonly struct TagTypeConfig<T> where T : struct, IComponentOrTag {
         /// <inheritdoc cref="ComponentTypeConfig{T}.Guid"/>>
         public readonly Guid? Guid;
 
@@ -304,7 +308,19 @@ namespace FFS.Libraries.StaticEcs {
             TrackDeleted = trackDeleted;
         }
 
-        public ComponentTypeConfig<T> AsComponentConfig => new(guid: Guid, trackAdded: TrackAdded, trackDeleted: TrackDeleted);
+        public ComponentTypeConfig<T> AsComponentConfig => AsComponentConfigInternal(this);
+        
+        internal static ComponentTypeConfig<T> AsComponentConfigInternal(TagTypeConfig<T> config) {
+            return new ComponentTypeConfig<T>(guid: config.Guid, trackAdded: config.TrackAdded, trackDeleted: config.TrackDeleted);
+        }
+    }
+
+    public interface IComponentConfig<T> where T : struct, IComponentOrTag {
+        ComponentTypeConfig<T> Config();
+    }
+
+    public interface ITagConfig<T> where T : struct, IComponentOrTag {
+        TagTypeConfig<T> Config();
     }
 
     #if ENABLE_IL2CPP
@@ -336,7 +352,11 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppEagerStaticClassConstruction]
         #endif
         [StructLayout(LayoutKind.Sequential)]
-        public struct Components<T> where T : struct, IComponentOrTag {
+        public struct Components<
+            #if NET5_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields | DynamicallyAccessedMemberTypes.PublicProperties | DynamicallyAccessedMemberTypes.NonPublicProperties)]
+            #endif
+            T> where T : struct, IComponentOrTag {
             /// <summary>
             /// Singleton instance of this component storage. All public methods operate on this instance.
             /// Initialized when <c>World&lt;TWorld&gt;.Types().Component&lt;T&gt;()</c> is called.
@@ -349,6 +369,28 @@ namespace FFS.Libraries.StaticEcs {
             /// and reflection-driven code. See <see cref="ComponentsHandle"/>.
             /// </summary>
             public static ComponentsHandle Handle;
+
+            #if UNITY_2022_1_OR_NEWER
+            [UnityEngine.Scripting.Preserve]
+            #endif
+            [MethodImpl(NoInlining)]
+            internal static void AutoRegister(bool isTag) {
+                if (Instance.IsRegistered) {
+                    return;
+                }
+                ComponentTypeConfig<T> config = default;
+                if (isTag) {
+                    if (default(T) is ITagConfig<T> cfg) {
+                        config = cfg.Config().AsComponentConfig;
+                    }
+                }
+                else if (default(T) is IComponentConfig<T> cfg) {
+                    config = cfg.Config();
+                }
+
+                
+                Data.Instance.RegisterComponentOrTagTypeInternal(config, isTag, typeof(T).Name);
+            }
 
             internal HeuristicChunk[] HeuristicChunks;
             internal T[][] ComponentSegments;
@@ -435,6 +477,8 @@ namespace FFS.Libraries.StaticEcs {
             /// <c>Types().Component&lt;T&gt;()</c>. In debug mode always check this before using <see cref="Instance"/>
             /// </summary>
             public readonly bool IsRegistered;
+
+            internal static string TypeName;
 
             #if FFS_ECS_DEBUG
             internal static readonly string ComponentsTypeName = $"{WorldTypeName}.Components<{typeof(T).GenericName()}>"; 
@@ -2234,15 +2278,19 @@ namespace FFS.Libraries.StaticEcs {
             }
             #endregion
 
-            internal Components(ushort componentId, ComponentTypeConfig<T> config, bool isTag) {
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Component metadata is preserved by the registration path.")]
+            #endif
+            internal Components(ushort componentId, ComponentTypeConfig<T> config, bool isTag, string typeName) {
+                TypeName = typeName;
                 IsTag = isTag;
                 DynamicId = componentId;
                 _idDiv = (ushort) (DynamicId >> Const.U64_SHIFT);
                 _idMask = 1UL << (DynamicId & Const.U64_MASK);
                 _idMaskInv = ~_idMask;
 
-                Guid = config.Guid.Value;
-                Version = config.Version.Value;
+                Guid = config.Guid!.Value;
+                Version = config.Version!.Value;
                 _readWriteArrayStrategy = config.ReadWriteStrategy;
                 _resettableStrategy = config.ReadWriteStrategy as IPackArrayStrategyResettable;
 
@@ -2274,6 +2322,10 @@ namespace FFS.Libraries.StaticEcs {
                     }
                     HasWrite = ComponentType<T>.HasWrite();
                     HasRead = ComponentType<T>.HasRead();
+                    if (default(T) is IComponentStrategyOverride packOverride) {
+                        _readWriteArrayStrategy = packOverride.ArrayPackStrategy<T>();
+                        _resettableStrategy = _readWriteArrayStrategy as IPackArrayStrategyResettable;
+                    }
                 }
                 Unmanaged = isTag || !RuntimeHelpers.IsReferenceOrContainsReferences<T>();
                 DataLifecycle = !isTag && !config.NoDataLifecycle.Value;
@@ -2316,6 +2368,28 @@ namespace FFS.Libraries.StaticEcs {
 
                 #if FFS_ECS_BURST
                 LifecycleHandle = default;
+                #endif
+
+                #if FFS_ECS_TRACE
+                Utils.Trace($"Registered {TypeName}:\n"
+                            + $"IsTag {IsTag}\n"
+                            + $"DynamicId {DynamicId}\n"
+                            + $"Guid {Guid}\n"
+                            + $"Version {Version}\n"
+                            + $"Unmanaged {Unmanaged}\n"
+                            + $"HasDefaultValue {HasDefaultValue}\n"
+                            + $"ReadWriteStrategyType {_readWriteArrayStrategy?.GetType().ToString() ?? "null"}\n"
+                            + $"HasOnAdd {HasOnAdd}\n"
+                            + $"HasOnDelete {HasOnDelete}\n"
+                            + $"HasWrite {HasWrite}\n"
+                            + $"HasRead {HasRead}\n"
+                            + $"TrackAdded {TrackAdded}\n"
+                            + $"TrackDeleted {TrackDeleted}\n"
+                            #if !FFS_ECS_DISABLE_CHANGED_TRACKING
+                            + $"TrackChanged {TrackChanged}\n"
+                            #endif
+                            + "\n"
+                );
                 #endif
             }
             
@@ -2503,12 +2577,12 @@ namespace FFS.Libraries.StaticEcs {
                     builder.Append(DynamicId);
                     builder.Append("] ");
                     if (IsTag) {
-                        builder.AppendLine(typeof(T).Name);
+                        builder.AppendLine(TypeName);
                     } else {
                         if (HasDisabled(entity)) {
                             builder.Append("[Disabled] ");
                         }
-                        builder.Append(typeof(T).Name);
+                        builder.Append(TypeName);
                         builder.Append(" ( ");
                         builder.Append(Ref(entity));
                         builder.AppendLine(" )");
@@ -3895,7 +3969,7 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     internal static class ComponentType<
         #if NET5_0_OR_GREATER
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
         #endif
         T> where T : struct, IComponentOrTag {
         private static readonly Type[] OnAddParams = {

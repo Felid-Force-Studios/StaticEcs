@@ -120,7 +120,7 @@ W.Create(WorldConfig.Default());
 
 // Register components, tags, and events — only between Create() and Initialize()
 W.Types()
-    .EntityType<Bullet>(Bullet.Id)
+    .EntityType<Bullet>()
     .Component<Position>()
     .Component<Velocity>()
     .Tag<IsPlayer>()
@@ -131,7 +131,7 @@ W.Initialize();
 ```
 
 {: .important }
-Type registration (`Types().Component<T>()`, `Types().Tag<T>()`, `Types().EntityType<T>(id)`) is only available in the `Created` state — after `Create()` and before `Initialize()`. Event registration (`Types().Event<T>()`) is also available after initialization.
+Type registration (`Types().Component<T>()`, `Types().Tag<T>()`, `Types().EntityType<T>()`) is only available in the `Created` state — after `Create()` and before `Initialize()`. Event registration (`Types().Event<T>()`) is also available after initialization.
 
 ___
 
@@ -148,10 +148,10 @@ W.Types().RegisterAll();
 // Or specify particular assemblies
 W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
 
-// Can be combined with manual registration (e.g. to set serialization GUID)
+// Can be combined with manual registration
 W.Types()
     .RegisterAll()
-    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent>(guid: myGuid));
+    .Component<SpecialComponent>();
 
 W.Initialize();
 ```
@@ -166,7 +166,7 @@ Detected interfaces:
 | `ILinkType` | Wrapped in `Link<T>` and registered as a component |
 | `ILinksType` | Wrapped in `Links<T>` and registered as a component |
 | `IMultiComponent` | Wrapped in `Multi<T>` and registered as a component |
-| `IEntityType` | `Types().EntityType<T>(T.Id)` |
+| `IEntityType` | `Types().EntityType<T>()` |
 
 {: .note }
 - If no assemblies are specified, only the calling assembly is scanned (not all loaded assemblies)

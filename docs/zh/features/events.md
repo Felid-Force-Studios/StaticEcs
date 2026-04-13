@@ -36,29 +36,23 @@ W.Types()
     .Event<WeatherChanged>()
     .Event<OnDamage>();
 
-// 带配置的注册
-W.Types()
-    .Event<WeatherChanged>(new EventTypeConfig<WeatherChanged>(
-        guid: new Guid("..."),      // 序列化的稳定标识符（默认 — 从类型名称自动计算）
-        version: 1,                  // 数据模式版本，用于迁移（默认 — 0）
-        readWriteStrategy: null      // 二进制序列化策略（默认 — 自动检测）
-    ));
+// 配置通过在事件结构体上实现 IEventConfig<T> 提供
+// （参见下方示例）
 //...
 W.Initialize();
 ```
 
 {: .notezh }
-无需手动传递配置，您可以在事件结构体内声明一个 `EventTypeConfig<T>` 类型的静态字段或属性。`RegisterAll()` 会按类型自动发现它（优先选择名为 `Config` 的成员）：
+要提供配置，请在事件结构体上实现 `IEventConfig<T>` 接口。手动注册和 `RegisterAll()` 都会自动使用它：
 
 ```csharp
-public struct WeatherChanged : IEvent {
+public struct WeatherChanged : IEvent, IEventConfig<WeatherChanged> {
     public WeatherType WeatherType;
-    public static readonly EventTypeConfig<WeatherChanged> Config = new(
-        guid: new Guid("..."),
-        version: 1
+    public EventTypeConfig<WeatherChanged> Config() => new(
+        guid: new Guid("..."),   // 序列化的稳定标识符（默认 — 从类型名称自动计算）
+        version: 1               // 数据模式版本，用于迁移（默认 — 0）
     );
 }
-// RegisterAll() 会自动使用 WeatherChanged.Config
 ```
 
 ___

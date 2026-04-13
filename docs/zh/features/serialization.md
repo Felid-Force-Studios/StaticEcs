@@ -21,8 +21,12 @@ ___
 
 #### Unmanaged 组件：
 ```csharp
-public struct Position : IComponent {
+public struct Position : IComponent, IComponentConfig<Position> {
     public float X, Y, Z;
+
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611")
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -39,17 +43,17 @@ public struct Position : IComponent {
     }
 }
 
-W.Types()
-    .Component<Position>(new ComponentTypeConfig<Position>(
-        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-        readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
-    ));
+W.Types().Component<Position>();
 ```
 
 #### Non-unmanaged 组件（包含引用字段）：
 ```csharp
-public struct Name : IComponent {
+public struct Name : IComponent, IComponentConfig<Name> {
     public string Value;
+
+    public ComponentTypeConfig<Name> Config() => new(
+        guid: new Guid("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3")
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -62,89 +66,118 @@ public struct Name : IComponent {
     }
 }
 
-W.Types()
-    .Component<Name>(new ComponentTypeConfig<Name>(
-        guid: new Guid("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3")
-    ));
+W.Types().Component<Name>();
 ```
 
 #### Unmanaged 类型的块内存复制：
 
-对于世界/集群/块快照，unmanaged 组件可以作为内存块序列化，而不是逐个调用 `Write`/`Read`。要启用此功能，需要**显式指定** `UnmanagedPackArrayStrategy<T>`：
-
-```csharp
-W.Types()
-    .Component<Position>(new ComponentTypeConfig<Position>(
-        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-        readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()  // 块内存复制
-    ));
-```
+对于世界/集群/块快照，unmanaged 组件自动作为内存块序列化，而不是逐个调用 `Write`/`Read`。
 
 {: .notezh }
 `UnmanagedPackArrayStrategy<T>` 执行直接内存复制 — 比逐个组件序列化快得多。仅适用于 unmanaged 类型。版本不匹配时（数据迁移），系统自动回退到 `Read` 钩子。默认策略自动检测：unmanaged 类型使用 `UnmanagedPackArrayStrategy<T>`，其他类型使用 `StructPackArrayStrategy<T>`。
 
 #### Multi 和 Links 的批量段序列化：
 
-多组件和 Links 将值存储在共享段存储中。默认情况下，每个实体的值单独序列化。要对底层存储进行批量段序列化（需要 unmanaged 值类型）：
+多组件和 Links 将值存储在共享段存储中。批量段序列化策略会自动应用于 unmanaged 值类型。要覆盖 GUID 或其他配置，请在类型上实现相应的配置接口：
 
 ```csharp
-// 带批量段策略的多组件
-W.Types().Multi<Item>(new ComponentTypeConfig<W.Multi<Item>>(
-    guid: new Guid("..."),
-    readWriteStrategy: new MultiUnmanagedPackArrayStrategy<MyWorld, Item>()
-));
+// 带自定义配置的多组件
+public struct Item : IMultiComponent, IMultiComponentConfig<Item> {
+    public int Id;
 
-// 带批量段策略的 Links
-W.Types().Links<MyLinkType>(new ComponentTypeConfig<W.Links<MyLinkType>>(
-    guid: new Guid("..."),
-    readWriteStrategy: new LinksUnmanagedPackArrayStrategy<MyWorld, MyLinkType>()
-));
+    public ComponentTypeConfig<W.Multi<Item>> Config<TWorld>()
+        where TWorld : struct, IWorldType => new(
+        guid: new Guid("...")
+    );
+
+    public IPackArrayStrategy<Item> ElementPackStrategy()
+        => new UnmanagedPackArrayStrategy<Item>();
+}
+
+W.Types().Multi<Item>();
+
+// 带自定义配置的 Links
+public struct MyLinkType : ILinksType, ILinksConfig<MyLinkType> {
+    public ComponentTypeConfig<W.Links<MyLinkType>> Config<TWorld>()
+        where TWorld : struct, IWorldType => new(
+        guid: new Guid("...")
+    );
+}
+
+W.Types().Links<MyLinkType>();
 ```
 
 #### 完整配置：
 ```csharp
-W.Types()
-    .Component<Position>(new ComponentTypeConfig<Position>(
+public struct Position : IComponent, IComponentConfig<Position> {
+    public float X, Y, Z;
+
+    public ComponentTypeConfig<Position> Config() => new(
         guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
         version: 1,                  // 用于迁移的数据模式版本（默认 — 0）
-        noDataLifecycle: true,       // 禁用框架数据管理（默认 — false）
-        readWriteStrategy: new UnmanagedPackArrayStrategy<Position>() // 序列化策略（默认 — StructPackArrayStrategy<T>）
-    ));
+        noDataLifecycle: true        // 禁用框架数据管理（默认 — false）
+        // 序列化策略自动检测：unmanaged 类型使用 UnmanagedPackArrayStrategy<T>，其他类型使用 StructPackArrayStrategy<T>
+    );
+
+    // ... Write/Read 钩子 ...
+}
+
+W.Types().Component<Position>();
 ```
 
 ___
 
 ## 配置标签
 
-标签通过 `TagTypeConfig<T>` 配置：
+标签通过实现 `ITagConfig<T>` 配置：
 
 ```csharp
+public struct IsPlayer : ITag, ITagConfig<IsPlayer> {
+    public TagTypeConfig<IsPlayer> Config() => new(
+        guid: new Guid("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90")
+    );
+}
+
+public struct IsDead : ITag, ITagConfig<IsDead> {
+    public TagTypeConfig<IsDead> Config() => new(
+        guid: new Guid("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30")
+    );
+}
+
 W.Types()
-    .Tag<IsPlayer>(new TagTypeConfig<IsPlayer>(guid: new Guid("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90")))
-    .Tag<IsDead>(new TagTypeConfig<IsDead>(guid: new Guid("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30")));
+    .Tag<IsPlayer>()
+    .Tag<IsDead>();
 ```
 
 #### 完整配置:
 ```csharp
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."), // 序列化的稳定标识符（默认 — 从类型名称自动计算）
-    trackAdded: true,                // 启用添加追踪（默认 — false）
-    trackDeleted: true               // 启用删除追踪（默认 — false）
-));
+public struct Poisoned : ITag, ITagConfig<Poisoned> {
+    public TagTypeConfig<Poisoned> Config() => new(
+        guid: new Guid("A1B2C3D4-..."), // 序列化的稳定标识符（默认 — 从类型名称自动计算）
+        trackAdded: true,                // 启用添加追踪（默认 — false）
+        trackDeleted: true               // 启用删除追踪（默认 — false）
+    );
+}
+
+W.Types().Tag<Poisoned>();
 ```
 
 {: .notezh }
-所有类型自动获得由类型名称计算的稳定 GUID。要覆盖，请在标签结构体内声明静态 `Guid` 字段或传递带自定义 guid 的 `TagTypeConfig<T>`。`RegisterAll()` 也会获取静态 `TagTypeConfig<T>` 字段（优先选择名为 `Config` 的成员）用于 `trackAdded` / `trackDeleted` 参数。
+所有类型自动获得由类型名称计算的稳定 GUID。要覆盖，请在标签结构体上实现 `ITagConfig<T>` 并提供自定义 guid。
 
 ___
 
 ## 配置事件
 
-事件使用 `EventTypeConfig<T>` — 类似于组件：
+事件通过实现 `IEventConfig<T>` 配置 — 类似于组件：
 
 ```csharp
-public struct OnDamage : IEvent {
+public struct OnDamage : IEvent, IEventConfig<OnDamage> {
     public float Amount;
+
+    public EventTypeConfig<OnDamage> Config() => new(
+        guid: new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+    );
 
     public void Write(ref BinaryPackWriter writer) {
         writer.WriteFloat(Amount);
@@ -155,10 +188,7 @@ public struct OnDamage : IEvent {
     }
 }
 
-W.Types()
-    .Event<OnDamage>(new EventTypeConfig<OnDamage>(
-        guid: new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-    ));
+W.Types().Event<OnDamage>();
 ```
 
 ___
@@ -459,8 +489,13 @@ ___
 `Read` 钩子中的 `version` 参数支持在模式版本之间迁移数据：
 
 ```csharp
-public struct Position : IComponent {
+public struct Position : IComponent, IComponentConfig<Position> {
     public float X, Y, Z;
+
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+        version: 1  // 之前是版本 0，现在是 1
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -478,13 +513,8 @@ public struct Position : IComponent {
     }
 }
 
-// 使用新版本注册
-W.Types()
-    .Component<Position>(new ComponentTypeConfig<Position>(
-        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-        version: 1,  // 之前是版本 0，现在是 1
-        readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
-    ));
+// 注册
+W.Types().Component<Position>();
 ```
 
 ___

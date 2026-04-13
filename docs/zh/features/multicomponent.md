@@ -50,28 +50,21 @@ ___
 
 ## 序列化策略
 
-默认使用 `StructPackArrayStrategy<T>` 进行逐元素序列化（通过钩子）。
-对于 unmanaged 类型，可以使用 `UnmanagedPackArrayStrategy<T>` 进行批量内存复制（更快）。
+元素序列化策略自动选择：
+- 对于 **unmanaged** 类型 — `UnmanagedPackArrayStrategy<T>`（批量内存复制，更快）
+- 对于 **managed** 类型 — `StructPackArrayStrategy<T>`（逐元素通过 `Write`/`Read` 钩子）
 
-可以通过三种方式指定策略：
+要覆盖策略或提供自定义配置，请实现 `IMultiComponentConfig<T>`：
 
-**1. 注册时显式参数：**
 ```csharp
-W.Types()
-    .Multi<Item>(elementStrategy: new UnmanagedPackArrayStrategy<Item>());
-```
-
-**2. 类型上的静态字段/属性（用于通过 `RegisterAll` 自动注册）：**
-```csharp
-public struct Item : IMultiComponent {
+public struct Item : IMultiComponent, IMultiComponentConfig<Item> {
     public int Id;
     public float Weight;
 
-    static readonly IPackArrayStrategy<Item> PackStrategy = new UnmanagedPackArrayStrategy<Item>();
+    public ComponentTypeConfig<W.Multi<Item>> Config<TWorld>() where TWorld : struct, IWorldType => default;
+    public IPackArrayStrategy<Item> ElementPackStrategy() => new UnmanagedPackArrayStrategy<Item>();
 }
 ```
-
-**3. 默认：** `StructPackArrayStrategy<T>` — 逐元素使用 `Write`/`Read` 钩子。
 
 ___
 
@@ -79,12 +72,18 @@ ___
 
 对于 chunk/world/cluster 快照，当 `TValue` 为 unmanaged 类型时，可以使用 `MultiUnmanagedPackArrayStrategy<TWorld, TValue>` 将整个存储段作为内存块序列化，而不是逐实体序列化元素数据。这将许多小的逐实体拷贝替换为每段一次批量操作，并直接恢复分配器状态。
 
+对于 unmanaged 类型，`MultiUnmanagedPackArrayStrategy` 会自动应用。要提供自定义配置：
+
 ```csharp
-W.Types()
-    .Multi<Item>(new ComponentTypeConfig<W.Multi<Item>>(
-        guid: new Guid("..."),
-        readWriteStrategy: new MultiUnmanagedPackArrayStrategy<MyWorld, Item>()
-    ));
+public struct Item : IMultiComponent, IMultiComponentConfig<Item> {
+    public int Id;
+    public float Weight;
+
+    public ComponentTypeConfig<W.Multi<Item>> Config<TWorld>() where TWorld : struct, IWorldType => new(
+        guid: new Guid("...")
+    );
+    public IPackArrayStrategy<Item> ElementPackStrategy() => null; // null = 自动检测
+}
 ```
 
 {: .note }
@@ -101,9 +100,8 @@ ___
 W.Create(WorldConfig.Default());
 
 W.Types()
-    .Multi<Item>()                                                         // 默认策略（StructPackArrayStrategy）
-    .Multi<Item>(elementStrategy: new UnmanagedPackArrayStrategy<Item>())   // 显式 unmanaged 策略
-    .Multi<NamedItem>();                                                    // 带钩子的 managed 类型
+    .Multi<Item>()         // 自动检测策略（unmanaged 类型使用 UnmanagedPackArrayStrategy）
+    .Multi<NamedItem>();   // managed 类型 — 使用 StructPackArrayStrategy 及 Write/Read 钩子
 
 W.Initialize();
 ```
