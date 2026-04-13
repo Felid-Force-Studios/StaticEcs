@@ -974,7 +974,7 @@ namespace FFS.Libraries.StaticEcs {
             var strategyType = typeof(IPackArrayStrategy<>).MakeGenericType(elementType);
             var strategy = FindStaticConfig(elementType, strategyType, "PackStrategy");
             openMethod.MakeGenericMethod(elementType).Invoke(null, new[] { config, strategy });
-        }
+            }
 
         #if NET5_0_OR_GREATER
         [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
@@ -1087,5 +1087,15 @@ namespace Unity.IL2CPP.CompilerServices {
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
     internal class Il2CppEagerStaticClassConstructionAttribute : Attribute { }
+}
+#endif
+
+#if !NET9_0_OR_GREATER
+namespace System.Runtime.CompilerServices {
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+    internal sealed class OverloadResolutionPriorityAttribute : Attribute {
+        public OverloadResolutionPriorityAttribute(int priority) => Priority = priority;
+        public int Priority { get; }
+    }
 }
 #endif

@@ -3312,7 +3312,7 @@ namespace FFS.Libraries.StaticEcs {
 
                 _componentPoolByGuid[guid] = Components<TComponent>.Handle;
             }
-            
+
             [MethodImpl(AggressiveInlining)]
             internal readonly void SetMigrator(Guid id, EcsComponentDeleteMigrationReader<TWorld> migrator) {
                 _migratorByGuid[id] = migrator;

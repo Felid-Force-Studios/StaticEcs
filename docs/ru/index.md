@@ -7,7 +7,7 @@ parent: Main page
 <p align="center">
   <img src="../fulllogo.png" alt="Static ECS" width="100%">
   <br><br>
-  <img src="https://img.shields.io/badge/version-2.0.5-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.0.6-blue?style=for-the-badge" alt="Version">
   <a href="https://felid-force-studios.github.io/StaticEcs/ru/"><img src="https://img.shields.io/badge/Docs-документация-blueviolet?style=for-the-badge" alt="Документация"></a>
   <a href="https://gist.github.com/blackbone/6d254a684cf580441bf58690ad9485c3"><img src="https://img.shields.io/badge/Benchmarks-результаты-green?style=for-the-badge" alt="Benchmarks"></a>
   <a href="https://github.com/Felid-Force-Studios/StaticEcs-Unity"><img src="https://img.shields.io/badge/Unity-модуль-orange?style=for-the-badge&logo=unity" alt="Unity модуль"></a>
@@ -180,7 +180,7 @@ public struct VelocitySystem : ISystem {
 public class Program {
     public static void Main() {
         // Создаем мир
-        W.Create(WorldConfig.Default());
+        W.Create();
 
         // Авторегистрация всех компонентов, тегов, событий и т.д. из текущей сборки
         W.Types().RegisterAll();
