@@ -26,7 +26,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public ulong FilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
-            return World<TWorld>.Data.Instance.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value;
+            return World<TWorld>.Data.Instance.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -43,7 +43,7 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Assert<TWorld>() where TWorld : struct, IWorldType {
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Instance.Id);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -53,7 +53,7 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_BURST
         [MethodImpl(AggressiveInlining)]
         public unsafe ulong BurstFilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
-            return World<TWorld>.Data.Instance.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value;
+            return World<TWorld>.Data.Instance.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -78,7 +78,7 @@ namespace FFS.Libraries.StaticEcs {
 
         [MethodImpl(AggressiveInlining)]
         public ulong FilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
-            return ~World<TWorld>.Data.Instance.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value;
+            return ~World<TWorld>.Data.Instance.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -95,7 +95,7 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Assert<TWorld>() where TWorld : struct, IWorldType {
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Instance.Id);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -105,7 +105,7 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_BURST
         [MethodImpl(AggressiveInlining)]
         public unsafe ulong BurstFilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
-            return ~World<TWorld>.Data.Instance.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value;
+            return ~World<TWorld>.Data.Instance.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -129,8 +129,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public ulong FilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value;
+            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -147,8 +147,8 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Assert<TWorld>() where TWorld : struct, IWorldType {
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Instance.Id);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -159,8 +159,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public unsafe ulong BurstFilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value;
+            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -185,9 +185,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public ulong FilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value;
+            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -204,9 +204,9 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Assert<TWorld>() where TWorld : struct, IWorldType {
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Instance.Id);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -217,9 +217,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public unsafe ulong BurstFilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value;
+            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -245,10 +245,10 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public ulong FilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Id].HeuristicChunks[chunkIdx].Value;
+            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -265,10 +265,10 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Assert<TWorld>() where TWorld : struct, IWorldType {
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T3).Name, World<TWorld>.EntityTypeInfo<T3>.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T3).Name, World<TWorld>.EntityTypeInfo<T3>.Instance.Id);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -279,10 +279,10 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public unsafe ulong BurstFilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Id].HeuristicChunks[chunkIdx].Value;
+            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -309,11 +309,11 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public ulong FilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T4>.Id].HeuristicChunks[chunkIdx].Value;
+            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T4>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -330,11 +330,11 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Assert<TWorld>() where TWorld : struct, IWorldType {
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T3).Name, World<TWorld>.EntityTypeInfo<T3>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T4).Name, World<TWorld>.EntityTypeInfo<T4>.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T3).Name, World<TWorld>.EntityTypeInfo<T3>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T4).Name, World<TWorld>.EntityTypeInfo<T4>.Instance.Id);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -345,11 +345,11 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public unsafe ulong BurstFilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Id].HeuristicChunks[chunkIdx].Value
-                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T4>.Id].HeuristicChunks[chunkIdx].Value;
+            return ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   & ~data.EntityTypes[World<TWorld>.EntityTypeInfo<T4>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -375,8 +375,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public ulong FilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value;
+            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -393,8 +393,8 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Assert<TWorld>() where TWorld : struct, IWorldType {
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Instance.Id);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -405,8 +405,8 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public unsafe ulong BurstFilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value;
+            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -431,9 +431,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public ulong FilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value;
+            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -450,9 +450,9 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Assert<TWorld>() where TWorld : struct, IWorldType {
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Instance.Id);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -463,9 +463,9 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public unsafe ulong BurstFilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value;
+            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -491,10 +491,10 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public ulong FilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Id].HeuristicChunks[chunkIdx].Value;
+            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -511,10 +511,10 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Assert<TWorld>() where TWorld : struct, IWorldType {
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T3).Name, World<TWorld>.EntityTypeInfo<T3>.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T3).Name, World<TWorld>.EntityTypeInfo<T3>.Instance.Id);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -525,10 +525,10 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public unsafe ulong BurstFilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Id].HeuristicChunks[chunkIdx].Value;
+            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -555,11 +555,11 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public ulong FilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Id].HeuristicChunks[chunkIdx].Value
-                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T4>.Id].HeuristicChunks[chunkIdx].Value;
+            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                   | data.EntityTypes[World<TWorld>.EntityTypeInfo<T4>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -576,11 +576,11 @@ namespace FFS.Libraries.StaticEcs {
         #if FFS_ECS_DEBUG
         [MethodImpl(AggressiveInlining)]
         public void Assert<TWorld>() where TWorld : struct, IWorldType {
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T3).Name, World<TWorld>.EntityTypeInfo<T3>.Id);
-            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T4).Name, World<TWorld>.EntityTypeInfo<T4>.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T0).Name, World<TWorld>.EntityTypeInfo<T0>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T1).Name, World<TWorld>.EntityTypeInfo<T1>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T2).Name, World<TWorld>.EntityTypeInfo<T2>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T3).Name, World<TWorld>.EntityTypeInfo<T3>.Instance.Id);
+            World<TWorld>.AssertEntityTypeIsRegistered(typeof(T4).Name, World<TWorld>.EntityTypeInfo<T4>.Instance.Id);
         }
 
         [MethodImpl(AggressiveInlining)]
@@ -591,11 +591,11 @@ namespace FFS.Libraries.StaticEcs {
         [MethodImpl(AggressiveInlining)]
         public unsafe ulong BurstFilterChunk<TWorld>(uint chunkIdx) where TWorld : struct, IWorldType {
             ref var data = ref World<TWorld>.Data.Instance;
-            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Id].HeuristicChunks[chunkIdx].Value
-                         | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Id].HeuristicChunks[chunkIdx].Value
-                         | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Id].HeuristicChunks[chunkIdx].Value
-                         | data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Id].HeuristicChunks[chunkIdx].Value
-                         | data.EntityTypes[World<TWorld>.EntityTypeInfo<T4>.Id].HeuristicChunks[chunkIdx].Value;
+            return data.EntityTypes[World<TWorld>.EntityTypeInfo<T0>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                         | data.EntityTypes[World<TWorld>.EntityTypeInfo<T1>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                         | data.EntityTypes[World<TWorld>.EntityTypeInfo<T2>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                         | data.EntityTypes[World<TWorld>.EntityTypeInfo<T3>.Instance.Id].HeuristicChunks[chunkIdx].Value
+                         | data.EntityTypes[World<TWorld>.EntityTypeInfo<T4>.Instance.Id].HeuristicChunks[chunkIdx].Value;
         }
 
         [MethodImpl(AggressiveInlining)]

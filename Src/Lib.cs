@@ -22,7 +22,7 @@ using Unity.IL2CPP.CompilerServices;
 
 
 namespace FFS.Libraries.StaticEcs {
-    
+
     internal class StaticEcsException : InvalidOperationException {
         internal StaticEcsException() { }
 
@@ -774,6 +774,17 @@ namespace FFS.Libraries.StaticEcs {
             var hashBytes = md5.ComputeHash(Encoding.UTF8.GetBytes(simplifiedAQN));
             return new Guid(hashBytes);
         }
+
+        #if FFS_ECS_TRACE
+        internal static void Trace(string message) {
+            #if UNITY_2022_1_OR_NEWER
+            UnityEngine.Debug.Log("[TRACE] " + message);
+            #else
+            Console.Write("[TRACE] ");
+            Console.WriteLine(message);
+            #endif
+        }
+        #endif
     }
 
     /// <summary>
@@ -822,14 +833,20 @@ namespace FFS.Libraries.StaticEcs {
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicMethods, typeof(World<>))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.NonPublicMethods, typeof(World<>))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicNestedTypes, typeof(World<>))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.NonPublicNestedTypes, typeof(World<>))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(ComponentTypeConfig<>))]
-        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(TagTypeConfig<>))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicMethods, typeof(TagTypeConfig<>))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(EventTypeConfig<>))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields, typeof(World<>.EntityTypeInfo<>))]
         [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Types are preserved by static usage in consuming code.")]
         [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency above.")]
         [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency above.")]
         [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "Config types have public parameterless constructors preserved by DynamicDependency above.")]
         [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because component/tag/event types are statically referenced in consuming code.")]
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by DynamicDependency attributes and static usage in consuming code.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2062", Justification = "Types are preserved by static usage in consuming code and DynamicDependency above.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2111", Justification = "Delegate methods are preserved by DynamicDependency above.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2037", Justification = "Config types are preserved by DynamicDependency above.")]
         #endif
         [MethodImpl(NoInlining)]
         public static void RegisterAll<TWorld>(params Assembly[] assemblies) where TWorld : struct, IWorldType {
@@ -837,40 +854,18 @@ namespace FFS.Libraries.StaticEcs {
             var worldType = typeof(World<TWorld>);
             var tWorld = worldType.GetGenericArguments()[0];
 
-            var registerComponent = worldType.GetMethod("RegisterComponentType", BindingFlags.NonPublic | BindingFlags.Static)
-                ?? throw new StaticEcsException($"AutoRegistration: method RegisterComponentType not found on {worldType.Name}");
-            var registerTag = worldType.GetMethod("RegisterTagType", BindingFlags.NonPublic | BindingFlags.Static)
-                ?? throw new StaticEcsException($"AutoRegistration: method RegisterTagType not found on {worldType.Name}");
-            var registerEvent = worldType.GetMethod("RegisterEventType", BindingFlags.NonPublic | BindingFlags.Static)
-                ?? throw new StaticEcsException($"AutoRegistration: method RegisterEventType not found on {worldType.Name}");
-            var registerMultiComponent = worldType.GetMethod("RegisterMultiComponentType", BindingFlags.NonPublic | BindingFlags.Static)
-                ?? throw new StaticEcsException($"AutoRegistration: method RegisterMultiComponentType not found on {worldType.Name}");
-            var registerEntityType = worldType.GetMethod("RegisterEntityType", BindingFlags.NonPublic | BindingFlags.Static)
-                ?? throw new StaticEcsException($"AutoRegistration: method RegisterEntityType not found on {worldType.Name}");
-
-            var isComponentRegistered = worldType.GetMethod("IsComponentTypeRegistered", BindingFlags.NonPublic | BindingFlags.Static)
-                ?? throw new StaticEcsException($"AutoRegistration: method IsComponentTypeRegistered not found on {worldType.Name}");
-            var isTagRegistered = worldType.GetMethod("IsTagTypeRegistered", BindingFlags.NonPublic | BindingFlags.Static)
-                ?? throw new StaticEcsException($"AutoRegistration: method IsTagTypeRegistered not found on {worldType.Name}");
-            var isEventRegistered = worldType.GetMethod("IsEventTypeRegistered", BindingFlags.NonPublic | BindingFlags.Static)
-                ?? throw new StaticEcsException($"AutoRegistration: method IsEventTypeRegistered not found on {worldType.Name}");
-            var isEntityTypeRegisteredById = worldType.GetMethod("IsEntityTypeRegistered", BindingFlags.NonPublic | BindingFlags.Static, null, new[] { typeof(byte) }, null)
-                ?? throw new StaticEcsException($"AutoRegistration: method IsEntityTypeRegistered(byte) not found on {worldType.Name}");
-            MethodInfo isEntityTypeRegisteredByType = null;
-            foreach (var m in worldType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)) {
-                if (m.Name == "IsEntityTypeRegistered" && m.IsGenericMethodDefinition) {
-                    isEntityTypeRegisteredByType = m;
-                    break;
-                }
-            }
-            if (isEntityTypeRegisteredByType == null) throw new StaticEcsException($"AutoRegistration: method IsEntityTypeRegistered<T> not found on {worldType.Name}");
-
+            var componentsOpenType = worldType.GetNestedType("Components`1", BindingFlags.Public)
+                                     ?? throw new StaticEcsException($"AutoRegistration: type Components`1 not found on {worldType.Name}");
+            var eventsOpenType = worldType.GetNestedType("Events`1", BindingFlags.NonPublic)
+                                     ?? throw new StaticEcsException($"AutoRegistration: type Events`1 not found on {worldType.Name}");
             var linkOpenType = worldType.GetNestedType("Link`1", BindingFlags.Public)
-                ?? throw new StaticEcsException($"AutoRegistration: nested type Link`1 not found on {worldType.Name}");
+                               ?? throw new StaticEcsException($"AutoRegistration: nested type Link`1 not found on {worldType.Name}");
             var linksOpenType = worldType.GetNestedType("Links`1", BindingFlags.Public)
-                ?? throw new StaticEcsException($"AutoRegistration: nested type Links`1 not found on {worldType.Name}");
+                                ?? throw new StaticEcsException($"AutoRegistration: nested type Links`1 not found on {worldType.Name}");
             var multiOpenType = worldType.GetNestedType("Multi`1", BindingFlags.Public)
-                ?? throw new StaticEcsException($"AutoRegistration: nested type Multi`1 not found on {worldType.Name}");
+                                ?? throw new StaticEcsException($"AutoRegistration: nested type Multi`1 not found on {worldType.Name}");
+            var entityTypeOpenType = worldType.GetNestedType("EntityTypeInfo`1", BindingFlags.NonPublic)
+                                     ?? throw new StaticEcsException($"AutoRegistration: nested type EntityTypeInfo`1 not found on {worldType.Name}");
 
             foreach (var assembly in assemblies) {
                 if (assembly == ecsAssembly) continue;
@@ -879,187 +874,89 @@ namespace FFS.Libraries.StaticEcs {
                     if (!type.IsValueType || type.IsAbstract || type.IsGenericTypeDefinition) continue;
 
                     if (typeof(IComponent).IsAssignableFrom(type) && !typeof(IComponentInternal).IsAssignableFrom(type)) {
-                        if (!IsRegistered(isComponentRegistered, type))
-                            InvokeRegisterComponent(registerComponent, type);
+                        GetAutoRegisterGenericMethod(type, componentsOpenType, tWorld).Invoke(null, new[] { (object)false });
                     }
 
                     if (typeof(ITag).IsAssignableFrom(type)) {
-                        if (!IsRegistered(isTagRegistered, type))
-                            InvokeRegisterTag(registerTag, type);
-                    }
-
-                    if (typeof(IEvent).IsAssignableFrom(type)) {
-                        if (!IsRegistered(isEventRegistered, type))
-                            InvokeRegisterEvent(registerEvent, type);
+                        GetAutoRegisterGenericMethod(type, componentsOpenType, tWorld).Invoke(null, new[] { (object)true });
                     }
 
                     if (typeof(IMultiComponent).IsAssignableFrom(type)) {
-                        var closedMulti = multiOpenType.MakeGenericType(tWorld, type);
-                        if (!IsRegistered(isComponentRegistered, closedMulti))
-                            InvokeRegisterMultiComponent(registerMultiComponent, closedMulti, type);
+                        GetAutoRegisterGenericMethod(type, multiOpenType, tWorld).Invoke(null, null);
                     }
 
                     if (typeof(ILinksType).IsAssignableFrom(type)) {
-                        var closedLinks = linksOpenType.MakeGenericType(tWorld, type);
-                        if (!IsRegistered(isComponentRegistered, closedLinks))
-                            InvokeRegisterComponent(registerComponent, closedLinks);
+                        GetAutoRegisterGenericMethod(type, linksOpenType, tWorld).Invoke(null, null);
                     }
                     else if (typeof(ILinkType).IsAssignableFrom(type)) {
-                        var closedLink = linkOpenType.MakeGenericType(tWorld, type);
-                        if (!IsRegistered(isComponentRegistered, closedLink))
-                            InvokeRegisterComponent(registerComponent, closedLink);
+                        GetAutoRegisterGenericMethod(type, linkOpenType, tWorld).Invoke(null, null);
+                    }
+
+                    if (typeof(IEvent).IsAssignableFrom(type)) {
+                        GetAutoRegisterGenericMethod(type, eventsOpenType, tWorld).Invoke(null, null);
                     }
 
                     if (typeof(IEntityType).IsAssignableFrom(type) && type != typeof(Default)) {
-                        var id = FindStaticConfig(type, typeof(byte), "Id");
-                        if (id != null) {
-                            if (!(bool) isEntityTypeRegisteredById.Invoke(null, new[] { id }))
-                                registerEntityType.MakeGenericMethod(type).Invoke(null, new[] { id });
-                        } else if (!IsRegistered(isEntityTypeRegisteredByType, type)) {
-                            throw new StaticEcsException($"AutoRegistration: IEntityType {type.Name} must have a static byte Id field or be registered manually");
+                        try {
+                            GetAutoRegisterGenericMethod(type, entityTypeOpenType, tWorld).Invoke(null, null);
+                        }
+                        catch (Exception) {
+                            throw new StaticEcsException($"Failed to automatically register EntityType `{type.Name}`; please register it manually using `W.Types().EntityType<{type.Name}>()`");
                         }
                     }
                 }
             }
         }
 
-        internal static ComponentTypeConfig<T> FindComponentConfig<T>() where T : struct, IComponentOrTag {
-            return (ComponentTypeConfig<T>)FindComponentConfig(typeof(T));
-        }
-
-        internal static EventTypeConfig<T> FindEventConfig<T>() where T : struct, IEvent {
-            return (EventTypeConfig<T>)FindEventConfig(typeof(T));
-        }
-
-        internal static TagTypeConfig<T> FindTagConfig<T>() where T : struct, ITag {
-            return (TagTypeConfig<T>)FindTagConfig(typeof(T));
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Types are preserved by DynamicDependency on RegisterAll.")]
+        #endif
+        internal static MethodInfo GetAutoRegisterGenericMethod(
+            #if NET5_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
+            #endif
+            Type type,
+            #if NET5_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
+            #endif
+            Type openType, Type tWorld) {
+            var genericType = openType.MakeGenericType(tWorld, type);
+            return genericType.GetMethod("AutoRegister", BindingFlags.NonPublic | BindingFlags.Static)
+                   ?? throw new StaticEcsException($"AutoRegistration: method AutoRegister not found on {genericType.Name}");
         }
 
         #if NET5_0_OR_GREATER
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(UnmanagedPackArrayStrategy<>))]
+        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiation is pre-compiled because types are statically referenced in consuming code.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Types preserved by DynamicDependency above.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2037", Justification = "UnmanagedPackArrayStrategy<T> constructor is preserved by DynamicDependency.")]
         #endif
         internal static IPackArrayStrategy<T> TryCreateUnmanagedPackArrayStrategy<T>() where T : struct {
             try {
                 var unmanagedPackStrategyType = typeof(UnmanagedPackArrayStrategy<>).MakeGenericType(typeof(T));
                 return (IPackArrayStrategy<T>)Activator.CreateInstance(unmanagedPackStrategyType);
             }
-            catch (ArgumentException argumentException) {
+            catch (Exception) {
                 return null;
             }
+        }
 
+        #if NET5_0_OR_GREATER
+        [DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(MultiUnmanagedPackArrayStrategy<,>))]
+        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiation is pre-compiled because types are statically referenced in consuming code.")]
+        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Types preserved by DynamicDependency above.")]
+        #endif
+        internal static IPackArrayStrategy<World<TWorld>.Multi<TValue>> TryCreateUnmanagedMultiPackArrayStrategy<TWorld, TValue>() 
+            where TValue : struct, IMultiComponent 
+            where TWorld : struct, IWorldType {
+            try {
+                var unmanagedPackStrategyType = typeof(MultiUnmanagedPackArrayStrategy<,>).MakeGenericType(typeof(TWorld), typeof(TValue));
+                return (IPackArrayStrategy<World<TWorld>.Multi<TValue>>)Activator.CreateInstance(unmanagedPackStrategyType);
+            }
+            catch (Exception) {
                 return null;
-        }
-
-        #if NET5_0_OR_GREATER
-        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "Config types have public parameterless constructors preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
-        #endif
-        private static void InvokeRegisterComponent(MethodInfo openMethod, Type componentType) {
-            var config = FindComponentConfig(componentType);
-            openMethod.MakeGenericMethod(componentType).Invoke(null, new[] { config });
-        }
-
-        #if NET5_0_OR_GREATER
-        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "Config types have public parameterless constructors preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
-        #endif
-        private static void InvokeRegisterMultiComponent(MethodInfo openMethod, Type multiType, Type elementType) {
-            var configType = typeof(ComponentTypeConfig<>).MakeGenericType(multiType);
-            var config = FindStaticConfig(multiType, configType, "Config")
-                         ?? Activator.CreateInstance(configType);
-            var strategyType = typeof(IPackArrayStrategy<>).MakeGenericType(elementType);
-            var strategy = FindStaticConfig(elementType, strategyType, "PackStrategy");
-            openMethod.MakeGenericMethod(elementType).Invoke(null, new[] { config, strategy });
             }
-
-        #if NET5_0_OR_GREATER
-        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "Config types have public parameterless constructors preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
-        #endif
-        private static void InvokeRegisterEvent(MethodInfo openMethod, Type eventType) {
-            var config = FindEventConfig(eventType);
-            openMethod.MakeGenericMethod(eventType).Invoke(null, new[] { config });
-        }
-
-        #if NET5_0_OR_GREATER
-        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "Config types have public parameterless constructors preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
-        #endif
-        private static void InvokeRegisterTag(MethodInfo openMethod, Type tagType) {
-            var config = FindTagConfig(tagType);
-            openMethod.MakeGenericMethod(tagType).Invoke(null, new[] { config });
-        }
-
-        #if NET5_0_OR_GREATER
-        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "Config types have public parameterless constructors preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
-        #endif
-        private static object FindComponentConfig(Type componentType) {
-            var configType = typeof(ComponentTypeConfig<>).MakeGenericType(componentType);
-            return FindStaticConfig(componentType, configType, "Config") ?? Activator.CreateInstance(configType);
-        }
-
-        #if NET5_0_OR_GREATER
-        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "Config types have public parameterless constructors preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
-        #endif
-        private static object FindEventConfig(Type eventType) {
-            var configType = typeof(EventTypeConfig<>).MakeGenericType(eventType);
-            return FindStaticConfig(eventType, configType, "Config") ?? Activator.CreateInstance(configType);
-        }
-
-        #if NET5_0_OR_GREATER
-        [UnconditionalSuppressMessage("Trimming", "IL2055", Justification = "Config types are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration methods are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("Trimming", "IL2067", Justification = "Config types have public parameterless constructors preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
-        #endif
-        private static object FindTagConfig(Type tagType) {
-            var configType = typeof(TagTypeConfig<>).MakeGenericType(tagType);
-            return FindStaticConfig(tagType, configType, "Config") ?? Activator.CreateInstance(configType);
-        }
-
-        #if NET5_0_OR_GREATER
-        [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "Component/event/tag types with Config fields are statically referenced in consuming code.")]
-        #endif
-        #if NET5_0_OR_GREATER
-        [UnconditionalSuppressMessage("Trimming", "IL2060", Justification = "Registration check methods are preserved by DynamicDependency on RegisterAll.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Generic instantiations are pre-compiled because types are statically referenced in consuming code.")]
-        #endif
-        private static bool IsRegistered(MethodInfo openMethod, Type type)
-            => (bool) openMethod.MakeGenericMethod(type).Invoke(null, null);
-
-        private static object FindStaticConfig(Type type, Type configType, string preferredName) {
-            object result = null;
-            var fields = type.GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-            foreach (var field in fields) {
-                if (field.FieldType == configType) {
-                    if (field.Name == preferredName) return field.GetValue(null);
-                    result ??= field.GetValue(null);
-                }
-            }
-            if (result != null) return result;
-
-            var properties = type.GetProperties(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-            foreach (var property in properties) {
-                if (property.PropertyType == configType) {
-                    if (property.Name == preferredName) return property.GetValue(null);
-                    result ??= property.GetValue(null);
-                }
-            }
-            return result;
         }
     }
 }

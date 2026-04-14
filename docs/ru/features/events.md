@@ -36,28 +36,23 @@ W.Types()
     .Event<WeatherChanged>()
     .Event<OnDamage>();
 
-// Регистрация с конфигурацией
-W.Types().Event<WeatherChanged>(new EventTypeConfig<WeatherChanged>(
-    guid: new Guid("..."),      // стабильный идентификатор для сериализации (по умолчанию — автоматически из имени типа)
-    version: 1,                  // версия схемы данных для миграции (по умолчанию — 0)
-    readWriteStrategy: null      // стратегия бинарной сериализации (по умолчанию — авто-определение)
-));
+// Конфигурация предоставляется через реализацию IEventConfig<T> на структуре события
+// (см. пример ниже)
 //...
 W.Initialize();
 ```
 
 {: .noteru }
-Вместо передачи конфигурации вручную можно объявить статическое поле или свойство типа `EventTypeConfig<T>` внутри структуры события. `RegisterAll()` автоматически найдёт его по типу (предпочитая имя `Config`):
+Для предоставления конфигурации реализуйте интерфейс `IEventConfig<T>` на структуре события. И ручная регистрация, и `RegisterAll()` используют его автоматически:
 
 ```csharp
-public struct WeatherChanged : IEvent {
+public struct WeatherChanged : IEvent, IEventConfig<WeatherChanged> {
     public WeatherType WeatherType;
-    public static readonly EventTypeConfig<WeatherChanged> Config = new(
-        guid: new Guid("..."),
-        version: 1
+    public EventTypeConfig<WeatherChanged> Config() => new(
+        guid: new Guid("..."),   // стабильный идентификатор для сериализации (по умолчанию — автоматически из имени типа)
+        version: 1               // версия схемы данных для миграции (по умолчанию — 0)
     );
 }
-// RegisterAll() автоматически использует WeatherChanged.Config
 ```
 
 ___

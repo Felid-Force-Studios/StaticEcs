@@ -120,7 +120,7 @@ W.Create(WorldConfig.Default());
 
 // 注册组件、标签和事件 — 仅在 Create() 和 Initialize() 之间
 W.Types()
-    .EntityType<Bullet>(Bullet.Id)
+    .EntityType<Bullet>()
     .Component<Position>()
     .Component<Velocity>()
     .Tag<IsPlayer>()
@@ -131,7 +131,7 @@ W.Initialize();
 ```
 
 {: .importantzh }
-类型注册（`W.Types().Component<T>()`、`W.Types().Tag<T>()`、`W.Types().EntityType<T>(id)`）仅在 `Created` 状态下可用 — 在 `Create()` 之后、`Initialize()` 之前。事件注册（`W.Types().Event<T>()`）在初始化之后也可用。
+类型注册（`W.Types().Component<T>()`、`W.Types().Tag<T>()`、`W.Types().EntityType<T>()`）仅在 `Created` 状态下可用 — 在 `Create()` 之后、`Initialize()` 之前。事件注册（`W.Types().Event<T>()`）在初始化之后也可用。
 
 ___
 
@@ -148,10 +148,10 @@ W.Types().RegisterAll();
 // 或指定特定程序集
 W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
 
-// 可以与手动注册结合使用（例如设置序列化 GUID）
+// 可以与手动注册结合使用
 W.Types()
     .RegisterAll()
-    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent>(guid: myGuid));
+    .Component<SpecialComponent>();
 
 W.Initialize();
 ```
@@ -166,7 +166,7 @@ W.Initialize();
 | `ILinkType` | 包装为 `Link<T>` 并作为组件注册 |
 | `ILinksType` | 包装为 `Links<T>` 并作为组件注册 |
 | `IMultiComponent` | 包装为 `Multi<T>` 并作为组件注册 |
-| `IEntityType` | `Types().EntityType<T>(T.Id)` |
+| `IEntityType` | `Types().EntityType<T>()` |
 
 {: .notezh }
 - 如果未指定程序集，则仅扫描调用程序集（不是所有已加载的程序集）

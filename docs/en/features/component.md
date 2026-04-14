@@ -40,16 +40,8 @@ W.Types()
     .Component<Velocity>()
     .Component<Name>();
 
-// Registration with configuration
-W.Types().Component<Scale>(new ComponentTypeConfig<Scale>(
-    guid: new Guid("..."),                           // stable identifier for serialization (default — auto-computed from type name)
-    version: 1,                                      // data schema version for migration (default — 0)
-    noDataLifecycle: false,                          // disable framework data management (default — false)
-    readWriteStrategy: null,                         // binary serialization strategy (default — auto-detected)
-    defaultValue: new Scale { Value = Vector3.One }, // default value for init and deletion (default — none)
-    trackAdded: true,                                // enable addition tracking (default — false), see Change Tracking
-    trackDeleted: true                               // enable deletion tracking (default — false), see Change Tracking
-));
+// Configuration is provided by implementing IComponentConfig<T> on the component struct
+// (see example below)
 //...
 W.Initialize();
 ```
@@ -58,17 +50,26 @@ W.Initialize();
 The `noDataLifecycle` parameter controls whether the framework manages component data lifecycle. By default (`noDataLifecycle: false`), the framework pre-initializes new storage with `defaultValue` and resets data to `defaultValue` on deletion — so `entity.Add<T>()` returns the configured default. With `noDataLifecycle: true`, no initialization or cleanup is performed — useful for high-frequency unmanaged types. If `OnDelete` is defined, the hook handles cleanup regardless of this flag.
 
 {: .note }
-Instead of passing configuration manually, you can declare a static field or property of type `ComponentTypeConfig<T>` directly inside the component struct. `RegisterAll()` will automatically discover it by type (preferring the name `Config`):
+To provide configuration, implement the `IComponentConfig<T>` interface on the component struct. Both manual registration and `RegisterAll()` will use it automatically:
 
 ```csharp
-public struct Health : IComponent {
+public struct Health : IComponent, IComponentConfig<Health> {
     public float Value;
-    public static readonly ComponentTypeConfig<Health> Config = new(
+    public ComponentTypeConfig<Health> Config() => new(
         defaultValue: new Health { Value = 100f }
     );
 }
-// RegisterAll() will use Health.Config automatically
 ```
+
+`ComponentTypeConfig<T>` parameters:
+- `guid` — stable identifier for serialization (default — auto-computed from type name)
+- `version` — data schema version for migration (default — 0)
+- `noDataLifecycle` — disable framework data management (default — false). When `false`, the framework pre-initializes new storage with `defaultValue` and resets data to `defaultValue` on deletion. When `true`, no initialization or cleanup is performed — useful for high-frequency unmanaged types. If `OnDelete` is defined, the hook handles cleanup regardless of this flag
+- `readWriteStrategy` — binary serialization strategy (default — auto-detected)
+- `defaultValue` — default value for init and deletion (default — none)
+- `trackAdded` — enable addition tracking (default — false), see [Change Tracking](tracking)
+- `trackDeleted` — enable deletion tracking (default — false), see [Change Tracking](tracking)
+- `trackChanged` — enable change tracking via `Mut<T>()` / `ref` access (default — false), see [Change Tracking](tracking)
 
 ___
 

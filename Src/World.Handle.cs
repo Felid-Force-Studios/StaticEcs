@@ -8,6 +8,9 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using FFS.Libraries.StaticPack;
 using static System.Runtime.CompilerServices.MethodImplOptions;
+#if NET5_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
@@ -569,6 +572,9 @@ namespace FFS.Libraries.StaticEcs {
         /// </summary>
         public readonly bool IsTag;
 
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Component metadata is preserved by the registration path.")]
+        #endif
         internal static unsafe ComponentsHandle Create<TWorld, TComponent>()
             where TWorld : struct, IWorldType
             where TComponent : struct, IComponentOrTag {
@@ -1126,6 +1132,9 @@ namespace FFS.Libraries.StaticEcs {
         /// </summary>
         public readonly ushort DynamicId;
 
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Event metadata is preserved by the registration path.")]
+        #endif
         internal static unsafe EventsHandle Create<TWorld, TEvent>()
             where TWorld : struct, IWorldType
             where TEvent : struct, IEvent {

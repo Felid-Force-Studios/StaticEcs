@@ -42,6 +42,11 @@ namespace FFS.Libraries.StaticEcs {
         void Read(ref BinaryPackReader reader) {}
     }
 
+    public interface IMultiComponentConfig<T> where T : struct, IMultiComponent {
+        ComponentTypeConfig<World<TWorld>.Multi<T>> Config<TWorld>() where TWorld : struct, IWorldType;
+        IPackArrayStrategy<T> ElementPackStrategy();
+    }
+
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
@@ -74,8 +79,26 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
         #endif
         [Serializable]
-        public struct Multi<TValue> : IComponent, IComponentInternal, IEquatable<Multi<TValue>> where TValue : struct, IMultiComponent {
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Multi-component metadata is preserved by the registration path.")]
+        #endif
+        public struct Multi<TValue> : IComponent, IComponentStrategyOverride, IComponentInternal, IEquatable<Multi<TValue>> where TValue : struct, IMultiComponent {
             internal static IPackArrayStrategy<TValue> ElementStrategy;
+
+            #if UNITY_2022_1_OR_NEWER
+            [UnityEngine.Scripting.Preserve]
+            #endif
+            [MethodImpl(NoInlining)]
+            internal static void AutoRegister() {
+                if (Components<Multi<TValue>>.Instance.IsRegistered) return;
+                ComponentTypeConfig<Multi<TValue>> config = default;
+                IPackArrayStrategy<TValue> elementStrategy = null;
+                if (default(TValue) is IMultiComponentConfig<TValue> cfg) {
+                    config = cfg.Config<TWorld>();
+                    elementStrategy = cfg.ElementPackStrategy() ?? AutoRegistration.TryCreateUnmanagedPackArrayStrategy<TValue>() ?? new StructPackArrayStrategy<TValue>();
+                }
+                RegisterMultiComponentType(config, elementStrategy, $"Multi<{typeof(TValue).Name}>");
+            }
 
             internal uint Offset;
             internal uint SegmentIdx;
@@ -850,7 +873,7 @@ namespace FFS.Libraries.StaticEcs {
                     }
                 }
             }
-
+            
             void IComponentInternal.OnInitialize<TW>() {
                 var hasWrite = MultiComponentType<TValue>.HasWrite();
                 var hasRead = MultiComponentType<TValue>.HasRead();
@@ -858,10 +881,14 @@ namespace FFS.Libraries.StaticEcs {
                 ref var storage = ref World<TW>.ResourcesData.Instance.GetOrCreate<MultiValueStorage<TValue>>(out var isNew);
                 if (isNew) {
                     storage.Init(Data.Instance.EntitiesSegments.Length, false, false, false, hasWrite, hasRead);
-                    storage.ElementStrategy = ElementStrategy ?? new StructPackArrayStrategy<TValue>();
+                    storage.ElementStrategy = ElementStrategy ?? AutoRegistration.TryCreateUnmanagedPackArrayStrategy<TValue>() ?? new StructPackArrayStrategy<TValue>();
                     World<TW>.Data.Instance.RegisterMultiStorageResizer(_ResizeStorage);
                     World<TW>.Data.Instance.RegisterMultiStorageResetter(_ResetStorage);
                 }
+            }
+
+            IPackArrayStrategy<T> IComponentStrategyOverride.ArrayPackStrategy<T>() {
+                return (IPackArrayStrategy<T>)AutoRegistration.TryCreateUnmanagedMultiPackArrayStrategy<TWorld, TValue>() ?? new StructPackArrayStrategy<T>();
             }
             #endregion
 
@@ -1570,7 +1597,7 @@ namespace FFS.Libraries.StaticEcs {
 
     internal static class MultiComponentType<
         #if NET5_0_OR_GREATER
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
         #endif
         T> where T : struct, IMultiComponent {
         private static readonly Type[] WriteParams = { typeof(BinaryPackWriter).MakeByRefType() };

@@ -21,8 +21,12 @@ ___
 
 #### Unmanaged компонент:
 ```csharp
-public struct Position : IComponent {
+public struct Position : IComponent, IComponentConfig<Position> {
     public float X, Y, Z;
+
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611")
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -39,16 +43,17 @@ public struct Position : IComponent {
     }
 }
 
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
-));
+W.Types().Component<Position>();
 ```
 
 #### Non-unmanaged компонент (содержит ссылочные поля):
 ```csharp
-public struct Name : IComponent {
+public struct Name : IComponent, IComponentConfig<Name> {
     public string Value;
+
+    public ComponentTypeConfig<Name> Config() => new(
+        guid: new Guid("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3")
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -61,86 +66,118 @@ public struct Name : IComponent {
     }
 }
 
-W.Types().Component<Name>(new ComponentTypeConfig<Name>(
-    guid: new Guid("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3")
-));
+W.Types().Component<Name>();
 ```
 
 #### Блочное копирование для unmanaged типов:
 
-Для снимков мира/кластера/чанка unmanaged компоненты могут быть сериализованы блоком памяти вместо поэлементных вызовов `Write`/`Read`. Для этого нужно **явно указать** `UnmanagedPackArrayStrategy<T>`:
-
-```csharp
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()  // блочное копирование
-));
-```
+Для снимков мира/кластера/чанка unmanaged компоненты автоматически сериализуются блоком памяти вместо поэлементных вызовов `Write`/`Read`.
 
 {: .noteru }
 `UnmanagedPackArrayStrategy<T>` выполняет прямое копирование памяти — значительно быстрее поэлементной сериализации. Работает только для unmanaged типов. При несовпадении версий (миграция данных) система автоматически переключается на хуки `Read`. Стратегия по умолчанию определяется автоматически: `UnmanagedPackArrayStrategy<T>` для unmanaged типов, `StructPackArrayStrategy<T>` в остальных случаях.
 
 #### Блочная сериализация сегментов для Multi и Links:
 
-Мульти-компоненты и Links хранят значения в общем сегментном хранилище. По умолчанию значения каждой сущности сериализуются индивидуально. Для блочной сериализации сегментов хранилища (требуются unmanaged типы значений):
+Мульти-компоненты и Links хранят значения в общем сегментном хранилище. Стратегии блочной сериализации сегментов применяются автоматически для unmanaged типов значений. Для переопределения GUID или другой конфигурации реализуйте соответствующий интерфейс на типе:
 
 ```csharp
-// Мульти-компонент с блочной стратегией
-W.Types().Multi<Item>(new ComponentTypeConfig<W.Multi<Item>>(
-    guid: new Guid("..."),
-    readWriteStrategy: new MultiUnmanagedPackArrayStrategy<MyWorld, Item>()
-));
+// Мульти-компонент с кастомной конфигурацией
+public struct Item : IMultiComponent, IMultiComponentConfig<Item> {
+    public int Id;
 
-// Links с блочной стратегией
-W.Types().Links<MyLinkType>(new ComponentTypeConfig<W.Links<MyLinkType>>(
-    guid: new Guid("..."),
-    readWriteStrategy: new LinksUnmanagedPackArrayStrategy<MyWorld, MyLinkType>()
-));
+    public ComponentTypeConfig<W.Multi<Item>> Config<TWorld>()
+        where TWorld : struct, IWorldType => new(
+        guid: new Guid("...")
+    );
+
+    public IPackArrayStrategy<Item> ElementPackStrategy()
+        => new UnmanagedPackArrayStrategy<Item>();
+}
+
+W.Types().Multi<Item>();
+
+// Links с кастомной конфигурацией
+public struct MyLinkType : ILinksType, ILinksConfig<MyLinkType> {
+    public ComponentTypeConfig<W.Links<MyLinkType>> Config<TWorld>()
+        where TWorld : struct, IWorldType => new(
+        guid: new Guid("...")
+    );
+}
+
+W.Types().Links<MyLinkType>();
 ```
 
 #### Полная конфигурация:
 ```csharp
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    version: 1,                  // версия схемы данных для миграции (по умолчанию — 0)
-    noDataLifecycle: true,       // отключить управление данными фреймворком (по умолчанию — false)
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>() // стратегия сериализации (по умолчанию — StructPackArrayStrategy<T>)
-));
+public struct Position : IComponent, IComponentConfig<Position> {
+    public float X, Y, Z;
+
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+        version: 1,                  // версия схемы данных для миграции (по умолчанию — 0)
+        noDataLifecycle: true        // отключить управление данными фреймворком (по умолчанию — false)
+        // стратегия сериализации определяется автоматически: UnmanagedPackArrayStrategy<T> для unmanaged, StructPackArrayStrategy<T> в остальных случаях
+    );
+
+    // ... хуки Write/Read ...
+}
+
+W.Types().Component<Position>();
 ```
 
 ___
 
 ## Настройка тегов
 
-Теги настраиваются через `TagTypeConfig<T>`:
+Теги настраиваются через реализацию `ITagConfig<T>`:
 
 ```csharp
+public struct IsPlayer : ITag, ITagConfig<IsPlayer> {
+    public TagTypeConfig<IsPlayer> Config() => new(
+        guid: new Guid("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90")
+    );
+}
+
+public struct IsDead : ITag, ITagConfig<IsDead> {
+    public TagTypeConfig<IsDead> Config() => new(
+        guid: new Guid("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30")
+    );
+}
+
 W.Types()
-    .Tag<IsPlayer>(new TagTypeConfig<IsPlayer>(guid: new Guid("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90")))
-    .Tag<IsDead>(new TagTypeConfig<IsDead>(guid: new Guid("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30")));
+    .Tag<IsPlayer>()
+    .Tag<IsDead>();
 ```
 
 #### Полная конфигурация:
 ```csharp
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."), // стабильный идентификатор для сериализации (по умолчанию — автоматически из имени типа)
-    trackAdded: true,                // включить отслеживание добавления (по умолчанию — false)
-    trackDeleted: true               // включить отслеживание удаления (по умолчанию — false)
-));
+public struct Poisoned : ITag, ITagConfig<Poisoned> {
+    public TagTypeConfig<Poisoned> Config() => new(
+        guid: new Guid("A1B2C3D4-..."), // стабильный идентификатор для сериализации (по умолчанию — автоматически из имени типа)
+        trackAdded: true,                // включить отслеживание добавления (по умолчанию — false)
+        trackDeleted: true               // включить отслеживание удаления (по умолчанию — false)
+    );
+}
+
+W.Types().Tag<Poisoned>();
 ```
 
 {: .noteru }
-Все типы автоматически получают стабильный GUID, вычисленный из имени типа. Для переопределения объявите статическое поле `Guid` внутри структуры тега или передайте `TagTypeConfig<T>` с пользовательским guid. `RegisterAll()` также подхватывает статическое поле `TagTypeConfig<T>` (предпочитая имя `Config`) для параметров `trackAdded` / `trackDeleted`.
+Все типы автоматически получают стабильный GUID, вычисленный из имени типа. Для переопределения реализуйте `ITagConfig<T>` на структуре тега с пользовательским guid.
 
 ___
 
 ## Настройка событий
 
-Для событий используется `EventTypeConfig<T>` — аналогично компонентам:
+Для событий реализуется `IEventConfig<T>` — аналогично компонентам:
 
 ```csharp
-public struct OnDamage : IEvent {
+public struct OnDamage : IEvent, IEventConfig<OnDamage> {
     public float Amount;
+
+    public EventTypeConfig<OnDamage> Config() => new(
+        guid: new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+    );
 
     public void Write(ref BinaryPackWriter writer) {
         writer.WriteFloat(Amount);
@@ -151,9 +188,7 @@ public struct OnDamage : IEvent {
     }
 }
 
-W.Types().Event<OnDamage>(new EventTypeConfig<OnDamage>(
-    guid: new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-));
+W.Types().Event<OnDamage>();
 ```
 
 ___
@@ -454,8 +489,13 @@ ___
 Параметр `version` в хуке `Read` позволяет мигрировать данные между версиями схемы:
 
 ```csharp
-public struct Position : IComponent {
+public struct Position : IComponent, IComponentConfig<Position> {
     public float X, Y, Z;
+
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+        version: 1  // была версия 0, теперь 1
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -473,12 +513,8 @@ public struct Position : IComponent {
     }
 }
 
-// Регистрация с новой версией
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    version: 1,  // была версия 0, теперь 1
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
-));
+// Регистрация
+W.Types().Component<Position>();
 ```
 
 ___

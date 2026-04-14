@@ -4574,6 +4574,9 @@ namespace FFS.Libraries.StaticEcs {
 
             #region PREPARE AND DISPOSE
             [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             internal bool PrepareFlexible<T0, T1, T2>(TFilter filter, ReadOnlySpan<ushort> clusters, EntityStatusType entities, ComponentStatus components, out QueryData queryData, out int firstGlobalBlockIdx)
                 where T0 : struct, IComponent
@@ -4723,6 +4726,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             internal bool PrepareStrict<T0, T1, T2>(TFilter filter, ReadOnlySpan<ushort> clusters, EntityStatusType entities, ComponentStatus components, out QueryData queryData, out int firstGlobalBlockIdx)
                 where T0 : struct, IComponent
@@ -4995,6 +5001,9 @@ namespace FFS.Libraries.StaticEcs {
                 return jobsCount != 0;
             }
 
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             internal void DisposeFlexible<T0, T1, T2>(TFilter filter, EntityStatusType entities, ComponentStatus components, QueryData queryData)
                 where T0 : struct, IComponent
@@ -5038,6 +5047,9 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             #if FFS_ECS_DEBUG
+            #if NET5_0_OR_GREATER
+            [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+            #endif
             [MethodImpl(AggressiveInlining)]
             internal void DisposeStrict<T0, T1, T2>(TFilter filter, EntityStatusType entities, ComponentStatus components, QueryData queryData)
                 where T0 : struct, IComponent

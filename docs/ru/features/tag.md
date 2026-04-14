@@ -38,33 +38,16 @@ W.Initialize();
 ```
 
 {: .noteru }
-Теги автоматически получают стабильный GUID, вычисленный из имени типа. Для переопределения (например, для стабильности при переименовании типа) передайте его вручную или объявите статическое поле/свойство `Guid` внутри структуры тега — `RegisterAll()` найдёт его автоматически (предпочитая имя `Guid`):
+Теги автоматически получают стабильный GUID, вычисленный из имени типа. Для предоставления конфигурации (переопределение GUID, отслеживание изменений) реализуйте интерфейс `ITagConfig<T>` на структуре тега. И ручная регистрация, и `RegisterAll()` используют его автоматически:
 
 ```csharp
-// Ручная регистрация с переопределением GUID
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(guid: new Guid("A1B2C3D4-...")));
-
-// Или объявить статическое поле — RegisterAll() подхватит его
-public struct Poisoned : ITag {
-    public static readonly Guid Guid = new("A1B2C3D4-...");
+public struct Poisoned : ITag, ITagConfig<Poisoned> {
+    public TagTypeConfig<Poisoned> Config() => new(
+        guid: new Guid("A1B2C3D4-..."),
+        trackAdded: true,    // включить отслеживание добавления (по умолчанию — false)
+        trackDeleted: true   // включить отслеживание удаления (по умолчанию — false)
+    );
 }
-```
-
-{: .noteru }
-Для отслеживания изменений тегов используйте `TagTypeConfig<T>` с параметрами `trackAdded` / `trackDeleted` (подробнее см. [Отслеживание изменений](tracking)):
-
-```csharp
-W.Types().Tag<Unit>(new TagTypeConfig<Unit>(
-    trackAdded: true,    // включить отслеживание добавления (по умолчанию — false)
-    trackDeleted: true   // включить отслеживание удаления (по умолчанию — false)
-));
-
-// Полная конфигурация с GUID и отслеживанием
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."),
-    trackAdded: true,
-    trackDeleted: true
-));
 ```
 
 ___

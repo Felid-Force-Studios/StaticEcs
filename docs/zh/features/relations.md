@@ -531,14 +531,16 @@ ___
 
 ## Links 批量段序列化
 
-对于使用 unmanaged 链接类型的 chunk/world/cluster 快照，使用 `LinksUnmanagedPackArrayStrategy<TWorld, TLinkType>` 批量序列化链接存储段：
+对于使用 unmanaged 链接类型的 chunk/world/cluster 快照，`LinksUnmanagedPackArrayStrategy` 会自动应用——无需手动配置。
+
+要为链接注册提供自定义配置，请在链接类型上实现 `ILinksConfig<T>`：
 
 ```csharp
-W.Types()
-    .Links<MyLinkType>(new ComponentTypeConfig<W.Links<MyLinkType>>(
-        guid: new Guid("..."),
-        readWriteStrategy: new LinksUnmanagedPackArrayStrategy<MyWorld, MyLinkType>()
-    ));
+public struct MyLinkType : ILinksType, ILinksConfig<MyLinkType> {
+    public ComponentTypeConfig<W.Links<MyLinkType>> Config<TWorld>() where TWorld : struct, IWorldType => new(
+        guid: new Guid("...")
+    );
+}
 ```
 
 工作方式与 `MultiUnmanagedPackArrayStrategy` 相同——详情参见[多组件批量段序列化](multicomponent.md#批量段序列化)。

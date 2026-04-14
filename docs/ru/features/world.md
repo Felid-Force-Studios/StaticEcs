@@ -120,7 +120,7 @@ W.Create(WorldConfig.Default());
 
 // Регистрация компонентов, тегов и событий — только между Create() и Initialize()
 W.Types()
-    .EntityType<Bullet>(Bullet.Id)
+    .EntityType<Bullet>()
     .Component<Position>()
     .Component<Velocity>()
     .Tag<IsPlayer>()
@@ -131,7 +131,7 @@ W.Initialize();
 ```
 
 {: .importantru }
-Регистрация типов (`.Component<T>()`, `.Tag<T>()`, `.EntityType<T>(id)`) доступна только в состоянии `Created` — после `Create()` и до `Initialize()`. Регистрация событий (`.Event<T>()`) доступна также после инициализации.
+Регистрация типов (`.Component<T>()`, `.Tag<T>()`, `.EntityType<T>()`) доступна только в состоянии `Created` — после `Create()` и до `Initialize()`. Регистрация событий (`.Event<T>()`) доступна также после инициализации.
 
 ___
 
@@ -148,10 +148,10 @@ W.Types().RegisterAll();
 // Или указать конкретные сборки
 W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
 
-// Можно комбинировать с ручной регистрацией (например, для задания GUID сериализации)
+// Можно комбинировать с ручной регистрацией
 W.Types()
     .RegisterAll()
-    .Component<SpecialComponent>(new ComponentTypeConfig<SpecialComponent>(guid: myGuid));
+    .Component<SpecialComponent>();
 
 W.Initialize();
 ```
@@ -166,7 +166,7 @@ W.Initialize();
 | `ILinkType` | Оборачивается в `Link<T>` и регистрируется как компонент |
 | `ILinksType` | Оборачивается в `Links<T>` и регистрируется как компонент |
 | `IMultiComponent` | Оборачивается в `Multi<T>` и регистрируется как компонент |
-| `IEntityType` | `Types().EntityType<T>(T.Id)` |
+| `IEntityType` | `Types().EntityType<T>()` |
 
 {: .noteru }
 - Если сборки не указаны, сканируется только вызывающая сборка (не все загруженные)

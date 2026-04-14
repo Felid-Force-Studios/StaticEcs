@@ -528,14 +528,16 @@ ___
 
 ## Bulk segment serialization for Links
 
-For chunk/world/cluster snapshots with unmanaged link types, use `LinksUnmanagedPackArrayStrategy<TWorld, TLinkType>` to serialize the entire link storage segments in bulk:
+For chunk/world/cluster snapshots with unmanaged link types, `LinksUnmanagedPackArrayStrategy` is applied automatically — no manual configuration needed.
+
+To provide custom configuration for links registration, implement `ILinksConfig<T>` on the link type:
 
 ```csharp
-W.Types()
-    .Links<MyLinkType>(new ComponentTypeConfig<W.Links<MyLinkType>>(
-        guid: new Guid("..."),
-        readWriteStrategy: new LinksUnmanagedPackArrayStrategy<MyWorld, MyLinkType>()
-    ));
+public struct MyLinkType : ILinksType, ILinksConfig<MyLinkType> {
+    public ComponentTypeConfig<W.Links<MyLinkType>> Config<TWorld>() where TWorld : struct, IWorldType => new(
+        guid: new Guid("...")
+    );
+}
 ```
 
 This works identically to `MultiUnmanagedPackArrayStrategy` — see [multi-component bulk serialization](multicomponent.md#bulk-segment-serialization) for details.

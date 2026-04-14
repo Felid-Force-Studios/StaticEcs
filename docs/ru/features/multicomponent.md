@@ -50,28 +50,21 @@ ___
 
 ## Стратегия сериализации
 
-По умолчанию используется `StructPackArrayStrategy<T>` для поэлементной сериализации (через хуки).
-Для unmanaged типов можно использовать `UnmanagedPackArrayStrategy<T>` для bulk memory copy (быстрее).
+Стратегия сериализации элементов выбирается автоматически:
+- Для **unmanaged** типов — `UnmanagedPackArrayStrategy<T>` (bulk memory copy, быстрее)
+- Для **managed** типов — `StructPackArrayStrategy<T>` (поэлементно через хуки `Write`/`Read`)
 
-Стратегию можно указать тремя способами:
+Для переопределения стратегии или предоставления пользовательской конфигурации реализуйте `IMultiComponentConfig<T>`:
 
-**1. Явный параметр при регистрации:**
 ```csharp
-W.Types()
-    .Multi<Item>(elementStrategy: new UnmanagedPackArrayStrategy<Item>());
-```
-
-**2. Статическое поле/свойство на типе (для авторегистрации через `RegisterAll`):**
-```csharp
-public struct Item : IMultiComponent {
+public struct Item : IMultiComponent, IMultiComponentConfig<Item> {
     public int Id;
     public float Weight;
 
-    static readonly IPackArrayStrategy<Item> PackStrategy = new UnmanagedPackArrayStrategy<Item>();
+    public ComponentTypeConfig<W.Multi<Item>> Config<TWorld>() where TWorld : struct, IWorldType => default;
+    public IPackArrayStrategy<Item> ElementPackStrategy() => new UnmanagedPackArrayStrategy<Item>();
 }
 ```
-
-**3. По умолчанию:** `StructPackArrayStrategy<T>` — использует хуки `Write`/`Read` поэлементно.
 
 ___
 
@@ -79,12 +72,18 @@ ___
 
 Для снимков чанков/мира/кластеров, когда `TValue` является unmanaged, можно использовать `MultiUnmanagedPackArrayStrategy<TWorld, TValue>` для сериализации целых сегментов хранилища одним блоком памяти вместо поэлементных данных каждой сущности. Это заменяет множество мелких per-entity копирований одной bulk-операцией на сегмент и восстанавливает состояние аллокатора напрямую.
 
+Для unmanaged типов `MultiUnmanagedPackArrayStrategy` применяется автоматически. Для предоставления пользовательской конфигурации:
+
 ```csharp
-W.Types()
-    .Multi<Item>(new ComponentTypeConfig<W.Multi<Item>>(
-        guid: new Guid("..."),
-        readWriteStrategy: new MultiUnmanagedPackArrayStrategy<MyWorld, Item>()
-    ));
+public struct Item : IMultiComponent, IMultiComponentConfig<Item> {
+    public int Id;
+    public float Weight;
+
+    public ComponentTypeConfig<W.Multi<Item>> Config<TWorld>() where TWorld : struct, IWorldType => new(
+        guid: new Guid("...")
+    );
+    public IPackArrayStrategy<Item> ElementPackStrategy() => null; // null = авто-определение
+}
 ```
 
 {: .noteru }
@@ -101,9 +100,8 @@ ___
 W.Create(WorldConfig.Default());
 
 W.Types()
-    .Multi<Item>()                                                         // стратегия по умолчанию (StructPackArrayStrategy)
-    .Multi<Item>(elementStrategy: new UnmanagedPackArrayStrategy<Item>())   // явная unmanaged стратегия
-    .Multi<NamedItem>();                                                    // managed тип с хуками
+    .Multi<Item>()         // авто-определение стратегии (UnmanagedPackArrayStrategy для unmanaged типов)
+    .Multi<NamedItem>();   // managed тип — используется StructPackArrayStrategy с хуками Write/Read
 
 W.Initialize();
 ```

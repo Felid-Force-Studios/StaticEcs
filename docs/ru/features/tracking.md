@@ -31,28 +31,42 @@ ___
 `ComponentTypeConfig<T>` поддерживает три флага трекинга: `trackAdded`, `trackDeleted`, `trackChanged`:
 
 ```csharp
-W.Create(WorldConfig.Default());
-//...
-// Включить все три типа трекинга
-W.Types().Component<Health>(new ComponentTypeConfig<Health>(
-    trackAdded: true,
-    trackDeleted: true,
-    trackChanged: true
-));
+// Трекинг настраивается реализацией IComponentConfig<T> на типе компонента:
+public struct Health : IComponent, IComponentConfig<Health> {
+    public float Value;
+    public ComponentTypeConfig<Health> Config() => new(
+        trackAdded: true,
+        trackDeleted: true,
+        trackChanged: true
+    );
+}
 
 // Включить только одно направление
-W.Types().Component<Velocity>(new ComponentTypeConfig<Velocity>(
-    trackAdded: true  // отслеживать только добавление
-));
+public struct Velocity : IComponent, IComponentConfig<Velocity> {
+    public float X, Y;
+    public ComponentTypeConfig<Velocity> Config() => new(
+        trackAdded: true  // отслеживать только добавление
+    );
+}
 
 // Полная конфигурация с трекингом
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("..."),
-    defaultValue: default,
-    trackAdded: true,
-    trackDeleted: true,
-    trackChanged: true
-));
+public struct Position : IComponent, IComponentConfig<Position> {
+    public float X, Y;
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("..."),
+        defaultValue: default,
+        trackAdded: true,
+        trackDeleted: true,
+        trackChanged: true
+    );
+}
+
+W.Create(WorldConfig.Default());
+//...
+// Регистрация без параметров — конфигурация читается из интерфейса
+W.Types().Component<Health>()
+         .Component<Velocity>()
+         .Component<Position>();
 //...
 W.Initialize();
 ```
@@ -62,17 +76,26 @@ W.Initialize();
 `TagTypeConfig<T>` поддерживает `trackAdded` и `trackDeleted`. Теги **не** поддерживают Changed-трекинг.
 
 ```csharp
-W.Types().Tag<Unit>(new TagTypeConfig<Unit>(
-    trackAdded: true,
-    trackDeleted: true
-));
+// Трекинг настраивается реализацией ITagConfig<T> на типе тега:
+public struct Unit : ITag, ITagConfig<Unit> {
+    public TagTypeConfig<Unit> Config() => new(
+        trackAdded: true,
+        trackDeleted: true
+    );
+}
 
 // С GUID для сериализации
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."),
-    trackAdded: true,
-    trackDeleted: true
-));
+public struct Poisoned : ITag, ITagConfig<Poisoned> {
+    public TagTypeConfig<Poisoned> Config() => new(
+        guid: new Guid("A1B2C3D4-..."),
+        trackAdded: true,
+        trackDeleted: true
+    );
+}
+
+// Регистрация без параметров
+W.Types().Tag<Unit>()
+         .Tag<Poisoned>();
 ```
 
 ### Создание сущностей
@@ -93,7 +116,7 @@ W.Initialize();
 
 ### Авто-регистрация
 
-Параметры `trackAdded`, `trackDeleted` и `trackChanged` можно объявить в статическом поле `Config` внутри структуры — `RegisterAll()` подхватит их автоматически.
+Параметры `trackAdded`, `trackDeleted` и `trackChanged`, объявленные через `IComponentConfig<T>` / `ITagConfig<T>`, автоматически подхватываются `RegisterAll()` — дополнительная настройка не требуется.
 
 ### Отключение на этапе компиляции
 

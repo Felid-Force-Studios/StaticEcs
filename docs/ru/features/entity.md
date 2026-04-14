@@ -18,19 +18,19 @@ ___
 
 ### Определение типов сущностей
 
-Типы сущностей определяются как структуры, реализующие `IEntityType`, со стабильным `byte Id`:
+Типы сущностей определяются как структуры, реализующие `IEntityType`, с методом `byte Id()`:
 
 ```csharp
 public struct Bullet : IEntityType {
-    public static readonly byte Id = 1;
+    public byte Id() => 1;
 }
 
 public struct Enemy : IEntityType {
-    public static readonly byte Id = 2;
+    public byte Id() => 2;
 }
 
 public struct Effect : IEntityType {
-    public static readonly byte Id = 3;
+    public byte Id() => 3;
 }
 ```
 
@@ -43,9 +43,9 @@ public struct Effect : IEntityType {
 **Ручная регистрация:**
 ```csharp
 W.Types()
-    .EntityType<Bullet>(Bullet.Id)
-    .EntityType<Enemy>(Enemy.Id)
-    .EntityType<Effect>(Effect.Id);
+    .EntityType<Bullet>()
+    .EntityType<Enemy>()
+    .EntityType<Effect>();
 ```
 
 **Авторегистрация:**
@@ -53,7 +53,7 @@ W.Types()
 W.Types().RegisterAll();
 ```
 
-`RegisterAll()` находит все типы, реализующие `IEntityType`, в указанных сборках (по умолчанию — вызывающая сборка) и регистрирует их автоматически. Для этого тип сущности должен содержать поле `public static readonly byte Id` — оно используется как идентификатор при авторегистрации.
+`RegisterAll()` находит все типы, реализующие `IEntityType`, в указанных сборках (по умолчанию — вызывающая сборка) и регистрирует их автоматически. Идентификатор получается из метода `Id()`.
 
 ### Хуки жизненного цикла (OnCreate / OnDestroy)
 
@@ -61,7 +61,7 @@ W.Types().RegisterAll();
 
 ```csharp
 public struct Bullet : IEntityType {
-    public static readonly byte Id = 1;
+    public byte Id() => 1;
 
     public void OnCreate<TWorld>(World<TWorld>.Entity entity) where TWorld : struct, IWorldType {
         entity.Set(new Velocity { Speed = 100 });
@@ -81,7 +81,7 @@ public struct Bullet : IEntityType {
 
 ```csharp
 public struct Flora : IEntityType {
-    public static readonly byte Id = 4;
+    public byte Id() => 4;
 
     public enum Kind : byte { Grass, Bush, Tree }
     public Kind FloraKind;

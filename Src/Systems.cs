@@ -292,7 +292,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public static SystemsRegistrar<TSystemsType> Add<
                 #if NET5_0_OR_GREATER
-                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
                 #endif
                 TSystem>(TSystem system, short order = 0) where TSystem : ISystem {
                 #if FFS_ECS_DEBUG
@@ -331,7 +331,7 @@ namespace FFS.Libraries.StaticEcs {
             [MethodImpl(AggressiveInlining)]
             public SystemsRegistrar<TSystemsType> Add<
                 #if NET5_0_OR_GREATER
-                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
                 #endif
                 TSystem>(TSystem system, short order = 0) where TSystem : ISystem {
                 Systems<TSystemsType>.Add(system, order);
@@ -347,7 +347,7 @@ namespace FFS.Libraries.StaticEcs {
     #endif
     internal static class SystemType<
         #if NET5_0_OR_GREATER
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
         #endif
         T> where T : ISystem {
         internal static bool HasUpdate() {

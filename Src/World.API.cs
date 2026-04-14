@@ -752,6 +752,9 @@ namespace FFS.Libraries.StaticEcs {
         /// <typeparam name="TEvent">The event type to send.</typeparam>
         /// <param name="value">Event data. Default value sends an empty/default-initialized event.</param>
         /// <returns><c>true</c> if the event was successfully added to the buffer; <c>false</c> if there are no registered receivers.</returns>
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Event metadata is preserved by the registration path.")]
+        #endif
         [MethodImpl(AggressiveInlining)]
         public static bool SendEvent<TEvent>(TEvent value = default) where TEvent : struct, IEvent {
             #if FFS_ECS_DEBUG
@@ -769,6 +772,9 @@ namespace FFS.Libraries.StaticEcs {
         /// </summary>
         /// <typeparam name="TEvent">The event type to receive.</typeparam>
         /// <returns>A new <see cref="EventReceiver{TWorld, TEvent}"/> that can read events of this type.</returns>
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Event metadata is preserved by the registration path.")]
+        #endif
         [MethodImpl(AggressiveInlining)]
         public static EventReceiver<TWorld, TEvent> RegisterEventReceiver<TEvent>() where TEvent : struct, IEvent {
             #if FFS_ECS_DEBUG
@@ -1111,7 +1117,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Data.InvokeOnCreateBatch(entityType, onCreate, mask, segmentIdx, segmentBlockIdx);
             }
@@ -1126,7 +1132,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchAdd(mask, segmentIdx, segmentBlockIdx);
                 Data.InvokeOnCreateBatch(entityType, onCreate, mask, segmentIdx, segmentBlockIdx);
@@ -1144,7 +1150,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchAdd(mask, segmentIdx, segmentBlockIdx);
                 Components<T2>.Instance.BatchAdd(mask, segmentIdx, segmentBlockIdx);
@@ -1165,7 +1171,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchAdd(mask, segmentIdx, segmentBlockIdx);
                 Components<T2>.Instance.BatchAdd(mask, segmentIdx, segmentBlockIdx);
@@ -1189,7 +1195,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchAdd(mask, segmentIdx, segmentBlockIdx);
                 Components<T2>.Instance.BatchAdd(mask, segmentIdx, segmentBlockIdx);
@@ -1216,7 +1222,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchAdd(mask, segmentIdx, segmentBlockIdx);
                 Components<T2>.Instance.BatchAdd(mask, segmentIdx, segmentBlockIdx);
@@ -1247,7 +1253,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchSet(c1, mask, segmentIdx, segmentBlockIdx);
                 Data.InvokeOnCreateBatch(entityType, onCreate, mask, segmentIdx, segmentBlockIdx);
@@ -1264,7 +1270,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchSet(c1, mask, segmentIdx, segmentBlockIdx);
                 Components<T2>.Instance.BatchSet(c2, mask, segmentIdx, segmentBlockIdx);
@@ -1284,7 +1290,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchSet(c1, mask, segmentIdx, segmentBlockIdx);
                 Components<T2>.Instance.BatchSet(c2, mask, segmentIdx, segmentBlockIdx);
@@ -1308,7 +1314,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchSet(c1, mask, segmentIdx, segmentBlockIdx);
                 Components<T2>.Instance.BatchSet(c2, mask, segmentIdx, segmentBlockIdx);
@@ -1335,7 +1341,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchSet(c1, mask, segmentIdx, segmentBlockIdx);
                 Components<T2>.Instance.BatchSet(c2, mask, segmentIdx, segmentBlockIdx);
@@ -1365,7 +1371,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchSet(c1, mask, segmentIdx, segmentBlockIdx);
                 Components<T2>.Instance.BatchSet(c2, mask, segmentIdx, segmentBlockIdx);
@@ -1398,7 +1404,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchSet(c1, mask, segmentIdx, segmentBlockIdx);
                 Components<T2>.Instance.BatchSet(c2, mask, segmentIdx, segmentBlockIdx);
@@ -1434,7 +1440,7 @@ namespace FFS.Libraries.StaticEcs {
             ref var entities = ref Data.Instance;
 
             while (count > 0) {
-                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
+                var created = entities.CreateEntitiesBatch(EntityTypeInfo<TEntityType>.Instance.Id, clusterId, count, out var mask, out var segmentIdx, out var segmentBlockIdx);
                 count -= created;
                 Components<T1>.Instance.BatchSet(c1, mask, segmentIdx, segmentBlockIdx);
                 Components<T2>.Instance.BatchSet(c2, mask, segmentIdx, segmentBlockIdx);
@@ -1507,96 +1513,116 @@ namespace FFS.Libraries.StaticEcs {
             /// Registers an entity type for use in this world.
             /// </summary>
             /// <typeparam name="T">Entity type struct implementing <see cref="IEntityType"/>.</typeparam>
-            /// <param name="id">Stable byte identifier (0–255). Must be unique within this world. Id 0 is reserved for <see cref="Default"/>.</param>
             /// <returns>This registrar for chaining.</returns>
             [MethodImpl(AggressiveInlining)]
             public TypeRegistrar EntityType<
                 #if NET5_0_OR_GREATER
-                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+                [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)]
                 #endif
-                T>(byte id) where T : struct, IEntityType {
-                RegisterEntityType<T>(id);
+                T>() where T : struct, IEntityType {
+                RegisterEntityType<T>();
                 return this;
             }
 
             /// <summary>
             /// Registers a component type for use in this world.
+            /// Configuration is provided by implementing <see cref="IComponentConfig{T}"/> on the component type.
             /// </summary>
             /// <typeparam name="T">Component type — must be a struct implementing <see cref="IComponent"/>.</typeparam>
-            /// <param name="config">Optional configuration for this component type.</param>
             /// <returns>This registrar for chaining.</returns>
             [MethodImpl(AggressiveInlining)]
-            public TypeRegistrar Component<T>(ComponentTypeConfig<T> config = default) where T : struct, IComponent {
-                RegisterComponentType(config);
+            public TypeRegistrar Component<T>() where T : struct, IComponent {
+                ComponentTypeConfig<T> config = default;
+                if (default(T) is IComponentConfig<T> cfg) {
+                    config = cfg.Config();
+                }
+                RegisterComponentType(config, typeof(T).Name);
                 return this;
             }
 
             /// <summary>
             /// Registers a tag type for use in this world. Tags are zero-size marker components.
+            /// Configuration is provided by implementing <see cref="ITagConfig{T}"/> on the tag type.
             /// </summary>
             /// <typeparam name="T">Tag type — must be a struct implementing <see cref="ITag"/>.</typeparam>
-            /// <param name="config">Optional configuration for this tag type.</param>
             /// <returns>This registrar for chaining.</returns>
             [MethodImpl(AggressiveInlining)]
-            public TypeRegistrar Tag<T>(TagTypeConfig<T> config = default) where T : struct, ITag {
+            public TypeRegistrar Tag<T>() where T : struct, ITag {
+                TagTypeConfig<T> config = default;
+                if (default(T) is ITagConfig<T> cfg) {
+                    config = cfg.Config();
+                }
                 RegisterTagType(config);
                 return this;
             }
 
             /// <summary>
             /// Registers an event type for use in this world.
+            /// Configuration is provided by implementing <see cref="IEventConfig{T}"/> on the event type.
             /// </summary>
             /// <typeparam name="T">Event type — must be a struct implementing <see cref="IEvent"/>.</typeparam>
-            /// <param name="config">Optional configuration for this event type.</param>
             /// <returns>This registrar for chaining.</returns>
             [MethodImpl(AggressiveInlining)]
-            public TypeRegistrar Event<T>(EventTypeConfig<T> config = default) where T : struct, IEvent {
+            public TypeRegistrar Event<T>() where T : struct, IEvent {
+                EventTypeConfig<T> config = default;
+                if (default(T) is IEventConfig<T> cfg) {
+                    config = cfg.Config();
+                }
                 RegisterEventType(config);
                 return this;
             }
 
             /// <summary>
             /// Registers a single-link relation type. Equivalent to registering <see cref="Link{T}"/> as a component.
+            /// Configuration is provided by implementing <see cref="ILinkConfig{T}"/> on the link type.
             /// </summary>
             /// <typeparam name="T">Link type implementing <see cref="ILinkType"/>.</typeparam>
-            /// <param name="config">Optional component configuration.</param>
             /// <returns>This registrar for chaining.</returns>
             [MethodImpl(AggressiveInlining)]
-            public TypeRegistrar Link<T>(ComponentTypeConfig<Link<T>> config = default) where T : unmanaged, ILinkType {
-                RegisterComponentType(config);
+            public TypeRegistrar Link<T>() where T : unmanaged, ILinkType {
+                ComponentTypeConfig<Link<T>> config = default;
+                if (default(T) is ILinkConfig<T> cfg) {
+                    config = cfg.Config<TWorld>();
+                }
+                RegisterComponentType(config, $"Link<{typeof(T).Name}>");
                 return this;
             }
 
             /// <summary>
             /// Registers a multi-link relation type. Equivalent to registering <see cref="Links{T}"/> as a component.
+            /// Configuration is provided by implementing <see cref="ILinksConfig{T}"/> on the links type.
             /// </summary>
             /// <typeparam name="T">Links type implementing <see cref="ILinksType"/>.</typeparam>
-            /// <param name="config">Optional component configuration.</param>
             /// <returns>This registrar for chaining.</returns>
             [MethodImpl(AggressiveInlining)]
-            public TypeRegistrar Links<T>(ComponentTypeConfig<Links<T>> config = default) where T : unmanaged, ILinksType {
-                RegisterComponentType(config);
+            public TypeRegistrar Links<T>() where T : unmanaged, ILinksType {
+                ComponentTypeConfig<Links<T>> config = default;
+                if (default(T) is ILinksConfig<T> cfg) {
+                    config = cfg.Config<TWorld>();
+                }
+                RegisterComponentType(config, $"Links<{typeof(T).Name}>");
                 return this;
             }
 
             /// <summary>
             /// Registers a multi-component type. Equivalent to registering <see cref="Multi{T}"/> as a component.
-            /// <para>
-            /// By default, uses <see cref="StructPackArrayStrategy{T}"/> for element serialization (per-element via hooks).
-            /// For unmanaged types, pass <see cref="UnmanagedPackArrayStrategy{T}"/> as <paramref name="elementStrategy"/>
-            /// for bulk memory copy, or declare a static <c>PackStrategy</c> property on the type itself.
-            /// </para>
+            /// Configuration is provided by implementing <see cref="IMultiComponentConfig{T}"/> on the multi-component type.
             /// </summary>
             /// <typeparam name="T">Multi-component value type implementing <see cref="IMultiComponent"/>.</typeparam>
-            /// <param name="config">Optional component configuration.</param>
-            /// <param name="elementStrategy">Optional serialization strategy for multi-component elements. Default: <see cref="StructPackArrayStrategy{T}"/>.</param>
             /// <returns>This registrar for chaining.</returns>
             [MethodImpl(AggressiveInlining)]
-            public TypeRegistrar Multi<T>(ComponentTypeConfig<Multi<T>> config = default, IPackArrayStrategy<T> elementStrategy = null) where T : struct, IMultiComponent {
-                RegisterMultiComponentType(config, elementStrategy);
+            public TypeRegistrar Multi<T>() where T : struct, IMultiComponent {
+                ComponentTypeConfig<Multi<T>> config = default;
+                IPackArrayStrategy<T> elementStrategy = null;
+                if (default(T) is IMultiComponentConfig<T> cfg) {
+                    config = cfg.Config<TWorld>();
+                    elementStrategy = cfg.ElementPackStrategy();
+                }
+                RegisterMultiComponentType(config, elementStrategy, $"Multi<{typeof(T).Name}>");
                 return this;
             }
         }
+
     }
 
     /// <summary>

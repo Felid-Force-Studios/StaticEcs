@@ -21,8 +21,12 @@ To support component serialization:
 
 #### Unmanaged component:
 ```csharp
-public struct Position : IComponent {
+public struct Position : IComponent, IComponentConfig<Position> {
     public float X, Y, Z;
+
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611")
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -39,16 +43,17 @@ public struct Position : IComponent {
     }
 }
 
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
-));
+W.Types().Component<Position>();
 ```
 
 #### Non-unmanaged component (contains reference fields):
 ```csharp
-public struct Name : IComponent {
+public struct Name : IComponent, IComponentConfig<Name> {
     public string Value;
+
+    public ComponentTypeConfig<Name> Config() => new(
+        guid: new Guid("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3")
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -61,86 +66,118 @@ public struct Name : IComponent {
     }
 }
 
-W.Types().Component<Name>(new ComponentTypeConfig<Name>(
-    guid: new Guid("531dc870-fdf5-4a8d-a4c6-b4911b1ea1c3")
-));
+W.Types().Component<Name>();
 ```
 
 #### Bulk memory copying for unmanaged types:
 
-For world/cluster/chunk snapshots, unmanaged components can be serialized as a memory block instead of per-component `Write`/`Read` calls. To enable this, **explicitly specify** `UnmanagedPackArrayStrategy<T>`:
-
-```csharp
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()  // bulk memory copy
-));
-```
+For world/cluster/chunk snapshots, unmanaged components are automatically serialized as a memory block instead of per-component `Write`/`Read` calls.
 
 {: .note }
 `UnmanagedPackArrayStrategy<T>` performs direct memory copying — significantly faster than per-component serialization. Works only for unmanaged types. On version mismatch (data migration), the system automatically falls back to `Read` hooks. The default strategy is auto-detected: `UnmanagedPackArrayStrategy<T>` for unmanaged types, `StructPackArrayStrategy<T>` otherwise.
 
 #### Bulk segment serialization for Multi and Links:
 
-Multi-components and Links store their values in shared segment storage. By default, each entity's values are serialized individually. For bulk segment serialization of the underlying storage (requires unmanaged value types):
+Multi-components and Links store their values in shared segment storage. Bulk segment serialization strategies are applied automatically for unmanaged value types. To override the GUID or other config, implement the corresponding config interface on the type:
 
 ```csharp
-// Multi-component with bulk segment strategy
-W.Types().Multi<Item>(new ComponentTypeConfig<W.Multi<Item>>(
-    guid: new Guid("..."),
-    readWriteStrategy: new MultiUnmanagedPackArrayStrategy<MyWorld, Item>()
-));
+// Multi-component with custom config
+public struct Item : IMultiComponent, IMultiComponentConfig<Item> {
+    public int Id;
 
-// Links with bulk segment strategy
-W.Types().Links<MyLinkType>(new ComponentTypeConfig<W.Links<MyLinkType>>(
-    guid: new Guid("..."),
-    readWriteStrategy: new LinksUnmanagedPackArrayStrategy<MyWorld, MyLinkType>()
-));
+    public ComponentTypeConfig<W.Multi<Item>> Config<TWorld>()
+        where TWorld : struct, IWorldType => new(
+        guid: new Guid("...")
+    );
+
+    public IPackArrayStrategy<Item> ElementPackStrategy()
+        => new UnmanagedPackArrayStrategy<Item>();
+}
+
+W.Types().Multi<Item>();
+
+// Links with custom config
+public struct MyLinkType : ILinksType, ILinksConfig<MyLinkType> {
+    public ComponentTypeConfig<W.Links<MyLinkType>> Config<TWorld>()
+        where TWorld : struct, IWorldType => new(
+        guid: new Guid("...")
+    );
+}
+
+W.Types().Links<MyLinkType>();
 ```
 
 #### Full configuration:
 ```csharp
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    version: 1,                  // data schema version for migration (default — 0)
-    noDataLifecycle: true,       // disable framework data management (default — false)
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>() // serialization strategy (default — StructPackArrayStrategy<T>)
-));
+public struct Position : IComponent, IComponentConfig<Position> {
+    public float X, Y, Z;
+
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+        version: 1,                  // data schema version for migration (default — 0)
+        noDataLifecycle: true        // disable framework data management (default — false)
+        // serialization strategy is auto-detected: UnmanagedPackArrayStrategy<T> for unmanaged, StructPackArrayStrategy<T> otherwise
+    );
+
+    // ... Write/Read hooks ...
+}
+
+W.Types().Component<Position>();
 ```
 
 ___
 
 ## Configuring tags
 
-Tags are configured via `TagTypeConfig<T>`:
+Tags are configured by implementing `ITagConfig<T>`:
 
 ```csharp
+public struct IsPlayer : ITag, ITagConfig<IsPlayer> {
+    public TagTypeConfig<IsPlayer> Config() => new(
+        guid: new Guid("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90")
+    );
+}
+
+public struct IsDead : ITag, ITagConfig<IsDead> {
+    public TagTypeConfig<IsDead> Config() => new(
+        guid: new Guid("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30")
+    );
+}
+
 W.Types()
-    .Tag<IsPlayer>(new TagTypeConfig<IsPlayer>(guid: new Guid("3a6fe6a2-9427-43ae-9b4a-f8582e3a5f90")))
-    .Tag<IsDead>(new TagTypeConfig<IsDead>(guid: new Guid("d25b7a08-cbe6-4c77-bd8e-29ce7f748c30")));
+    .Tag<IsPlayer>()
+    .Tag<IsDead>();
 ```
 
 #### Full configuration:
 ```csharp
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."), // stable identifier for serialization (default — auto-computed from type name)
-    trackAdded: true,                // enable addition tracking (default — false)
-    trackDeleted: true               // enable deletion tracking (default — false)
-));
+public struct Poisoned : ITag, ITagConfig<Poisoned> {
+    public TagTypeConfig<Poisoned> Config() => new(
+        guid: new Guid("A1B2C3D4-..."), // stable identifier for serialization (default — auto-computed from type name)
+        trackAdded: true,                // enable addition tracking (default — false)
+        trackDeleted: true               // enable deletion tracking (default — false)
+    );
+}
+
+W.Types().Tag<Poisoned>();
 ```
 
 {: .note }
-All types automatically get a stable GUID computed from the type name. To override, declare a static `Guid` field inside the tag struct or pass `TagTypeConfig<T>` with a custom guid. `RegisterAll()` also picks up a static `TagTypeConfig<T>` field (preferring the name `Config`) for `trackAdded` / `trackDeleted` parameters.
+All types automatically get a stable GUID computed from the type name. To override, implement `ITagConfig<T>` on the tag struct with a custom guid.
 
 ___
 
 ## Configuring events
 
-Events use `EventTypeConfig<T>` — similar to components:
+Events are configured by implementing `IEventConfig<T>` — similar to components:
 
 ```csharp
-public struct OnDamage : IEvent {
+public struct OnDamage : IEvent, IEventConfig<OnDamage> {
     public float Amount;
+
+    public EventTypeConfig<OnDamage> Config() => new(
+        guid: new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+    );
 
     public void Write(ref BinaryPackWriter writer) {
         writer.WriteFloat(Amount);
@@ -151,9 +188,7 @@ public struct OnDamage : IEvent {
     }
 }
 
-W.Types().Event<OnDamage>(new EventTypeConfig<OnDamage>(
-    guid: new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-));
+W.Types().Event<OnDamage>();
 ```
 
 ___
@@ -454,8 +489,13 @@ ___
 The `version` parameter in the `Read` hook enables data migration between schema versions:
 
 ```csharp
-public struct Position : IComponent {
+public struct Position : IComponent, IComponentConfig<Position> {
     public float X, Y, Z;
+
+    public ComponentTypeConfig<Position> Config() => new(
+        guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
+        version: 1  // was version 0, now 1
+    );
 
     public void Write<TWorld>(ref BinaryPackWriter writer, World<TWorld>.Entity self)
         where TWorld : struct, IWorldType {
@@ -473,12 +513,8 @@ public struct Position : IComponent {
     }
 }
 
-// Registration with the new version
-W.Types().Component<Position>(new ComponentTypeConfig<Position>(
-    guid: new Guid("b121594c-456e-4712-9b64-b75dbb37e611"),
-    version: 1,  // was version 0, now 1
-    readWriteStrategy: new UnmanagedPackArrayStrategy<Position>()
-));
+// Registration
+W.Types().Component<Position>();
 ```
 
 ___

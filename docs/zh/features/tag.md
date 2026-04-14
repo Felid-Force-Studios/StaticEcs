@@ -38,33 +38,16 @@ W.Initialize();
 ```
 
 {: .notezh }
-标签自动获得由类型名称计算的稳定 GUID。要覆盖（例如，为了在重命名类型时保持稳定），可以手动传递，也可以在标签结构体内声明一个静态 `Guid` 字段/属性 — `RegisterAll()` 会自动发现它（优先选择名为 `Guid` 的成员）：
+标签自动获得由类型名称计算的稳定 GUID。要提供配置（GUID 覆盖、变更追踪），请在标签结构体上实现 `ITagConfig<T>` 接口。手动注册和 `RegisterAll()` 都会自动使用它：
 
 ```csharp
-// 手动注册并覆盖 GUID
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(guid: new Guid("A1B2C3D4-...")));
-
-// 或声明静态字段 — RegisterAll() 会自动获取
-public struct Poisoned : ITag {
-    public static readonly Guid Guid = new("A1B2C3D4-...");
+public struct Poisoned : ITag, ITagConfig<Poisoned> {
+    public TagTypeConfig<Poisoned> Config() => new(
+        guid: new Guid("A1B2C3D4-..."),
+        trackAdded: true,    // 启用添加追踪（默认 — false）
+        trackDeleted: true   // 启用删除追踪（默认 — false）
+    );
 }
-```
-
-{: .notezh }
-要启用标签的变更追踪，请使用带 `trackAdded` / `trackDeleted` 参数的 `TagTypeConfig<T>`（详见[变更追踪](tracking)）：
-
-```csharp
-W.Types().Tag<Unit>(new TagTypeConfig<Unit>(
-    trackAdded: true,    // 启用添加追踪（默认 — false）
-    trackDeleted: true   // 启用删除追踪（默认 — false）
-));
-
-// 带 GUID 和追踪的完整配置
-W.Types().Tag<Poisoned>(new TagTypeConfig<Poisoned>(
-    guid: new Guid("A1B2C3D4-..."),
-    trackAdded: true,
-    trackDeleted: true
-));
 ```
 
 ___

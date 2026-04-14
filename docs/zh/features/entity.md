@@ -18,19 +18,19 @@ ___
 
 ### 定义实体类型
 
-实体类型定义为实现 `IEntityType` 的结构体，并带有稳定的 `byte Id`：
+实体类型定义为实现 `IEntityType` 的结构体，并带有稳定的 `byte Id()` 方法：
 
 ```csharp
 public struct Bullet : IEntityType {
-    public static readonly byte Id = 1;
+    public byte Id() => 1;
 }
 
 public struct Enemy : IEntityType {
-    public static readonly byte Id = 2;
+    public byte Id() => 2;
 }
 
 public struct Effect : IEntityType {
-    public static readonly byte Id = 3;
+    public byte Id() => 3;
 }
 ```
 
@@ -43,9 +43,9 @@ public struct Effect : IEntityType {
 **手动注册：**
 ```csharp
 W.Types()
-    .EntityType<Bullet>(Bullet.Id)
-    .EntityType<Enemy>(Enemy.Id)
-    .EntityType<Effect>(Effect.Id);
+    .EntityType<Bullet>()
+    .EntityType<Enemy>()
+    .EntityType<Effect>();
 ```
 
 **自动注册：**
@@ -53,7 +53,7 @@ W.Types()
 W.Types().RegisterAll();
 ```
 
-`RegisterAll()` 会在指定程序集（默认为调用程序集）中查找所有实现 `IEntityType` 的类型并自动注册。为此，实体类型必须声明 `public static readonly byte Id` 字段——该字段在自动注册时用作标识符。
+`RegisterAll()` 会在指定程序集（默认为调用程序集）中查找所有实现 `IEntityType` 的类型并自动注册。标识符通过 `Id()` 方法获取。
 
 ### 生命周期钩子（OnCreate / OnDestroy）
 
@@ -61,7 +61,7 @@ W.Types().RegisterAll();
 
 ```csharp
 public struct Bullet : IEntityType {
-    public static readonly byte Id = 1;
+    public byte Id() => 1;
 
     public void OnCreate<TWorld>(World<TWorld>.Entity entity) where TWorld : struct, IWorldType {
         entity.Set(new Velocity { Speed = 100 });
@@ -81,7 +81,7 @@ public struct Bullet : IEntityType {
 
 ```csharp
 public struct Flora : IEntityType {
-    public static readonly byte Id = 4;
+    public byte Id() => 4;
 
     public enum Kind : byte { Grass, Bush, Tree }
     public Kind FloraKind;

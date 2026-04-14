@@ -6,9 +6,13 @@
         <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>disable</Nullable>
+        <!-- IL2091: All instances in this project are false positives - reflection on component/event types
+             happens only during registration (World.Types().Component<T>()), not during entity operations.
+             Type metadata is always preserved by the registration path. -->
+        <NoWarn>$(NoWarn);IL2091</NoWarn>
         <RootNamespace>FFS.Libraries.StaticEcs</RootNamespace>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>2.0.6</Version>
+        <Version>2.1.0</Version>
         <Authors>Felid-Force-Studios</Authors>
         <Description>C# Hierarchical Inverted Bitmap ECS framework</Description>
         <Copyright>Felid-Force-Studios</Copyright>

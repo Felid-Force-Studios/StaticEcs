@@ -7,6 +7,9 @@ using static System.Runtime.CompilerServices.MethodImplOptions;
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
+#if NET5_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 
 #pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
 
@@ -35,6 +38,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllAdded<T0> : IQueryFilter
         where T0 : struct, IComponentOrTag {
@@ -96,6 +102,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllAdded<T0, T1> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -166,6 +175,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllAdded<T0, T1, T2> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -245,6 +257,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllAdded<T0, T1, T2, T3> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -333,6 +348,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllAdded<T0, T1, T2, T3, T4> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -438,6 +456,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+    #endif
     public readonly struct NoneAdded<T0> : IQueryFilter
         where T0 : struct, IComponentOrTag {
 
@@ -493,6 +514,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneAdded<T0, T1> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -555,6 +579,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneAdded<T0, T1, T2> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -623,6 +650,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneAdded<T0, T1, T2, T3> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -697,6 +727,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneAdded<T0, T1, T2, T3, T4> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -785,6 +818,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+    #endif
     public readonly struct AnyAdded<T0, T1> : IQueryFilter
         where T0 : struct, IComponentOrTag
         where T1 : struct, IComponentOrTag {
@@ -854,6 +890,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AnyAdded<T0, T1, T2> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -933,6 +972,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AnyAdded<T0, T1, T2, T3> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -1021,6 +1063,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AnyAdded<T0, T1, T2, T3, T4> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -1138,6 +1183,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+    #endif
     public readonly struct AllDeleted<T0> : IQueryFilter
         where T0 : struct, IComponentOrTag {
 
@@ -1198,6 +1246,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllDeleted<T0, T1> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -1268,6 +1319,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllDeleted<T0, T1, T2> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -1347,6 +1401,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllDeleted<T0, T1, T2, T3> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -1435,6 +1492,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllDeleted<T0, T1, T2, T3, T4> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -1540,6 +1600,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+    #endif
     public readonly struct NoneDeleted<T0> : IQueryFilter
         where T0 : struct, IComponentOrTag {
 
@@ -1595,6 +1658,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneDeleted<T0, T1> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -1657,6 +1723,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneDeleted<T0, T1, T2> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -1725,6 +1794,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneDeleted<T0, T1, T2, T3> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -1799,6 +1871,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneDeleted<T0, T1, T2, T3, T4> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -1887,6 +1962,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+    #endif
     public readonly struct AnyDeleted<T0, T1> : IQueryFilter
         where T0 : struct, IComponentOrTag
         where T1 : struct, IComponentOrTag {
@@ -1956,6 +2034,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AnyDeleted<T0, T1, T2> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -2035,6 +2116,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AnyDeleted<T0, T1, T2, T3> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -2123,6 +2207,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AnyDeleted<T0, T1, T2, T3, T4> : IQueryFilter
         where T0 : struct, IComponentOrTag
@@ -2228,6 +2315,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+    #endif
     public readonly struct Created : IQueryFilter {
 
         public readonly ulong FromTick;
@@ -2289,6 +2379,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+    #endif
     public readonly struct AllChanged<T0> : IQueryFilter
         where T0 : struct, IComponent {
 
@@ -2349,6 +2442,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllChanged<T0, T1> : IQueryFilter
         where T0 : struct, IComponent
@@ -2419,6 +2515,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllChanged<T0, T1, T2> : IQueryFilter
         where T0 : struct, IComponent
@@ -2498,6 +2597,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllChanged<T0, T1, T2, T3> : IQueryFilter
         where T0 : struct, IComponent
@@ -2586,6 +2688,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AllChanged<T0, T1, T2, T3, T4> : IQueryFilter
         where T0 : struct, IComponent
@@ -2692,6 +2797,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+    #endif
     public readonly struct NoneChanged<T0> : IQueryFilter
         where T0 : struct, IComponent {
 
@@ -2747,6 +2855,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneChanged<T0, T1> : IQueryFilter
         where T0 : struct, IComponent
@@ -2809,6 +2920,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneChanged<T0, T1, T2> : IQueryFilter
         where T0 : struct, IComponent
@@ -2877,6 +2991,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneChanged<T0, T1, T2, T3> : IQueryFilter
         where T0 : struct, IComponent
@@ -2951,6 +3068,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct NoneChanged<T0, T1, T2, T3, T4> : IQueryFilter
         where T0 : struct, IComponent
@@ -3040,6 +3160,9 @@ namespace FFS.Libraries.StaticEcs {
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
     #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+    #endif
     public readonly struct AnyChanged<T0, T1> : IQueryFilter
         where T0 : struct, IComponent
         where T1 : struct, IComponent {
@@ -3109,6 +3232,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AnyChanged<T0, T1, T2> : IQueryFilter
         where T0 : struct, IComponent
@@ -3188,6 +3314,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AnyChanged<T0, T1, T2, T3> : IQueryFilter
         where T0 : struct, IComponent
@@ -3276,6 +3405,9 @@ namespace FFS.Libraries.StaticEcs {
     #if ENABLE_IL2CPP
     [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
     [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+    #endif
+    #if NET5_0_OR_GREATER
+    [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
     #endif
     public readonly struct AnyChanged<T0, T1, T2, T3, T4> : IQueryFilter
         where T0 : struct, IComponent
@@ -3382,6 +3514,9 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
         #endif
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
+        #endif
         internal readonly struct ChangedTracker<T0> : IChangedTracker
             where T0 : struct, IComponent {
             private readonly bool _track0;
@@ -3403,6 +3538,9 @@ namespace FFS.Libraries.StaticEcs {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+        #endif
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
         #endif
         internal readonly struct ChangedTracker<T0, T1> : IChangedTracker
             where T0 : struct, IComponent
@@ -3429,6 +3567,9 @@ namespace FFS.Libraries.StaticEcs {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+        #endif
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
         #endif
         internal readonly struct ChangedTracker<T0, T1, T2> : IChangedTracker
             where T0 : struct, IComponent
@@ -3459,6 +3600,9 @@ namespace FFS.Libraries.StaticEcs {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+        #endif
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
         #endif
         internal readonly struct ChangedTracker<T0, T1, T2, T3> : IChangedTracker
             where T0 : struct, IComponent
@@ -3493,6 +3637,9 @@ namespace FFS.Libraries.StaticEcs {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+        #endif
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
         #endif
         internal readonly struct ChangedTracker<T0, T1, T2, T3, T4> : IChangedTracker
             where T0 : struct, IComponent
@@ -3531,6 +3678,9 @@ namespace FFS.Libraries.StaticEcs {
         #if ENABLE_IL2CPP
         [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
+        #endif
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path.")]
         #endif
         internal readonly struct ChangedTracker<T0, T1, T2, T3, T4, T5> : IChangedTracker
             where T0 : struct, IComponent

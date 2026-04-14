@@ -6,6 +6,9 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using static System.Runtime.CompilerServices.MethodImplOptions;
+#if NET5_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 #if ENABLE_IL2CPP
 using Unity.IL2CPP.CompilerServices;
 #endif
@@ -42,6 +45,9 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppSetOption(Option.NullChecks, Const.IL2CPPNullChecks)]
         [Il2CppSetOption(Option.ArrayBoundsChecks, Const.IL2CPPArrayBoundsChecks)]
         [Il2CppEagerStaticClassConstruction]
+        #endif
+        #if NET5_0_OR_GREATER
+        [UnconditionalSuppressMessage("AOT", "IL2091", Justification = "Type metadata is preserved by the registration path (World.Types().Component<T>()). Entity methods do not perform reflection.")]
         #endif
         public struct Entity : IEquatable<Entity> {
             internal uint IdWithOffset;
@@ -147,7 +153,7 @@ namespace FFS.Libraries.StaticEcs {
             /// </summary>
             [MethodImpl(AggressiveInlining)]
             public readonly bool Is<T>() where T : struct, IEntityType {
-                return EntityType == EntityTypeInfo<T>.Id;
+                return EntityType == EntityTypeInfo<T>.Instance.Id;
             }
 
             /// <summary>
@@ -157,7 +163,7 @@ namespace FFS.Libraries.StaticEcs {
             public readonly bool IsAny<T0, T1>()
                 where T0 : struct, IEntityType
                 where T1 : struct, IEntityType {
-                return EntityType == EntityTypeInfo<T0>.Id || EntityType == EntityTypeInfo<T1>.Id;
+                return EntityType == EntityTypeInfo<T0>.Instance.Id || EntityType == EntityTypeInfo<T1>.Instance.Id;
             }
 
             /// <summary>
@@ -168,7 +174,7 @@ namespace FFS.Libraries.StaticEcs {
                 where T0 : struct, IEntityType
                 where T1 : struct, IEntityType
                 where T2 : struct, IEntityType {
-                return EntityType == EntityTypeInfo<T0>.Id || EntityType == EntityTypeInfo<T1>.Id || EntityType == EntityTypeInfo<T2>.Id;
+                return EntityType == EntityTypeInfo<T0>.Instance.Id || EntityType == EntityTypeInfo<T1>.Instance.Id || EntityType == EntityTypeInfo<T2>.Instance.Id;
             }
 
             /// <summary>
@@ -176,7 +182,7 @@ namespace FFS.Libraries.StaticEcs {
             /// </summary>
             [MethodImpl(AggressiveInlining)]
             public readonly bool IsNot<T>() where T : struct, IEntityType {
-                return EntityType != EntityTypeInfo<T>.Id;
+                return EntityType != EntityTypeInfo<T>.Instance.Id;
             }
 
             /// <summary>
@@ -186,7 +192,7 @@ namespace FFS.Libraries.StaticEcs {
             public readonly bool IsNot<T0, T1>()
                 where T0 : struct, IEntityType
                 where T1 : struct, IEntityType {
-                return EntityType != EntityTypeInfo<T0>.Id && EntityType != EntityTypeInfo<T1>.Id;
+                return EntityType != EntityTypeInfo<T0>.Instance.Id && EntityType != EntityTypeInfo<T1>.Instance.Id;
             }
 
             /// <summary>
@@ -197,7 +203,7 @@ namespace FFS.Libraries.StaticEcs {
                 where T0 : struct, IEntityType
                 where T1 : struct, IEntityType
                 where T2 : struct, IEntityType {
-                return EntityType != EntityTypeInfo<T0>.Id && EntityType != EntityTypeInfo<T1>.Id && EntityType != EntityTypeInfo<T2>.Id;
+                return EntityType != EntityTypeInfo<T0>.Instance.Id && EntityType != EntityTypeInfo<T1>.Instance.Id && EntityType != EntityTypeInfo<T2>.Instance.Id;
             }
 
             /// <summary>
@@ -249,7 +255,7 @@ namespace FFS.Libraries.StaticEcs {
                 AssertEntityIsNotDestroyedAndLoaded(EntityTypeName, this);
                 #endif
 
-                Data.Instance.CreateEntity(EntityType, ClusterId, out var dstEntity);
+                Data.Instance.CreateEntityWithOnCreate(EntityType, ClusterId, out var dstEntity);
                 CopyTo(dstEntity);
 
                 return dstEntity;
@@ -269,7 +275,7 @@ namespace FFS.Libraries.StaticEcs {
                 AssertEntityIsNotDestroyedAndLoaded(EntityTypeName, this);
                 #endif
 
-                Data.Instance.CreateEntity(EntityType, clusterId, out var dstEntity);
+                Data.Instance.CreateEntityWithOnCreate(EntityType, clusterId, out var dstEntity);
                 CopyTo(dstEntity);
 
                 return dstEntity;
@@ -312,7 +318,7 @@ namespace FFS.Libraries.StaticEcs {
                 AssertEntityIsNotDestroyedAndLoaded(EntityTypeName, this);
                 #endif
 
-                Data.Instance.CreateEntity(EntityType, clusterId, out var dstEntity);
+                Data.Instance.CreateEntityWithOnCreate(EntityType, clusterId, out var dstEntity);
                 CopyTo(dstEntity);
                 Destroy();
                 return dstEntity;
@@ -1664,6 +1670,9 @@ namespace FFS.Libraries.StaticEcs {
     /// </para>
     /// </summary>
     public interface IEntityType {
+
+        public byte Id();
+        
         /// <summary>
         /// Called after entity creation. Override to add components, tags, or perform setup.
         /// The struct instance may carry configuration data accessible via <c>this</c>.
@@ -1689,6 +1698,6 @@ namespace FFS.Libraries.StaticEcs {
     /// Used when no specific entity type is needed.
     /// </summary>
     public readonly struct Default : IEntityType {
-        public static readonly byte Id = 0;
+        public byte Id() => 0;
     }
 }
