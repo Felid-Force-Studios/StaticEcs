@@ -185,12 +185,14 @@ namespace FFS.Libraries.StaticEcs {
         [Il2CppEagerStaticClassConstruction]
         #endif
         internal readonly struct NamedResources {
-            internal class BoxBase {
+            internal abstract class BoxBase {
                 internal bool IsValid = true;
+                internal abstract object GetValue();
             }
 
             internal class Box<T> : BoxBase {
                 public T Value;
+                internal override object GetValue() => Value;
             }
 
             internal static readonly Dictionary<string, object> Values = new();
@@ -206,6 +208,14 @@ namespace FFS.Libraries.StaticEcs {
                 }
 
                 return ref ((Box<T>)boxObj).Value;
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal static object GetRaw(string key) {
+                if (!Values.TryGetValue(key, out var boxObj)) {
+                    throw new StaticEcsException($"NamedResource with key `{key}` not found in World<{typeof(TWorld).Name}>");
+                }
+                return ((BoxBase) boxObj).GetValue();
             }
 
             [MethodImpl(AggressiveInlining)]
@@ -298,16 +308,39 @@ namespace FFS.Libraries.StaticEcs {
             }
 
             [MethodImpl(AggressiveInlining)]
-            internal readonly Dictionary<Type, (Func<object>, Action<object, bool>, Action)> GetAllGetSetRemoveValuesMethods() => ValuesGetSetRawMethods;
+            internal Dictionary<Type, (Func<object>, Action<object, bool>, Action)> GetAllGetSetRemoveValuesMethods() {
+                ValuesGetSetRawMethods ??= new Dictionary<Type, (Func<object>, Action<object, bool>, Action)>();
+                return ValuesGetSetRawMethods;
+            }
 
             [MethodImpl(AggressiveInlining)]
             internal readonly bool HasRaw(Type type) => ValuesGetSetRawMethods != null && ValuesGetSetRawMethods.ContainsKey(type);
 
             [MethodImpl(AggressiveInlining)]
-            internal readonly object GetRaw(Type type) => ValuesGetSetRawMethods[type].get();
+            internal readonly object GetRaw(Type type) {
+                if (ValuesGetSetRawMethods == null || !ValuesGetSetRawMethods.TryGetValue(type, out var methods)) {
+                    throw new StaticEcsException($"Resource of type `{type}` is not registered in World<{typeof(TWorld).Name}>");
+                }
+                return methods.get();
+            }
 
             [MethodImpl(AggressiveInlining)]
-            internal readonly void RemoveRaw(Type type) => ValuesGetSetRawMethods[type].remove();
+            internal readonly void RemoveRaw(Type type) {
+                if (ValuesGetSetRawMethods == null || !ValuesGetSetRawMethods.TryGetValue(type, out var methods)) {
+                    throw new StaticEcsException($"Resource of type `{type}` is not registered in World<{typeof(TWorld).Name}>");
+                }
+                methods.remove();
+            }
+
+            [MethodImpl(AggressiveInlining)]
+            internal readonly void SetRaw(Type type, object value, bool clearOnDestroy) {
+                if (ValuesGetSetRawMethods == null || !ValuesGetSetRawMethods.TryGetValue(type, out var methods)) {
+                    throw new StaticEcsException(
+                        $"Resource of type `{type}` is not registered in World<{typeof(TWorld).Name}>. " +
+                        $"Raw SetResource requires the type to be registered first via typed SetResource<{type.Name}>(...)");
+                }
+                methods.set(value, clearOnDestroy);
+            }
         }
     }
 
