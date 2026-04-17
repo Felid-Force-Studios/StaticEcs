@@ -3733,7 +3733,7 @@ namespace FFS.Libraries.StaticEcs {
         internal static object _GetResource(Type type) => ResourcesData.Instance.GetRaw(type);
 
         [MethodImpl(AggressiveInlining)]
-        internal static object _GetResourceByKey(string key) => NamedResources.Get<object>(key);
+        internal static object _GetResourceByKey(string key) => NamedResources.GetRaw(key);
 
         [MethodImpl(AggressiveInlining)]
         internal static void _RemoveResource(Type type) => ResourcesData.Instance.RemoveRaw(type);
@@ -3742,7 +3742,7 @@ namespace FFS.Libraries.StaticEcs {
         internal static void _RemoveResourceByKey(string key) => NamedResources.Remove(key);
 
         [MethodImpl(AggressiveInlining)]
-        internal static void _SetResource(Type type, object value, bool clearOnDestroy) => ResourcesData.Instance.GetAllGetSetRemoveValuesMethods()[type].Item2(value, clearOnDestroy);
+        internal static void _SetResource(Type type, object value, bool clearOnDestroy) => ResourcesData.Instance.SetRaw(type, value, clearOnDestroy);
 
         [MethodImpl(AggressiveInlining)]
         internal static void _SetResourceByKey(string key, object value, bool clearOnDestroy) => NamedResources.Set(key, value, clearOnDestroy);

@@ -7,7 +7,7 @@ parent: Main page
 <p align="center">
   <img src="../fulllogo.png" alt="Static ECS" width="100%">
   <br><br>
-  <img src="https://img.shields.io/badge/version-2.1.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.1.1-blue?style=for-the-badge" alt="Version">
   <a href="https://felid-force-studios.github.io/StaticEcs/en/"><img src="https://img.shields.io/badge/Docs-documentation-blueviolet?style=for-the-badge" alt="Documentation"></a>
   <a href="https://gist.github.com/blackbone/6d254a684cf580441bf58690ad9485c3"><img src="https://img.shields.io/badge/Benchmarks-results-green?style=for-the-badge" alt="Benchmarks"></a>
   <a href="https://github.com/Felid-Force-Studios/StaticEcs-Unity"><img src="https://img.shields.io/badge/Unity-module-orange?style=for-the-badge&logo=unity" alt="Unity module"></a>
