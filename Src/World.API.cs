@@ -60,6 +60,27 @@ namespace FFS.Libraries.StaticEcs {
     public abstract partial class World<TWorld> where TWorld : struct, IWorldType {
 
         #region BASE
+        
+        /// <summary>
+        /// Type-erased <see cref="WorldHandle"/> for this world, exposing its API through
+        /// function pointers without requiring the <typeparamref name="TWorld"/> generic
+        /// parameter at the call site.
+        /// <para>
+        /// Intended for editor tools, debug visualizers, serializers, and plugin code that
+        /// must operate on any world uniformly. For regular gameplay code prefer the strongly
+        /// typed <see cref="World{TWorld}"/> API — the handle adds an indirection and loses
+        /// compile-time type safety.
+        /// </para>
+        /// <para>
+        /// Returned by reference so internal delegate slots stay addressable; do not copy
+        /// the handle into a <c>readonly</c> field. Valid while the world exists.
+        /// </para>
+        /// </summary>
+        public static ref WorldHandle Handle {
+            [MethodImpl(AggressiveInlining)]
+            get => ref Data.Handle;
+        }
+        
         /// <summary>
         /// Whether the world has been fully initialized and is ready for entity creation,
         /// queries, and gameplay logic. Returns <c>true</c> only in <see cref="WorldStatus.Initialized"/> state.
