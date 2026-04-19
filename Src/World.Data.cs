@@ -3559,6 +3559,8 @@ namespace FFS.Libraries.StaticEcs {
                         }
                     }
                 }
+                
+                ArrayPool<(Guid, uint)>.Shared.Return(tempDeletedPoolIds);
             }
 
             [MethodImpl(AggressiveInlining)]
