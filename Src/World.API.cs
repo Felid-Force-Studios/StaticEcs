@@ -1496,7 +1496,7 @@ namespace FFS.Libraries.StaticEcs {
         public readonly struct TypeRegistrar {
 
             /// <summary>
-            /// Auto-discovers and registers all ECS types found in the specified assemblies via reflection.
+            /// Auto-discovers and registers all ECS types found in the assembly that declares <typeparamref name="TWorld"/>.
             /// Scans for structs implementing the following marker interfaces and registers each one:
             /// <list type="bullet">
             /// <item><see cref="IComponent"/> — registered as component (excludes internal framework components).</item>
@@ -1508,10 +1508,21 @@ namespace FFS.Libraries.StaticEcs {
             /// <item><see cref="IEntityType"/> — registered as entity type with Id from a static <c>byte Id</c> field. <see cref="Default"/> is skipped (already registered).</item>
             /// </list>
             /// <para>
-            /// If no assemblies are specified, scans the calling assembly only.
+            /// The scanned assembly is resolved as <c>typeof(TWorld).Assembly</c>. This is a pure reflection lookup
+            /// and does not rely on stack walking, so it works correctly on all runtimes, including
+            /// <b>Unity IL2CPP, Unity WebGL, and NativeAOT</b> (where <c>Assembly.GetCallingAssembly</c> returns
+            /// unreliable results).
+            /// </para>
+            /// <para>
+            /// If <typeparamref name="TWorld"/> lives in a different assembly than your ECS types (e.g. a shared
+            /// "core" assembly), use the overload <see cref="RegisterAll(Assembly, Assembly[])"/> and pass the
+            /// assemblies explicitly.
+            /// </para>
+            /// <para>
             /// The StaticEcs framework assembly itself is always excluded from scanning.
             /// Abstract types and open generic type definitions are skipped.
-            /// All types are registered with default configuration (default GUID, default serialization settings).
+            /// All types are registered with default configuration (default GUID, default serialization settings);
+            /// for custom configuration use the explicit <see cref="Component{T}"/>, <see cref="Event{T}"/>, etc.
             /// </para>
             /// <para>
             /// Must be called during the <see cref="WorldStatus.Created"/> phase
@@ -1520,14 +1531,39 @@ namespace FFS.Libraries.StaticEcs {
             /// will be registered for each applicable interface.
             /// </para>
             /// </summary>
-            /// <param name="assemblies">Assemblies to scan for ECS type implementations. If empty, scans the calling assembly.</param>
             /// <returns>This registrar for chaining.</returns>
-            [MethodImpl(NoInlining)]
-            public void RegisterAll(params Assembly[] assemblies) {
-                if (assemblies == null || assemblies.Length == 0) {
-                    assemblies = new[] { Assembly.GetCallingAssembly() };
+            [MethodImpl(AggressiveInlining)]
+            public TypeRegistrar RegisterAll() {
+                AutoRegistration.RegisterAll<TWorld>(typeof(TWorld).Assembly);
+                return this;
+            }
+
+            /// <summary>
+            /// Auto-discovers and registers all ECS types found in the specified assemblies via reflection.
+            /// Use this overload when ECS types live in one or more assemblies different from the one that
+            /// declares <typeparamref name="TWorld"/>, e.g.:
+            /// <code>
+            /// World&lt;MyWorld&gt;.Types().RegisterAll(typeof(MyWorld).Assembly, typeof(SomeComponent).Assembly);
+            /// </code>
+            /// <para>
+            /// Discovery rules, excluded types, configuration defaults and lifecycle constraints are identical to
+            /// <see cref="RegisterAll()"/> — see that method for details.
+            /// </para>
+            /// </summary>
+            /// <param name="first">First assembly to scan (required — prevents accidental empty calls).</param>
+            /// <param name="rest">Additional assemblies to scan.</param>
+            /// <returns>This registrar for chaining.</returns>
+            [MethodImpl(AggressiveInlining)]
+            public TypeRegistrar RegisterAll(Assembly first, params Assembly[] rest) {
+                if (rest == null || rest.Length == 0) {
+                    AutoRegistration.RegisterAll<TWorld>(first);
+                } else {
+                    var assemblies = new Assembly[rest.Length + 1];
+                    assemblies[0] = first;
+                    Array.Copy(rest, 0, assemblies, 1, rest.Length);
+                    AutoRegistration.RegisterAll<TWorld>(assemblies);
                 }
-                AutoRegistration.RegisterAll<TWorld>(assemblies);
+                return this;
             }
 
             /// <summary>
