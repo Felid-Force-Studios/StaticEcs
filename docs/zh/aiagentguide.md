@@ -39,13 +39,13 @@ public abstract class GameSys : W.Systems<GameSystems> { }
 
 ### 世界生命周期（严格顺序）
 1. `W.Create(WorldConfig.Default())` — 创建世界
-2. `W.Types().RegisterAll()` 或手动注册 `.Component<T>().Tag<T>().Event<T>()` — 注册所有类型（必须！）
+2. `W.Types().RegisterAll()` 或手动注册 `.Component<T>().Tag<T>().Event<T>()` — 注册所有类型（必须！）。无参的 `RegisterAll()` 扫描 `typeof(TWorld).Assembly`（在 IL2CPP/WebGL/NativeAOT 上安全）。对于跨程序集的类型使用 `RegisterAll(typeof(TWorld).Assembly, typeof(Other).Assembly)`。
 3. `W.Initialize()` — 之后实体操作可用
 4. 工作：创建实体、运行系统、迭代查询
 5. `W.Destroy()` — 清理
 
 ### 关键规则
-- 始终在 Create() 和 Initialize() 之间注册组件/标签/事件/链接类型。使用 `W.Types().RegisterAll()` 从程序集自动注册所有类型，或手动注册。未注册的类型会导致运行时错误。
+- 始终在 Create() 和 Initialize() 之间注册组件/标签/事件/链接类型。使用 `W.Types().RegisterAll()` 从声明 `TWorld` 标记的程序集自动注册所有类型（在 Unity IL2CPP / WebGL / NativeAOT 上都可用，因为它使用 `typeof(TWorld).Assembly` 而非 `GetCallingAssembly`），或手动注册。对于多程序集项目，请显式传入每个程序集：`W.Types().RegisterAll(typeof(TWorld).Assembly, typeof(OtherAssemblyMarker).Assembly)`。未注册的类型会导致运行时错误。
 - Entity 是 4 字节 uint 句柄，不是持久引用。永远不要在字段/集合中跨帧存储 Entity。使用 EntityGID 作为持久引用。
 - `Add<T>()` 不带值是幂等的（如果存在 → 返回 ref，不调用钩子）。`Set(value)` 总是覆写，触发 OnDelete→OnAdd 钩子。
 - `Ref<T>()` 返回组件的 ref 引用。假设组件存在——不确定时用 `Has<T>()` 检查。

@@ -137,18 +137,20 @@ ___
 
 #### Auto-registration of types:
 Instead of manually registering each type, you can use automatic assembly scanning.
-`RegisterAll()` discovers all structs implementing ECS interfaces and registers them automatically:
+`RegisterAll()` discovers all structs implementing ECS interfaces in one or more assemblies and registers each one via the corresponding `Register*` API.
 
 ```csharp
 W.Create(WorldConfig.Default());
 
-// Auto-register all types from the calling assembly
+// Parameterless form — scans the assembly that declares the IWorldType struct `WT`
+// (resolved as typeof(WT).Assembly). No stack walking.
 W.Types().RegisterAll();
 
-// Or specify particular assemblies
+// Explicit form — scans the given assemblies only. The first assembly is required
+// so an empty call is syntactically impossible.
 W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
 
-// Can be combined with manual registration
+// Can be combined with manual registration (fluent chain)
 W.Types()
     .RegisterAll()
     .Component<SpecialComponent>();
@@ -156,7 +158,36 @@ W.Types()
 W.Initialize();
 ```
 
-Detected interfaces:
+**How the scanned assembly is resolved**
+
+| Overload | Scanned assemblies |
+|----------|-------------------|
+| `RegisterAll()` | `typeof(TWorld).Assembly` — the assembly that declares your `IWorldType` struct (in the examples, `WT` — not the alias class `W : World<WT>`, but the struct itself) |
+| `RegisterAll(Assembly first, params Assembly[] rest)` | Exactly the assemblies you pass — `TWorld`'s assembly is **not** added implicitly |
+
+The parameterless form deliberately uses `typeof(TWorld).Assembly` and never calls `Assembly.GetCallingAssembly()`. This means it works correctly on **all runtimes**, including:
+
+- .NET Framework / .NET Core / .NET 5+
+- Mono and Unity Mono
+- **Unity IL2CPP**
+- **Unity WebGL**
+- **NativeAOT**
+
+On IL2CPP/WebGL/NativeAOT, `Assembly.GetCallingAssembly()` returns unreliable results because stack walking is stripped or restricted — that is why the implementation derives the assembly from a generic type argument instead. As long as your `IWorldType` struct (`WT`) lives in the same assembly as your ECS types, the parameterless form is all you need.
+
+**Multi-assembly scenario**
+
+If your `IWorldType` struct and your ECS types live in different assemblies (for example, `WT` is defined in a shared "core" assembly and your components live in a game assembly), use the explicit overload and list every assembly that contains ECS types:
+
+```csharp
+W.Types().RegisterAll(
+    typeof(WT).Assembly,           // core assembly with the IWorldType struct
+    typeof(Position).Assembly,     // gameplay assembly with components
+    typeof(AiPlugin).Assembly      // another plugin assembly
+);
+```
+
+**Detected interfaces**
 
 | Interface | Registration |
 |-----------|-------------|
@@ -169,15 +200,17 @@ Detected interfaces:
 | `IEntityType` | `Types().EntityType<T>()` |
 
 {: .note }
-- If no assemblies are specified, only the calling assembly is scanned (not all loaded assemblies)
-- The StaticEcs framework assembly itself is always excluded from scanning
+- The StaticEcs framework assembly itself is always excluded from scanning.
+- Abstract types and open generic type definitions are skipped.
+- A struct implementing multiple interfaces (e.g. both `IComponent` and `IMultiComponent`) is registered for each applicable interface.
+- The `Default` entity type is skipped because it is already registered by the world.
 - `RegisterAll()` searches for a static field or property of the matching config type inside each struct and uses it if found. Otherwise, default configuration is used. Lookup rules:
   - `IComponent` — looks for `ComponentTypeConfig<T>` (prefers name `Config`)
   - `IEvent` — looks for `EventTypeConfig<T>` (prefers name `Config`)
   - `ITag` — looks for `TagTypeConfig<T>` (prefers name `Config`)
   - `IEntityType` — looks for `byte` (prefers name `Id`)
-- Both fields and properties are supported
-- A struct implementing multiple interfaces (e.g. both `IComponent` and `IMultiComponent`) will be registered for each one
+- Both fields and properties are supported.
+- Must be called during the `Created` phase — after `W.Create()` and before `W.Initialize()`.
 
 ___
 

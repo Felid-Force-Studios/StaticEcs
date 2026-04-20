@@ -12,7 +12,7 @@
         <NoWarn>$(NoWarn);IL2091</NoWarn>
         <RootNamespace>FFS.Libraries.StaticEcs</RootNamespace>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-        <Version>2.1.3</Version>
+        <Version>2.1.4</Version>
         <Authors>Felid-Force-Studios</Authors>
         <Description>C# Hierarchical Inverted Bitmap ECS framework</Description>
         <Copyright>Felid-Force-Studios</Copyright>
@@ -48,18 +48,18 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Content Include="README.md" Pack="true" PackagePath=""/>
-        <Content Include="README_RU.md"/>
-        <Content Include="README_ZH.md"/>
-        <Content Include="CHANGELOG_2_0_0.md"/>
-        <Content Include="CHANGELOG_2_0_0_EN.md"/>
-        <Content Include="CHANGELOG_2_0_0_ZH.md"/>
+        <None Include="README.md" Pack="true" PackagePath=""/>
+        <None Include="README_RU.md" Pack="true" PackagePath=""/>
+        <None Include="README_ZH.md" Pack="true" PackagePath=""/>
     </ItemGroup>
     <ItemGroup>
         <None Remove="**/*.meta"/>
         <None Remove="FFS.StaticEcs.asmdef"/>
         <None Remove="package.json"/>
         <None Remove="LICENSE.meta"/>
+        <None Remove="CHANGELOG_2_0_0.md"/>
+        <None Remove="CHANGELOG_2_0_0_EN.md"/>
+        <None Remove="CHANGELOG_2_0_0_ZH.md"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(Configuration)' == 'Debug'">

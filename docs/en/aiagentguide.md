@@ -39,13 +39,13 @@ public abstract class GameSys : W.Systems<GameSystems> { }
 
 ### World Lifecycle (strict order)
 1. `W.Create(WorldConfig.Default())` — creates the world
-2. `W.Types().RegisterAll()` or manual registration `.Component<T>().Tag<T>().Event<T>()` — register ALL types (required!)
+2. `W.Types().RegisterAll()` or manual registration `.Component<T>().Tag<T>().Event<T>()` — register ALL types (required!). `RegisterAll()` without arguments scans `typeof(TWorld).Assembly` (safe on IL2CPP/WebGL/NativeAOT). For types split across assemblies use `RegisterAll(typeof(TWorld).Assembly, typeof(Other).Assembly)`.
 3. `W.Initialize()` — after this, entity operations are available
 4. Work: create entities, run systems, iterate queries
 5. `W.Destroy()` — cleanup
 
 ### Critical Rules
-- ALWAYS register component/tag/event/link types between Create() and Initialize(). Use `W.Types().RegisterAll()` to auto-register all types from the assembly, or register manually. Unregistered types cause runtime errors.
+- ALWAYS register component/tag/event/link types between Create() and Initialize(). Use `W.Types().RegisterAll()` to auto-register all types from the assembly that declares your `TWorld` marker (works on Unity IL2CPP / WebGL / NativeAOT because it uses `typeof(TWorld).Assembly`, not `GetCallingAssembly`), or register manually. For multi-assembly projects pass each assembly explicitly: `W.Types().RegisterAll(typeof(TWorld).Assembly, typeof(OtherAssemblyMarker).Assembly)`. Unregistered types cause runtime errors.
 - Entity is a 4-byte uint handle — NOT a persistent reference. NEVER store Entity in fields/collections across frames. Use EntityGID for persistent references.
 - `Add<T>()` without value is idempotent (if exists → returns ref, no hooks). `Set(value)` ALWAYS overwrites with OnDelete→OnAdd hook cycle.
 - `Ref<T>()` returns a ref to the component. Assumes component exists — check with `Has<T>()` first if uncertain.

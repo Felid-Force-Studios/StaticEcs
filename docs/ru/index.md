@@ -7,7 +7,7 @@ parent: Main page
 <p align="center">
   <img src="../fulllogo.png" alt="Static ECS" width="100%">
   <br><br>
-  <img src="https://img.shields.io/badge/version-2.1.3-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.1.4-blue?style=for-the-badge" alt="Version">
   <a href="https://felid-force-studios.github.io/StaticEcs/ru/"><img src="https://img.shields.io/badge/Docs-документация-blueviolet?style=for-the-badge" alt="Документация"></a>
   <a href="https://gist.github.com/blackbone/6d254a684cf580441bf58690ad9485c3"><img src="https://img.shields.io/badge/Benchmarks-результаты-green?style=for-the-badge" alt="Benchmarks"></a>
   <a href="https://github.com/Felid-Force-Studios/StaticEcs-Unity"><img src="https://img.shields.io/badge/Unity-модуль-orange?style=for-the-badge&logo=unity" alt="Unity модуль"></a>
@@ -182,7 +182,10 @@ public class Program {
         // Создаем мир
         W.Create();
 
-        // Авторегистрация всех компонентов, тегов, событий и т.д. из текущей сборки
+        // Авторегистрация всех компонентов, тегов, событий, связей и типов сущностей
+        // из сборки, в которой объявлена IWorldType-структура `WT` (берётся как typeof(WT).Assembly).
+        // Безопасно на всех рантаймах, включая Unity IL2CPP, Unity WebGL и NativeAOT — без stack walking.
+        // Для мульти-сборочных проектов: W.Types().RegisterAll(typeof(WT).Assembly, typeof(Other).Assembly);
         W.Types().RegisterAll();
 
         // Инициализируем мир

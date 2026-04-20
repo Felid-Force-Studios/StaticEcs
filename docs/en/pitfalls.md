@@ -32,6 +32,28 @@ W.Types().RegisterAll();
 W.Initialize();
 ```
 
+### `RegisterAll()` and multi-assembly projects / Unity IL2CPP / WebGL / NativeAOT
+
+`W.Types().RegisterAll()` without arguments scans **exactly one assembly** — the one that declares your `IWorldType` marker (`typeof(TWorld).Assembly`). It does **not** walk the stack and does **not** enumerate loaded assemblies, which means:
+
+- **It is safe on all runtimes**, including Unity IL2CPP, Unity WebGL and NativeAOT, where stack walking (`Assembly.GetCallingAssembly`) returns unreliable results.
+- **It will miss ECS types defined in other assemblies.** A common mistake is to keep your `TWorld` marker struct in a "core" / "shared" assembly and your components in a gameplay assembly — the parameterless call then registers nothing.
+
+```csharp
+// WRONG — MyWorld lives in Game.Core.dll, components live in Game.Gameplay.dll.
+// Only Game.Core.dll is scanned, so no components get registered.
+W.Types().RegisterAll();
+
+// CORRECT — list every assembly that contains ECS types.
+W.Types().RegisterAll(
+    typeof(MyWorld).Assembly,
+    typeof(Position).Assembly,
+    typeof(AiPlugin).Assembly
+);
+```
+
+If in doubt, place your `TWorld` marker in the same assembly as your components and use the parameterless form.
+
 ### Entity operations before Initialize
 `NewEntity`, queries, and all entity operations only work after `W.Initialize()`. Calling them during the `Created` phase (between `Create` and `Initialize`) will fail.
 

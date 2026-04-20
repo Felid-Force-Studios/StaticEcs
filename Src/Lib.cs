@@ -811,7 +811,7 @@ namespace FFS.Libraries.StaticEcs {
     /// <item>Abstract types and open generic definitions are skipped.</item>
     /// <item>All types are registered with default configuration (no custom GUID, no custom serialization).</item>
     /// <item>A single type implementing multiple interfaces will be registered for each applicable one.</item>
-    /// <item>If no assemblies are specified, only the calling assembly is scanned (not all loaded assemblies).</item>
+    /// <item>The fluent wrapper <c>World&lt;TWorld&gt;.Types().RegisterAll()</c> (without arguments) defaults to <c>typeof(TWorld).Assembly</c>. This method itself does not default — pass assemblies explicitly.</item>
     /// </list>
     /// </para>
     /// <para>
@@ -826,7 +826,9 @@ namespace FFS.Libraries.StaticEcs {
         /// </summary>
         /// <typeparam name="TWorld">The world type to register types into.</typeparam>
         /// <param name="assemblies">
-        /// Assemblies to scan. If <c>null</c> or empty, scans the calling assembly only.
+        /// Assemblies to scan. Must contain at least one assembly — this is the low-level entry point and does not
+        /// fall back to any default. For the ergonomic default (scan <c>typeof(TWorld).Assembly</c>), use the fluent
+        /// wrapper <c>World&lt;TWorld&gt;.Types().RegisterAll()</c> instead.
         /// The StaticEcs framework assembly is always excluded.
         /// </param>
         #if NET5_0_OR_GREATER

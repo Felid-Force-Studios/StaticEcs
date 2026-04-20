@@ -5,7 +5,7 @@
   <a href="./README_RU.md"><img src="https://img.shields.io/badge/RU-Русский-blue?style=flat-square" alt="Русский"></a>
   <a href="./README_ZH.md"><img src="https://img.shields.io/badge/ZH-中文-blue?style=flat-square" alt="中文"></a>
   <br><br>
-  <img src="https://img.shields.io/badge/version-2.1.3-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.1.4-blue?style=for-the-badge" alt="Version">
   <a href="https://www.nuget.org/packages/FFS.StaticEcs/"><img src="https://img.shields.io/badge/NuGet-FFS.StaticEcs-004880?style=for-the-badge&logo=nuget" alt="NuGet"></a>
   <a href="https://felid-force-studios.github.io/StaticEcs/ru/"><img src="https://img.shields.io/badge/Docs-документация-blueviolet?style=for-the-badge" alt="Документация"></a>
   <a href="https://gist.github.com/blackbone/6d254a684cf580441bf58690ad9485c3"><img src="https://img.shields.io/badge/Benchmarks-результаты-green?style=for-the-badge" alt="Benchmarks"></a>
@@ -180,7 +180,10 @@ public class Program {
         // Создаём мир
         W.Create();
 
-        // Авторегистрация всех компонентов, тегов, событий и т.д. из текущей сборки
+        // Авторегистрация всех компонентов, тегов, событий, связей и типов сущностей
+        // из сборки, в которой объявлена IWorldType-структура `WT` (берётся как typeof(WT).Assembly).
+        // Безопасно на всех рантаймах, включая Unity IL2CPP, Unity WebGL и NativeAOT — без stack walking.
+        // Для мульти-сборочных проектов: W.Types().RegisterAll(typeof(WT).Assembly, typeof(Other).Assembly);
         W.Types().RegisterAll();
 
         // Инициализируем мир

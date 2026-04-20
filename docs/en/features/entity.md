@@ -53,7 +53,7 @@ W.Types()
 W.Types().RegisterAll();
 ```
 
-`RegisterAll()` discovers all types implementing `IEntityType` in the specified assemblies (defaults to the calling assembly) and registers them automatically. The identifier is obtained from the `Id()` method.
+`RegisterAll()` discovers all types implementing `IEntityType` in the specified assemblies (defaults to `typeof(TWorld).Assembly` — no stack walking, safe on Unity IL2CPP, Unity WebGL and NativeAOT) and registers them automatically. The identifier is obtained from the `Id()` method.
 
 ### Lifecycle hooks (OnCreate / OnDestroy)
 

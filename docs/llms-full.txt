@@ -5,7 +5,7 @@
 ## Core Concepts
 
 - **Static generics**: `World<TWorld>` where `TWorld : struct, IWorldType` is the central type. Each unique TWorld gets isolated static storage. Typical pattern: `public struct WT : IWorldType {} public abstract class W : World<WT> {}`
-- **World lifecycle**: `W.Create(WorldConfig.Default())` → `W.Types().RegisterAll()` (or manual `.Component<T>().Tag<T>().Event<T>()`) → `W.Initialize()` → work → `W.Destroy()`. Type registration is ONLY allowed between Create and Initialize.
+- **World lifecycle**: `W.Create(WorldConfig.Default())` → `W.Types().RegisterAll()` (or manual `.Component<T>().Tag<T>().Event<T>()`) → `W.Initialize()` → work → `W.Destroy()`. Type registration is ONLY allowed between Create and Initialize. `RegisterAll()` without arguments scans `typeof(TWorld).Assembly` — no stack walking, safe on Unity IL2CPP / Unity WebGL / NativeAOT. For types in other assemblies use `RegisterAll(typeof(TWorld).Assembly, typeof(Other).Assembly)` — the explicit form scans only the assemblies you pass (no implicit `TWorld` assembly).
 - **Entity** (`W.Entity`): 4-byte uint handle. NOT a persistent reference — valid only while entity is alive. No generation counter embedded. Use `EntityGID` for persistent references.
 - **Entity types** (`IEntityType`): Logical entity grouping for cache locality. `Default` is the built-in type (Id = 0). Create: `W.NewEntity<Default>()`. Define: `public struct Bullet : IEntityType { public byte Id() => 1; }`. Register: `W.Types().EntityType<Bullet>()`. Entities of the same type are stored together in memory segments. Non-generic overloads accept `byte entityType` for runtime-known types: `W.NewEntity(entityTypeId)`, `W.NewEntityInChunk(entityTypeId, chunkIdx)`, `W.NewEntityByGID(entityTypeId, gid)`.
 - **EntityGID** (8 bytes): Persistent entity reference with version-based staleness detection. Fields: Id (uint) + ClusterId (ushort) + Version (ushort). Check status: `gid.Status<WT>()` → `GIDStatus.Active/NotActual/NotLoaded`. Resolve: `gid.TryUnpack<WT>(out entity)`.
@@ -278,24 +278,45 @@ ___
 
 #### Auto-registration of types:
 Instead of manually registering each type, you can use automatic assembly scanning.
-`RegisterAll()` discovers all structs implementing ECS interfaces and registers them automatically:
+`RegisterAll()` discovers all structs implementing ECS interfaces in one or more assemblies and registers each one via the corresponding `Register*` API.
 
 ```csharp
 W.Create(WorldConfig.Default());
 
-// Auto-register all types from the calling assembly
+// Parameterless form — scans the assembly that declares the IWorldType struct `WT`
+// (resolved as typeof(WT).Assembly). No stack walking.
 W.Types().RegisterAll();
 
-// Or specify particular assemblies
+// Explicit form — scans the given assemblies only. The first assembly is required
+// so an empty call is syntactically impossible.
 W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
 
-// Can be combined with manual registration
+// Can be combined with manual registration (fluent chain)
 // Configuration is provided by implementing IComponentConfig<T> on the struct itself
 W.Types()
     .RegisterAll()
     .Component<SpecialComponent>();
 
 W.Initialize();
+```
+
+**How the scanned assembly is resolved**
+
+| Overload | Scanned assemblies |
+|----------|-------------------|
+| `RegisterAll()` | `typeof(TWorld).Assembly` — the assembly that declares your `IWorldType` struct (in the example, `WT` — the struct itself, not the alias class `W : World<WT>`) |
+| `RegisterAll(Assembly first, params Assembly[] rest)` | Exactly the assemblies you pass — `TWorld`'s assembly is **not** added implicitly |
+
+The parameterless form deliberately uses `typeof(TWorld).Assembly` and never calls `Assembly.GetCallingAssembly()`. It works correctly on **all runtimes**, including .NET Framework / Core / 5+, Mono, Unity Mono, **Unity IL2CPP**, **Unity WebGL** and **NativeAOT**. On IL2CPP/WebGL/NativeAOT `Assembly.GetCallingAssembly()` returns unreliable results because stack walking is stripped or restricted — deriving the assembly from a generic type argument avoids that problem entirely.
+
+**Multi-assembly scenario.** If your `IWorldType` struct lives in one assembly (e.g. a shared "core" assembly) and your ECS types live in another, use the explicit overload and list every assembly that contains ECS types:
+
+```csharp
+W.Types().RegisterAll(
+    typeof(WT).Assembly,           // core assembly with the IWorldType struct
+    typeof(Position).Assembly,     // gameplay assembly with components
+    typeof(AiPlugin).Assembly      // another plugin assembly
+);
 ```
 
 Detected interfaces:
@@ -311,10 +332,12 @@ Detected interfaces:
 | `IEntityType` | `Types().EntityType<T>()` |
 
 {: .note }
-- If no assemblies are specified, only the calling assembly is scanned (not all loaded assemblies)
-- The StaticEcs framework assembly itself is always excluded from scanning
-- All types are registered with default configuration (GUID auto-computed from type name, serialization strategy auto-detected)
-- A struct implementing multiple interfaces (e.g. both `IComponent` and `IMultiComponent`) will be registered for each one
+- The StaticEcs framework assembly itself is always excluded from scanning.
+- Abstract types and open generic type definitions are skipped.
+- All types are registered with default configuration (GUID auto-computed from type name, serialization strategy auto-detected).
+- A struct implementing multiple interfaces (e.g. both `IComponent` and `IMultiComponent`) is registered for each applicable interface.
+- The `Default` entity type is skipped — already registered by the world.
+- Must be called during the `Created` phase — after `W.Create()` and before `W.Initialize()`.
 
 ___
 
@@ -5323,6 +5346,28 @@ W.Create(WorldConfig.Default());
 W.Types().RegisterAll();
 W.Initialize();
 ```
+
+### `RegisterAll()` and multi-assembly projects / Unity IL2CPP / WebGL / NativeAOT
+
+`W.Types().RegisterAll()` without arguments scans **exactly one assembly** — the one that declares your `IWorldType` marker (`typeof(TWorld).Assembly`). It does not walk the stack and does not enumerate loaded assemblies, which means:
+
+- It is safe on all runtimes, including Unity IL2CPP, Unity WebGL and NativeAOT, where `Assembly.GetCallingAssembly()` returns unreliable results.
+- It will miss ECS types defined in other assemblies. If your `TWorld` marker lives in a "core" assembly and your components live in a gameplay assembly, the parameterless call registers nothing.
+
+```csharp
+// WRONG — MyWorld lives in Game.Core.dll, components live in Game.Gameplay.dll.
+// Only Game.Core.dll is scanned, so no components get registered.
+W.Types().RegisterAll();
+
+// CORRECT — list every assembly that contains ECS types.
+W.Types().RegisterAll(
+    typeof(MyWorld).Assembly,
+    typeof(Position).Assembly,
+    typeof(AiPlugin).Assembly
+);
+```
+
+If in doubt, place the `TWorld` marker in the same assembly as your components and use the parameterless form.
 
 ### Entity operations before Initialize
 `NewEntity`, queries, and all entity operations only work after `W.Initialize()`. Calling them during the `Created` phase (between `Create` and `Initialize`) will fail.

@@ -32,6 +32,28 @@ W.Types().RegisterAll();
 W.Initialize();
 ```
 
+### `RegisterAll()` в мульти-сборочных проектах / Unity IL2CPP / WebGL / NativeAOT
+
+`W.Types().RegisterAll()` без аргументов сканирует **ровно одну сборку** — ту, в которой объявлен ваш `IWorldType`-маркер (`typeof(TWorld).Assembly`). Метод **не** использует stack walking и **не** перебирает все загруженные сборки. Это значит:
+
+- **Метод безопасен на всех рантаймах**, включая Unity IL2CPP, Unity WebGL и NativeAOT, где `Assembly.GetCallingAssembly` возвращает ненадёжный результат.
+- **Он пропустит ECS-типы из других сборок.** Типичная ошибка — держать маркер `TWorld` в «core»/«shared»-сборке, а компоненты — в игровой сборке: беспараметрный вызов тогда не зарегистрирует ничего.
+
+```csharp
+// НЕПРАВИЛЬНО — MyWorld лежит в Game.Core.dll, компоненты — в Game.Gameplay.dll.
+// Сканируется только Game.Core.dll, поэтому компоненты не регистрируются.
+W.Types().RegisterAll();
+
+// ПРАВИЛЬНО — перечислите все сборки с ECS-типами.
+W.Types().RegisterAll(
+    typeof(MyWorld).Assembly,
+    typeof(Position).Assembly,
+    typeof(AiPlugin).Assembly
+);
+```
+
+Если сомневаетесь — держите маркер `TWorld` в той же сборке, что и компоненты, и пользуйтесь беспараметрной формой.
+
 ### Операции с сущностями до Initialize
 `NewEntity`, запросы и все операции с сущностями работают только после `W.Initialize()`. Вызов их во время фазы `Created` (между Create и Initialize) приведёт к ошибке.
 

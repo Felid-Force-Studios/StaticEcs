@@ -32,6 +32,28 @@ W.Types().RegisterAll();
 W.Initialize();
 ```
 
+### 多程序集项目 / Unity IL2CPP / WebGL / NativeAOT 下的 `RegisterAll()`
+
+无参的 `W.Types().RegisterAll()` **只扫描一个程序集** —— 声明你的 `IWorldType` 标记的那个（`typeof(TWorld).Assembly`）。该方法**不**使用调用栈回溯，**也不**枚举所有已加载的程序集。这意味着：
+
+- **在所有运行时上都安全**，包括 Unity IL2CPP、Unity WebGL 和 NativeAOT —— 这些平台上 `Assembly.GetCallingAssembly` 返回不可靠的结果。
+- **会遗漏位于其他程序集的 ECS 类型。** 一个常见错误是：`TWorld` 标记结构体放在 "core"/"shared" 程序集中，组件放在游戏程序集中 —— 无参调用将无法注册任何组件。
+
+```csharp
+// 错误 —— MyWorld 位于 Game.Core.dll，组件位于 Game.Gameplay.dll。
+// 仅扫描 Game.Core.dll，因此不会注册任何组件。
+W.Types().RegisterAll();
+
+// 正确 —— 列出所有包含 ECS 类型的程序集。
+W.Types().RegisterAll(
+    typeof(MyWorld).Assembly,
+    typeof(Position).Assembly,
+    typeof(AiPlugin).Assembly
+);
+```
+
+如果拿不准，请将 `TWorld` 标记放在与组件相同的程序集中，并使用无参形式。
+
 ### 在 Initialize 之前操作实体
 `NewEntity`、查询和所有实体操作只有在 `W.Initialize()` 之后才能使用。在 `Created` 阶段（Create 和 Initialize 之间）调用将会失败。
 

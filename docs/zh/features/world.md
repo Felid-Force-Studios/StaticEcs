@@ -137,18 +137,20 @@ ___
 
 #### 类型自动注册：
 可以使用自动程序集扫描来替代手动注册每个类型。
-`RegisterAll()` 会发现所有实现 ECS 接口的结构体并自动注册：
+`RegisterAll()` 会在一个或多个程序集中查找所有实现 ECS 接口的结构体，并通过相应的 `Register*` API 逐一注册。
 
 ```csharp
 W.Create(WorldConfig.Default());
 
-// 从调用程序集自动注册所有类型
+// 无参形式 —— 扫描声明 IWorldType 结构体 `WT` 的程序集
+// (通过 typeof(WT).Assembly 解析)。不进行任何调用栈回溯。
 W.Types().RegisterAll();
 
-// 或指定特定程序集
+// 显式形式 —— 仅扫描给定的程序集。第一个程序集参数为必填，
+// 因此在语法上不可能传入空参数。
 W.Types().RegisterAll(typeof(MyGame).Assembly, typeof(MyPlugin).Assembly);
 
-// 可以与手动注册结合使用
+// 可以与手动注册结合使用（fluent 链式调用）
 W.Types()
     .RegisterAll()
     .Component<SpecialComponent>();
@@ -156,7 +158,36 @@ W.Types()
 W.Initialize();
 ```
 
-检测的接口：
+**被扫描的程序集如何解析**
+
+| 重载 | 被扫描的程序集 |
+|------|----------------|
+| `RegisterAll()` | `typeof(TWorld).Assembly` —— 声明你的 `IWorldType` 结构体的程序集（示例中是 `WT` —— **不是**别名类 `W : World<WT>`，而是结构体本身） |
+| `RegisterAll(Assembly first, params Assembly[] rest)` | 你传入的那些程序集本身 —— 不会**隐式**添加 `TWorld` 所在程序集 |
+
+无参形式**始终**使用 `typeof(TWorld).Assembly`，从不调用 `Assembly.GetCallingAssembly()`。因此它可以在**所有运行时**正确工作，包括：
+
+- .NET Framework / .NET Core / .NET 5+
+- Mono 与 Unity Mono
+- **Unity IL2CPP**
+- **Unity WebGL**
+- **NativeAOT**
+
+在 IL2CPP/WebGL/NativeAOT 上，`Assembly.GetCallingAssembly()` 返回的结果不可靠，因为调用栈回溯被裁剪或受限 —— 所以实现会通过泛型参数获取程序集。只要你的 `IWorldType` 结构体（`WT`）与 ECS 类型位于同一程序集，无参形式就足够了。
+
+**多程序集场景**
+
+如果 `IWorldType` 结构体和 ECS 类型位于不同的程序集（例如 `WT` 定义在共享的 "core" 程序集中，组件定义在游戏程序集中），请使用显式重载并列出所有包含 ECS 类型的程序集：
+
+```csharp
+W.Types().RegisterAll(
+    typeof(WT).Assembly,           // 包含 IWorldType 结构体的 core 程序集
+    typeof(Position).Assembly,     // 包含组件的游戏程序集
+    typeof(AiPlugin).Assembly      // 另一个插件程序集
+);
+```
+
+**检测的接口**
 
 | 接口 | 注册方式 |
 |------|---------|
@@ -169,15 +200,17 @@ W.Initialize();
 | `IEntityType` | `Types().EntityType<T>()` |
 
 {: .notezh }
-- 如果未指定程序集，则仅扫描调用程序集（不是所有已加载的程序集）
-- StaticEcs 框架程序集本身始终被排除在扫描之外
+- StaticEcs 框架程序集本身始终被排除在扫描之外。
+- 抽象类型和开放泛型类型定义会被跳过。
+- 实现多个接口的结构体（例如同时实现 `IComponent` 和 `IMultiComponent`）将为每个适用的接口分别注册。
+- 注册实体类型时会跳过 `Default` —— 它已由世界本身注册。
 - `RegisterAll()` 会在每个结构体内搜索对应配置类型的静态字段或属性，如果找到则使用它。否则使用默认配置。查找规则：
-  - `IComponent` — 查找 `ComponentTypeConfig<T>`（优先选择名为 `Config` 的成员）
-  - `IEvent` — 查找 `EventTypeConfig<T>`（优先选择名为 `Config` 的成员）
-  - `ITag` — 查找 `TagTypeConfig<T>`（优先选择名为 `Config` 的成员）
-  - `IEntityType` — 查找 `byte`（优先选择名为 `Id` 的成员）
-- 同时支持字段（field）和属性（property）
-- 实现多个接口的结构体（例如同时实现 `IComponent` 和 `IMultiComponent`）将为每个接口分别注册
+  - `IComponent` —— 查找 `ComponentTypeConfig<T>`（优先选择名为 `Config` 的成员）
+  - `IEvent` —— 查找 `EventTypeConfig<T>`（优先选择名为 `Config` 的成员）
+  - `ITag` —— 查找 `TagTypeConfig<T>`（优先选择名为 `Config` 的成员）
+  - `IEntityType` —— 查找 `byte`（优先选择名为 `Id` 的成员）
+- 同时支持字段（field）和属性（property）。
+- 必须在 `Created` 阶段调用 —— 在 `W.Create()` 之后、`W.Initialize()` 之前。
 
 ___
 

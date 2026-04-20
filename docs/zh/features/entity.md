@@ -53,7 +53,7 @@ W.Types()
 W.Types().RegisterAll();
 ```
 
-`RegisterAll()` 会在指定程序集（默认为调用程序集）中查找所有实现 `IEntityType` 的类型并自动注册。标识符通过 `Id()` 方法获取。
+`RegisterAll()` 会在指定程序集（默认为 `typeof(TWorld).Assembly`；不使用调用栈回溯，在 Unity IL2CPP、Unity WebGL 和 NativeAOT 上都安全）中查找所有实现 `IEntityType` 的类型并自动注册。标识符通过 `Id()` 方法获取。
 
 ### 生命周期钩子（OnCreate / OnDestroy）
 
