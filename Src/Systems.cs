@@ -706,27 +706,45 @@ namespace FFS.Libraries.StaticEcs {
         private static readonly Type[] ReadParams = { typeof(BinaryPackReader).MakeByRefType(), typeof(byte) };
 
         internal static bool HasUpdate() {
-            return HasMethod(typeof(T), nameof(ISystem.Update), Array.Empty<Type>());
+            return HasMethodInHierarchy(typeof(T), nameof(ISystem.Update), Array.Empty<Type>());
         }
 
         internal static bool HasInit() {
-            return HasMethod(typeof(T), nameof(ISystem.Init), Array.Empty<Type>());
+            return HasMethodInHierarchy(typeof(T), nameof(ISystem.Init), Array.Empty<Type>());
         }
 
         internal static bool HasDestroy() {
-            return HasMethod(typeof(T), nameof(ISystem.Destroy), Array.Empty<Type>());
+            return HasMethodInHierarchy(typeof(T), nameof(ISystem.Destroy), Array.Empty<Type>());
         }
 
         internal static bool HasUpdateIsActive() {
-            return HasMethod(typeof(T), nameof(ISystem.UpdateIsActive), Array.Empty<Type>());
+            return HasMethodInHierarchy(typeof(T), nameof(ISystem.UpdateIsActive), Array.Empty<Type>());
         }
 
         internal static bool HasWrite() {
-            return HasMethod(typeof(T), nameof(ISystem.Write), WriteParams);
+            return HasMethodInHierarchy(typeof(T), nameof(ISystem.Write), WriteParams);
         }
 
         internal static bool HasRead() {
-            return HasMethod(typeof(T), nameof(ISystem.Read), ReadParams);
+            return HasMethodInHierarchy(typeof(T), nameof(ISystem.Read), ReadParams);
+        }
+        
+        private static bool HasMethodInHierarchy(
+#if NET5_0_OR_GREATER
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+#endif
+            Type type,
+            string methodName,
+            Type[] parameterTypes
+        ) {
+            while (type != null && type != typeof(object)) {
+                if (HasMethod(type, methodName, parameterTypes))
+                    return true;
+
+                type = type.BaseType;
+            }
+
+            return false;
         }
 
         private static bool HasMethod(
